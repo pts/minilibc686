@@ -1387,7 +1387,8 @@ sub run_cmd($$) {
 # ---
 
 # Most of these flags instruct GCC and other compilers to generate shorter (smaller) code.
-my @gcc_flags = qw(-m32 -fno-pic -Os -march=i686 -W -Wall -Werror -U_FORTIFY_SOURCE -fno-stack-protector -fno-unwind-tables -fno-asynchronous-unwind-tables -falign-functions=1 -falign-jumps=1 -falign-loops=1 -mpreferred-stack-boundary=2 -fno-builtin -fno-ident);
+# -fsigned-char is the default for gcc, but not for owcc. We make it explicit for both.
+my @gcc_flags = qw(-m32 -fno-pic -Os -march=i686 -W -Wall -Werror -U_FORTIFY_SOURCE -fno-stack-protector -fno-unwind-tables -fno-asynchronous-unwind-tables -falign-functions=1 -falign-jumps=1 -falign-loops=1 -mpreferred-stack-boundary=2 -fno-builtin -fno-ident -fsigned-char);
 my @clang_flags = qw(-m32 -fno-pic -Os -march=i686 -W -Wall -Werror -U_FORTIFY_SOURCE -fno-stack-protector -fno-unwind-tables -fno-asynchronous-unwind-tables -mstack-alignment=2 -fno-builtin -fno-ident);
 my @gcc_cmds = (  # GCC and Clang C compilers.
     ["gcc", "-march=i386", "-fno-omit-frame-pointer", @gcc_flags],
@@ -1403,7 +1404,7 @@ my @gcc_cmds = (  # GCC and Clang C compilers.
     ["clang", "-march=i386", "-fomit-frame-pointer", @clang_flags],
     ["clang", "-march=i686", "-fomit-frame-pointer", @clang_flags],
 );
-my @owcc_flags = qw(-blinux -fno-stack-check -march=i386 -mregparm=0 -W -Wall -Wextra -Werror);
+my @owcc_flags = qw(-blinux -fno-stack-check -fsigned-char -march=i386 -mregparm=0 -W -Wall -Wextra -Werror);
 my @owcc_cmds = (  # OpenWatcom C compiler. Good or optimizing for size.
     ["owcc", @owcc_flags],
     ["owcc", "-frerun-optimizer", @owcc_flags],
