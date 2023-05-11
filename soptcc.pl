@@ -1206,20 +1206,18 @@ sub convert_wasm_to_nasm($$$$$$) {
 
 # ---
 
-sub convert_to_nasm($$$$$$) {
-  my($cmd_arg, $srcfn, $basefn, $objfn, $nasmfn, $data_alignment) = @_;
-  my $format = (detect_binary_format($objfn) or "unknown");
-  die "fatal: unsupported object file format: $format\n" if $format ne "elf" and $format ne "omf";
+sub convert_to_nasm($$$$$$$) {
+  my($cmd_type, $cmd_arg, $srcfn, $basefn, $objfn, $nasmfn, $data_alignment) = @_;
   # May be kept undefined if no -march=... was found in @$cmd_arg.
   # `cpu prescott' would also work in NASM for $cpulevel > 6.
   my $nasm_cpu;
   for my $arg (@$cmd_arg) {
     $nasm_cpu = $1 if $arg =~ m@\A-march=i([3456]86)\Z(?!\n)@;
   }
-  if ($format eq "elf") {
-    my @cmdcs = @$cmd_arg;
+  if ($cmd_type eq "gcc") {
     my $asfn = "$basefn.tmp.s";  # GNU as AT&T syntax. TODO(pts): Remove temporary file as part of cleanup (@unlink_fns).
-    push @cmdcs, "-S", "-o", $asfn, $srcfn;  # TODO(pts): Don't run again, but do it before, as a temporary step, when generating $objfn.
+    my @cmdcs = @$cmd_arg;
+    push @cmdcs, "-S", "-o", $asfn, $srcfn;
     print STDERR "info: running compiler-to-as: ", join(" ", map { shargq($_) } @cmdcs), "\n";
     my $status = system(@cmdcs);
     die "fatal: error running compiler-to-as\n" if $status;
@@ -1227,7 +1225,14 @@ sub convert_to_nasm($$$$$$) {
     die "fatal: expeected as file format, got: $format\n" if $format ne "as";
     convert_as_to_nasm($asfn, $nasmfn, $basefn, $srcfn, $nasm_cpu, $data_alignment);
     unlink($asfn);
-  } else {
+  } elsif ($cmd_type eq "owcc") {
+    my @cmdco = @$cmd_arg;
+    push @cmdco, "-c", "-o", $objfn, $srcfn;
+    print STDERR "info: running compiler-again: ", join(" ", map { shargq($_) } @cmdco), "\n";
+    my $status = system(@cmdco);
+    die "fatal: error running compiler-to-as\n" if $status;
+    my $format = (detect_binary_format($objfn) or "unknown");
+    die "fatal: expeected omf file format, got: $format\n" if $format ne "omf";
     my $wasmfn = "$objfn.tmp.wasm";  # TODO(pts): Remove temporary file as part of cleanup (@unlink_fns).
     my @wasmdis_cmd = ("wdis", "-a", argv_escape_fn($objfn));
     print STDERR "info: running wasmdis_cmd: @wasmdis_cmd >$wasmfn\n";
@@ -1241,6 +1246,8 @@ sub convert_to_nasm($$$$$$) {
     }
     convert_wasm_to_nasm($wasmfn, $nasmfn, $basefn, $srcfn, $nasm_cpu, $data_alignment);
     unlink($wasmfn);
+  } else {
+    die "fatal: unknown compiler command type: $cmd_type\n";
   }
 }
 
@@ -1426,7 +1433,7 @@ die "fatal: no compilers have been run\n" if !defined($best_code_size);
 printf STDERR "info: found best code size is 0x%x bytes with %s command: %s\n",
     $best_code_size, $best_cmd_type, join(" ", map { shargq($_) } @$best_cmd_ary);
 my $nasmfn = "$basefn.nasm";
-convert_to_nasm($best_cmd_ary, $srcfn, $basefn, $best_objfn, $nasmfn, $data_alignment);
+convert_to_nasm($best_cmd_type, $best_cmd_ary, $srcfn, $basefn, $best_objfn, $nasmfn, $data_alignment);
 unlink($best_objfn);
 
 __END__
