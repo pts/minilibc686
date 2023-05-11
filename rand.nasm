@@ -25,6 +25,8 @@ section .bss align=1
 
 section .text
 mini_srand:
+; static unsigned long long seed;
+; void mini_srand(unsigned s) { seed = s - 1; }
 		mov eax, [esp+0x4]
 		dec eax
 		push edi
@@ -38,7 +40,13 @@ times 1/0 nop
 		stosd
 		pop edi
 		ret
+
 mini_rand:
+; static unsigned long long seed;
+; int mini_rand(void) {
+;   seed = 6364136223846793005ULL * seed + 1;
+;   return seed >> 33;
+; }
 %ifdef CONFIG_PIC
 %error Not PIC because of read-write seed.
 times 1/0 nop
