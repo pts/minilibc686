@@ -8,10 +8,6 @@
 
 bits 32
 cpu 386
-section .text align=1
-section .rodata align=4
-section .data align=4
-section .bss align=4
 
 global mini_vfprintf
 %ifidn __OUTPUT_FORMAT__, bin
@@ -34,24 +30,24 @@ mini_vfprintf:
 		push esi
 		push edi
 		push ebp
-		sub esp, 0x24
+		sub esp, byte 0x24
 		mov ebx, [esp+0x3c]
 		xor ebp, ebp
 .1:
 		mov al, [ebx]
 		test al, al
-		je .33
+		je near .33
 		cmp al, 0x25
-		jne .30
+		jne near .30
 		xor eax, eax
 		mov [esp+0x14], eax
 		xor edi, edi
 		inc ebx
 		mov al, [ebx]
 		test al, al
-		je .33
+		je near .33
 		cmp al, 0x25
-		je .30
+		je near .30
 		cmp al, 0x2d
 		jne .2
 		mov eax, 0x1
@@ -69,9 +65,9 @@ mini_vfprintf:
 		jl .4
 		cmp al, 0x39
 		jg .4
-		imul edi, 0xa
+		imul edi, byte 0xa
 		movsx eax, al
-		sub eax, 0x30
+		sub eax, byte 0x30
 		add edi, eax
 		inc ebx
 		jmp .3
@@ -79,9 +75,9 @@ mini_vfprintf:
 		mov al, [ebx]
 		mov esi, esp
 		mov ecx, [esp+0x40]
-		add ecx, 0x4
+		add ecx, byte 0x4
 		cmp al, 0x73
-		jne .14
+		jne near .14
 		mov [esp+0x40], ecx
 		mov esi, [ecx-0x4]
 		test esi, esi
@@ -116,7 +112,7 @@ mini_vfprintf:
 		cmp eax, edi
 		jb .8
 		xor edi, edi
-		jmp .9
+		jmp short .9
 .8:
 		sub edi, eax
 .9:
@@ -133,7 +129,7 @@ mini_vfprintf:
 		movsx eax, byte [esp+0x20]
 		push eax
 		call mini_fputc
-		add esp, 0x8
+		add esp, byte 0x8
 		inc ebp
 		dec edi
 		jmp .11
@@ -145,18 +141,18 @@ mini_vfprintf:
 		movsx eax, al
 		push eax
 		call mini_fputc
-		add esp, 0x8
+		add esp, byte 0x8
 		inc ebp
 		inc esi
 		jmp .12
 .13:
 		test edi, edi
-		jbe .32
+		jbe near .32
 		push dword [esp+0x38]
 		movsx eax, byte [esp+0x20]
 		push eax
 		call mini_fputc
-		add esp, 0x8
+		add esp, byte 0x8
 		inc ebp
 		dec edi
 		jmp .13
@@ -167,8 +163,8 @@ mini_vfprintf:
 		mov al, [ecx-0x4]
 		mov [esp], al
 		test edi, edi
-		je .29
-		jmp .17
+		je near .29
+		jmp short .17
 .15:
 		mov [esp+0x40], ecx
 		mov ecx, [ecx-0x4]
@@ -179,7 +175,7 @@ mini_vfprintf:
 		mov ah, al
 		or ah, 0x20
 		cmp ah, 0x78
-		jne .33
+		jne near .33
 .16:
 		test ecx, ecx
 		jne .18
@@ -193,7 +189,7 @@ mini_vfprintf:
 		cmp ah, 0x78
 		jne .19
 		mov esi, 0x10
-		jmp .20
+		jmp short .20
 .19:
 		mov esi, 0xa
 .20:
@@ -201,23 +197,23 @@ mini_vfprintf:
 		cmp al, 0x58
 		jne .21
 		mov esi, 0x41
-		jmp .22
+		jmp short .22
 .21:
 		mov esi, 0x61
 .22:
-		sub esi, 0x3a
+		sub esi, byte 0x3a
 		mov [esp+0x10], esi
 		mov ah, [esp+0x10]
 		mov [esp+0x20], ah
 		cmp al, 0x64
 		jne .23
-		cmp dword [esp+0xc], 0xa
+		cmp dword [esp+0xc], byte 0xa
 		jne .23
 		test ecx, ecx
 		jge .23
 		mov byte [esp+0x18], 0x1
 		neg ecx
-		jmp .24
+		jmp short .24
 .23:
 		mov byte [esp+0x18], 0x0
 .24:
@@ -250,9 +246,9 @@ mini_vfprintf:
 		test byte [esp+0x14], 0x2
 		je .28
 		push dword [esp+0x38]
-		push 0x2d
+		push byte 0x2d
 		call mini_fputc
-		add esp, 0x8
+		add esp, byte 0x8
 		inc ebp
 		dec edi
 		jmp .5
@@ -263,21 +259,21 @@ mini_vfprintf:
 .29:
 		push dword [esp+0x38]
 		movsx eax, al
-		jmp .31
+		jmp short .31
 .30:
 		push dword [esp+0x38]
 		movsx eax, byte [ebx]
 .31:
 		push eax
 		call mini_fputc
-		add esp, 0x8
+		add esp, byte 0x8
 		inc ebp
 .32:
 		inc ebx
 		jmp .1
 .33:
 		mov eax, ebp
-		add esp, 0x24
+		add esp, byte 0x24
 		pop ebp
 		pop edi
 		pop esi
