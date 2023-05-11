@@ -115,7 +115,7 @@ mini_vfprintf:
 .13:
 		test edi, edi
 		jbe .14
-		movsx eax, byte [esp+0x1c]
+		mov al, byte [esp+0x1c]
 		call .call_fputc
 		dec edi
 		jmp .13
@@ -123,14 +123,13 @@ mini_vfprintf:
 		mov al, [esi]
 		test al, al
 		je .15
-		movsx eax, al
 		call .call_fputc
 		inc esi
 		jmp .14
 .15:
 		test edi, edi
 		jbe .32
-		movsx eax, byte [esp+0x1c]
+		mov al, byte [esp+0x1c]
 		call .call_fputc
 		dec edi
 		jmp .15
@@ -141,7 +140,7 @@ mini_vfprintf:
 		mov al, [ecx-0x4]
 		mov [esp], al
 		test edi, edi
-		je .29
+		je .31
 		mov byte [esp+0x1], 0x0
 		jmp .7
 .17:
@@ -214,10 +213,10 @@ mini_vfprintf:
 		cmp byte [esp+0x14], 0x0
 		je .7
 		test edi, edi
-		je .28
+		jz .28
 		test byte [esp+0x10], 0x2
-		je .28
-		movsx eax, byte [esp+0x14]
+		jz .28
+		mov al, byte [esp+0x14]
 		call .call_fputc
 		dec edi
 		jmp .7
@@ -226,18 +225,15 @@ mini_vfprintf:
 		mov al, [esp+0x14]
 		mov [esi], al
 		jmp .7
-.29:
-		movsx eax, al
-		jmp .31
 .30:
-		movsx eax, byte [ebx]
+		mov al, byte [ebx]
 .31:
 		call .call_fputc
 .32:
 		inc ebx
 		jmp .1
 .33:
-		mov eax, ebp
+		xchg eax, ebp  ; EAX := number of bytes written; EBP := junk.
 		add esp, 0x20
 		pop ebp
 		pop edi
@@ -246,7 +242,8 @@ mini_vfprintf:
 		ret
 .call_fputc:
 		push dword [esp+0x38]
-		push eax
+		push eax  ; Only the low 8 bits matter for fputc, the high 24 bits of EAX is garbage here.
+		; movsx eax, al : Not neede,d fputc ignores the high 24 bits anyway.
 		call mini_fputc
 		times 2 pop eax  ; Shorter than `add esp, strict byte 8'.
 		inc ebp
