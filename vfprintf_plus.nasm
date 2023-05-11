@@ -116,8 +116,8 @@ $L$13:
 		test edi, edi
 		jbe $L$14
 		push dword [esp+0x34]
-		movsx edx, byte [esp+0x20]
-		push edx
+		movsx eax, byte [esp+0x20]
+		push eax
 		call mini_fputc
 		add esp, 0x8
 		inc ebp
@@ -128,8 +128,8 @@ $L$14:
 		test al, al
 		je $L$15
 		push dword [esp+0x34]
-		movsx edx, al
-		push edx
+		movsx eax, al
+		push eax
 		call mini_fputc
 		add esp, 0x8
 		inc ebp
@@ -139,8 +139,8 @@ $L$15:
 		test edi, edi
 		jbe $L$32
 		push dword [esp+0x34]
-		movsx edx, byte [esp+0x20]
-		push edx
+		movsx eax, byte [esp+0x20]
+		push eax
 		call mini_fputc
 		add esp, 0x8
 		inc ebp
@@ -230,8 +230,8 @@ $L$27:
 		test byte [esp+0x10], 0x2
 		je $L$28
 		push dword [esp+0x34]
-		movsx edx, byte [esp+0x18]
-		push edx
+		movsx eax, byte [esp+0x18]
+		push eax
 		call mini_fputc
 		add esp, 0x8
 		inc ebp
@@ -244,13 +244,13 @@ $L$28:
 		jmp $L$7
 $L$29:
 		push dword [esp+0x34]
-		movsx edx, al
+		movsx eax, al
 		jmp $L$31
 $L$30:
 		push dword [esp+0x34]
-		movsx edx, byte [ebx]
+		movsx eax, byte [ebx]
 $L$31:
-		push edx
+		push eax
 		call mini_fputc
 		add esp, 0x8
 		inc ebp
