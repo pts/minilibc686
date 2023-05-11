@@ -42,6 +42,7 @@ times 1/0 nop
 		ret
 
 mini_rand:
+		push edi
 ; static unsigned long long seed;
 ; int mini_rand(void) {
 ;   seed = 6364136223846793005ULL * seed + 1;
@@ -51,39 +52,19 @@ mini_rand:
 %error Not PIC because of read-write seed.
 times 1/0 nop
 %endif
-; TODO(pts): Optimize it like this.
-;
-; return (U << 32 | L) * B;
-;
-; return (U:L) * B;
-;
-; return ((U*B) << 32) + L*B;
-;
-; PU:PL = U*B;
-; return (PU:PL << 32) + L*B;
-;
-; PU:PL = U*B;
-; ignore PU;
-; return PL:0 + L*B;
-;
-; mov eax, U
-; mul B
-; xchg eax, ecx  ; ECX := PL; EAX := junk.
-; mov eax, L
-; mul B
-; add edx, ecx  ; Result is in EDX:EAX.
-		imul dword eax, [seed], 0x5851f42d
-		imul dword ecx, [seed+0x4], 0x4c957f2d
+		mov edi, seed
+		imul dword eax, [edi], 0x5851f42d  ; 32*32-->32 bit multiplication.
+		imul dword ecx, [edi+0x4], 0x4c957f2d  ; 32*32-->32 bit multiplication.
 		add ecx, eax
 		mov eax, 0x4c957f2d
-		mul dword [seed]
-		add edx, ecx
-		add eax, byte 0x1
-		adc edx, byte 0x0
-		mov [seed], eax
-		mov eax, edx
-		mov [seed+0x4], edx
-		shr eax, 0x1
+		mul dword [edi]  ; Unsigned 32*32-->64 bit multiplication.
+		add eax, byte 1
+		adc edx, ecx
+		stosd
+		xchg eax, edx  ; EAX := EDX; EDX := junk.
+		stosd
+		shr eax, 1
+		pop edi
 		ret
 
 section .bss  ; common
