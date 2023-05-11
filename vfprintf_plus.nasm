@@ -10,6 +10,7 @@
 
 bits 32
 cpu 386
+B.code equ 0
 
 global mini_vfprintf
 %ifidn __OUTPUT_FORMAT__, bin
@@ -260,7 +261,7 @@ mini_vfprintf:
 		push dword [esp+0x38]
 		push eax  ; Only the low 8 bits matter for mini_fputc, the high 24 bits of EAX is garbage here.
 		; movsx eax, al : Not neede,d mini_fputc ignores the high 24 bits anyway.
-		call mini_fputc
+		call B.code+mini_fputc
 		times 2 pop eax  ; Shorter than `add esp, strict byte 8'.
 		inc ebp
 		ret
