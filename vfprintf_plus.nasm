@@ -115,8 +115,8 @@ $L$12:
 $L$13:
 		test edi, edi
 		jbe $L$14
+		movsx eax, byte [esp+0x1c]
 		push dword [esp+0x34]
-		movsx eax, byte [esp+0x20]
 		push eax
 		call mini_fputc
 		times 2 pop eax  ; Shorter than `add esp, strict byte 8'.
@@ -127,8 +127,8 @@ $L$14:
 		mov al, [esi]
 		test al, al
 		je $L$15
-		push dword [esp+0x34]
 		movsx eax, al
+		push dword [esp+0x34]
 		push eax
 		call mini_fputc
 		times 2 pop eax  ; Shorter than `add esp, strict byte 8'.
@@ -138,8 +138,8 @@ $L$14:
 $L$15:
 		test edi, edi
 		jbe $L$32
+		movsx eax, byte [esp+0x1c]
 		push dword [esp+0x34]
-		movsx eax, byte [esp+0x20]
 		push eax
 		call mini_fputc
 		times 2 pop eax  ; Shorter than `add esp, strict byte 8'.
@@ -229,8 +229,8 @@ $L$27:
 		je $L$28
 		test byte [esp+0x10], 0x2
 		je $L$28
+		movsx eax, byte [esp+0x14]
 		push dword [esp+0x34]
-		movsx eax, byte [esp+0x18]
 		push eax
 		call mini_fputc
 		times 2 pop eax  ; Shorter than `add esp, strict byte 8'.
@@ -243,13 +243,12 @@ $L$28:
 		mov [esi], al
 		jmp $L$7
 $L$29:
-		push dword [esp+0x34]
 		movsx eax, al
 		jmp $L$31
 $L$30:
-		push dword [esp+0x34]
 		movsx eax, byte [ebx]
 $L$31:
+		push dword [esp+0x34]
 		push eax
 		call mini_fputc
 		times 2 pop eax  ; Shorter than `add esp, strict byte 8'.
