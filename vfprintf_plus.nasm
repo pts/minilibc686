@@ -116,11 +116,7 @@ mini_vfprintf:
 		test edi, edi
 		jbe .14
 		movsx eax, byte [esp+0x1c]
-		push dword [esp+0x34]
-		push eax
-		call mini_fputc
-		times 2 pop eax  ; Shorter than `add esp, strict byte 8'.
-		inc ebp
+		call .call_fputc
 		dec edi
 		jmp .13
 .14:
@@ -128,22 +124,14 @@ mini_vfprintf:
 		test al, al
 		je .15
 		movsx eax, al
-		push dword [esp+0x34]
-		push eax
-		call mini_fputc
-		times 2 pop eax  ; Shorter than `add esp, strict byte 8'.
-		inc ebp
+		call .call_fputc
 		inc esi
 		jmp .14
 .15:
 		test edi, edi
 		jbe .32
 		movsx eax, byte [esp+0x1c]
-		push dword [esp+0x34]
-		push eax
-		call mini_fputc
-		times 2 pop eax  ; Shorter than `add esp, strict byte 8'.
-		inc ebp
+		call .call_fputc
 		dec edi
 		jmp .15
 .16:
@@ -230,11 +218,7 @@ mini_vfprintf:
 		test byte [esp+0x10], 0x2
 		je .28
 		movsx eax, byte [esp+0x14]
-		push dword [esp+0x34]
-		push eax
-		call mini_fputc
-		times 2 pop eax  ; Shorter than `add esp, strict byte 8'.
-		inc ebp
+		call .call_fputc
 		dec edi
 		jmp .7
 .28:
@@ -248,11 +232,7 @@ mini_vfprintf:
 .30:
 		movsx eax, byte [ebx]
 .31:
-		push dword [esp+0x34]
-		push eax
-		call mini_fputc
-		times 2 pop eax  ; Shorter than `add esp, strict byte 8'.
-		inc ebp
+		call .call_fputc
 .32:
 		inc ebx
 		jmp .1
@@ -264,6 +244,14 @@ mini_vfprintf:
 		pop esi
 		pop ebx
 		ret
+.call_fputc:
+		push dword [esp+0x38]
+		push eax
+		call mini_fputc
+		times 2 pop eax  ; Shorter than `add esp, strict byte 8'.
+		inc ebp
+		ret
+		
 
 section .rodata
 str_null:
