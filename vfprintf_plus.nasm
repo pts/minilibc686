@@ -32,29 +32,29 @@ mini_vfprintf:
 		push esi
 		push edi
 		push ebp
-		sub esp, 0x20
+		sub esp, byte 0x20
 		mov ebx, [esp+0x38]
 		xor ebp, ebp
 .1:
 		mov al, [ebx]
 		test al, al
-		je .33
+		je near .33
 		cmp al, 0x25
-		jne .30
+		jne near .30
 		xor eax, eax
 		mov [esp+0x10], eax
 		xor edi, edi
 		inc ebx
 		mov al, [ebx]
 		test al, al
-		je .33
+		je near .33
 		cmp al, 0x25
-		je .30
+		je near .30
 		lea edx, [ebx+0x1]
 		cmp al, 0x2d
 		jne .2
 		mov dword [esp+0x10], 0x1
-		jmp .3
+		jmp short .3
 .2:
 		cmp al, 0x2b
 		jne .4
@@ -72,10 +72,10 @@ mini_vfprintf:
 .5cont:
 		mov al, [ebx]
 		sub al, '0'
-		jl .6
+		jl short .6
 		cmp al, 9
-		jg .6
-		imul edi, 0xa
+		jg short .6
+		imul edi, byte 0xa
 		add edi, eax
 		inc ebx
 		jmp .5cont
@@ -83,7 +83,7 @@ mini_vfprintf:
 		mov al, [ebx]
 		mov esi, esp
 		mov ecx, [esp+0x3c]
-		add ecx, 0x4
+		add ecx, byte 0x4
 		cmp al, 0x73
 		jne .16
 		mov [esp+0x3c], ecx
@@ -120,7 +120,7 @@ mini_vfprintf:
 		cmp edx, edi
 		jb .10
 		xor edi, edi
-		jmp .11
+		jmp short .11
 .10:
 		sub edi, edx
 .11:
@@ -146,7 +146,7 @@ mini_vfprintf:
 		jmp .14
 .15:
 		test edi, edi
-		jbe .32
+		jbe near .32
 		mov al, byte [esp+0x1c]
 		call .call_mini_fputc
 		dec edi
@@ -158,7 +158,7 @@ mini_vfprintf:
 		mov al, [ecx-0x4]
 		mov [esp], al
 		test edi, edi
-		je .31
+		je near .31
 		mov byte [esp+0x1], 0x0
 		jmp .7
 .17:
@@ -171,14 +171,14 @@ mini_vfprintf:
 		mov dl, al
 		or dl, 0x20
 		cmp dl, 0x78
-		jne .33
+		jne near .33
 .18:
 		mov dl, al
 		or dl, 0x20
 		cmp dl, 0x78
 		jne .19
 		mov edx, 0x10
-		jmp .20
+		jmp short .20
 .19:
 		mov edx, 0xa
 .20:
@@ -186,26 +186,26 @@ mini_vfprintf:
 		cmp al, 0x58
 		jne .21
 		mov edx, 0x41
-		jmp .22
+		jmp short .22
 .21:
 		mov edx, 0x61
 .22:
-		sub edx, 0x3a
+		sub edx, byte 0x3a
 		mov [esp+0x18], dl
 		cmp al, 0x64
 		jne .23
-		cmp dword [esp+0xc], 0xa
+		cmp dword [esp+0xc], byte 0xa
 		jne .23
 		test ecx, ecx
 		jge .23
 		mov byte [esp+0x14], 0x2d
 		neg ecx
-		jmp .25
+		jmp short .25
 .23:
 		test byte [esp+0x10], 0x4
 		je .24
 		mov byte [esp+0x14], 0x2b
-		jmp .25
+		jmp short .25
 .24:
 		mov byte [esp+0x14], 0x0
 .25:
@@ -250,7 +250,7 @@ mini_vfprintf:
 		jmp .1
 .33:
 		xchg eax, ebp  ; EAX := number of bytes written; EBP := junk.
-		add esp, 0x20
+		add esp, byte 0x20
 		pop ebp
 		pop edi
 		pop esi
