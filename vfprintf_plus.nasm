@@ -193,11 +193,11 @@ mini_vfprintf:
 .25:
 		lea esi, [esp+0xa]
 		mov byte [esi], 0x0
+		xchg eax, ecx  ; EAX := positive number to print; ECX := junk.
 .26:
 		xor edx, edx
-		mov eax, ecx
 		div dword [esp+0xc]
-		xchg eax, edx  ; After this: EAX == remainder, EDX == quotient.
+		xchg eax, edx  ; EAX := remainder; EDX := quotient.
 		cmp al, 10
 		jb .27
 		add al, [esp+0x18]
@@ -205,10 +205,8 @@ mini_vfprintf:
 		add al, 0x30
 		dec esi
 		mov [esi], al
-		xchg eax, edx  ; After this: EAX == quotient.
-		mov ecx, eax
-		; !! Do we still need EAX here? If not, we could do `xchg edx, ecx' above.
-		test ecx, ecx
+		xchg edx, eax  ; Ater this: EAX == quotient.
+		test eax, eax
 		jnz .26
 		cmp byte [esp+0x14], 0x0
 		je .7
@@ -218,7 +216,7 @@ mini_vfprintf:
 		jz .28
 		mov al, byte [esp+0x14]
 		call .call_fputc
-		dec edi
+		dec edi  ; EDI contains the (remaining) width of the current number.
 		jmp .7
 .28:
 		dec esi
