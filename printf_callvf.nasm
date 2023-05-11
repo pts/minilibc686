@@ -1,8 +1,6 @@
 ;
 ; Compile to i386 ELF .o object: nasm -O999999999 -w+orphan-labels -f elf -o printf_callvf.o printf_callvf.nasm
 ;
-; Code+data size: 0x214 bytes; 0x215 bytes with CONFIG_PIC.
-;
 ; Uses: %ifdef CONFIG_PIC
 ;
 
@@ -37,6 +35,10 @@ mini_printf:
 ;esp:ap=&val retaddr fmt val
 		push dword [esp+2*4]  ; 4 bytes.
 ;esp:fmt ap=&val retaddr fmt val
+%ifdef CONFIG_PIC
+%error Not PIC because of mini_stdout.
+times 1/0 nop
+%endif
 		push dword [mini_stdout]  ; 6 bytes.
 ;esp:filep fmt ap=&val retaddr fmt val
 		call B.code+mini_vfprintf  ; 5 bytes.
@@ -44,5 +46,6 @@ mini_printf:
 		add esp, strict byte 3*4  ; 3 bytes, same as `times 3 pop edx'.
 ;esp:retaddr fmt val
 		ret  ; 1 byte.
+
 		
 ; __END__
