@@ -2,6 +2,11 @@
 ; It supports format flags '-', '+', '0', and length modifiers.
 ; Manually optimized for size based on the output of soptcc.pl for c_vfprintf_plus.c.
 ; Compile to i386 ELF .o object: nasm -O999999999 -w+orphan-labels -f elf -o vfprintf_plus.o vfprintf_plus.nasm
+;
+; Code+data size: 0x214 bytes; 0x215 bytes with CONFIG_PIC.
+;
+; Uses: %ifdef CONFIG_PIC
+;
 
 bits 32
 cpu 386
@@ -85,7 +90,20 @@ mini_vfprintf:
 		mov esi, [ecx-0x4]
 		test esi, esi
 		jne .7
+%ifdef CONFIG_PIC
+		call .after_str_null
+.str_null:
+		; This is also valid i386 machine code:
+		; db '(nu'  ;  sub [esi+0x75], ch
+		; db 'l'  ; insb
+		; db 'l'  ; insb
+		; db ')', 0  ; sub [eax], eax
+		db '(null)', 0
+.after_str_null:
+		pop esi  ; ESI := &.str_null.
+%else  ; CONFIG_PIC
 		mov esi, str_null
+%endif  ; CONFIG_PIC
 .7:
 		mov byte [esp+0x1c], 0x20
 		test edi, edi
@@ -116,21 +134,21 @@ mini_vfprintf:
 		test edi, edi
 		jbe .14
 		mov al, byte [esp+0x1c]
-		call .call_fputc
+		call .call_mini_fputc
 		dec edi
 		jmp .13
 .14:
 		mov al, [esi]
 		test al, al
 		je .15
-		call .call_fputc
+		call .call_mini_fputc
 		inc esi
 		jmp .14
 .15:
 		test edi, edi
 		jbe .32
 		mov al, byte [esp+0x1c]
-		call .call_fputc
+		call .call_mini_fputc
 		dec edi
 		jmp .15
 .16:
@@ -215,7 +233,7 @@ mini_vfprintf:
 		test byte [esp+0x10], 0x2
 		jz .28
 		mov al, byte [esp+0x14]
-		call .call_fputc
+		call .call_mini_fputc
 		dec edi  ; EDI contains the (remaining) width of the current number.
 		jmp .7
 .28:
@@ -226,9 +244,9 @@ mini_vfprintf:
 .30:
 		mov al, byte [ebx]
 .31:
-		call .call_fputc
+		call .call_mini_fputc
 .32:
-		inc ebx
+		inc ebx  ; TODO(pts): Swap the role of EBX and ESI, and use lodsb.
 		jmp .1
 .33:
 		xchg eax, ebp  ; EAX := number of bytes written; EBP := junk.
@@ -238,18 +256,19 @@ mini_vfprintf:
 		pop esi
 		pop ebx
 		ret
-.call_fputc:
+.call_mini_fputc:
 		push dword [esp+0x38]
-		push eax  ; Only the low 8 bits matter for fputc, the high 24 bits of EAX is garbage here.
-		; movsx eax, al : Not neede,d fputc ignores the high 24 bits anyway.
+		push eax  ; Only the low 8 bits matter for mini_fputc, the high 24 bits of EAX is garbage here.
+		; movsx eax, al : Not neede,d mini_fputc ignores the high 24 bits anyway.
 		call mini_fputc
 		times 2 pop eax  ; Shorter than `add esp, strict byte 8'.
 		inc ebp
 		ret
 		
-
+%ifndef CONFIG_PIC
 section .rodata
 str_null:
-		db '(null)', 0  ; !! Embed into .text, position-independent.
+		db '(null)', 0
+%endif
 
 ; __END__
