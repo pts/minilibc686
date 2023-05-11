@@ -91,6 +91,236 @@ sub print_nasm_header($$$$$$) {
   #print $nasmfh "\nsection .text\n";  # asm2nasm(...) will print it.
 }
 
+# --- Merge C string literal by tail (e.g. merge "bar" and "foobar").
+
+# Merge C string literal by tail (e.g. merge "bar" and "foobar").
+#
+# $outfh is the filehandle to write NASM assembly lines to.
+#
+# $rodata_strs is a reference to an array containing assembly source lines
+# (`label:' and `db: ...') in `section .rodata', `section .rdata' and
+# `section .rodata.str1.1' (GCC, GNU as; already
+# converted to db) or `CONST SEGMENT' (OpenWatcom WASM). It will be cleared
+# as a side effect.
+#
+# TODO(pts): Deduplicate strings in .nasm source as well.
+sub print_merged_strings_in_strdata($$$) {
+  my($outfh, $rodata_strs, $is_db_canonical_gnu_as) = @_;
+  return if !$rodata_strs or !@$rodata_strs;
+  # Test data: my $strdata_test = "foo:\ndb 'ello', 0\ndb 0\ndb 'oth'\nmer:\ndb 'er', 1\ndb 2\ndb 0\ndb 3\ndb 0\ndb 4\ndb 'hell'\nbar:\ndb 'o', 0\nbaz:\ndb 'lo', 0, 'ello', 0, 'hell', 0, 'foo', ', ', 0, 15, 3, 0\nlast:";  @$rodata_strs = split(/\n/, $strdata_test);
+  my $ofs = 0;
+  my @labels;
+  my $strdata = "";
+  for my $str (@$rodata_strs) {
+    if ($str =~ m@\A\s*db\s@i) {
+      pos($str) = 0;
+      if ($is_db_canonical_gnu_as) {  # Shortcut.
+        while ($str =~ m@\d+|'([^']*)'@g) { $ofs += defined($1) ? length($1) : 1 }
+        $strdata .= $str;
+        $strdata .= "\n";
+      } else {
+        die if $str !~ s@\A\s*db\s+@@i;
+        my $str0 = $str;
+        my $has_error = 0;
+        # Parse and canonicalize the db string, so that we can transform it later.
+        $str =~ s@(-?)0[xX]([0-9a-fA-F]+)|(-?)([0-9][0-9a-fA-F]*)[hH]|(-?)(0(?!\d)|[1-9][0-9]*)|('[^']*')|(\s*,\s*)|([^\s',]+)@
+          my $v;
+          if (defined($1) or defined($3) or defined($5)) {
+            ++$ofs;
+            $v = defined($1) ? ($1 ? -hex($2) : hex($2)) & 255 :
+                 defined($3) ? ($3 ? -hex($4) : hex($4)) & 255 :
+                 defined($5) ? ($5 ? -int($6) : int($6)) & 255 : undef;
+            ($v >= 32 and $v <= 126 and $v != 0x27) ? "'" . chr($v) . "'" : $v
+          } elsif (defined($7)) { $ofs += length($7) - 2; $7 }
+          elsif (defined($8)) { ", " }
+          else { $has_error = 1; "" }
+        @ge;
+        die "fatal: arg: syntax error in string literal db: $str0\n" if $has_error;
+        #$str =~ s@', '@@g;  # This is incorrect, e.g. db 1, ', ', 2
+        $strdata .= "db $str\n";
+      }
+    } elsif ($str =~ m@\s*([^\s:,]+)\s*:\s*\Z(?!\n)@) {
+      push @labels, [$ofs, $1];
+      #print STDERR ";;old: $1 equ strs+$ofs\n";
+    } elsif ($str =~ m@\S@) {
+      die "fatal: arg: unexpected string literal instruction: $str\n";
+    }
+  }
+  # $strdata already has very strict syntax (because we have generated its
+  # dbs), so we can do these regexp substitutions below safely.
+  $strdata =~ s@([^:])\ndb @$1, @g;
+  $strdata = "db " if !length($strdata);
+  die "fatal: assert: missing db" if $strdata !~ m@\Adb@;
+  die "fatal: assert: too many dbs" if $strdata =~ m@.db@s;
+  $strdata =~ s@^db @db , @mg;
+  $strdata =~ s@, 0(?=, )@, 0\ndb @g;  # Split lines on NUL.
+  my $ss = 0;
+  while (length($strdata) != $ss) {  # Join adjacent 'chars' arguments.
+    $ss = length($strdata);
+    $strdata =~ s@'([^']*)'(?:, '([^']*)')?@ my $x = defined($2) ? $2 : ""; "'$1$x'" @ge;
+  }
+  chomp($strdata);
+  @$rodata_strs = split(/\n/, $strdata);
+  my @sorteds;
+  {
+    my $i = 0;
+    for my $str (@$rodata_strs) {
+      my $rstr = reverse($str);
+      substr($rstr, -3) = "";  # Remove "db ".
+      substr($rstr, 0, 3) = "";  # Remove "0, ".
+      $rstr =~ s@' ,\Z@@;
+      push @sorteds, [$rstr, $i];
+      ++$i;
+    }
+  }
+  @sorteds = sort { $a->[0] cmp $b->[0] or $a->[1] <=> $b->[1] } @sorteds;
+  my %mapi;
+  for (my $i = 0; $i < $#sorteds; ++$i) {
+    my $rstri = $sorteds[$i][0];
+    my $rstri1 = $sorteds[$i + 1][0];
+    if (length($rstri1) >= length($rstri) and substr($rstri1, 0, length($rstri)) eq $rstri) {
+      $mapi{$sorteds[$i][1]} = $sorteds[$i + 1][1];
+    }
+  }
+  my @ofss;
+  my @oldofss;
+  #%mapi = ();  # For debugging: don't merge anything.
+  {
+    my $i = 0;
+    my $ofs = 0;
+    my $oldofs = 0;
+    my @sizes;
+    for my $str (@$rodata_strs) {
+      pos($str) = 0;
+      my $size = 0;
+      while ($str =~ m@\d+|'([^']*)'@g) { $size += defined($1) ? length($1) : 1 }
+      push @sizes, $size;
+      push @oldofss, $oldofs;
+      $oldofs += $size;
+      if (exists($mapi{$i})) {
+        my $j = $mapi{$i};
+        $j = $mapi{$j} while exists($mapi{$j});
+        $mapi{$i} = $j;
+        #print STDERR ";$i: ($str) -> ($rodata_strs->[$j]}\n";
+        push @ofss, undef;
+      } else {
+        push @ofss, $ofs;
+        $ofs += $size;
+        #print STDERR "$str\n";
+      }
+      ++$i;
+    }
+    if (%mapi) {
+      for ($i = 0; $i < @$rodata_strs; ++$i) {
+        my $j = $mapi{$i};
+        $ofss[$i] = $ofss[$j] + $sizes[$j] - $sizes[$i] if defined($j) and !defined($ofss[$i]);
+      }
+    }
+    push @ofss, $ofs;
+    push @oldofss, $oldofs;
+  }
+  {
+    for my $str (@$rodata_strs) {
+      die "fatal: assert: missing db-comma\n" if $str !~ s@\Adb , @db @;  # Modify in place.
+      # !! if TODO(pts): length($str) > 500, then split to several `db's.
+      $str .= "\n";
+    }
+    #print $outfh "section .rodata\n";  # Printed by the caller.
+    print $outfh "__strs:\n";
+    my $i = 0;
+    my $pi = 0;
+    for my $pair (@labels) {
+      my($lofs, $label) = @$pair;
+      ++$i while $i + 1 < @oldofss and $oldofss[$i + 1] <= $lofs;
+      die "fatal: assert: bad oldoffs\n" if $i >= @oldofss;
+      my $ofs = $lofs - $oldofss[$i] + $ofss[$i];
+      for (; $pi < $i; ++$pi) {
+        #print STDERR "$rodata_strs->[$pi]\n" if !exists($mapi{$pi});
+        print $outfh "\t\t", $rodata_strs->[$pi] if !exists($mapi{$pi});
+      }
+      if ($lofs != $oldofss[$i] or exists($mapi{$i})) {
+        if (exists($mapi{$i})) {
+          # !! TODO(pts): Find a later (or earlier), closer label, report relative offset there.
+          print $outfh "$label equ __strs+$ofs  ; old=$lofs\n";
+        } else {
+          my $dofs = $lofs - $oldofss[$i];
+          #print STDERR "$label equ \$+$dofs\n";
+          print $outfh "$label equ \$+$dofs\n";
+        }
+      } else {
+        #print STDERR "$label:\n";
+        print $outfh "$label:\n";
+      }
+    }
+    for (; $pi < @$rodata_strs; ++$pi) {
+      #print STDERR "$rodata_strs->[$pi]\n" if !exists($mapi{$pi});
+      print $outfh "\t\t", $rodata_strs->[$pi] if !exists($mapi{$pi});
+    }
+  }
+  @$rodata_strs = ();
+}
+
+# ---
+
+sub print_commons($$$) {
+  my($outfh, $common_by_label, $define_when_defined) = @_;
+  return if !%$common_by_label;
+  my @commons2;
+  for my $label (sort(keys(%$common_by_label))) {
+    die "fatal: assert: common value syntax\n" if $common_by_label->{$label} !~ m@\A(\d+):(\d+)\Z(?!\n)@;
+    push @commons2, [$label, $1 + 0, $2 + 0];
+  }
+  # (alignment decreasing, size decreasing, name lexicographically increasing).
+  @commons2 = sort { $b->[2] <=> $a->[2] or $b->[1] <=> $a->[1] or $a->[0] cmp $b->[0] } @commons2;
+  print $outfh "\nsection .bss  ; common\n";
+  # NASM 0.98.39 and 0.99.06 report phase errors with if the .nasm file
+  # contains forward-referenced `common' directives, even without the equ
+  # hack below. It works with NASM 2.13.02, but only without the `equ'
+  # hack: with `equ' it's Segmentation fault when running.
+  #
+  # Thus we emit the .bss manually even for `nasm -f elf'. Thus, without
+  # the `common', it's not possible for many .c source file to say `int
+  # var;'. One of them must have `int var;', the others must have `extern
+  # int var;'.
+  if (0) {
+    print $outfh "%ifidn __OUTPUT_FORMAT__, elf\n";
+    for my $tuple (@commons2) {
+      my($label, $size, $alignment) = @$tuple;
+      #print $outfh "common $label $size:$alignment\n";
+      #if (exists($define_when_defined{$label})) {
+      #  my $label1 = $define_when_defined{$label};
+      #  print $outfh "$label1 equ $label\n";
+      #}
+      if (exists($define_when_defined->{$label})) {
+        my $label1 = $define_when_defined->{$label};
+        #print $outfh "$label1 equ $label\n";
+        print $outfh "common $label1 $size:$alignment\n";
+      } else {
+        print $outfh "common $label $size:$alignment\n";
+      }
+    }
+    print $outfh "%else  ; ifidn __OUTPUT_FORMAT__, elf\n";
+  }
+  for my $tuple (@commons2) {
+    my($label, $size, $alignment) = @$tuple;
+    print $outfh "alignb $alignment\n" if $alignment > 1;
+    print $outfh "$label: resb $size  ; align=$alignment\n";
+    if (exists($define_when_defined->{$label})) {
+      my $label1 = $define_when_defined->{$label};
+      print $outfh "$label1 equ $label\n";
+    }
+  }
+  if (0) {
+    print $outfh "%endif ; ifidn __OUTPUT_FORMAT__, elf\n";
+  }
+}
+
+# --- Assembly syntax onversion helpers.
+
+my %gp_regs = map { $_ => 1 } qw(al cl dl bl ah ch dh bh ax cx dx bx sp bp si di eax ecx edx ebx esp ebp esi edi);
+
+my %shift_instructions = map { $_ => 1 } qw (rcl rcr rol ror sal sar shl shr);
+
 # --- convert_as_to_nasm(...)
 
 sub convert_as_to_nasm($$$$$$) {
@@ -105,11 +335,211 @@ sub convert_as_to_nasm($$$$$$) {
   while (defined($line = <$asfh>)) {
     print $nasmfh $line;  # !! TODO(pts): Do proper conversion.
   }
-  close($nasmfh);  # TODO(pts): Fail on read error.
+  # !! print_commons($nasmfh, $common_by_label, $define_when_defined);  # Aggregate from multiple source files.
+  print $nasmfh "\n; __END__\n";
+  die "fatal: error writing NASM-assembly output\n" if !close($nasmfh);
   close($asfh);  # TODO(pts): Fail on write error;
 }
 
 # --- convert_wasm_to_nasm(...)
+
+# Converts WASM (OpenWatcom assembler) syntax to NASM 0.98.39 syntax,
+# Supports only a very small subset of WASM syntax, mostly the one generated
+# by `wdis' (the OpenWatcom disassembler), and most hand-written .wasm
+# source files won't work.
+#
+# The input file come from `wdis -a' or `wdis -a -fi'.
+sub wasm2nasm($$$$$$$) {
+  my($srcfh, $outfh, $first_line, $lc, $rodata_strs, $is_win32, $is_start_found_ref) = @_;
+  my $section = ".text";
+  my $segment = "";
+  my $bss_org = 0;
+  my $is_end = 0;
+  my %segment_to_section = qw(_TEXT .text  CONST .rodata  CONST2 .rodata  _DATA .data  _BSS .bss);
+  my %directive_to_segment = qw(.code _TEXT  .const CONST2  .data _DATA  .data? _BSS);  # TODO(pts): Is there a way for CONST2?
+  my $end_expr;
+  my @abitest_insts;  # Label and list of instructions being buffered.
+  my $do_hide_abitest = 0;
+  while (defined($first_line) or defined($first_line = <$srcfh>)) {
+    ++$lc;
+    ($_, $first_line) = ($first_line, undef);
+    y@\r\n@@d;
+    die "fatal: line after end ($lc): $_\n" if $is_end;
+    my $is_instr = s@^\t(?!\t)@@;  # Assembly instruction.
+    s@\A\s+@@;
+    if (s@^\s*db\s+@db @i) {
+      die "fatal: comment in db line\n" if m@;@;  # TODO(pts): Parse db '?'.
+      s@\s+\Z(?!\n)@@;
+    } else {
+      s@;.*@@s;
+      s@\s+@ @g;
+      s@ \Z(?!\n)@@;
+      s@\s*,\s*@, @g;
+    }
+    if ($is_instr) {
+      die "fatal: unsupported instruction in non-.text ($lc): $_\n" if $section ne ".text";
+      die "fatal: unsupported quote in instruction ($lc): $_\n" if m@'@;  # Whitespace is already gone.
+      s@([\s:\[\],+\-*/()<>`])(?:([0-9][0-9a-fA-F]*)[hH]|(0|[1-9]\d*))@ defined($3) ? sprintf("%s0x%x", $1, $3) : sprintf("%s0x%x", $1, hex($2)) @ge;
+      if (s~^(jmp|call) near ptr (?:FLAT:)?~$1 \$~) {
+        s@\$`([^\s:\[\],+\-*/()<>`]+)`@\$$1@g;
+      } elsif (s@^(j[a-z]+|loop[a-z]*) ([^\[\],\s]+)$@$1 \$$2@) {   # Add $ in front of jump target label.
+        if (!s@\$`([^\s:\[\],+\-*/()<>`]+)`@\$$1@g) {  # Remove backtick quotes.
+          s@^(jmp|call) \$([a-z]{2,})$@ exists($gp_regs{$2}) ? "$1 $2" : "$1 \$$2" @e;  # Make `jmp cx' work.
+        }
+      } elsif ($is_win32 and m@^call dword ptr *(?:FLAT:)?`?__imp__([^\s:\[\],+\-*/()<>`]+?)((?:\@\d+)?)`?$@) {
+        $_ = "kcall __imp__$1$2, '$1'";  # Example: kcall __imp__GetStdHandle@4, 'GetStdHandle'
+      } elsif ($_ eq "????") {
+        die "fatal: unknown instruction\n";  # WASM doesn't recognize e.g. `db 0xd6' == `salc'.
+      } else {
+        s@ ptr ([cdefgs]s:)([^\[\],\s:]*)\[@ ptr $2\[$1@g;
+        s@^(frstor|fsave|fstenv|fldenv|lea \w+,) (?:FLAT:)?([^\[\],]+)$@$1 [$2]@;
+        s`([\s,])(byte|word|dword|fword|qword) ptr (?:([^\[\],\s]*)\[(.*?)\]|(?:([cdefgs]s:)|(?:FLAT|DGROUP:))?([^,]+))`
+            # Example: sgdt fword ptr [...] to sgdt [...].
+            my $size = $2 eq "fword" ? "" : "$2 ";
+            if (defined($3)) {
+              my $p = "$1$size\[$4"; my $displacement = $3;
+              if (length($displacement)) {
+                $p .= "+" if $displacement !~ m@\A-(?:0[xX][0-9a-fA-F]+|[0-9][0-9a-fA-F]*[hH]|0|[1-9]\d*)\Z(?!\n)@;
+                $p .= $displacement;
+              }
+              $p .= "]"
+            } else { my $seg = defined($5) ? $5 : ""; "$1$size\[$seg\$$6]" } `ge;
+        s@^(call|jmp) dword \[@$1 [@;
+        s@([\s,])([^\[\],\s]+)\[(.*?)\]@${1}[$3+$2]@g;  # `cmp al, 42[esi]'   -->  `cmp al, [esi+42]'.
+        s@([-+])FLAT:([^,]+)@$1\$$2@g;
+        s@([\s:\[\],+\-*/()<>])offset (?:FLAT:)?([^\s,+\-\[\]*/()<>]+)@$1\$$2@g;
+        s@\$`([^\s:\[\],+\-*/()<>`]+)`@\$$1@g;  # Remove backtick quotes in `call dword [$`__imp__GetStdHandle@4`]`.
+        if (m@^([a-z0-9]+) (?:byte|word|dword) ([^,]+)(, *(?:byte |word |dword )?([^,]+))?$@) {
+          if (exists($gp_regs{$2}) or (
+              defined($4) and
+              not ($4 eq "cl" and exists($shift_instructions{$1})) and
+              exists($gp_regs{$4}) and
+              $1 ne "movsx" and $1 ne "movzx")) {
+            my $m3 = defined($3) ? $3 : "";
+            $_ = "$1 $2$m3";  # Omit the byte|word|dword qualifier.
+          }
+        } elsif (m@^([a-z0-9]+) ([^,]+), *(?:byte|word|dword) ([^,]+)?$@) {
+          if (exists($gp_regs{$3}) or ($1 ne "movsx" and $1 ne "movzx" and exists($gp_regs{$2}))) {
+            $_ = "$1 $2, $3";  # Omit the byte|word|dword qualifier.
+          }
+        }
+        # !! TODO(pts): Some `fwait' (`db 0x9b') instructions are removed by
+        #    wdis (e.g. in front `fld st'), which NASM won't add back. Add
+        #    them back manually.
+        s@([\s,])st\((\d)\)(?=[\s,]|\Z)@${1}st$2@g;  # st(0) --> st0.
+        s@([\s,])st(?=[\s,]|\Z)@${1}st0@g;  # st --> st0.
+      }
+      if ($rodata_strs and $segment eq "CONST") {  # C string literals.
+        push @$rodata_strs, $_;
+      } else {
+        print $outfh "\t\t$_\n" if !$do_hide_abitest;
+        if (@abitest_insts) {
+          if ($_ eq "ret") {
+            my $abitest_name = shift(@abitest_insts);
+            # The emitted `_abi cc, watcall' or `_abi cc, rp0' may not be
+            # the before all labels and code, becase the OpenWatcom C
+            # compiler sometimes merges function body tails, and it may get
+            # merged to a later one.
+            die "fatal: abitest not implemented\n";
+            #exit(1) if process_abitest($outfh, $abitest_name, \@abitest_insts, $lc);
+            @abitest_insts = ();
+            $do_hide_abitest = 0;
+          } else {
+            push @abitest_insts, "\t\t$_\n";
+          }
+        }
+      }
+    } elsif (m@^[.]@) {
+      die "fatal: incomplete abitest ($lc): $_\n" if @abitest_insts;
+      if ($_ eq ".387" or $_ eq ".model flat") {  # Ignore.
+      } elsif (m@^[.]386@) {
+        #print $outfh "cpu 386\n";
+      } elsif (exists($directive_to_segment{$_})) {
+        $segment = $directive_to_segment{$_};
+        $section = $segment_to_section{$segment};
+        print $outfh "\nsection $section  ; $segment\n";
+      } else {
+        die "fatal: unsupported WASM directive: $_\n" ;
+      }
+    } elsif (m@^(?:`([^\s:\[\],+\-*/()<>`]+)`|([^\s:\[\],+\-*/()<>`]+)):$@) {  # Label.
+      $_ = (defined($1) ? $1 : $2) . ":";
+      if ($rodata_strs and $segment eq "CONST") {
+        push @$rodata_strs, "\$$_";
+      } elsif (m@^__abitest_(.*?)_?:$@) {
+        die "fatal: overlapping abitest ($lc): $_\n" if @abitest_insts;
+        @abitest_insts = ($1);
+        $do_hide_abitest = 1;
+      } else {
+        if ($do_hide_abitest) {  # It overlaps with code of another function.
+          for (my $i = 1; $i < @abitest_insts; ++$i) {
+            print $outfh "$abitest_insts[$i]\n";
+          }
+          $do_hide_abitest = 0;
+        }
+        if ($_ eq "_start_:" or $_ eq "_mainCRTStartup:") {  # Add extra start label for entry point.
+          print $outfh "_start:\n";
+          $$is_start_found_ref = 1;
+        } elsif ($_ eq "_start:") {
+          $$is_start_found_ref = 1;
+        }
+        print $outfh "\$$_\n";
+      }
+    } elsif (@abitest_insts) {
+      die "fatal: incomplete abitest ($lc): $_\n" if @abitest_insts;
+    } elsif (s@^(d[bwd])(?= )@@i) {
+      my $cmd = lc($1);
+      s@\boffset (?:FLAT:|DGROUP:)?@\$@g if !m@'@;
+      my $count = 1;
+      # Example: ` 0fH DUP(0,0,0,0,0,0,0,0)'.
+      $count = (defined($1) ? ($1 + 0) : hex($2)) if
+          s@^ (?:([0-9])|([0-9][0-9a-fA-F]*)[hH]) DUP\((.*)\)$@ $3@;
+      while ($count--) {
+        if (0 and $rodata_strs and $segment eq "CONST") {  # C string literals.
+          push @$rodata_strs, $cmd . $_;
+        } else {
+          s@([\s:\[\],+\-*/()<>`])(?:([0-9][0-9a-fA-F]*)[hH]|(0|[1-9]\d*))@ defined($3) ? sprintf("%s0x%02x", $1, $3) : sprintf("%s0x%02x", $1, hex($2)) @ge;
+          print $outfh "\t\t$cmd$_\n";
+        }
+      }
+    } elsif (m@^(_TEXT|CONST2?|_DATA|_BSS) SEGMENT @) {
+      $segment = $1;
+      $section = $segment_to_section{$segment};
+      print $outfh "\nsection $section  ; $segment\n";
+      die "fatal: non-32-bit segment found: $_\n" if !m@ USE32 @;
+    } elsif (m@^(\S+) ENDS$@) {
+      die "fatal: unexpected segment end: $1\n" if $1 ne $segment;
+    } elsif (m@^ORG @) {
+      die "fatal: bad org instruction ($lc): $_\n" if
+          !m@^ORG (?:([0-9])|([0-9][0-9a-fA-F]*)[hH])$@ or $section ne ".bss";
+      my $delta_bss_org = (defined($1) ? ($1 + 0) : hex($2)) - $bss_org;
+      die "fatal: .bss org decreasing ($lc): $_\n" if $delta_bss_org < 0;
+      if ($delta_bss_org != 0) {
+        print $outfh "\t\tresb $delta_bss_org\n";
+      }
+      $bss_org += $delta_bss_org;
+    } elsif (m@^(?:`([^\s:\[\],+\-*/()<>`]+)`|([^\s:\[\],+\-*/()<>`]+)) LABEL BYTE$@ and $section eq ".bss") {
+      my $label = defined($1) ? $1 : $2;
+      print $outfh "\$$label:\n";
+    } elsif (m@^end(?: ([^\s:\[\],+\-*/()<>`]+))?$@i) {
+      $end_expr = $1;
+      $is_end = 1;
+    } elsif (m@^public (?:`([^\s:\[\],+\-*/()<>`]+)`|([^\s:\[\],+\-*/()<>`]+))$@i) {
+      my $label = defined($1) ? $1 : $2;
+      print $outfh "global \$$label\n";
+    } elsif (m@^extrn (?:`([^\s:\[\],+\-*/()<>`]+)`|([^\s:\[\],+\-*/()<>`]+))(?::byte)?$@i) {
+      # Example with backtick: EXTRN `__imp__GetStdHandle@4`:BYTE
+      my $label = defined($1) ? $1 : $2;
+      print $outfh "extern \$$label\n" if !$is_win32 or $label !~ m@\A__imp__@;
+    } elsif (!length($_) or m@^DGROUP GROUP@ or m@^ASSUME @) {  # Ignore.
+    } else {
+      die "fatal: unsupported WASM instruction ($lc): $_\n" ;
+    }
+  }
+  die "fatal: incomplete abitest ($lc): $_\n" if @abitest_insts;
+  if (defined $end_expr) {
+    print $outfh "\$_start equ $end_expr\n" if $end_expr ne "_start";
+  }
+}
 
 sub convert_wasm_to_nasm($$$$$$) {
   my($wasmfn, $nasmfn, $basefn, $srcfn, $nasm_cpu, $data_alignment) = @_;
@@ -119,11 +549,17 @@ sub convert_wasm_to_nasm($$$$$$) {
   my $nasmfh;
   die "fatal: open for writing: $nasmfn: $!\n" if !open($nasmfh, ">", $nasmfn);  # TODO(pts): Unlink it on subsequent errors.
   print_nasm_header($nasmfh, $nasmfn, $basefn, $srcfn, $nasm_cpu, $data_alignment);
-  my $line;
-  while (defined($line = <$wasmfh>)) {
-    print $nasmfh $line;  # !! TODO(pts): Do proper conversion.
-  }
-  close($nasmfh);  # TODO(pts): Fail on read error.
+  my $is_win32 = 0;
+  my $is_start_found = 0;
+  my $lc = 0;
+  my $first_line;
+  my $do_merge_tail_strings = 1;  # TODO(pts): Make it configurable.
+  my $rodata_strs = $do_merge_tail_strings ? [] : undef;
+  wasm2nasm($wasmfh, $nasmfh, $first_line, $lc, $rodata_strs, $is_win32, \$is_start_found);
+  print $nasmfh "\nsection .rodata\n" if $rodata_strs and @$rodata_strs;
+  print_merged_strings_in_strdata($nasmfh, $rodata_strs, 0);
+  print $nasmfh "\n; __END__\n";
+  die "fatal: error writing NASM-assembly output\n" if !close($nasmfh);
   close($wasmfh);  # TODO(pts): Fail on write error;
 }
 
