@@ -63,17 +63,17 @@ mini_vfprintf:
 		inc ebx
 		jmp .4
 .5:
+		xor eax, eax
+.5cont:
 		mov al, [ebx]
-		cmp al, 0x30
+		sub al, '0'
 		jl .6
-		cmp al, 0x39
+		cmp al, 9
 		jg .6
 		imul edi, 0xa
-		movsx edx, al
-		sub edx, 0x30
-		add edi, edx
+		add edi, eax
 		inc ebx
-		jmp .5
+		jmp .5cont
 .6:
 		mov al, [ebx]
 		mov esi, esp
