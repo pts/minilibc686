@@ -1,7 +1,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 
-int mini_vfprintf(FILE *stream, const char *format, va_list ap);  /* Function under test. */
+extern int mini_vfprintf(FILE *stream, const char *format, va_list ap);  /* Function under test. */
 int mini_fputc(int c, FILE *f) { return fputc(c, f); }
 
 int myprintf(const char *fmt, ...) {

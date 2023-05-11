@@ -1,7 +1,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 
-int mini_printf(const char *format, ...);  /* Function under test. */
+extern int mini_printf(const char *format, ...);  /* Function under test. */
 FILE *mini_stdout;
 int mini_fputc(int c, FILE *f) { return fputc(c, f); }
 

@@ -1,8 +1,8 @@
 #include <stdarg.h>
 #include <stdio.h>
 
-int mini_fprintf(FILE *stream, const char *format, ...);  /* Function under test. !! */
-int mini_fputc(int c, FILE *f) { return fputc(c, f); }
+extern int mini_fprintf(FILE *stream, const char *format, ...);  /* Function under test. !! */
+extern int mini_fputc(int c, FILE *f) { return fputc(c, f); }
 
 #define myprintf1(fmt, arg1      ) mini_fprintf(stdout, fmt, arg1)
 #define myprintf2(fmt, arg1, arg2) mini_fprintf(stdout, fmt, arg1, arg2)
