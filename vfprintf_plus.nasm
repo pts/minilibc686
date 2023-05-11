@@ -30,91 +30,91 @@ mini_vfprintf:
 		sub esp, 0x20
 		mov ebx, [esp+0x38]
 		xor ebp, ebp
-$L$1:
+.1:
 		mov al, [ebx]
 		test al, al
-		je $L$33
+		je .33
 		cmp al, 0x25
-		jne $L$30
+		jne .30
 		xor eax, eax
 		mov [esp+0x10], eax
 		xor edi, edi
 		inc ebx
 		mov al, [ebx]
 		test al, al
-		je $L$33
+		je .33
 		cmp al, 0x25
-		je $L$30
+		je .30
 		lea edx, [ebx+0x1]
 		cmp al, 0x2d
-		jne $L$2
+		jne .2
 		mov dword [esp+0x10], 0x1
-		jmp $L$3
-$L$2:
+		jmp .3
+.2:
 		cmp al, 0x2b
-		jne $L$4
+		jne .4
 		mov dword [esp+0x10], 0x4
-$L$3:
+.3:
 		mov ebx, edx
-$L$4:
+.4:
 		cmp byte [ebx], 0x30
-		jne $L$5
+		jne .5
 		or byte [esp+0x10], 0x2
 		inc ebx
-		jmp $L$4
-$L$5:
+		jmp .4
+.5:
 		mov al, [ebx]
 		cmp al, 0x30
-		jl $L$6
+		jl .6
 		cmp al, 0x39
-		jg $L$6
+		jg .6
 		imul edi, 0xa
 		movsx edx, al
 		sub edx, 0x30
 		add edi, edx
 		inc ebx
-		jmp $L$5
-$L$6:
+		jmp .5
+.6:
 		mov al, [ebx]
 		mov esi, esp
 		mov ecx, [esp+0x3c]
 		add ecx, 0x4
 		cmp al, 0x73
-		jne $L$16
+		jne .16
 		mov [esp+0x3c], ecx
 		mov esi, [ecx-0x4]
 		test esi, esi
-		jne $L$7
-		mov esi, $L$34
-$L$7:
+		jne .7
+		mov esi, str_null
+.7:
 		mov byte [esp+0x1c], 0x20
 		test edi, edi
-		jbe $L$12
+		jbe .12
 		xor edx, edx
 		mov ecx, esi
-$L$8:
+.8:
 		cmp byte [ecx], 0x0
-		je $L$9
+		je .9
 		inc edx
 		inc ecx
-		jmp $L$8
-$L$9:
+		jmp .8
+.9:
 		cmp edx, edi
-		jb $L$10
+		jb .10
 		xor edi, edi
-		jmp $L$11
-$L$10:
+		jmp .11
+.10:
 		sub edi, edx
-$L$11:
+.11:
 		test byte [esp+0x10], 0x2
-		je $L$12
+		je .12
 		mov byte [esp+0x1c], 0x30
-$L$12:
+.12:
 		test byte [esp+0x10], 0x1
-		jne $L$14
-$L$13:
+		jne .14
+.13:
 		test edi, edi
-		jbe $L$14
+		jbe .14
 		movsx eax, byte [esp+0x1c]
 		push dword [esp+0x34]
 		push eax
@@ -122,11 +122,11 @@ $L$13:
 		times 2 pop eax  ; Shorter than `add esp, strict byte 8'.
 		inc ebp
 		dec edi
-		jmp $L$13
-$L$14:
+		jmp .13
+.14:
 		mov al, [esi]
 		test al, al
-		je $L$15
+		je .15
 		movsx eax, al
 		push dword [esp+0x34]
 		push eax
@@ -134,10 +134,10 @@ $L$14:
 		times 2 pop eax  ; Shorter than `add esp, strict byte 8'.
 		inc ebp
 		inc esi
-		jmp $L$14
-$L$15:
+		jmp .14
+.15:
 		test edi, edi
-		jbe $L$32
+		jbe .32
 		movsx eax, byte [esp+0x1c]
 		push dword [esp+0x34]
 		push eax
@@ -145,76 +145,76 @@ $L$15:
 		times 2 pop eax  ; Shorter than `add esp, strict byte 8'.
 		inc ebp
 		dec edi
-		jmp $L$15
-$L$16:
+		jmp .15
+.16:
 		cmp al, 0x63
-		jne $L$17
+		jne .17
 		mov [esp+0x3c], ecx
 		mov al, [ecx-0x4]
 		mov [esp], al
 		test edi, edi
-		je $L$29
+		je .29
 		mov byte [esp+0x1], 0x0
-		jmp $L$7
-$L$17:
+		jmp .7
+.17:
 		mov [esp+0x3c], ecx
 		mov ecx, [ecx-0x4]
 		cmp al, 0x64
-		je $L$18
+		je .18
 		cmp al, 0x75
-		je $L$18
+		je .18
 		mov dl, al
 		or dl, 0x20
 		cmp dl, 0x78
-		jne $L$33
-$L$18:
+		jne .33
+.18:
 		mov dl, al
 		or dl, 0x20
 		cmp dl, 0x78
-		jne $L$19
+		jne .19
 		mov edx, 0x10
-		jmp $L$20
-$L$19:
+		jmp .20
+.19:
 		mov edx, 0xa
-$L$20:
+.20:
 		mov [esp+0xc], edx
 		cmp al, 0x58
-		jne $L$21
+		jne .21
 		mov edx, 0x41
-		jmp $L$22
-$L$21:
+		jmp .22
+.21:
 		mov edx, 0x61
-$L$22:
+.22:
 		sub edx, 0x3a
 		mov [esp+0x18], dl
 		cmp al, 0x64
-		jne $L$23
+		jne .23
 		cmp dword [esp+0xc], 0xa
-		jne $L$23
+		jne .23
 		test ecx, ecx
-		jge $L$23
+		jge .23
 		mov byte [esp+0x14], 0x2d
 		neg ecx
-		jmp $L$25
-$L$23:
+		jmp .25
+.23:
 		test byte [esp+0x10], 0x4
-		je $L$24
+		je .24
 		mov byte [esp+0x14], 0x2b
-		jmp $L$25
-$L$24:
+		jmp .25
+.24:
 		mov byte [esp+0x14], 0x0
-$L$25:
+.25:
 		lea esi, [esp+0xa]
 		mov byte [esi], 0x0
-$L$26:
+.26:
 		xor edx, edx
 		mov eax, ecx
 		div dword [esp+0xc]
 		xchg eax, edx  ; After this: EAX == remainder, EDX == quotient.
 		cmp al, 10
-		jb $L$27
+		jb .27
 		add al, [esp+0x18]
-$L$27:
+.27:
 		add al, 0x30
 		dec esi
 		mov [esi], al
@@ -222,13 +222,13 @@ $L$27:
 		mov ecx, eax
 		; !! Do we still need EAX here? If not, we could do `xchg edx, ecx' above.
 		test ecx, ecx
-		jnz $L$26
+		jnz .26
 		cmp byte [esp+0x14], 0x0
-		je $L$7
+		je .7
 		test edi, edi
-		je $L$28
+		je .28
 		test byte [esp+0x10], 0x2
-		je $L$28
+		je .28
 		movsx eax, byte [esp+0x14]
 		push dword [esp+0x34]
 		push eax
@@ -236,27 +236,27 @@ $L$27:
 		times 2 pop eax  ; Shorter than `add esp, strict byte 8'.
 		inc ebp
 		dec edi
-		jmp $L$7
-$L$28:
+		jmp .7
+.28:
 		dec esi
 		mov al, [esp+0x14]
 		mov [esi], al
-		jmp $L$7
-$L$29:
+		jmp .7
+.29:
 		movsx eax, al
-		jmp $L$31
-$L$30:
+		jmp .31
+.30:
 		movsx eax, byte [ebx]
-$L$31:
+.31:
 		push dword [esp+0x34]
 		push eax
 		call mini_fputc
 		times 2 pop eax  ; Shorter than `add esp, strict byte 8'.
 		inc ebp
-$L$32:
+.32:
 		inc ebx
-		jmp $L$1
-$L$33:
+		jmp .1
+.33:
 		mov eax, ebp
 		add esp, 0x20
 		pop ebp
@@ -266,7 +266,7 @@ $L$33:
 		ret
 
 section .rodata
-$L$34:
+str_null:
 		db '(null)', 0  ; !! Embed into .text, position-independent.
 
 ; __END__
