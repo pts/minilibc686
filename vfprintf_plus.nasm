@@ -119,7 +119,7 @@ $L$13:
 		movsx eax, byte [esp+0x20]
 		push eax
 		call mini_fputc
-		add esp, 0x8
+		times 2 pop eax  ; Shorter than `add esp, strict byte 8'.
 		inc ebp
 		dec edi
 		jmp $L$13
@@ -131,7 +131,7 @@ $L$14:
 		movsx eax, al
 		push eax
 		call mini_fputc
-		add esp, 0x8
+		times 2 pop eax  ; Shorter than `add esp, strict byte 8'.
 		inc ebp
 		inc esi
 		jmp $L$14
@@ -142,7 +142,7 @@ $L$15:
 		movsx eax, byte [esp+0x20]
 		push eax
 		call mini_fputc
-		add esp, 0x8
+		times 2 pop eax  ; Shorter than `add esp, strict byte 8'.
 		inc ebp
 		dec edi
 		jmp $L$15
@@ -233,7 +233,7 @@ $L$27:
 		movsx eax, byte [esp+0x18]
 		push eax
 		call mini_fputc
-		add esp, 0x8
+		times 2 pop eax  ; Shorter than `add esp, strict byte 8'.
 		inc ebp
 		dec edi
 		jmp $L$7
@@ -252,7 +252,7 @@ $L$30:
 $L$31:
 		push eax
 		call mini_fputc
-		add esp, 0x8
+		times 2 pop eax  ; Shorter than `add esp, strict byte 8'.
 		inc ebp
 $L$32:
 		inc ebx
