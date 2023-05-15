@@ -3,8 +3,6 @@
 
 extern long mini_strtol(const char *nptr, char **endptr, int base);  /* Function under test. */
 
-extern double mini_log(double x);
-
 static char expect(const char *nptr, int base) {
   char *expected_endptr;
   const int expected_value = strtol(nptr, &expected_endptr, base);
@@ -17,8 +15,6 @@ static char expect(const char *nptr, int base) {
   printf("is_ok=%d str=(%s) base=%d expected_value=%d expected_size=%d value=%d size=%d value2=%d\n", is_ok, nptr, base, expected_value, expected_size, value, size, value2);
   return is_ok;
 }
-
-extern int isxx(int x);
 
 int main(int argc, char **argv) {
   int exit_code = 0;
