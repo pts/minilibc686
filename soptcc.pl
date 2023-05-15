@@ -327,7 +327,7 @@ my %shift_instructions = map { $_ => 1 } qw (rcl rcr rol ror sal sar shl shr);
 my %force_nosize_insts = map { $_ => 1 } qw(
     arpl call cmovb cmovl fldcw fnstcw fnstsw fstcw fstsw imul lmsw lsl mul
     rcl rol sbb setb setl shl smsw sub verw jb jnb jl jnl cmpxchg8b lcall fcmovb fcmovnb
-    prefetchw syscall cbw iretw popaw popfw pushaw pushfw fisttpll fmul);
+    prefetchw syscall cbw iretw popaw popfw pushaw pushfw fisttpll fmul fsub);
 
 # All floating point instructions with memory argument (m32fp, m64fp, m80fp).
 my %fp_memarg_insts = ("fldt" => 1, "fstpt" => 1, map { $_ . "s" => 1, $_ . "l" => 1 } qw(fld fst fstp fmul fdiv fdivr fadd fsub fsubr fcom fcomp));
@@ -338,15 +338,15 @@ my %prefix_insts = map { $_ => 1 } qw(cs ds es fs gs lock rep repe repne repnz r
 
 my %str_arg_insts = map { $_ => 1 } qw(ins outs lods stos movs cmps scas);
 
-# fdivp--fdivrp and fsubp--fsubrp instructions are swapped, these are opposites:
+# fdivp--fdivrp and fsubp--fsubrp instructions are swapped depending on
+# their arguments, so we handle that separately.
 #
 # * NASM 0.98.39 == NASM 2.13.02 == FASM 1.73.30 == https://www.felixcloutier.com/x86/fsub:fsubp:fisub
 # * GNU as 2.30 == GNU binutils 2.30 == GCC 7.5.0 == GCC 12.2.
 my %inst_map = qw(fiadds fiaddw ficoms ficomw ficomps ficompw fidivs fidivw
     fidivrs fidivrw filds fildw fimuls fimulw fists fistw fistps fistpw
     fisttps fisttpw  fisubs fisubw  fisubrs fisubrw
-    cbtw cbw  cltd cdq  cwtd cwd  cwtl cwde
-    fdivp fdivrp  fdivrp fdivp  fsubp fsubrp  fsubrp fsubp);
+    cbtw cbw  cltd cdq  cwtd cwd  cwtl cwde);
 
 my %mov_extend_insts = map { $_ => 1 } qw(movsb movsw movzb movzw);
 
@@ -830,6 +830,12 @@ sub as2nasm($$$$$$$$$$) {
           push @abitest_insts, "\t\tcall $_\n";
           next;  # Don't do $used_labels{$label} = 1.
         } elsif (!m@\A[\$]@) { s@\A@\$@ }  # Relative immediate syntax for `jmp short' or `jmp near'.
+      } elsif ($inst =~ m@\A(fdiv|fsub)(r?)(p?)\Z(?!n)@) {
+        if (index($_, ",") >= 0) {  # > 1 arguments (actually, 2).
+          my $nr = length($2) ? "" : "r";
+          my $inst2 = "$1$nr$3";  # Swap the r and non-r variants.
+          $inst = $inst2 if not ($inst !~ m@p@ and m@\A%st\((?!0)\d+\),@);  # Swap the instruction (r vs non-r) only if the 1st argument is not nonzero %st. Sigh. It was tested and it works.
+        }
       }
       pos($_) = 0;
       my @args;
