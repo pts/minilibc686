@@ -618,8 +618,9 @@ sub as2nasm($$$$$$$$$$) {
         # !! What is .text.unlikely?
         $section = ".text";  # !! Any better?
         print $outfh "section $section\n";
-      } elsif (m@\A[.]section [.]ro?data(?:[.]str[.a-z0-9]*)?(?:\Z|\s*,)@) {
+      } elsif (m@\A[.]section [.]ro?data(?:[.]str[.a-z0-9]*|[.]cst4)?(?:\Z|\s*,)@) {
         # Example $_ for MinGW: .section .rdata,"dr"
+        # Example $_: .section .rodata.cst4,"aM",@progbits,4  Floating-point constants.
         # Example $_: .section .rodata.str1.1,...
         if ($rodata_strs) {
           $section = "S";
