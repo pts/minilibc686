@@ -327,9 +327,12 @@ my %shift_instructions = map { $_ => 1 } qw (rcl rcr rol ror sal sar shl shr);
 my %force_nosize_insts = map { $_ => 1 } qw(
     arpl call cmovb cmovl fldcw fnstcw fnstsw fstcw fstsw imul lmsw lsl mul
     rcl rol sbb setb setl shl smsw sub verw jb jnb jl jnl cmpxchg8b lcall fcmovb fcmovnb
-    prefetchw syscall cbw iretw popaw popfw pushaw pushfw fisttpll);
+    prefetchw syscall cbw iretw popaw popfw pushaw pushfw fisttpll fmul);
 
-my %nosize_arg_insts = map { $_ => 1 } qw(lea lds les lfs lgs lss lgdt lidt sgdt sidt);
+# All floating point instructions with memory argument (m32fp, m64fp, m80fp).
+my %fp_memarg_insts = ("fldt" => 1, "fstpt" => 1, map { $_ . "s" => 1, $_ . "l" => 1 } qw(fld fst fstp fmul fdiv fdivr fadd fsub fsubr fcom fcomp));
+
+my %nosize_arg_insts = map { $_ => 1 } qw(lea lds les lfs lgs lss lgdt lidt sgdt sidt fmul);
 
 my %prefix_insts = map { $_ => 1 } qw(cs ds es fs gs lock rep repe repne repnz repz ss wait);
 
@@ -771,6 +774,7 @@ sub as2nasm($$$$$$$$$$) {
         print STDERR "error: instruction outside section ($lc): $_\n";
       }
       my $inst = $1;
+      #print STDERR "INST($inst $_)\n";
       $inst = "wait" if $inst eq "fwait";
       while (exists($prefix_insts{$inst})) {
         my $suffix = ($inst eq "wait" or !length($_)) ? "\n" : " ";
@@ -788,7 +792,11 @@ sub as2nasm($$$$$$$$$$) {
       $inst = $inst_map{$inst} if exists($inst_map{$inst});
       my $arg1_prefix;
       my $instwd = "";
-      if (!exists($force_nosize_insts{$inst}) and $inst =~ s@([bwl])\Z@@) {
+      if (exists($fp_memarg_insts{$inst})) {
+        die "fatal: assert: bad fp-memory instruction: $inst\n" if $inst !~ s@([slt])\Z@@;
+        die "fatal: assert: missing arg for fp-memory instruction: $inst\n" if !length($_);
+        $instwd = ($1 eq "s") ? " dword" : ($1 eq "l") ? " qword" : " tword";
+      } elsif (!exists($force_nosize_insts{$inst}) and $inst =~ s@([bwl])\Z@@) {
         if (exists($nosize_arg_insts{$inst})) {
         } elsif (exists($str_arg_insts{$inst})) {
           my $suffix = ($1 eq "l") ? "d" : $1;
