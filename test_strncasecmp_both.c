@@ -2,12 +2,22 @@
 #include <string.h>
 
 extern int mini_strcasecmp(const char *_l, const char *_r);  /* Function under test. */
+#if !DO_IGNORE_STRNCASECMP
 extern int mini_strncasecmp(const char *_l, const char *_r, size_t n);  /* Function under test. */
+#endif
 
 static char expect(const char *l, const char *r, size_t n) {
+#if DO_IGNORE_STRNCASECMP
+  int expected_value = 0;
+#else
   int expected_value = strncasecmp(l, r, n);
+#endif
   int expected_value2 = strcasecmp(l, r);
+#if DO_IGNORE_STRNCASECMP
+  int value = 0;
+#else
   int value = mini_strncasecmp(l, r, n);
+#endif
   int value2 = mini_strcasecmp(l, r);
   char is_ok = (value == expected_value && value2 == expected_value2);
   printf("is_ok=%d lstr=(%s) rstr=(%s) n=%u exp=%d value=%d exp2=%d value2=%d\n", is_ok, l, r, (unsigned)n, expected_value, value, expected_value2, value2);
