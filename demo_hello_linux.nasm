@@ -93,8 +93,8 @@ phdr0:					; Elf32_Phdr
 phdr_end:
 
 section .text
-_start:  ; ELF program entry point.
 %ifdef CONFIG_NO_LIBC
+_start:  ; ELF program entry point.
 		xor ebx, ebx		; EBX := 0. This isn't necessary since Linux 2.2, but it is in Linux 2.0: ELF_PLAT_INIT: https://asm.sourceforge.net/articles/startup.html
 		inc ebx			; EBX := 1 == STDOUT_FILENO.
 		mov al, 4		; EAX := __NR_write == 4. EAX happens to be 0. https://stackoverflow.com/a/9147794
@@ -108,6 +108,21 @@ _start:  ; ELF program entry point.
 		dec ebx			; EBX := 0 == EXIT_SUCCESS.
 		int 0x80		; Linux i386 syscall.
 %else
+main:  ; int main(int argc, char **argv, char **envp);  /* envp is optional to declare and/or use. */
+		cmp dword [esp+4], 4	; argc == 4?
+		jne short .after_envp
+		; If argc == 4, print envp[0] (without a trailing newline).
+		mov eax, [esp+0xc]	; EAX := address of the envp[0] string.
+		mov edx, [eax]		; EDX := The envp[0] string.
+		call strlen_edx		; EAX := strlen(envp[0]). TODO(pts): Use mini_strlen(...), when available.
+		push eax		; Argument count for mini_write(...): strlen(envp[0]).
+		push edx		; Argument buf for mini_write(...): envp[0].
+		push 1			; Argument fd (1 == STDOUT_FILENO) for mini_write(...).
+		call mini_write
+		add esp, byte 3*4	; Clean up arguments of mini_write(...) above from the stack.
+.after_envp:
+
+		xor eax, eax		; EAX := 0 == EXIT_SUCCESS.
 		push eax		; Push 0 == EXIT_SUCCESS early, just to show that we clean up the stack properly.
 
 		sub esp, byte 0x7c	; Create buffer of this size on the stack.
@@ -118,22 +133,24 @@ _start:  ; ELF program entry point.
 		push strict dword format
 		push eax		; Push the address of the end pointer.
 		call mini_vfprintf	; Print to buffer. Calls mini_putc (defined below) for each byte.
-		add esp, byte 4*4	; Clean up arguments of mini_vfprintf above from the stack, now the end pointer and the buffer remains.
+		add esp, byte 4*4	; Clean up arguments of mini_vfprintf(...) above from the stack, now the end pointer and the buffer remains.
 
 		lea ecx, [esp+4]	; ECX: := Address of buffer.
 		mov edx, [esp]		; EDX := End pointer value.
+		add ecx, [esp+0x7c+0xc] ; ECX += argc. Skip printing of the first few bytes.
+		dec ecx			; Base skip count: if argc == 0, don't skip anything.
 		sub edx, ecx		; EDX := Number of bytes to print.
 		push edx		; Argument count for mini_write(...).
 		push ecx		; Argument buf for mini_write(...).
 		push strict byte 1	; Argument fd (1 == STDOUT_FILENO) for mini_write(...).
 		call mini_write
-		add esp, byte 3*4	; Clean up arguments of mini_write above from the stack.
+		add esp, byte 3*4	; Clean up arguments of mini_write(...) above from the stack.
 
 		pop eax			; Remove end pointer from the stack.
 		add esp, byte 0x7c	; Remove buffer from the stack.
 
-		call mini_exit		; Exit code already pushed above.
-		; Not reached, mini_exit above doesn't return.
+		pop eax			; Return value (program exit code).
+		ret
 
 ; Appends the character to the end pointer, increments te end pointer.
 mini_fputc:	mov dl, [esp+4]		; Byte (character) to be printed.
@@ -144,12 +161,22 @@ mini_fputc:	mov dl, [esp+4]		; Byte (character) to be printed.
 		pop eax			; End pointer.
 		inc dword [eax]
 		ret
+
+; Set EAX to the ASCIIZ string length (excluding the trailing NUL) starting at EDX.
+strlen_edx:	xor eax, eax
+.next:		cmp byte [edx+eax], 0
+		je strict short .done
+		inc eax
+		jmp strict short .next
+.done:		ret
+
 %endif
 
 %ifndef CONFIG_NO_LIBC
 %include "vfprintf_noplus.nasm"
-%include "exit_linux.nasm"
 %include "write_linux.nasm"
+%include "start_linux.nasm"
+_start equ mini__start  ; ELF program entry point defined in start_linux.nasm.
 %endif
 
 section .rodata
