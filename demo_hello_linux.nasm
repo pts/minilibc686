@@ -15,23 +15,9 @@
 ;     ./demo_hello_linux
 ;
 
+%define CONFIG_NO_RW_SECTIONS
 %include "elf0.inc.nasm"
 
-%ifdef CONFIG_NO_LIBC
-_start:  ; ELF program entry point.
-		xor ebx, ebx		; EBX := 0. This isn't necessary since Linux 2.2, but it is in Linux 2.0: ELF_PLAT_INIT: https://asm.sourceforge.net/articles/startup.html
-		inc ebx			; EBX := 1 == STDOUT_FILENO.
-		mov al, 4		; EAX := __NR_write == 4. EAX happens to be 0. https://stackoverflow.com/a/9147794
-		push ebx
-		mov ecx, message	; Pointer to message string.
-		mov dl, message.end-message  ; EDX := size of message to write. EDX is 0 since Linux 2.0 (or earlier): ELF_PLAT_INIT: https://asm.sourceforge.net/articles/startup.html
-		int 0x80		; Linux i386 syscall.
-		;mov eax, 1		; __NR_exit.
-		pop eax			; EAX := 1 == __NR_exit.
-		;mov ebx, 0		; EXIT_SUCCESS.
-		dec ebx			; EBX := 0 == EXIT_SUCCESS.
-		int 0x80		; Linux i386 syscall.
-%else
 main:  ; int main(int argc, char **argv, char **envp);  /* envp is optional to declare and/or use. */
 		cmp dword [esp+4], byte 4  ; argc == 4?
 		jne short .after_envp
@@ -100,22 +86,13 @@ strlen_edx:	xor eax, eax
 ;section .bss
 ;buf:		resb 0x100
 
-%endif
-
-%ifndef CONFIG_NO_LIBC
 %include "vfprintf_plus.nasm"
 %include "write_linux.nasm"
 %include "start_linux.nasm"
 _start equ mini__start  ; ELF program entry point defined in start_linux.nasm.
-%endif
 
 section .rodata
-%ifdef CONFIG_NO_LIBC
-message:	db 'Hello, World!', 10
-.end:
-%else
 format:		db 'Hello, %s!', 10, 0
 addressee:	db 'World', 0
-%endif
 
 _end  ; __END__
