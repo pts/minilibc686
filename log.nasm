@@ -21,7 +21,11 @@ section .data align=1
 section .bss align=1
 %else
 section .text align=1
+%ifdef CONFIG_I386
 section .rodata align=8
+%else
+section .rodata align=1
+%endif
 section .data align=4
 section .bss align=4
 %endif
@@ -157,6 +161,7 @@ times 1/0 nop
 %endif
 section .rodata
 fpconst:
+		align 8, db 0  ; Not strictly necessary, but it's faster to align the f64 constants to a multiple of 8.
 .3:		dd 0xd078c69f, 0x3fc39a09
 .4:		dd 0x1d8e78af, 0x3fcc71c5
 .5:		dd 0x9997fa04, 0x3fd99999
