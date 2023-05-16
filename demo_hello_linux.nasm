@@ -24,9 +24,10 @@ main:  ; int main(int argc, char **argv, char **envp);  /* envp is optional to d
 		jne short .after_envp
 		; If argc == 4, print envp[0] (without a trailing newline).
 		mov eax, [esp+0xc]	; EAX := address of the envp[0] string.
-		mov edx, [eax]		; EDX := The envp[0] string.
-		call strlen_edx		; EAX := strlen(envp[0]). TODO(pts): Use mini_strlen(...), when available.
-		push eax		; Argument count for mini_write(...): strlen(envp[0]).
+		push dword [eax]	; The envp[0] string.
+		call mini_strlen	; EAX := strlen(envp[0]).
+		pop edx			; Also clean up the argument of mini_strlen(...) above from the stack.
+		push eax		; Argument count for mini_write(...): mini_strlen(envp[0]).
 		push edx		; Argument buf for mini_write(...): envp[0].
 		push strict byte 1	; Argument fd (1 == STDOUT_FILENO) for mini_write(...).
 		call mini_write
@@ -73,14 +74,6 @@ mini_fputc:	mov dl, [esp+4]		; Byte (character) to be printed.
 		inc dword [eax]
 		ret
 
-; Set EAX to the ASCIIZ string length (excluding the trailing NUL) starting at EDX.
-strlen_edx:	xor eax, eax
-.next:		cmp byte [edx+eax], 0
-		je strict short .done
-		inc eax
-		jmp strict short .next
-.done:		ret
-
 ;section .data
 ;		db 'Hit'
 ;		dd buf
@@ -88,6 +81,7 @@ strlen_edx:	xor eax, eax
 ;buf:		resb 0x100
 
 %include "vfprintf_plus.nasm"
+%include "strlen.nasm"
 %include "write_linux.nasm"
 %include "start_linux.nasm"
 _start equ mini__start  ; ELF program entry point defined in start_linux.nasm.
