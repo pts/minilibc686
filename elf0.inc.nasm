@@ -25,6 +25,10 @@
 ;
 ;     ./demo_hello_linux
 ;
+; Alternatively, you can %include this file with `nasm -f elf', and all it
+; will do is setting up the 4 useful ELF sections (.text, .rodata, .data,
+; .bss) with proper section alignment.
+;
 
 bits 32
 cpu 386
@@ -52,6 +56,7 @@ __define_align BSS, 4
 
 ; TODO(pts): Add support for alignment (align=4 and align=8).
 %define CONFIG_SECTIONS_DEFINED  ; Used by the %include files.
+%ifidn __OUTPUT_FORMAT__, bin
 section .elfhdr align=1 valign=1 vstart=(prog_org)
 section .text align=1 valign=1 follows=.elfhdr vfollows=.elfhdr
 text_start:
@@ -75,8 +80,6 @@ bss_gap_start:
 section .bss align=1 follows=.bss_gap nobits
 %endif
 bss_start:
-
-section .text
 
 %macro _end 0
 section .rodata
@@ -205,3 +208,14 @@ data_vstart equ prog_org+((file_size_before_data+0xfff)&~0xfff)+(file_size_befor
 section .bss
 
 %endmacro  ; _end
+%else  ; __OUTPUT_FORMAT__, bin
+  ; For __OUTPUT_FORMAT__==elf.
+  section .text align=1
+  section .rodata align=(ALIGN_RODATA)
+  section .data align=(ALIGN_DATA)
+  section .bss align=(ALIGN_BSS)
+  %macro _end 0
+  %endmacro
+%endif  ; __OUTPUT_FORMAT__, bin
+
+section .text
