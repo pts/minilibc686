@@ -7,6 +7,9 @@
 ;     nasm -O999999999 -w+orphan-labels -f bin -o demo_hello_linux demo_hello_linux.nasm &&
 ;     chmod +x demo_hello_linux
 ;
+; Alternatively, you can compile with Yasm (tested with 1.2.0 and 1.3.0)
+; instead of NASM. The output is bitwise identical.
+;
 ; Run it on Linux i386 or Linux amd64 systems:
 ;
 ;     ./demo_hello_linux
@@ -14,12 +17,6 @@
 
 bits 32
 cpu 386
-
-%ifdef __YASM_MAJOR__  ; Yasm. For correct memsz calculation of .bss. Other things don't work though yet.
-%define NOBITS_VFOLLOWS(x) vfollows=x
-%else  ; NASM. It fails for sections with `nobits vfollows=...'.
-%define NOBITS_VFOLLOWS(x)
-%endif
 
 ; TODO(pts): Add support for alignment (align=4 and align=8).
 %define CONFIG_SECTIONS_DEFINED  ; Used by the %include files.
@@ -29,9 +26,18 @@ section .text align=1 valign=1 follows=.elfhdr vfollows=.elfhdr
 text_start:
 section .rodata align=1 valign=1 follows=.text vfollows=.text
 rodata_start:
-section .data align=1 valign=1 follows=.rodata vstart=(data_vstart) progbits  ; !! Yasm 1.2.0 and 1.3.0 error: vstart expression is too complex
+%ifdef __YASM_MAJOR__
+section .datagap align=1 valing=1 follow=.rodata vfollows=.rodata nobits
+section .data align=1 valign=1 follows=.rodata vfollows=.datagap progbits
+%else
+section .data align=1 valign=1 follows=.rodata vstart=(data_vstart) progbits
+%endif
 data_start:
-section .bss align=1 NOBITS_VFOLLOWS(.data) nobits
+%ifdef __YASM_MAJOR__
+section .bss align=1 valign=1 follows=.data vfollows=.data nobits
+%else
+section .bss align=1 follows=.data nobits
+%endif
 bss_start:
 
 
@@ -42,7 +48,6 @@ PT:  ; Symbolic constants for ELF PT_... (program header type).
 .GNU_STACK equ 0x6474e551  ; GNU stack.
 
 section .elfhdr
-X.ELF_ehdr:
 ehdr:					; Elf32_Ehdr
 		db 0x7f, 'ELF'		;   e_ident[EI_MAG...]
 		db 1			;   e_ident[EI_CLASS]: 32-bit
@@ -177,14 +182,15 @@ strlen_edx:	xor eax, eax
 .done:		ret
 
 ;section .data
-;		db 'Hi'
+;		db 'Hit'
+;		dd buf
 ;section .bss
 ;buf:		resb 0x100
 
 %endif
 
 %ifndef CONFIG_NO_LIBC
-%include "vfprintf_noplus.nasm"
+%include "vfprintf_plus.nasm"
 %include "write_linux.nasm"
 %include "start_linux.nasm"
 _start equ mini__start  ; ELF program entry point defined in start_linux.nasm.
@@ -213,6 +219,10 @@ bss_end:
 file_size_before_data equ (elfhdr_end-ehdr)+(text_end-text_start)+(rodata_end-rodata_start)
 elf_file_size equ file_size_before_data+(data_end-data_start)
 data_vstart equ prog_org+((file_size_before_data+0xfff)&~0xfff)+(file_size_before_data&0xfff)
+%ifdef __YASM_MAJOR__
+  section .datagap
+  resb data_vstart-(prog_org+file_size_before_data)
+%endif
 %ifdef CONFIG_NO_RW_SECTIONS
   %if data_end-data_start
     %error .data must be empty with .CONFIG_NO_RW_SECTIONS
