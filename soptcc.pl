@@ -444,6 +444,9 @@ sub as2nasm($$$$$$$$$$) {
         s@/[*].*?[*]/@ @sg;
         $is_comment = 1 if s@/[*].*@@s;  # Start of multiline comment.
       }
+    } elsif (m@"@) {
+    } else {
+      s@#.*@@;
     }
     s@\A[\s;]+@@;
     s@[\s;]+\Z(?!\n)@@;
