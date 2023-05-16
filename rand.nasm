@@ -1,13 +1,12 @@
 ;
 ; Manually optimized for size based on the output of soptcc.pl for c_rand.c.
-; Compile to i386 ELF .o object: nasm -O999999999 -w+orphan-labels -f elf -o c_rand.o c_rand.nasm
+; Compile to i386 ELF .o object: nasm -O999999999 -w+orphan-labels -f elf -o rand.o rand.nasm
 ;
 ; Uses: %ifdef CONFIG_PIC
 ;
 
 bits 32
 cpu 386
-B.code equ 0
 
 global mini_srand
 global mini_rand
