@@ -79,7 +79,28 @@ bss_start:
 section .text
 
 %macro _end 0
+section .rodata
+rodata_noaend:  ; Before alignment.
+section .data
+data_noaend:  ; Before alignment.
+section .bss_gap
+bss_gap_noaend:
+%ifdef __YASM_MAJOR__
+  times (bss_gap_noaend-bss_gap_start)|-(bss_gap_noaend-bss_gap_start) nop  ; Fails with `error: multiple is negative' if .bss_gap is not empty yet.
+%else
+  %if bss_gap_noaend-bss_gap_start  ; Doesn't work in Yasm, Yasm needs a constant expression here.
+    %error ".bss_gap must be empty"  ; Yasm requires the quotes.
+    times 1/0 nop  ; Force fatal error.
+  %endif
+%endif
+section .bss
+bss_noaend:  ; Before alignment.
+have_bytes_in_rodata equ ((rodata_start-rodata_noaend)>>31)&1  ; Bool (0 or 1) indicating whether there are any non-.bss bytes in .rodata.
+have_bytes_in_data equ ((data_start-data_noaend)>>31)&1  ; Bool (0 or 1) indicating whether there are any non-.bss bytes in .data.
+have_bytes_in_bss equ ((bss_start-bss_noaend)>>31)&1  ; Bool (0 or 1) indicating whether there are any non-.bss bytes in .bss.
+have_rw_bytes equ have_bytes_in_data|have_bytes_in_bss
 prog_org equ 0x8048000
+
 PT:  ; Symbolic constants for ELF PT_... (program header type).
 .LOAD equ 1
 .NOTE equ 4
@@ -121,15 +142,15 @@ phdr0:					; Elf32_Phdr
 		dd 0x1000		;   p_align
 .size		equ $-phdr0
 %ifndef CONFIG_NO_RW_SECTIONS
-phdr1:					; Elf32_Phdr  !! Omit this automatically (if have_bytes_in_data == 0 and have_bytes_in_bss == 0).
-		dd PT.LOAD		;   p_type
-		dd file_size_before_data  ;   p_offset
-		dd data_vstart		;   p_vaddr
-		dd data_vstart		;   p_paddr
-		dd (elf_file_size-file_size_before_data)  ;   p_filesz
-		dd (elf_file_size-file_size_before_data)+(bss_gap_end-bss_gap_start)+(bss_end-bss_start)  ;   p_memsz
-		dd 6			;   p_flags: rw-: read and write, no execute
-		dd 0x1000		;   p_align
+phdr1:					; Elf32_Phdr
+		times have_rw_bytes dd PT.LOAD  ;   p_type
+		times have_rw_bytes dd file_size_before_data  ;   p_offset
+		times have_rw_bytes dd data_vstart  ;   p_vaddr
+		times have_rw_bytes dd data_vstart  ;   p_paddr
+		times have_rw_bytes dd (elf_file_size-file_size_before_data)  ;   p_filesz
+		times have_rw_bytes dd (elf_file_size-file_size_before_data)+(bss_gap_end-bss_gap_start)+(bss_end-bss_start)  ;   p_memsz
+		times have_rw_bytes dd 6  ;   p_flags: rw-: read and write, no execute
+		times have_rw_bytes dd 0x1000  ;   p_align
 %endif
 ;hdr2:					; Elf32_Phdr
 ;		dd PT.GNU_STACK		;   p_type
@@ -143,25 +164,6 @@ phdr1:					; Elf32_Phdr  !! Omit this automatically (if have_bytes_in_data == 0 
 phdr_end:
 elfhdr_end:
 
-section .rodata
-rodata_noaend:  ; Before alignment.
-section .data
-data_noaend:  ; Before alignment.
-section .bss_gap
-bss_gap_noaend:
-%ifdef __YASM_MAJOR__
-  times (bss_gap_noaend-bss_gap_start)|-(bss_gap_noaend-bss_gap_start) nop  ; Fails with `error: multiple is negative' if .bss_gap is not empty yet.
-%else
-  %if bss_gap_noaend-bss_gap_start  ; Doesn't work in Yasm, Yasm needs a constant expression here.
-    %error ".bss_gap must be empty"  ; Yasm requires the quotes.
-    times 1/0 nop  ; Force fatal error.
-  %endif
-%endif
-section .bss
-bss_noaend:  ; Before alignment.
-have_bytes_in_rodata equ ((rodata_start-rodata_noaend)>>31)&1  ; Bool (0 or 1) indicating whether there are any non-.bss bytes in .rodata.
-have_bytes_in_data equ ((data_start-data_noaend)>>31)&1  ; Bool (0 or 1) indicating whether there are any non-.bss bytes in .data.
-have_bytes_in_bss equ ((bss_start-bss_noaend)>>31)&1  ; Bool (0 or 1) indicating whether there are any non-.bss bytes in .bss.
 section .text
 times have_bytes_in_rodata*(-(($-$$)+(elfhdr_end-ehdr))&(ALIGN_RODATA-1)) db 0
 text_end:
@@ -175,7 +177,7 @@ resb have_bytes_in_bss*(-((data_end-data_start)+(rodata_end-rodata_start)+(text_
 bss_gap_end:
 section .bss
 bss_end:
-;
+
 file_size_before_data equ (elfhdr_end-ehdr)+(text_end-text_start)+(rodata_end-rodata_start)
 elf_file_size equ file_size_before_data+(data_end-data_start)
 data_vstart equ prog_org+((file_size_before_data+0xfff)&~0xfff)+(file_size_before_data&0xfff)

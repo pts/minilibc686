@@ -15,7 +15,7 @@
 ;     ./demo_hello_linux
 ;
 
-%define CONFIG_NO_RW_SECTIONS
+;%define CONFIG_NO_RW_SECTIONS
 ;%define ALIGN_RODATA 4
 %include "elf0.inc.nasm"
 
