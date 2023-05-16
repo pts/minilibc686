@@ -636,8 +636,9 @@ sub as2nasm($$$$$$$$$$) {
           $section = ".rodata";
           print $outfh "section $section\n";
         }
-      } elsif (m@\A[.]section [.]note[.]GNU-stack[,]@) {
+      } elsif (m@\A[.]section \"?[.]note[.]GNU-stack\"?[,]@) {
         # Non-executable stack marker: .section .note.GNU-stack,"",@progbits
+        # Example: .section ".note.GNU-stack","",@progbits
         # !! respect it.
         $section = "";
       } elsif (m@\A[.]extern ([^\s:,]+)\Z@) {  # GCC doesn't write these.
