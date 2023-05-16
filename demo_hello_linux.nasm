@@ -115,7 +115,7 @@ _start:  ; ELF program entry point.
 		int 0x80		; Linux i386 syscall.
 %else
 main:  ; int main(int argc, char **argv, char **envp);  /* envp is optional to declare and/or use. */
-		cmp dword [esp+4], 4	; argc == 4?
+		cmp dword [esp+4], byte 4  ; argc == 4?
 		jne short .after_envp
 		; If argc == 4, print envp[0] (without a trailing newline).
 		mov eax, [esp+0xc]	; EAX := address of the envp[0] string.
@@ -123,7 +123,7 @@ main:  ; int main(int argc, char **argv, char **envp);  /* envp is optional to d
 		call strlen_edx		; EAX := strlen(envp[0]). TODO(pts): Use mini_strlen(...), when available.
 		push eax		; Argument count for mini_write(...): strlen(envp[0]).
 		push edx		; Argument buf for mini_write(...): envp[0].
-		push 1			; Argument fd (1 == STDOUT_FILENO) for mini_write(...).
+		push strict byte 1	; Argument fd (1 == STDOUT_FILENO) for mini_write(...).
 		call mini_write
 		add esp, byte 3*4	; Clean up arguments of mini_write(...) above from the stack.
 .after_envp:
