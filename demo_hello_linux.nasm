@@ -110,7 +110,7 @@ _start:  ; ELF program entry point.
 %else
 		push eax		; Push 0 == EXIT_SUCCESS early, just to show that we clean up the stack properly.
 
-		sub esp, byte 0x7f	; Create buffer of this size on the stack.
+		sub esp, byte 0x7c	; Create buffer of this size on the stack.
 		push esp		; End pointer for printing.
 		mov eax, esp
 		push strict dword addressee
@@ -128,7 +128,7 @@ _start:  ; ELF program entry point.
 		int 0x80		; Linux i386 syscall.
 
 		pop eax			; Remove end pointer from the stack.
-		add esp, byte 0x7f	; Remove buffer from the stack.
+		add esp, byte 0x7c	; Remove buffer from the stack.
 
 		pop ebx			; EBX := Exit code.
 		xor eax, eax
