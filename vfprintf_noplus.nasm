@@ -60,7 +60,7 @@ mini_vfprintf:
 		jne .3
 		or byte [esp+0x14], 0x2
 		inc ebx
-		jmp .2
+		jmp short .2
 .3:
 		mov al, [ebx]
 		cmp al, 0x30
@@ -72,7 +72,7 @@ mini_vfprintf:
 		sub eax, byte 0x30
 		add edi, eax
 		inc ebx
-		jmp .3
+		jmp short .3
 .4:
 		mov al, [ebx]
 		mov esi, esp
@@ -109,7 +109,7 @@ mini_vfprintf:
 		je .7
 		inc eax
 		inc ecx
-		jmp .6
+		jmp short .6
 .7:
 		cmp eax, edi
 		jb .8
@@ -134,7 +134,7 @@ mini_vfprintf:
 		add esp, byte 0x8
 		inc ebp
 		dec edi
-		jmp .11
+		jmp short .11
 .12:
 		mov al, [esi]
 		test al, al
@@ -146,7 +146,7 @@ mini_vfprintf:
 		add esp, byte 0x8
 		inc ebp
 		inc esi
-		jmp .12
+		jmp short .12
 .13:
 		test edi, edi
 		jbe near .32
@@ -157,7 +157,7 @@ mini_vfprintf:
 		add esp, byte 0x8
 		inc ebp
 		dec edi
-		jmp .13
+		jmp short .13
 .14:
 		cmp al, 0x63
 		jne .15
@@ -239,7 +239,7 @@ mini_vfprintf:
 		mov eax, ecx
 		div dword [esp+0xc]
 		mov ecx, eax
-		jmp .25
+		jmp short .25
 .27:
 		cmp byte [esp+0x18], 0x0
 		je .5
@@ -253,11 +253,11 @@ mini_vfprintf:
 		add esp, byte 0x8
 		inc ebp
 		dec edi
-		jmp .5
+.jmp5		jmp .5
 .28:
 		dec esi
 		mov byte [esi], 0x2d
-		jmp .5
+		jmp short .jmp5
 .29:
 		push dword [esp+0x38]
 		movsx eax, al

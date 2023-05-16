@@ -13,7 +13,8 @@ cpu 386
 B.code equ 0
 
 global mini_vfprintf
-%ifidn __OUTPUT_FORMAT__, bin
+%ifdef CONFIG_SECTIONS_DEFINED
+%elifidn __OUTPUT_FORMAT__, bin
 section .text align=1
 section .rodata align=1
 section .data align=1
@@ -67,7 +68,7 @@ mini_vfprintf:
 		jne .5
 		or byte [esp+0x10], 0x2
 		inc ebx
-		jmp .4
+		jmp short .4
 .5:
 		xor eax, eax
 .5cont:
@@ -79,7 +80,7 @@ mini_vfprintf:
 		imul edi, byte 0xa
 		add edi, eax
 		inc ebx
-		jmp .5cont
+		jmp short .5cont
 .6:
 		mov al, [ebx]
 		mov esi, esp
@@ -116,7 +117,7 @@ mini_vfprintf:
 		je .9
 		inc edx
 		inc ecx
-		jmp .8
+		jmp short .8
 .9:
 		cmp edx, edi
 		jb .10
@@ -137,21 +138,21 @@ mini_vfprintf:
 		mov al, byte [esp+0x1c]
 		call .call_mini_fputc
 		dec edi
-		jmp .13
+		jmp short .13
 .14:
 		mov al, [esi]
 		test al, al
 		je .15
 		call .call_mini_fputc
 		inc esi
-		jmp .14
+		jmp short .14
 .15:
 		test edi, edi
 		jbe near .32
 		mov al, byte [esp+0x1c]
 		call .call_mini_fputc
 		dec edi
-		jmp .15
+		jmp short .15
 .16:
 		cmp al, 0x63
 		jne .17
@@ -161,7 +162,7 @@ mini_vfprintf:
 		test edi, edi
 		je near .31
 		mov byte [esp+0x1], 0x0
-		jmp .7
+		jmp near .7
 .17:
 		mov [esp+0x3c], ecx
 		mov ecx, [ecx-0x4]
@@ -236,19 +237,19 @@ mini_vfprintf:
 		mov al, byte [esp+0x14]
 		call .call_mini_fputc
 		dec edi  ; EDI contains the (remaining) width of the current number.
-		jmp .7
+.jmp7:		jmp near .7
 .28:
 		dec esi
 		mov al, [esp+0x14]
 		mov [esi], al
-		jmp .7
+		jmp short .jmp7
 .30:
 		mov al, byte [ebx]
 .31:
 		call .call_mini_fputc
 .32:
 		inc ebx  ; TODO(pts): Swap the role of EBX and ESI, and use lodsb.
-		jmp .1
+		jmp near .1
 .33:
 		xchg eax, ebp  ; EAX := number of bytes written; EBP := junk.
 		add esp, byte 0x20
