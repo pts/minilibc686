@@ -2,10 +2,17 @@
 ; Compile to i386 ELF .o object: nasm -O999999999 -w+orphan-labels -f elf -o log_i586.o log_i586.nasm
 ;
 ; Uses: %ifdef CONFIG_PIC
+; Uses: %ifdef CONFIG_I386
 ;
 
 bits 32
+%ifdef CONFIG_I386
+%error This code needs at least 586 CPU.
+cpu 386
+db 1/0
+%else
 cpu 586  ; nasm-0.98.39 `cpu 386' incorrectly accepts `fyl2x', GNU `as -march=i386' doesn't.
+%endif
 B.code equ 0
 
 global mini_log
