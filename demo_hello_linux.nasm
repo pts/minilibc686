@@ -130,10 +130,8 @@ _start:  ; ELF program entry point.
 		pop eax			; Remove end pointer from the stack.
 		add esp, byte 0x7c	; Remove buffer from the stack.
 
-		pop ebx			; EBX := Exit code.
-		xor eax, eax
-		inc eax			; EAX := 1 == __NR_exit.
-		int 0x80		; Linux i386 syscall.
+		call mini_exit		; Exit code already pushed above.
+		; Not reached, mini_exit above doesn't return.
 
 ; Appends the character to the end pointer, increments te end pointer.
 mini_fputc:	mov dl, [esp+4]		; Byte (character) to be printed.
@@ -148,6 +146,7 @@ mini_fputc:	mov dl, [esp+4]		; Byte (character) to be printed.
 
 %ifndef CONFIG_NO_LIBC
 %include "vfprintf_noplus.nasm"
+%include "exit_linux.nasm"
 %endif
 
 section .rodata
