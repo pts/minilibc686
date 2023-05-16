@@ -16,6 +16,7 @@
 ;
 
 %define CONFIG_NO_RW_SECTIONS
+;%define ALIGN_RODATA 4
 %include "elf0.inc.nasm"
 
 main:  ; int main(int argc, char **argv, char **envp);  /* envp is optional to declare and/or use. */

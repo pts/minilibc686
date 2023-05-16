@@ -29,6 +29,27 @@
 bits 32
 cpu 386
 
+%macro __define_align 2
+  %ifdef ALIGN_%1  ; Must be a power of 2. TODO(pts): Round up.
+    %assign ALIGN_%1 ALIGN_%1
+    %if ALIGN_%1 <= 0 || ALIGN_%1&(ALIGN_%1-1)
+      %ifdef __YASM_MAJOR__
+        %error ".ALIGN_%1 must be a power of 2"  ; SUXX: Doesn't substitute.
+      %else
+        %error .ALIGN_%1 must be a power of 2, got: ALIGN_%1
+      %endif
+      %assign ALIGN_%1 %2
+      times 1/0 nop
+    %endif
+  %else
+    %assign ALIGN_%1 %2
+  %endif
+%endmacro
+
+__define_align RODATA, 4
+__define_align DATA, 4
+__define_align BSS, 4
+
 ; TODO(pts): Add support for alignment (align=4 and align=8).
 %define CONFIG_SECTIONS_DEFINED  ; Used by the %include files.
 section .elfhdr align=1 valign=1 vstart=(prog_org)
@@ -37,17 +58,21 @@ text_start:
 section .rodata align=1 valign=1 follows=.text vfollows=.text
 rodata_start:
 %ifdef __YASM_MAJOR__
-section .datagap align=1 valign=1 follow=.rodata vfollows=.rodata nobits
-datagap_start:
-section .data align=1 valign=1 follows=.rodata vfollows=.datagap progbits
+section .data_gap align=1 valign=1 follow=.rodata vfollows=.rodata nobits
+data_gap_start:
+section .data align=1 valign=1 follows=.rodata vfollows=.data_gap progbits
 %else
 section .data align=1 valign=1 follows=.rodata vstart=(data_vstart) progbits
 %endif
 data_start:
 %ifdef __YASM_MAJOR__
-section .bss align=1 valign=1 follows=.data vfollows=.data nobits
+section .bss_gap align=1 valign=1 follows=.data vfollows=.data nobits
+bss_gap_start:
+section .bss align=1 valign=1 follows=.bss_gap vfollows=.bss_gap nobits
 %else
-section .bss align=1 follows=.data nobits
+section .bss_gap align=1 follows=.data nobits
+bss_gap_start:
+section .bss align=1 follows=.bss_gap nobits
 %endif
 bss_start:
 
@@ -55,7 +80,6 @@ section .text
 
 %macro _end 0
 prog_org equ 0x8048000
-
 PT:  ; Symbolic constants for ELF PT_... (program header type).
 .LOAD equ 1
 .NOTE equ 4
@@ -97,13 +121,13 @@ phdr0:					; Elf32_Phdr
 		dd 0x1000		;   p_align
 .size		equ $-phdr0
 %ifndef CONFIG_NO_RW_SECTIONS
-phdr1:					; Elf32_Phdr
+phdr1:					; Elf32_Phdr  !! Omit this automatically (if have_bytes_in_data == 0 and have_bytes_in_bss == 0).
 		dd PT.LOAD		;   p_type
 		dd file_size_before_data  ;   p_offset
 		dd data_vstart		;   p_vaddr
 		dd data_vstart		;   p_paddr
 		dd (elf_file_size-file_size_before_data)  ;   p_filesz
-		dd (elf_file_size-file_size_before_data)+(bss_end-bss_start)  ;   p_memsz
+		dd (elf_file_size-file_size_before_data)+(bss_gap_end-bss_gap_start)+(bss_end-bss_start)  ;   p_memsz
 		dd 6			;   p_flags: rw-: read and write, no execute
 		dd 0x1000		;   p_align
 %endif
@@ -119,12 +143,36 @@ phdr1:					; Elf32_Phdr
 phdr_end:
 elfhdr_end:
 
+section .rodata
+rodata_noaend:  ; Before alignment.
+section .data
+data_noaend:  ; Before alignment.
+section .bss_gap
+bss_gap_noaend:
+%ifdef __YASM_MAJOR__
+  times (bss_gap_noaend-bss_gap_start)|-(bss_gap_noaend-bss_gap_start) nop  ; Fails with `error: multiple is negative' if .bss_gap is not empty yet.
+%else
+  %if bss_gap_noaend-bss_gap_start  ; Doesn't work in Yasm, Yasm needs a constant expression here.
+    %error ".bss_gap must be empty"  ; Yasm requires the quotes.
+    times 1/0 nop  ; Force fatal error.
+  %endif
+%endif
+section .bss
+bss_noaend:  ; Before alignment.
+have_bytes_in_rodata equ ((rodata_start-rodata_noaend)>>31)&1  ; Bool (0 or 1) indicating whether there are any non-.bss bytes in .rodata.
+have_bytes_in_data equ ((data_start-data_noaend)>>31)&1  ; Bool (0 or 1) indicating whether there are any non-.bss bytes in .data.
+have_bytes_in_bss equ ((bss_start-bss_noaend)>>31)&1  ; Bool (0 or 1) indicating whether there are any non-.bss bytes in .bss.
 section .text
+times have_bytes_in_rodata*(-(($-$$)+(elfhdr_end-ehdr))&(ALIGN_RODATA-1)) db 0
 text_end:
 section .rodata
+times have_bytes_in_data*(-(($-$$)+(text_end-text_start)+(elfhdr_end-ehdr))&(ALIGN_DATA-1)) db 0
 rodata_end:
 section .data
 data_end:
+section .bss_gap
+resb have_bytes_in_bss*(-((data_end-data_start)+(rodata_end-rodata_start)+(text_end-text_start)+(elfhdr_end-ehdr))&(ALIGN_BSS-1))
+bss_gap_end:
 section .bss
 bss_end:
 ;
@@ -132,12 +180,14 @@ file_size_before_data equ (elfhdr_end-ehdr)+(text_end-text_start)+(rodata_end-ro
 elf_file_size equ file_size_before_data+(data_end-data_start)
 data_vstart equ prog_org+((file_size_before_data+0xfff)&~0xfff)+(file_size_before_data&0xfff)
 %ifdef __YASM_MAJOR__
-  section .datagap
-  datagap_presize equ $-datagap_start
-  times datagap_presize|-datagap_presize nop  ; Fails with `error: multiple is negative' if datagap_presize is nonzero.
+  section .data_gap
+  data_gap_presize equ $-data_gap_start
+  times data_gap_presize|-data_gap_presize nop  ; Fails with `error: multiple is negative' if data_gap_presize is nonzero.
   resb data_vstart-(prog_org+file_size_before_data)
-  times (data_end-data_start)|-(data_end-data_start) nop
-  times (bss_end-bss_start)|-(bss_end-bss_start) nop
+  %ifdef CONFIG_NO_RW_SECTIONS
+    times (data_end-data_start)|-(data_end-data_start) nop
+    times (bss_end-bss_start)|-(bss_end-bss_start) nop
+  %endif
 %else
   %ifdef CONFIG_NO_RW_SECTIONS
     %if data_end-data_start  ; Doesn't work in Yasm, Yasm needs a constant expression here.
