@@ -38,6 +38,7 @@ section .rodata align=1 valign=1 follows=.text vfollows=.text
 rodata_start:
 %ifdef __YASM_MAJOR__
 section .datagap align=1 valign=1 follow=.rodata vfollows=.rodata nobits
+datagap_start:
 section .data align=1 valign=1 follows=.rodata vfollows=.datagap progbits
 %else
 section .data align=1 valign=1 follows=.rodata vstart=(data_vstart) progbits
@@ -132,17 +133,23 @@ elf_file_size equ file_size_before_data+(data_end-data_start)
 data_vstart equ prog_org+((file_size_before_data+0xfff)&~0xfff)+(file_size_before_data&0xfff)
 %ifdef __YASM_MAJOR__
   section .datagap
+  datagap_presize equ $-datagap_start
+  times datagap_presize|-datagap_presize nop  ; Fails with `error: multiple is negative' if datagap_presize is nonzero.
   resb data_vstart-(prog_org+file_size_before_data)
-%endif
-%ifdef CONFIG_NO_RW_SECTIONS
-  %if data_end-data_start
-    %error .data must be empty with .CONFIG_NO_RW_SECTIONS
-    times 1/0 nop  ; Force fatal error.
+  times (data_end-data_start)|-(data_end-data_start) nop
+  times (bss_end-bss_start)|-(bss_end-bss_start) nop
+%else
+  %ifdef CONFIG_NO_RW_SECTIONS
+    %if data_end-data_start  ; Doesn't work in Yasm, Yasm needs a constant expression here.
+      %error .data must be empty with .CONFIG_NO_RW_SECTIONS
+      times 1/0 nop  ; Force fatal error.
+    %endif
+    %if bss_end-bss_start  ; Doesn't work in Yasm, Yasm needs a constant expression here.
+      %error .bss must be empty with .CONFIG_NO_RW_SECTIONS
+      times 1/0 nop  ; Force fatal error.
+    %endif
   %endif
-  %if bss_end-bss_start
-    %error .bss must be empty with .CONFIG_NO_RW_SECTIONS
-    times 1/0 nop  ; Force fatal error.
-  %endif
 %endif
+section .bss
 
 %endmacro  ; _end
