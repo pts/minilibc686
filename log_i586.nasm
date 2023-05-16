@@ -31,11 +31,12 @@ section .bss align=4
 section .text
 
 mini_log: ; This needs an >=586 CPU, or a 386+387, or a 486+387. Linux, if the kernel is built with CONFIG_MATH_EMULATION, will emulate a 387.
+		lea eax, [esp+4]
 		fldln2
-		fld qword [esp+4]
+		fld qword [eax]
 		fyl2x  ; db 0xd9, 0xf1  ; fyl2x needs an >=586 CPU, or a 386+387, or a 486+387. Linux, if the kernel is built with CONFIG_MATH_EMULATION, will emulate a 387.
-		fstp qword [esp+4]
-		fld qword [esp+4]
+		fstp qword [eax]
+		fld qword [eax]
 		ret
 
 %ifdef CONFIG_PIC  ; Already position-independent code.
