@@ -2,6 +2,11 @@
 ; written by pts@fazekas.hu at Tue May 16 18:16:29 CEST 2023
 ; Compile to i386 ELF .o object: nasm -O999999999 -w+orphan-labels -f elf -o strlen.o strlen.nasm
 ;
+; Code size: 0x11 bytes.
+;
+; This is the fast implementation (using `repne scasb'), but the slow
+; implementation isn't shorter either.
+
 ; Uses: %ifdef CONFIG_PIC
 ;
 
@@ -25,13 +30,15 @@ section .bss align=1
 
 section .text
 mini_strlen:  ; size_t mini_strlen(const char *s);
-		mov eax, [esp+4]  ; EAX := Address of string data.
-		; TODO(pts): Add a faster (but longer?) implementation with rep scasb.
-.next:		cmp byte [eax], 0
-		je strict short .done
-		inc eax
-		jmp strict short .next
-.done:		sub eax, [esp+4]
+		push edi
+		mov edi, [esp+8]  ; Argument s.
+		xor eax, eax
+		or ecx, byte -1  ; ECX := -1.
+		repne scasb
+		sub eax, ecx
+		dec eax
+		dec eax
+		pop edi
 		ret
 
 %ifdef CONFIG_PIC  ; Already position-independent code.
