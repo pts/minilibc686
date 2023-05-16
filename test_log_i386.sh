@@ -1,7 +1,7 @@
 #! /bin/sh --
 set -ex
 
-CFLAGS="${*:-}"
+CFLAGS="-DCONFIG_I386 ${*:-}"
 nasm-0.98.39 $CFLAGS -O999999999 -w+orphan-labels -f elf -o log_i586.o log.nasm
 nasm-0.98.39 $CFLAGS -O999999999 -w+orphan-labels -f bin -o log_i586.bin log.nasm
 nasm-0.98.39 $CFLAGS -O0 -w+orphan-labels -f bin -o log_i586.o0.bin log.nasm
