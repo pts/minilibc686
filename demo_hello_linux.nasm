@@ -15,7 +15,7 @@
 bits 32
 cpu 386
 
-%ifdef __YASM_MAJOR__  ; Yasm. For correct memsz calculation of .bss.
+%ifdef __YASM_MAJOR__  ; Yasm. For correct memsz calculation of .bss. Other things don't work though yet.
 %define NOBITS_VFOLLOWS(x) vfollows=x
 %else  ; NASM. It fails for sections with `nobits vfollows=...'.
 %define NOBITS_VFOLLOWS(x)
@@ -23,13 +23,17 @@ cpu 386
 
 ; TODO(pts): Add support for alignment (align=4 and align=8).
 %define CONFIG_SECTIONS_DEFINED  ; Used by the %include files.
-section .elfhdr align=1 valign=1 vstart=0x8048000
+prog_org equ 0x8048000
+section .elfhdr align=1 valign=1 vstart=(prog_org)
 section .text align=1 valign=1 follows=.elfhdr vfollows=.elfhdr
 text_start:
 section .rodata align=1 valign=1 follows=.text vfollows=.text
 rodata_start:
-;section .data align=1 valign=1 follows=.rodata vfollows=.rodata
-;section .bss align=1 NOBITS_VFOLLOWS(.data) nobits
+section .data align=1 valign=1 follows=.rodata vstart=(data_vstart) progbits  ; !! Yasm 1.2.0 and 1.3.0 error: vstart expression is too complex
+data_start:
+section .bss align=1 NOBITS_VFOLLOWS(.data) nobits
+bss_start:
+
 
 PT:  ; Symbolic constants for ELF PT_... (program header type).
 .LOAD equ 1
@@ -67,20 +71,22 @@ phdr0:					; Elf32_Phdr
 		dd 0			;   p_offset
 		dd ehdr			;   p_vaddr
 		dd ehdr			;   p_paddr
-		dd elf_file_size	;   p_filesz
-		dd elf_file_size	;   p_memsz
+		dd file_size_before_data  ;   p_filesz
+		dd file_size_before_data  ;   p_memsz
 		dd 5			;   p_flags: r-x: read and execute, no write
 		dd 0x1000		;   p_align
 .size		equ $-phdr0
-;phdr1:					; Elf32_Phdr
-;		dd PT.LOAD		;   p_type
-;		dd .........		;   p_offset
-;		dd .........		;   p_vaddr
-;		dd .........		;   p_paddr
-;		dd .........		;   p_filesz
-;		dd .........		;   p_memsz
-;		dd 6			;   p_flags: rw-: read and write, no execute
-;		dd 0x1000		;   p_align
+%ifndef CONFIG_NO_RW_SECTIONS
+phdr1:					; Elf32_Phdr
+		dd PT.LOAD		;   p_type
+		dd file_size_before_data  ;   p_offset
+		dd data_vstart		;   p_vaddr
+		dd data_vstart		;   p_paddr
+		dd (elf_file_size-file_size_before_data)  ;   p_filesz
+		dd (elf_file_size-file_size_before_data)+(bss_end-bss_start)  ;   p_memsz
+		dd 6			;   p_flags: rw-: read and write, no execute
+		dd 0x1000		;   p_align
+%endif
 ;hdr2:					; Elf32_Phdr
 ;		dd PT.GNU_STACK		;   p_type
 ;		dd 0			;   p_offset
@@ -170,6 +176,11 @@ strlen_edx:	xor eax, eax
 		jmp strict short .next
 .done:		ret
 
+;section .data
+;		db 'Hi'
+;section .bss
+;buf:		resb 0x100
+
 %endif
 
 %ifndef CONFIG_NO_LIBC
@@ -194,4 +205,23 @@ section .text
 text_end:
 section .rodata
 rodata_end:
-elf_file_size equ (elfhdr_end-ehdr)+(text_end-text_start)+(rodata_end-rodata_start)
+section .data
+data_end:
+section .bss
+bss_end:
+;
+file_size_before_data equ (elfhdr_end-ehdr)+(text_end-text_start)+(rodata_end-rodata_start)
+elf_file_size equ file_size_before_data+(data_end-data_start)
+data_vstart equ prog_org+((file_size_before_data+0xfff)&~0xfff)+(file_size_before_data&0xfff)
+%ifdef CONFIG_NO_RW_SECTIONS
+  %if data_end-data_start
+    %error .data must be empty with .CONFIG_NO_RW_SECTIONS
+    times 1/0 nop  ; Force fatal error.
+  %endif
+  %if bss_end-bss_start
+    %error .bss must be empty with .CONFIG_NO_RW_SECTIONS
+    times 1/0 nop  ; Force fatal error.
+  %endif
+%endif
+
+; __END__
