@@ -679,7 +679,7 @@ sub as2nasm($$$$$$$$$$) {
             print STDERR "error: common mismatch for $label, latter ignored: $common_by_label->{$label} vs $value\n";
           }
         }
-      } elsif (m@\A[.]align (0|[1-9]\d*)\Z@) {
+      } elsif (m@\A[.](p2)?align (0|[1-9]\d*)\Z@ ) {
         if (!length($section)) {
           ++$errc;
           print STDERR "error: .align outside section ($lc): $_\n";
@@ -687,9 +687,12 @@ sub as2nasm($$$$$$$$$$) {
           # We'd need `alignb'. Does it make sense? We don't even support .bss directly.
           print STDERR "error: .align in .bss ignored ($lc): $_\n" if !exists($unknown_directives{".align/bss"});
           $unknown_directives{".align/bss"} = 1;
+        } elsif ($1 and $2 > 16) {
+          ++$errc;
+          print STDERR "error: .p2align too large ($lc): $_\n";
         } else {
+          my $alignment = $1 ? (1 << $2) : $2 + 0;
           $section = ".rodata" if length($section) == 1;  # Not a string literal.
-          my $alignment = $1 + 0;
           if ($alignment & ($alignment - 1)) {
             ++$errc;
             print STDERR "error: alignment value not a power of 2 ($lc): $_\n";
