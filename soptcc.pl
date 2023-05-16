@@ -717,11 +717,23 @@ sub as2nasm($$$$$$$$$$) {
             #$unknown_directives{".align"} = 1;
           }
         }
-      } elsif (m@\A[.](byte|value|long) (\S.*)\Z@) {  # !! 64-bit data? floating-point data?
+      } elsif (m@\A[.](byte|value|long|quad) (\S.*)\Z@) {  # floating-point data?
         my $inst1 = $1;
         my $expr = fix_labels($2, \@bad_labels, $used_labels, \%local_labels);
+        $expr = " $expr";
+        die "fatal: 32-bit Perl not supported for .quad\n" if $inst1 eq "quad" and (1<<16<<16) == 0;
         $expr =~ s@([\s:\[\],+\-*/()<>`])(?:0x([0-9a-fA-F]+)|(0|[1-9]\d*))@ defined($3) ? sprintf("%s0x%x", $1, $3) : sprintf("%s0x%x", $1, hex($2)) @ge;
+        $expr =~ s@\A +@@;
         if (length($section) > 1) {
+          if ($inst1 eq "quad" and $expr =~ m@\A(?:0x([0-9a-fA-F]+)|(0|[1-9]\d*))\Z@) {
+            my $value;
+            {
+              BEGIN { $^W = 0 }  # Silence hex warning.
+              $value = defined($1) ? hex($1) : $2 + 0;
+            }
+            # Make it work in old NASM 0.98.39, which doesn't have `dq'.
+            $inst1 = "long"; $expr = sprintf("0x%x, 0x%x", $value & 0xffffffff, ($value >> 32) & 0xffffffff);
+          }
         } elsif (length($section) != 0) {  # "S", @$rodata_strs.
           # It doesn't look like a string. Pop and print preceding labels as well.
           # TODO(pts): Don't pop end-line labels (ending the previous string in hand-written assembly).
@@ -735,7 +747,7 @@ sub as2nasm($$$$$$$$$$) {
           ++$errc;
           print STDERR "error: .$inst1 outside section ($lc): $_\n";
         }
-        my $inst = $inst1 eq "byte" ? "db" : $inst1 eq "value" ? "dw" : $inst1 eq "long" ? "dd" : "d?";
+        my $inst = $inst1 eq "byte" ? "db" : $inst1 eq "value" ? "dw" : $inst1 eq "long" ? "dd" : $inst1 eq "quad" ? "dq" : "d?";
         print $outfh "\t\t$inst $expr\n";
       } elsif (m@\A[.]((string)|ascii)(?=\Z|\s)(?:\s+"((?:[^\\"]+|\\.)*)"\s*\Z)?@s) {
         if (!defined($3)) {
