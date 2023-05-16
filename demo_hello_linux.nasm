@@ -118,14 +118,16 @@ _start:  ; ELF program entry point.
 		push strict dword format
 		push eax		; Push the address of the end pointer.
 		call mini_vfprintf	; Print to buffer. Calls mini_putc (defined below) for each byte.
-		add esp, byte 4*4	; Clean up arguments the stack, now the end pointer and the buffer remains.
+		add esp, byte 4*4	; Clean up arguments of mini_vfprintf above from the stack, now the end pointer and the buffer remains.
 
-		mov eax, 4		; EAX := __NR_write == 4.
-		mov ebx, 1		; EBX := 1 == STDOUT_FILENO.
 		lea ecx, [esp+4]	; ECX: := Address of buffer.
 		mov edx, [esp]		; EDX := End pointer value.
 		sub edx, ecx		; EDX := Number of bytes to print.
-		int 0x80		; Linux i386 syscall.
+		push edx		; Argument count for mini_write(...).
+		push ecx		; Argument buf for mini_write(...).
+		push strict byte 1	; Argument fd (1 == STDOUT_FILENO) for mini_write(...).
+		call mini_write
+		add esp, byte 3*4	; Clean up arguments of mini_write above from the stack.
 
 		pop eax			; Remove end pointer from the stack.
 		add esp, byte 0x7c	; Remove buffer from the stack.
@@ -147,6 +149,7 @@ mini_fputc:	mov dl, [esp+4]		; Byte (character) to be printed.
 %ifndef CONFIG_NO_LIBC
 %include "vfprintf_noplus.nasm"
 %include "exit_linux.nasm"
+%include "write_linux.nasm"
 %endif
 
 section .rodata
