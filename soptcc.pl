@@ -850,11 +850,35 @@ sub as2nasm($$$$$$$$$$) {
           push @abitest_insts, "\t\tcall $_\n";
           next;  # Don't do $used_labels{$label} = 1.
         } elsif (!m@\A[\$]@) { s@\A@\$@ }  # Relative immediate syntax for `jmp short' or `jmp near'.
+      } elsif ($inst =~ m@\A(?:fadd|fmul|fsubr?|fdivr?)\Z(?!n)@ and m@\A%st(?:\(0\))?, *%st(?:\(0\))?\Z@) {
+        # These are special instruction encodings of GNU as(1) 2.24--2.30 if
+        # both arguments are ST(0). In that case as(1) generates the NASM
+        # `$inst st0' variant rather than the `$inst st0, st0' ==
+        # `$inst to st0' variant. The effect of these instructions are the
+        # same.
+        #
+        # It's important to have this condition checked earlier than the
+        # $inst2 one below.
+        $_ = "%st";  # Will be converted to `st0'.
       } elsif ($inst =~ m@\A(fdiv|fsub)(r?)(p?)\Z(?!n)@) {
         if (index($_, ",") >= 0) {  # > 1 arguments (actually, 2).
+          # * Input is either in the B form: `INST %st,%st(B)'
+          #   or in the A form: `INST %st(A),%st'.
+          #   Actually, we don't check here for the unsupported C form:
+          #   `INST %st(C1),%st(C2)' with either C1 or C2 being 0.
+          # * Replace %st with st0. This will be done by calling fix_reg below.
+          # * Replace %st(I) with stI for I matching /\d+/. This will be
+          #   done by calling fix_reg below.
+          # * Swap the two arguments. This will be done by `reverse(@args)' below.
+          # * Either flip the `r' in INST or not, e.g. fdivrp <-> fdivp:
+          #   * For fadd, fmul, faddp, fmulp, keep it. (There isn't an `r' variant.)
+          #   * For fdivrp, fdivp, fsubp, fsubrp: flip it.
+          #   * For fdivr, fdiv, fsub, fsubr: flip it iff it was in the B form.
+          # The flipping is important, otherwise an instruction with a
+          # different meaning would be generated. (Checked it.)
           my $nr = length($2) ? "" : "r";
           my $inst2 = "$1$nr$3";  # Swap the r and non-r variants.
-          $inst = $inst2 if not ($inst !~ m@p@ and m@\A%st\((?!0)\d+\),@);  # Swap the instruction (r vs non-r) only if the 1st argument is not nonzero %st. Sigh. It was tested and it works.
+          $inst = $inst2 if length($3) or substr($_, 0, 4) eq "%st,";
         }
       }
       pos($_) = 0;
