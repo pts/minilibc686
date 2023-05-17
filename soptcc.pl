@@ -1328,7 +1328,20 @@ my $data_alignment = 4;
   $srcfn = $ARGV[$i];
 }
 my $basefn = $srcfn;
-die "fatal: source file must be C source (*.c): $srcfn\n" if $basefn !~ s@[.]c\Z(?!\n)@@;
+die "fatal: source file must have an extension: $srcfn\n" if $basefn !~ s@[.](\w+)\Z(?!\n)@@;
+my $ext = $1;
+
+if ($ext eq "s") {
+  my $asfn = $srcfn;
+  my $nasmfn = "$basefn.nasm";
+  my $nasm_cpu = "";  # We don't know, it would be specified in the as(1) command line.
+  convert_as_to_nasm($asfn, $nasmfn, $basefn, $srcfn, $nasm_cpu, $data_alignment);
+  exit();
+} elsif ($ext eq "c") {
+  # Continue below.
+} else {
+  die "fatal: source file must be C source (*.c) or GNU as(1) source (*.s): $srcfn\n";
+}
 
 # ---
 
