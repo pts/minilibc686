@@ -160,14 +160,21 @@ int main(int argc, char **argv)
 
         if ((fi = fopen(argv[i_obj], "rb")) == NULL)
         {
-            fprintf(stderr, "Can't open file %s \n", argv[i_obj]);
+            fprintf(stderr, "Can't open file %s\n", argv[i_obj]);
             goto the_end;
         }
-        fseek(fi, 0, SEEK_END);
+        if (fseek(fi, 0, SEEK_END) != 0) {
+          error_seeking_fi:
+            fprintf(stderr, "Error seeking file: %s\n", argv[i_obj]);
+            goto the_end;
+        }
         fsize = ftell(fi);
-        fseek(fi, 0, SEEK_SET);
+        if (fseek(fi, 0, SEEK_SET) != 0) goto error_seeking_fi;
         buf = malloc(fsize + 1);
-        fread(buf, fsize, 1, fi);
+        if (fread(buf, fsize, 1, fi) != 1) {
+            fprintf(stderr, "Error reading file: %s\n", argv[i_obj]);
+            goto the_end;
+        }
         fclose(fi);
 
         // elf header
@@ -261,12 +268,24 @@ int main(int argc, char **argv)
     if (fpos)
         fwrite("", 1, 1, fh);
     // write objects
-    fseek(fo, 0, SEEK_END);
+    if (fseek(fo, 0, SEEK_END) != 0) {
+      error_seeking_fo:
+        fprintf(stderr, "Error seeking file: %s\n", tfile);
+        goto the_end;
+    }
     fsize = ftell(fo);
-    fseek(fo, 0, SEEK_SET);
+    if (fseek(fo, 0, SEEK_SET) != 0) goto error_seeking_fo;
     buf = malloc(fsize + 1);
-    fread(buf, fsize, 1, fo);
+    if (fread(buf, fsize, 1, fo) != 1) {
+        fprintf(stderr, "Error reading file: %s\n", tfile);
+        goto the_end;
+    }
     fwrite(buf, fsize, 1, fh);
+    fflush(fh);
+    if (ferror(fh)) {
+        fprintf(stderr, "Error writing file: %s\n", argv[i_lib]);
+        goto the_end;
+    }
     free(buf);
     ret = 0;
 the_end:
