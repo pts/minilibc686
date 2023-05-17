@@ -311,6 +311,7 @@ int main(int argc, char **argv)
         if (*a == '-' && strstr(a, "."))
             return usage(1);  // -x.y is always invalid (same as gnu ar)
         if ((*a == '-') || (i == 1 && !strstr(a, "."))) {  // options argument
+            if (a[0] == '-' && a[1] == 'h' && a[2] == '\0') return usage(0);
             if (contains_any(a, ops_conflict))
                 return usage(1);
             if (strstr(a, "v"))
