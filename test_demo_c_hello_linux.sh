@@ -2,6 +2,7 @@
 # by pts@fazekas.hu at Wed May 17 02:43:02 CEST 2023
 
 if test "$NASM"; then :
+elif test -f tools/nasm-0.98.39 && tools/nasm-0.98.39 -h 2>/dev/null >&2; then NASM=tools/nasm-0.98.39
 elif nasm-0.98.39 -h 2>/dev/null >&2; then NASM=nasm-0.98.39
 elif nasm -h 2>/dev/null >&2; then NASM=nasm
 else NASM=nasm  # Will fail.
