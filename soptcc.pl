@@ -560,7 +560,7 @@ sub as2nasm($$$$$$$$$$) {
           die "fatal: assert: bad implicit local label: $label\n" if $label !~ s@\A[FS]_@S_@;
           $local_labels{$label} = 1;
         }
-      } elsif (m@\A[.]globl ([^\s:,]+)\Z@) {
+      } elsif (m@\A[.]globa?l ([^\s:,]+)\Z@) {
         # GCC 7.5.0 emits `.globl __udivdi3', but no `.globl' for other
         # extern functions. So in the NASM output we end up with both
         # `global __udivdi3' and `extern __udivdi3'. That's fine, even for
