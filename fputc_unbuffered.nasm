@@ -41,7 +41,7 @@ mini_fputc:  ; int fputc(int c, FILE *filep);
 		test eax, eax
 		jnz .nz
 		pop eax
-		jmp .again  ; No bytes written, write again.
+		jmp short .again  ; No bytes written, write again.
 .nz:		cmp eax, byte -1
 		jne .ok
 		pop edx  ; Ignore original character, return -1 indicating error.
