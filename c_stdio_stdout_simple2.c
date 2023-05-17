@@ -2,7 +2,7 @@
  * c_stdio_stdout_simple2.c: a simple partial stdio implementation: just mini_stdout (buffered) + mini_stderr (unbuffered) + mini_fputc(...)
  * by pts@fazekas.h at Wed May 17 17:29:07 CEST 2023
  *
- * !! TODO(pts): Add many more tests.
+ * !! TODO(pts): Add many more tests, especially for line buffering.
  */
 
 #define NULL ((void*)0)
@@ -15,7 +15,8 @@ typedef int ssize_t;
 typedef struct _FILE {
   int fd;  /* File descriptor, fileno. */
   char *bufstart;
-  char *bufp;  /* If bufp == bufend, then the buffer is full. */
+  char *bufp;  /* Sentinel: .bufp == .bufend. It means any of: the buffer is full (maybe because it has 0 size), there was an error, or line buffering (_IOLBF) is enabled. */
+  char *bufpf;  /* Fallback value iff .bufp == .bufend. */
   char *bufend;
   unsigned char state;  /* FS_... */
   unsigned char indicators;  /* Bitmask of FI_... */
@@ -49,7 +50,8 @@ int mini_fileno(FILE *filep) {
 
 void mini_clearerr(FILE *filep) {
   filep->indicators = 0;  /* Clears both FI_EOF and FI_ERROR. */
-  filep->bufp = filep->bufstart;  /* !! Restore it from a saved value? */
+  filep->bufp = filep->bufpf;  /* Restore saved .bufp. */
+  if (filep->bufmode == _IOFBF) filep->bufpf = filep->bufend;  /* Make (C1) work later. */
 }
 
 #if 0  /* We don't need this since we don't allow reading. */
@@ -64,6 +66,7 @@ int mini_ferror(FILE *filep) {
 
 static int set_error(FILE *filep) {
   filep->indicators |= FI_ERROR;
+  if (filep->bufmode == _IOFBF) filep->bufpf = filep->bufp;  /* Save .bufp, it will be restored in mini_clearerr(...). */
   filep->bufp = filep->bufend;  /* Fake indicator that the buffer is full, this speeds up the check in mini_fputc(...). */
   return EOF;
 }
@@ -73,14 +76,18 @@ int mini_fflush(FILE *filep) {
   size_t size, got;
   if (filep->indicators & FI_ERROR) return EOF;  /* TODO(pts): Is this more important than an empty buffer? Probably it is. */
   p = filep->bufstart;
-  size = filep->bufp - p;
+  size = (filep->bufp == filep->bufend ? filep->bufpf : filep->bufp) - p;
   while (size != 0) {  /* This is never true if filep is unbuffered. */
     got = mini_write(filep->fd, p, size);
     if (got + 1U <= 1U) return set_error(filep);  /* EOF. */
     size -= got;
     p += got;
   }
-  filep->bufp = filep->bufstart;
+  if (filep->bufmode == _IOLBF) {
+    filep->bufpf = filep->bufstart;
+  } else {
+    filep->bufp = filep->bufstart;
+  }
   return 0;
 }
 
@@ -90,18 +97,25 @@ int mini_fflush(FILE *filep) {
 int mini_fputc(int c, FILE *filep) {
   unsigned char uc;
   ssize_t got;
-  if (filep->bufp != filep->bufend) {  /* Buffer is not full and there was no error. */
-   append_to_buffer:
+ try_again_after_flush:
+  if (filep->bufp != filep->bufend) {  /* Fast path: _IOFBF, no error, buffer not full yet. */
     return (unsigned char)(*filep->bufp++ = c);
   }
   if (filep->indicators & FI_ERROR) return EOF;
-  if (filep->bufp != filep->bufstart) {   /* Not unbuffered. !! It doesn't have to mean that the buffer size is 0. It rather means that its autoflushed. !! uClibc has stderr unbuffered -- but is fprintf byte-by-byte? glibc still has a 0x2000 byte buffer. */
-    if (mini_fflush(filep)) return EOF;
-    goto append_to_buffer; 
+  if (filep->bufpf != filep->bufend) {  /* (C1). */ /* The buffer isn't really full, then we have _IOLBF. */
+    *filep->bufpf++ = uc = c;
+    if (uc == '\n' && mini_fflush(filep)) return EOF;
+  } else {  /* The buffer is full. */
+     /* Not unbuffered. !! It doesn't have to mean that the buffer size is 0. It rather means that its autoflushed. !! uClibc has stderr unbuffered -- but is fprintf byte-by-byte? glibc still has a 0x2000 byte buffer. */
+    if (filep->bufp != filep->bufstart) {  /* The buffer is full, and it has nonzero size. */
+      if (mini_fflush(filep)) return EOF;
+      goto try_again_after_flush;
+    }
+    /* The buffer has zero size. */
+    uc = c;
+    got = mini_write(filep->fd, &uc, 1);
+    if (got <= 0) return set_error(filep);  /* EOF. */
   }
-  uc = c;
-  got = mini_write(filep->fd, &uc, 1);
-  if (got <= 0) return set_error(filep);  /* EOF. */
   return uc;
 }
 
@@ -109,26 +123,45 @@ int mini_setvbuf(FILE *filep, char *buf, int mode, size_t size) {
   if (mini_fflush(filep)) return 1;  /* Flush failure. */  /* TODO(pts): Propagate return value of mini_fflush(...). */
   if (mode + 0U > 2U) return 2;  /* Invalid buffering mode. */
   if (size == 0) mode = _IONBF;
-  if (mode == _IONBF) {
-    filep->bufp = filep->bufend = filep-> bufstart = NULL;
-  } else {
-    filep->bufp = filep->bufstart = buf;
+  if (mode == _IONBF) buf = NULL; /* !! allow _IONBF with nonempty buffer, that means immediate flush after printf, but not during */
+  filep->bufpf = filep->bufp = filep->bufend = filep->bufstart = buf;
+  if (mode != _IONBF) {
+    if (buf == NULL) return 3;  /* Normal libc would call malloc(...) on first use. */
+    filep->bufpf = filep->bufp = filep->bufstart = buf;
     filep->bufend = buf + size;
+    if (mode == _IOLBF) {
+      filep->bufp = filep->bufend;  /* Sentinel. */
+    } else {
+      filep->bufpf = filep->bufend;  /* Sentinel. */
+    }
   }
-  /* !! TODO(pts): Implement _IOLBF properly: it's like _IOFBF, but it flushes on '\n'. */
   filep->bufmode = mode;
   return 0;
 }
 
+/* Changes stream buffering from _IOFBF to _IOLBF, and if there was an
+ * actual change, it does a mini_fflush(filep) as well.
+ */
+void mini__M_set_linebuf(FILE *filep) {
+  if (filep->bufmode == _IOFBF) {
+    mini_fflush(filep);
+    filep->bufmode = _IOLBF;
+    filep->bufpf = filep->bufp;
+    filep->bufp = filep->bufend;
+  }
+}
+
+/* !! If stdout is used (linked) in the program, only then add this to program startup: if (isatty(1)) mini__M_set_linebuf(stdout); */
+
 static char buf_stdout[0x400];  /* glibc 2.19 does this much buffering on stdout if it's a TTY. It does more (0x2000) for non-TTY. */
 
 static FILE struct_stdout = {
-    /* .fd = */ 1, /* .bufstart = */ buf_stdout, /* .bufp = */ buf_stdout, /* .bufend = */ buf_stdout + sizeof(buf_stdout),
-    /* .state = */ FS_WRITE, /* .indicators = */ 0, /* .bufmode = */ _IOFBF };  /* !! TODO(pts): If stdin is a TTY, do _IOLBF. */
+    /* .fd = */ 1, /* .bufstart = */ buf_stdout, /* .bufp = */ buf_stdout, /* .bufpf = */ buf_stdout + sizeof(buf_stdout), /* .bufend = */ buf_stdout + sizeof(buf_stdout),
+    /* .state = */ FS_WRITE, /* .indicators = */ 0, /* .bufmode = */ _IOFBF };  /* !! TODO(pts): If stdout is a TTY, do _IOLBF. */
 FILE *mini_stdout = &struct_stdout;
 
 static FILE struct_stderr = {
-    /* .fd = */ 2, /* .bufstart = */ NULL, /* .bufp = */ NULL, /* .bufend = */ NULL,  /* Unbuffered. */
+    /* .fd = */ 2, /* .bufstart = */ NULL, /* .bufp = */ NULL, /* .bufpf = */ NULL, /* .bufend = */ NULL,  /* Unbuffered. */
     /* .state = */ FS_WRITE, /* .indicators = */ 0, /* .bufmode = */ _IOFBF };
 FILE *mini_stderr = &struct_stderr;
 
