@@ -41,15 +41,15 @@ case "$GCC" in
 esac
 
 if test "$GCC"; then
-  $GCC $GCC_TCC_FLAGS $GCC_FLAGS -Os -W -Wall -o demo_c_hello_linux.prog demo_c_hello.c $OFS
-  ./demo_c_hello_linux.prog  # Prints: Hello, World!
-  ./demo_c_hello_linux.prog there  # Prints: Hello, there!
+  $GCC $GCC_TCC_FLAGS $GCC_FLAGS -Os -W -Wall -o demo_c_hello_linux.elf demo_c_hello.c $OFS
+  ./demo_c_hello_linux.elf  # Prints: Hello, World!
+  ./demo_c_hello_linux.elf there  # Prints: Hello, there!
 fi
 
 if test "$TCC"; then
-  $TCC $GCC_TCC_FLAGS -Os -W -Wall -o demo_c_hello_linux.tcc.prog demo_c_hello.c $OFS
-  ./demo_c_hello_linux.tcc.prog  # Prints: Hello, World!
-  ./demo_c_hello_linux.tcc.prog there  # Prints: Hello, there!
+  $TCC $GCC_TCC_FLAGS -Os -W -Wall -o demo_c_hello_linux.tcc.elf demo_c_hello.c $OFS
+  ./demo_c_hello_linux.tcc.elf  # Prints: Hello, World!
+  ./demo_c_hello_linux.tcc.elf there  # Prints: Hello, there!
 fi
 
 : "$0" OK.
