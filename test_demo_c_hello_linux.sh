@@ -17,6 +17,7 @@ fi
 
 if test "$TCC" = :; then TCC=  # Explicitly disabled.
 elif test "$TCC"; then :
+elif test -f tools/pts-tcc && tools/pts-tcc -v 2>/dev/null >&2; then TCC=tools/pts-tcc
 elif pts-tcc -v 2>/dev/null >&2; then TCC=pts-tcc
 elif i386-tcc -v 2>/dev/null >&2; then TCC=i386-tcc
 elif tcc -v 2>/dev/null; then TCC=tcc
