@@ -1,5 +1,7 @@
 /* This source file contains some modifications
  * by pts@fazekas.hu at Wed May 17 13:02:35 CEST 2023
+ *
+ * Recommended compile: owcc -blinux -fno-stack-check -fsigned-char -march=i386 -W -Wall -Wextra -Werror -s -Os -o tools/tiny_libmaker tools/tiny_libmaker.c && sstrip tools/tiny_libmaker
  */
 
 /*
