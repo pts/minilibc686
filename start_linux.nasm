@@ -2,6 +2,9 @@
 ; written by pts@fazekas.hu at Tue May 16 13:56:57 CEST 2023
 ; Compile to i386 ELF .o object: nasm -O999999999 -w+orphan-labels -f elf -o start_linux.o start_linux.nasm
 ;
+; This startup code doesn't flush stdio streams (filehandles) upon exit. To
+; get that, use start_stdio_linux.nasm instead.
+;
 ; Uses: %ifdef CONFIG_PIC
 ;
 
@@ -9,6 +12,7 @@ bits 32
 cpu 386
 
 global mini__start
+global mini__exit
 global mini_exit
 %ifdef CONFIG_SECTIONS_DEFINED
 %elifidn __OUTPUT_FORMAT__, bin
@@ -46,12 +50,11 @@ mini__start:  ; Entry point (_start) of the Linux i386 executable.
 		push edx  ; Argument argv for main.
 		push eax  ; Argument argc for main.
 		call main  ; Return value (exit code) in EAX (AL).
-		; times 2 pop edx  ; No need to clean up the stack.
+		; times 3 pop edx  ; No need to clean up arguments of main on the stack.
 		xor ebx, eax  ; EBX := Exit code; EAX := junk.
-		; TODO(pts): Call fflush(stdout) etc.
 		jmp strict short mini_exit.ebx
+mini__exit:  ; void mini__exit(int exit_code);
 mini_exit:  ; void mini_exit(int exit_code);
-		; !! envp.
 		mov ebx, [esp+4]  ; EBX := Exit code.
 .ebx:		xor eax, eax
 		inc eax  ; EAX := 1 == __NR_exit.
