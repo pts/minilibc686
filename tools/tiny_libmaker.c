@@ -23,8 +23,35 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA.
  */
 
+#if defined(__WATCOMC__) && defined(__LINUX__) && defined(_M_I386)
+#define DO_INLINE_STDLIB 1  /* Make it work without #include()s. */
+struct __iobuf {
+  unsigned char        *_ptr;
+  int                   _cnt;
+  struct __stream_link *_link;
+  unsigned              _flag;
+  int                   _handle;
+  unsigned              _bufsize;
+  unsigned short        _ungotten;
+};
+extern struct __iobuf __iob[];
+typedef struct _FILE FILE;
+/*#define stdout ((FILE*)&__iob[1])*/
+/* This works even if "$WATCOM"/h is on the #include path, rather than the
+ * correct "$WATCOM"/lh. It works by not #include()ing any .h files.
+ */
+#define stderr ((FILE*)&__iob[2])  /* sizeof(__iobuf) matters. */
+#else
 #if (defined(__TINYC__) || defined(__GNUC__)) && defined(__i386__) && defined(__linux__)
-    /* Make it work without #include()s. */
+#define DO_INLINE_STDLIB 1  /* Make it work without #include()s. */
+typedef struct _FILE FILE;
+extern FILE *stderr;
+#else
+#undef  DO_INLINE_STDLIB
+#endif
+#endif
+
+#if DO_INLINE_STDLIB
 #define NULL ((void*)0)
 /**/
 typedef unsigned int size_t;
@@ -57,8 +84,6 @@ void free(void *ptr);
 void *realloc(void *ptr, size_t size);
 /* <stdio.h> */
 typedef long off_t;
-typedef struct _FILE FILE;
-extern FILE *stderr;
 int printf(const char *format, ...);
 int sprintf(char *str, const char *format, ...);
 int fprintf(FILE *stream, const char *format, ...);
@@ -72,7 +97,7 @@ int ferror(FILE *stream);
 int fclose(FILE *stream);
 int remove(const char *pathname);
 /**/
-#else  /* Not pts-tcc. */
+#else  /* Use standard .h files (by default). */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
