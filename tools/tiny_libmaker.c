@@ -22,10 +22,177 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA.
  */
+
+#if (defined(__TINYC__) || defined(__GNUC__)) && defined(__i386__) && defined(__linux__)
+    /* Make it work without #include()s. */
+#define NULL ((void*)0)
+/**/
+typedef unsigned int size_t;
+typedef int ssize_t;
+/* <stdint.h> */
+#define __int8_t_defined
+typedef signed char int8_t;
+typedef short int int16_t;
+typedef int int32_t;
+typedef long long int int64_t;
+typedef unsigned char           uint8_t;
+typedef unsigned short int      uint16_t;
+typedef unsigned int            uint32_t;
+typedef unsigned long long int  uint64_t;
+/* <string.h> */
+char *strstr(const char *haystack, const char *needle);
+void *memcpy(void *dest, const void *src, size_t n);
+int strcmp(const char *s1, const char *s2);
+size_t strlen(const char *s);
+char *strcpy(char *dest, const char *src);
+char *strchr(const char *s, int c);
+void *memset(void *s, int c, size_t n);
+/**/
+#define SEEK_SET 0
+#define SEEK_CUR 1
+#define SEEK_END 2
+/**/
+void *malloc(size_t size);
+void free(void *ptr);
+void *realloc(void *ptr, size_t size);
+/* <stdio.h> */
+typedef long off_t;
+typedef struct _FILE FILE;
+extern FILE *stderr;
+int printf(const char *format, ...);
+int sprintf(char *str, const char *format, ...);
+int fprintf(FILE *stream, const char *format, ...);
+FILE *fopen(const char *pathname, const char *mode);
+int fseek(FILE *stream, long off, int whence);
+long ftell(FILE *stream);
+size_t fread(void *ptr, size_t size, size_t nmemb, FILE *stream);
+size_t fwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream);
+int fflush(FILE *stream);
+int ferror(FILE *stream);
+int fclose(FILE *stream);
+int remove(const char *pathname);
+/**/
+#else  /* Not pts-tcc. */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "../../elf.h"
+#endif
+
+/* --- <elf.h>, with only the needed features. */
+
+/* This file defines standard ELF types, structures, and macros.
+   Copyright (C) 1995-2012 Free Software Foundation, Inc.
+   This file is part of the GNU C Library.
+
+   The GNU C Library is free software; you can redistribute it and/or
+   modify it under the terms of the GNU Lesser General Public
+   License as published by the Free Software Foundation; either
+   version 2.1 of the License, or (at your option) any later version.
+
+   The GNU C Library is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+   Lesser General Public License for more details.
+
+   You should have received a copy of the GNU Lesser General Public
+   License along with the GNU C Library; if not, see
+   <http://www.gnu.org/licenses/>.  */
+
+#ifndef _WIN32
+#include <inttypes.h>
+#else
+#ifndef __int8_t_defined
+#define __int8_t_defined
+typedef signed char int8_t;
+typedef short int int16_t;
+typedef int int32_t;
+typedef long long int int64_t;
+typedef unsigned char           uint8_t;
+typedef unsigned short int      uint16_t;
+typedef unsigned int            uint32_t;
+typedef unsigned long long int  uint64_t;
+#endif
+#endif
+
+/* Standard ELF types.  */
+
+/* Type for a 16-bit quantity.  */
+typedef uint16_t Elf32_Half;
+typedef uint16_t Elf64_Half;
+
+/* Types for signed and unsigned 32-bit quantities.  */
+typedef uint32_t Elf32_Word;
+typedef	int32_t  Elf32_Sword;
+
+/* Types for signed and unsigned 64-bit quantities.  */
+typedef uint64_t Elf32_Xword;
+typedef	int64_t  Elf32_Sxword;
+
+/* Type of addresses.  */
+typedef uint32_t Elf32_Addr;
+
+/* Type of file offsets.  */
+typedef uint32_t Elf32_Off;
+
+/* Type for section indices, which are 16-bit quantities.  */
+typedef uint16_t Elf32_Section;
+
+/* The ELF file header.  This appears at the start of every ELF file.  */
+
+#define EI_NIDENT (16)
+
+typedef struct
+{
+  unsigned char	e_ident[EI_NIDENT];	/* Magic number and other info */
+  Elf32_Half	e_type;			/* Object file type */
+  Elf32_Half	e_machine;		/* Architecture */
+  Elf32_Word	e_version;		/* Object file version */
+  Elf32_Addr	e_entry;		/* Entry point virtual address */
+  Elf32_Off	e_phoff;		/* Program header table file offset */
+  Elf32_Off	e_shoff;		/* Section header table file offset */
+  Elf32_Word	e_flags;		/* Processor-specific flags */
+  Elf32_Half	e_ehsize;		/* ELF header size in bytes */
+  Elf32_Half	e_phentsize;		/* Program header table entry size */
+  Elf32_Half	e_phnum;		/* Program header table entry count */
+  Elf32_Half	e_shentsize;		/* Section header table entry size */
+  Elf32_Half	e_shnum;		/* Section header table entry count */
+  Elf32_Half	e_shstrndx;		/* Section header string table index */
+} Elf32_Ehdr;
+
+#define ELFCLASS32	1		/* 32-bit objects */
+
+/* Section header.  */
+
+typedef struct
+{
+  Elf32_Word	sh_name;		/* Section name (string tbl index) */
+  Elf32_Word	sh_type;		/* Section type */
+  Elf32_Word	sh_flags;		/* Section flags */
+  Elf32_Addr	sh_addr;		/* Section virtual addr at execution */
+  Elf32_Off	sh_offset;		/* Section file offset */
+  Elf32_Word	sh_size;		/* Section size in bytes */
+  Elf32_Word	sh_link;		/* Link to another section */
+  Elf32_Word	sh_info;		/* Additional section information */
+  Elf32_Word	sh_addralign;		/* Section alignment */
+  Elf32_Word	sh_entsize;		/* Entry size if section holds table */
+} Elf32_Shdr;
+
+/* Symbol table entry.  */
+
+typedef struct
+{
+  Elf32_Word	st_name;		/* Symbol name (string tbl index) */
+  Elf32_Addr	st_value;		/* Symbol value */
+  Elf32_Word	st_size;		/* Symbol size */
+  unsigned char	st_info;		/* Symbol type and binding */
+  unsigned char	st_other;		/* Symbol visibility */
+  Elf32_Section	st_shndx;		/* Section index */
+} Elf32_Sym;
+
+#define SHT_SYMTAB	  2		/* Symbol table */
+#define SHT_STRTAB	  3		/* String table */
+
+/* --- End of <elf.h> */
 
 #ifdef TCC_TARGET_X86_64
 # define ELFCLASSW ELFCLASS64
