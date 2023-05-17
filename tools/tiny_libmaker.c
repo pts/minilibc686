@@ -1,3 +1,7 @@
+/* This source file contains some modifications
+ * by pts@fazekas.hu at Wed May 17 13:02:35 CEST 2023
+ */
+
 /*
  * This program is for making libtcc1.a without ar
  * tiny_libmaker - tiny elf lib maker
@@ -227,7 +231,7 @@ int main(int argc, char **argv)
              name > file && name[-1] != '/' && name[-1] != '\\';
              --name);
         istrlen = strlen(name);
-        if (istrlen >= sizeof(arhdro.ar_name))
+        if (istrlen + 0U >= sizeof(arhdro.ar_name))
             istrlen = sizeof(arhdro.ar_name) - 1;
         memset(arhdro.ar_name, ' ', sizeof(arhdro.ar_name));
         memcpy(arhdro.ar_name, name, istrlen);
