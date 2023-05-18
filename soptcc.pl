@@ -9,8 +9,8 @@ eval 'PERL_BADLANG=x;export PERL_BADLANG;exec perl -x "$0" "$@";exit 1'
 #
 # Runs multiple C compilers and picks the one which generates fewer (code)
 # bytes. Emits a NASM source file (`nasm -f elf -O999999999'). Supports only
-# i386 architecture (up to i686) with the SYSV calling convention
-# (-mregparm=0).
+# i386 architecture (up to i686) with the cdecl calling convention
+# (`gcc -mregparm=0' (default) and `owcc -mabi=cdecl').
 #
 
 BEGIN { $^W = 1 }
@@ -1483,7 +1483,7 @@ my @gcc_cmds = (  # GCC and Clang C compilers.
     ["clang", "-march=i386", "-fomit-frame-pointer", @clang_flags],
     ["clang", "-march=i686", "-fomit-frame-pointer", @clang_flags],
 );
-my @owcc_flags = qw(-blinux -fno-stack-check -fsigned-char -march=i386 -mregparm=0 -W -Wall -Wextra -Werror);
+my @owcc_flags = qw(-blinux -fno-stack-check -fsigned-char -march=i386 -mabi=cdecl -W -Wall -Wextra -Werror);
 my @owcc_cmds = (  # OpenWatcom C compiler. Good or optimizing for size.
     ["owcc", @owcc_flags],
     ["owcc", "-frerun-optimizer", @owcc_flags],
