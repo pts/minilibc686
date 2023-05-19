@@ -28,8 +28,8 @@ section .bss align=4
 extern mini_fputc
 %endif
 
-section .text  ; _TEXT
-mini_vfprintf:
+section .text
+mini_vfprintf:  ; int mini_vfprintf(FILE *filep, const char *format, va_list ap);
 		push ebx
 		push esi
 		push edi
@@ -258,10 +258,10 @@ mini_vfprintf:
 		pop esi
 		pop ebx
 		ret
-.call_mini_fputc:
-		push dword [esp+0x38]
+.call_mini_fputc:  ; Input: AL contains the byte to be printed.
+		push dword [esp+0x38]  ; filep.
 		push eax  ; Only the low 8 bits matter for mini_fputc, the high 24 bits of EAX is garbage here.
-		; movsx eax, al : Not neede,d mini_fputc ignores the high 24 bits anyway.
+		; movsx eax, al : Not needed, mini_fputc ignores the high 24 bits anyway.
 		call B.code+mini_fputc
 		times 2 pop eax  ; Shorter than `add esp, strict byte 8'.
 		inc ebp

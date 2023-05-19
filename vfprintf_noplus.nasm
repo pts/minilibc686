@@ -1,9 +1,11 @@
 ;
 ; It supports format flags '-', '0', and length modifiers. It doesn't support format flag '+'.
-; Manually improved (but not optimized for size )based on the output of soptcc.pl for c_vfprintf_noplus.c.
+; Manually improved (but not optimized for size) based on the output of soptcc.pl for c_vfprintf_noplus.c.
 ; Compile to i386 ELF .o object: nasm -O999999999 -w+orphan-labels -f elf -o vfprintf_noplus.o vfprintf_noplus.nasm
 ;
 ; Uses: %ifdef CONFIG_PIC
+;
+; !! TODO(pts): Add more manual size optimizations, e.g. port .call_mini_fputc from vfprintf_plus.nasm.
 ;
 
 bits 32
@@ -26,8 +28,8 @@ section .bss align=4
 extern mini_fputc
 %endif
 
-section .text  ; _TEXT
-mini_vfprintf:
+section .text
+mini_vfprintf:  ; int mini_vfprintf(FILE *filep, const char *format, va_list ap);
 		push ebx
 		push esi
 		push edi
@@ -263,7 +265,7 @@ mini_vfprintf:
 		movsx eax, al
 		jmp short .31
 .30:
-		push dword [esp+0x38]
+		push dword [esp+0x38]  ; filep.
 		movsx eax, byte [ebx]
 .31:
 		push eax
