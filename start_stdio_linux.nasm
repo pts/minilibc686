@@ -1,6 +1,6 @@
 ;
 ; written by pts@fazekas.hu at Tue May 16 13:56:57 CEST 2023
-; Compile to i386 ELF .o object: nasm -O999999999 -w+orphan-labels -f elf -o start_linux.o start_linux.nasm
+; Compile to i386 ELF .o object: nasm -O999999999 -w+orphan-labels -f elf -o start_stdio_linux.o start_stdio_linux.nasm
 ;
 ; Uses: %ifdef CONFIG_PIC
 ;
