@@ -1,0 +1,111 @@
+;
+; written by pts@fazekas.hu at Fri May 19 17:25:38 CEST 2023
+; Compile to i386 ELF .o object: nasm -O999999999 -w+orphan-labels -f elf -o start_stdio_file_linux.o start_stdio_file_linux.nasm
+;
+; Uses: %ifdef CONFIG_PIC
+;
+
+bits 32
+cpu 386
+
+global mini__start
+global mini__exit
+global mini_exit
+global mini_open
+global mini_close
+global mini_read
+global mini_write
+global mini_lseek
+%ifdef CONFIG_SECTIONS_DEFINED
+%elifidn __OUTPUT_FORMAT__, bin
+section .text align=1
+section .rodata align=4
+section .data align=4
+section .bss align=4
+main equ +0x12345678
+mini___M_flushall equ +0x12345679
+%else
+extern main
+extern mini___M_flushall
+section .text align=1
+section .rodata align=1
+section .data align=1
+section .bss align=1
+%endif
+
+section .text
+mini__start:  ; Entry point (_start) of the Linux i386 executable.
+		; Now the stack looks like (from top to bottom):
+		;   dword [esp]: argc
+		;   dword [esp+4]: argv[0] pointer
+		;   esp+8...: argv[1..] pointers
+		;   NULL that ends argv[]
+		;   environment pointers
+		;   NULL that ends envp[]
+		;   ELF Auxiliary Table
+		;   argv strings
+		;   environment strings
+		;   program name
+		;   NULL		
+		pop eax  ; argc.
+		mov edx, esp  ; argv.
+		lea ecx, [edx+eax*4+4]  ; envp.
+		push ecx  ; Argument envp for main.
+		push edx  ; Argument argv for main.
+		push eax  ; Argument argc for main.
+		call main  ; Return value (exit code) in EAX (AL).
+		push eax  ; Save exit code, for mini_exit.
+		push eax
+		; Fall through to mini_exit(...).
+mini_exit:  ; void mini_exit(int exit_code);
+		call mini___M_flushall  ; Flush all stdio streams.
+		; Fall through to mini__exit(...).
+mini__exit:  ; void mini__exit(int exit_code);
+_exit:
+		mov al, 1  ; __NR_exit.
+		; Fall through to progx_syscall3.
+syscall3:
+; Calls syscall(number, arg1, arg2, arg3).
+;
+; It takes the syscall number from AL (8 bits only!), arg1 (optional) from
+; [esp+4], arg2 (optional) from [esp+8], arg3 (optional) from [esp+0xc]. It
+; keeps these args on the stack.
+;
+; It can EAX, EDX and ECX as scratch.
+;
+; It returns result (or -1 as error) in EAX.
+		push ebx  ; Save it, it's not a scratch register.
+		movzx eax, al  ; number.
+		mov ebx, [esp+8]  ; arg1.
+		mov ecx, [esp+0xc]  ; arg2.
+		mov edx, [esp+0x10]  ; arg3.
+		int 0x80  ; Linux i386 syscall.
+		; test eax, eax
+		; jns .final_result
+		cmp eax, -0x100  ; TODO(pts): Treat very large (e.g. <-0x100; with Linux 5.4.0, 0x85 seems to be the smallest) non-negative return values as success rather than errno. This is needed by time(2) when it returns a negative timestamp. uClibc has -0x1000 here.
+		jna .final_result
+		or eax, byte -1  ; EAX := -1 (error).
+.final_result:	pop ebx
+		ret
+
+mini_read:	mov al, 3  ; __NR_read.
+		jmp strict short syscall3
+mini_write:	mov al, 4  ; __NR_write.
+		jmp strict short syscall3
+mini_open:	mov al, 5  ; __NR_open.
+		jmp strict short syscall3
+mini_close:	mov al, 6  ; __NR_close.
+		jmp strict short syscall3
+mini_lseek:	mov al, 19  ; __NR_lseek.
+		jmp strict short syscall3
+;mini_time:	mov al, 13  ; __NR_time.
+;		jmp strict short syscall3
+;mini_ioctl:	mov al, 54  ; __NR_ioctl.
+;		jmp strict short syscall3
+;mini_gettimeofday:  mov al, 78  ; __NR_gettimeofday.
+;		jmp strict short syscall3
+
+%ifdef CONFIG_PIC  ; Already position-independent code.
+%endif
+
+; __END__
