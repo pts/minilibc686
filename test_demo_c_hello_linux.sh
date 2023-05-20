@@ -37,8 +37,8 @@ OFS="vfprintf_noplus.o printf_callvf.o fputc_unbuffered.o write_linux.o start_no
 for OF in $OFS; do
   $NASM $CFLAGS -O999999999 -w+orphan-labels -f elf -o "$OF" "${OF%.*}.nasm"
 done
-rm -f libmini686.a  # Some versions of ar(1) such as GNU ar(1) do something different if the .a file already exists.
-$AR crs libmini686.a $OFS
+rm -f libmini686_hello.a  # Some versions of ar(1) such as GNU ar(1) do something different if the .a file already exists.
+$AR crs libmini686_hello.a $OFS
 
 # -Wl,-e,mini__start is not supported by tcc.
 # tcc either supports or silently ignores these $GCC_FLAGS.
@@ -50,14 +50,14 @@ case "$GCC" in
 esac
 
 if test "$GCC"; then
-  $GCC $GCC_TCC_FLAGS $GCC_FLAGS -Os -W -Wall -o demo_c_hello_linux.elf demo_c_hello.c libmini686.a
+  $GCC $GCC_TCC_FLAGS $GCC_FLAGS -Os -W -Wall -o demo_c_hello_linux.elf demo_c_hello.c libmini686_hello.a
   ./demo_c_hello_linux.elf  # Prints: Hello, World!
   ./demo_c_hello_linux.elf there  # Prints: Hello, there!
 fi
 
 if test "$TCC"; then
   # tcc needs the _start symbol be defined in an .o file (why?) -- or does it try to be smart with linking?
-  $TCC $GCC_TCC_FLAGS -Os -W -Wall -o demo_c_hello_linux.tcc.elf demo_c_hello.c libmini686.a start_nomini_linux.o
+  $TCC $GCC_TCC_FLAGS -Os -W -Wall -o demo_c_hello_linux.tcc.elf demo_c_hello.c libmini686_hello.a start_nomini_linux.o
   ./demo_c_hello_linux.tcc.elf  # Prints: Hello, World!
   ./demo_c_hello_linux.tcc.elf there  # Prints: Hello, there!
 fi
