@@ -2,7 +2,7 @@
 ; Mostly based on the output of soptcc.pl for c_stdio_file_simple_buffered.c
 ; Compile to i386 ELF .o object: nasm -O999999999 -w+orphan-labels -f elf -o stdio_file_simple_buffered.o stdio_file_simple_buffered.nasm
 ;
-; Code size: 0x2ca bytes.
+; Code size: 0x2c3 bytes.
 ;
 ; Uses: %ifdef CONFIG_PIC
 ;
@@ -43,7 +43,7 @@ extern mini_write
 
 section .text
 
-mini_fopen:
+mini_fopen:  ; FILE *mini_fopen(const char *pathname, const char *mode);
 		push ebx
 		push ecx
 		cmp byte [global_files], 0x0
@@ -85,7 +85,7 @@ mini_fopen:
 		pop ebx
 		ret
 
-mini_fflush:
+mini_fflush:  ; int mini_fflush(FILE *filep);
 		push edi
 		push esi
 		push ebx
@@ -121,7 +121,7 @@ mini_fflush:
 		pop edi
 		ret
 
-mini_fclose:
+mini_fclose:  ; int mini_fclose(FILE *filep);
 		push esi
 		push ebx
 		mov ebx, [esp+0xc]
@@ -145,7 +145,7 @@ mini_fclose:
 		pop esi
 		ret
 
-mini_fread:
+mini_fread:  ; size_t mini_fread(void *ptr, size_t size, size_t nmemb, FILE *filep);
 		push edi
 		push esi
 		push ebx
@@ -196,7 +196,7 @@ mini_fread:
 		pop edi
 		ret
 
-mini_fwrite:
+mini_fwrite:  ; size_t mini_fwrite(const void *ptr, size_t size, size_t nmemb, FILE *filep);
 		push ebp
 		push edi
 		push esi
@@ -256,7 +256,7 @@ mini_fwrite:
 		pop ebp
 		ret
 
-mini_fseek:
+mini_fseek:  ; int mini_fseek(FILE *filep, off_t offset, int whence);  /* Only 32-bit off_t. */
 		push edi
 		push esi
 		push ebx
@@ -301,7 +301,7 @@ mini_fseek:
 		pop edi
 		ret
 
-mini_ftell:
+mini_ftell:  ; off_t mini_ftell(FILE *filep);  /* Only 32-bit off_t */
 		mov edx, [esp+0x4]
 		mov al, [edx]
 		lea ecx, [eax-0x1]
@@ -315,32 +315,33 @@ mini_ftell:
 		add eax, ecx
 .74:		ret
 
-mini_fgetc:
-		push ecx  ; !! TODO(pts): Why save and restore ecx?
+mini_fgetc:  ; int mini_fgetc(FILE *filep);
+		push ecx
 		mov eax, [esp+0x8]
 		mov edx, [eax+0x8]
 		cmp edx, [eax+0xc]
 		je .78
-		lea ecx, [edx+0x1]
-		mov [eax+0x8], ecx
-		movzx edx, byte [edx]
-		jmp short .77
-.78:		push eax
-		push byte 0x1
-		push byte 0x1
-		lea eax, [esp+0xf]
+		inc edx
+		mov [eax+0x8], edx
+		dec edx
+		jmp short .79
+.78:		mov edx, esp  ; EDX := &uc.
 		push eax
+		push byte 0x1
+		push byte 0x1
+		push edx  ; &uc.
 		call mini_fread
 		add esp, byte 0x10
-		or edx, byte -0x1
-		test eax, eax
-		je .77
-		movzx edx, byte [esp+0x3]  ; TODO(pts): Why has the C compiler chosen +3? Strange.
-.77:		mov eax, edx
-		pop edx
+		xchg eax, edx
+		or eax, byte -0x1  ; EAX := -1 (== EOF).
+		test edx, edx
+		jz .77
+		mov edx, esp
+.79:		movzx eax, byte [edx]
+.77:		pop ecx  ; Value overwritten by mini_fread above. That's fine, ECX is a scratch register.
 		ret
 
-mini___M_flushall:
+mini___M_flushall:  ; void mini___M_flushall(void);
 		push dword global_files
 		call mini_fflush
 		pop eax
@@ -350,7 +351,7 @@ mini___M_flushall:
 		ret
 
 section .bss
-global_files: resb 0x2028
+global_files: resb 2*0x1014  ; Contains 2 `struct _SFS_FILE's, reserved for allocation by mini_fopen(...).
 
 %ifdef CONFIG_PIC
 %error Not PIC because of mini_stdout.
