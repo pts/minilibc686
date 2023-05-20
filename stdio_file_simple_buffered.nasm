@@ -6,6 +6,8 @@
 ;
 ; Uses: %ifdef CONFIG_PIC
 ;
+; TODO(pts): Check whether owcc(1) can make any individual functions shorter.
+;
 
 bits 32
 cpu 386
@@ -43,18 +45,21 @@ extern mini_write
 
 section .text
 
+FILE_CAPACITY equ 2  ; This is hardwired to the assembly code below, changing it here won't work.
+BUF_SIZE equ 0x1000  ; glibc has 0x2000, uClibc has BUFSIZ == 0x1000.
+
 mini_fopen:  ; FILE *mini_fopen(const char *pathname, const char *mode);
 		push ebx
 		push ecx
 		cmp byte [global_files], 0x0
 		je .6
-		cmp byte [global_files+0x1014], 0x0
+		cmp byte [global_files+0x14+BUF_SIZE], 0x0
 		je .7
 .5:		xor ebx, ebx
 		jmp short .1
 .6:		mov ebx, global_files
 		jmp short .2
-.7:		mov ebx, global_files+0x1014
+.7:		mov ebx, global_files+0x14+BUF_SIZE
 .2:		mov eax, [esp+0x10]
 		mov dl, [eax]
 		cmp dl, 0x77
@@ -174,7 +179,7 @@ mini_fread:  ; size_t mini_fread(void *ptr, size_t size, size_t nmemb, FILE *fil
 		add [ebx+0x10], edx
 		mov [ebx+0xc], eax
 		mov [ebx+0x8], eax
-		push dword 0x1000
+		push dword BUF_SIZE
 		push eax
 		push dword [ebx+0x4]
 		call mini_read
@@ -213,9 +218,9 @@ mini_fwrite:  ; size_t mini_fwrite(const void *ptr, size_t size, size_t nmemb, F
 		mov ebx, ebp
 		cmp [esi+0x8], eax
 		jne .53
-		cmp edi, 0xfff
+		cmp edi, BUF_SIZE-1
 		ja .44
-.53:		lea ecx, [esi+0x1014]
+.53:		lea ecx, [esi+0x14+BUF_SIZE]
 .46:		mov edx, [esi+0x8]
 		cmp edx, ecx
 		je .44
@@ -345,13 +350,13 @@ mini___M_flushall:  ; void mini___M_flushall(void);
 		push dword global_files
 		call mini_fflush
 		pop eax
-		push dword global_files+0x1014
+		push dword global_files+0x14+BUF_SIZE
 		call mini_fflush
 		pop eax
 		ret
 
 section .bss
-global_files: resb 2*0x1014  ; Contains 2 `struct _SFS_FILE's, reserved for allocation by mini_fopen(...).
+global_files: resb 2*(0x14+BUF_SIZE)  ; Contains 2 `struct _SFS_FILE's, reserved for allocation by mini_fopen(...).
 
 %ifdef CONFIG_PIC
 %error Not PIC because of mini_stdout.
