@@ -83,7 +83,7 @@ FILE *mini_fopen(const char *pathname, const char *mode) {
   return NULL;  /* No free slots in global_files. */
 }
 
-int fflush(FILE *filep) {
+int mini_fflush(FILE *filep) {
   (void)filep;
   return 0;  /* Always succeeds. */
 }
@@ -143,5 +143,3 @@ int mini_fgetc(FILE *filep) {
 void mini___M_flushall(void) {
   /* There is nothing to flush. */
 }
-
-/* !! Retry reads and writes to fill the buffer. */

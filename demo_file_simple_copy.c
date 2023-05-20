@@ -9,17 +9,37 @@
 
 int main(int argc, char **argv) {
   FILE *fin, *fout;
-  char buf[0x100];
+  char buf[123];  /* Make it a small odd number for testing interactions of various buffer sizes. */
   int got, got2;
+  char mode;
   off_t ofs;
   (void)argc;
   /* We need exactly 2 arguments: argv[1] and argv[2]. */
-  if (!argv[0] || !argv[1] || !argv[2] || argv[3]) return 1;
+  if (!argv[0] || !argv[1] || !argv[2]) return 1;
+  if (argv[3] && (argv[3][0] == 'r' || argv[3][0] == 'c' || argc[3] == 'a') && argv[3][1] == '\0') {
+    mode = argv[3][0];
+  } else if (!argv[3]) {
+    mode = 'r';  /* Default. */
+  } else {
+    return 2;
+  }
   if ((fin = mini_fopen(argv[1], "rb")) == NULL) return 2;
   if ((fout = mini_fopen(argv[2], "wb")) == NULL) return 3;
-  ofs = 0;
+  if (mode == 'c') {  /* Just to check that it works. */
+    mini_fflush(fin);
+    mini_fflush(fout);
+  }
+  ofs = got = 0;
   goto check_ofs;
-  while ((got = mini_fread(buf, 1, sizeof(buf), fin)) != 0) {
+  for (;;) {
+    if (mode != 'c') {
+      if ((got = mini_fread(buf, 1, sizeof(buf), fin)) == 0) break;
+    } else {  /* mode == 'c'. */
+      got = mini_fgetc(fin);
+      if (got == EOF) break;
+      buf[0] = got;
+      got = 1;
+    }
     if ((ssize_t)got < 0) return 4;  /* mini_fread(...) never neturns negative, such as EOF. */
     if ((got2 = mini_fwrite(buf, 1, got, fout)) == 0) return 5;
     if ((ssize_t)got < 0) return 6;  /* mini_fread(...) never neturns negative, such as EOF. */
@@ -31,10 +51,11 @@ int main(int argc, char **argv) {
   }
   if (mini_ftell(fin) != ofs) return 10;
   if (mini_ftell(fin) != ofs) return 11;
-  if (mini_fclose(fout)) return 4;
-  if (mini_fclose(fin)) return 4;
+  if (mode = 'a') {  /* Let autoflush at exit(3) time take care of writing unflushed data to fout. */
+    if (mini_fclose(fout)) return 4;
+    if (mini_fclose(fin)) return 4;
+  }
   /* !! TODO(pts): Also test mini_fseek(...). */
-  /* !! TODO(pts): Also test mini_fgetc(...). */
   /* !! TODO(pts): Also test autoflush on ecit. */
   return 0;
 }

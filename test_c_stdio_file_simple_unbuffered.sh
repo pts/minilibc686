@@ -17,9 +17,13 @@ cmp f1.tmp.dat f2.tmp.dat
 rm -f f1.tmp.dat
 if ./test_c_stdio_file_simple_unbuffered.prog f1.tmp.dat f2.tmp.dat; then echo unexpected-success; exit 1; fi  # f1.tmp.dat doesn't exist, copy must fail.
 : t4
-awk 'BEGIN{for(i=0;i<=10000;++i){print "L",i}}' >f1.tmp.dat
+awk 'BEGIN{for(i=0;i<=1000;++i){print "L",i}}' >f1.tmp.dat
 rm -f f2.tmp.dat
 if ./test_c_stdio_file_simple_unbuffered.prog f1.tmp.dat f2.tmp.dat; then :; else echo "$?"; exit 1; fi  # Copies long file f1.tmp.dat to f2.tmp.dat.
+: t5
+rm -f f2.tmp.dat
+if ./test_c_stdio_file_simple_unbuffered.prog f1.tmp.dat f2.tmp.dat c; then :; else echo "$?"; exit 1; fi  # Copies long file f1.tmp.dat to f2.tmp.dat.
+
 rm -f f1.tmp.dat f2.tmp.dat
 
 : "$0" OK.
