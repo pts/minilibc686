@@ -81,7 +81,9 @@ static void discard_buf(FILE *filep) {
 FILE *mini_fopen(const char *pathname, const char *mode) {
   FILE *filep;
   int fd;
-  char is_write = mode[0] == 'w';
+  char is_write;
+#if FILE_CAPACITY > 0
+  is_write = mode[0] == 'w';
   for (filep = global_files; filep != global_files + sizeof(global_files) / sizeof(global_files[0]); ++filep) {
     if (filep->dire == FD_CLOSED) {
       fd = mini_open(pathname, is_write ? O_WRONLY | O_TRUNC | O_CREAT : O_RDONLY, 0666);
@@ -203,8 +205,20 @@ int mini_fgetc(FILE *filep) {
 
 /* Called from mini_exit(...). */
 void mini___M_flushall(void) {
+#if FILE_CAPACITY <= 0
+#else
+#if FILE_CAPACITY == 1
+  mini_fflush(global_files);
+#else
+#if FILE_CAPACITY == 2  /* Size optimization. */
+  mini_fflush(global_files);
+  mini_fflush(global_files + 1);
+#else
   FILE *filep;
   for (filep = global_files; filep != global_files + sizeof(global_files) / sizeof(global_files[0]); ++filep) {
     mini_fflush(filep);
   }
+#endif
+#endif
+#endif
 }
