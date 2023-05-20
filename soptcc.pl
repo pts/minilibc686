@@ -304,7 +304,8 @@ sub print_commons($$$) {
   for my $tuple (@commons2) {
     my($label, $size, $alignment) = @$tuple;
     print $outfh "alignb $alignment\n" if $alignment > 1;
-    print $outfh "$label: resb $size  ; align=$alignment\n";
+    my $sizex = sprintf("0x%x", $size);
+    print $outfh "$label: resb $sizex  ; align=$alignment\n";
     if (exists($define_when_defined->{$label})) {
       my $label1 = $define_when_defined->{$label};
       print $outfh "$label1 equ $label\n";
@@ -1214,7 +1215,8 @@ sub wasm2nasm($$$$$$$) {
       my $delta_bss_org = (defined($1) ? ($1 + 0) : hex($2)) - $bss_org;
       die "fatal: .bss org decreasing ($lc): $_\n" if $delta_bss_org < 0;
       if ($delta_bss_org != 0) {
-        print $outfh "\t\tresb $delta_bss_org\n";
+        my $sizex = sprintf("0x%x", $delta_bss_org);
+        print $outfh "\t\tresb $sizex\n";
       }
       $bss_org += $delta_bss_org;
     } elsif (m@^(?:`([^\s:\[\],+\-*/()<>`]+)`|([^\s:\[\],+\-*/()<>`]+)) LABEL BYTE$@ and $section eq ".bss") {
