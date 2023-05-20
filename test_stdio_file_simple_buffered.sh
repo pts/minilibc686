@@ -21,7 +21,7 @@ CFLAGS="${*:-}"
 "$NASM" $CFLAGS -O999999999 -w+orphan-labels -f elf -o stdio_file_simple_buffered.o stdio_file_simple_buffered.nasm
 "$NASM" $CFLAGS -O999999999 -w+orphan-labels -f bin -o stdio_file_simple_buffered.bin stdio_file_simple_buffered.nasm
 "$NASM" $CFLAGS -O0 -w+orphan-labels -f bin -o stdio_file_simple_buffered.o0.bin stdio_file_simple_buffered.nasm
-ndisasm -b 32 stdio_file_simple_buffered.bin | tail  # For the size.
+"$NDISASM" -b 32 stdio_file_simple_buffered.bin | tail  # For the size.
 if ! cmp stdio_file_simple_buffered.bin stdio_file_simple_buffered.o0.bin; then
   "$NDISASM" -b 32 stdio_file_simple_buffered.bin >stdio_file_simple_buffered.ndisasm
   "$NDISASM" -b 32 stdio_file_simple_buffered.o0.bin >stdio_file_simple_buffered.o0.ndisasm
