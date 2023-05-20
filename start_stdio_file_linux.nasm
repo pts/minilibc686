@@ -54,8 +54,8 @@ mini__start:  ; Entry point (_start) of the Linux i386 executable.
 		push edx  ; Argument argv for main.
 		push eax  ; Argument argc for main.
 		call main  ; Return value (exit code) in EAX (AL).
-		push eax  ; Save exit code, for mini_exit.
-		push eax
+		push eax  ; Save exit code, for mini__exit.
+		push eax  ; Fake return address, for mini__exit.
 		; Fall through to mini_exit(...).
 mini_exit:  ; void mini_exit(int exit_code);
 		call mini___M_flushall  ; Flush all stdio streams.
