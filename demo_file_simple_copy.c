@@ -16,7 +16,7 @@ int main(int argc, char **argv) {
   (void)argc;
   /* We need exactly 2 arguments: argv[1] and argv[2]. */
   if (!argv[0] || !argv[1] || !argv[2]) return 1;
-  if (argv[3] && (argv[3][0] == 'r' || argv[3][0] == 'c' || argc[3] == 'a') && argv[3][1] == '\0') {
+  if (argv[3] && (argv[3][0] == 'r' || argv[3][0] == 'c' || argv[3][0] == 'a') && argv[3][1] == '\0') {
     mode = argv[3][0];
   } else if (!argv[3]) {
     mode = 'r';  /* Default. */
@@ -51,11 +51,10 @@ int main(int argc, char **argv) {
   }
   if (mini_ftell(fin) != ofs) return 10;
   if (mini_ftell(fin) != ofs) return 11;
-  if (mode = 'a') {  /* Let autoflush at exit(3) time take care of writing unflushed data to fout. */
+  if (mode != 'a') {  /* Let autoflush at exit(3) time take care of writing unflushed data to fout. */
     if (mini_fclose(fout)) return 4;
     if (mini_fclose(fin)) return 4;
   }
   /* !! TODO(pts): Also test mini_fseek(...). */
-  /* !! TODO(pts): Also test autoflush on ecit. */
   return 0;
 }

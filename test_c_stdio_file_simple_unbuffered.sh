@@ -9,8 +9,12 @@ echo foobar >f1.tmp.dat
 rm -f f2.tmp.dat
 if ./test_c_stdio_file_simple_unbuffered.prog f1.tmp.dat f2.tmp.dat; then :; else echo "$?"; exit 1; fi  # Copies f1.tmp.dat to f2.tmp.dat.
 cmp f1.tmp.dat f2.tmp.dat
-: t2
-echo bad >f2.tmp.dat
+: t1b autoflush
+rm -f f2.tmp.dat
+if ./test_c_stdio_file_simple_unbuffered.prog f1.tmp.dat f2.tmp.dat a; then :; else echo "$?"; exit 1; fi  # Copies f1.tmp.dat to f2.tmp.dat.
+cmp f1.tmp.dat f2.tmp.dat
+: t2 overwritten
+echo overwritten >f2.tmp.dat
 if ./test_c_stdio_file_simple_unbuffered.prog f1.tmp.dat f2.tmp.dat; then :; else echo "$?"; exit 1; fi  # Copies f1.tmp.dat to f2.tmp.dat.
 cmp f1.tmp.dat f2.tmp.dat
 : t3
