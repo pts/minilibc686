@@ -122,7 +122,7 @@ mini_strtol:  ; long mini_strtol(const char *nptr, char **endptr, int base);
 		add edx, eax
 		jnc .no_overflow_2
 		mov ch, 1
-.no_overflow_2: jmp .next_digit
+.no_overflow_2: jmp short .next_digit
 .after_loop:	test cl, 2
 		jz .endptr_null_2
 		mov ebx, [ARG_ENDPTR]

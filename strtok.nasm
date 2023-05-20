@@ -53,7 +53,7 @@ mini_strtok:  ; char *mini_strtok(char *__restrict__ s, const char *__restrict__
 .5:		cmp al, [edx]
 		jne .4
 		inc edx
-		jmp .5
+		jmp short .5
 .8:		mov bl, cl
 		and cl, 0x1f
 		shr bl, 0x5
@@ -102,7 +102,7 @@ mini_strtok:  ; char *mini_strtok(char *__restrict__ s, const char *__restrict__
 		cmp al, cl
 		je .19
 		inc ebx
-		jmp .16
+		jmp short .16
 .43:		mov al, cl
 		mov edi, esi
 		shr al, 0x5

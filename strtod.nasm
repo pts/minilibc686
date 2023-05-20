@@ -68,7 +68,7 @@ MAX_ALLOWED_EXP equ 4973
 		cmp ah, 4  ; ord("\r")-ord("\t").
 		ja .3
 .2:		inc ebx
-		jmp .1
+		jmp short .1
 .3:		xor ebp, ebp
 		cmp al, '-'
 		je .4
@@ -100,14 +100,14 @@ MAX_ALLOWED_EXP equ 4973
 		fmul dword [esp+VAR_F32_10]
 		fiadd dword [esp+VAR_TMP_DIGIT]
 .10:		inc ebx
-		jmp .loop7
+		jmp short .loop7
 .after_loop7:	cmp dl, '.'-'0'
 		jne .done_loop7
 		test esi, esi
 		jne .done_loop7
 		inc ebx
 		mov esi, ebx  ; pos0 = pos;
-		jmp .loop7
+		jmp short .loop7
 .done_loop7:	test eax, eax
 		jge .18
 		test esi, esi
@@ -208,7 +208,7 @@ MAX_ALLOWED_EXP equ 4973
 		imul eax, byte 10
 		add eax, edx
 .26:		inc ebx
-		jmp .loop25
+		jmp short .loop25
 .27:		cmp ebx, ebp
 		jne .28
 		mov ebx, [esp+VAR_TMP_DIGIT]  ; pos = pos1;

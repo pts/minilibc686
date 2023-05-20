@@ -42,7 +42,7 @@ mini_strtok:  ; char *mini_strtok(char *__restrict__ s, const char *__restrict__
 .1:		cmp dl, [eax]
 		jne .2
 		inc eax
-		jmp .1
+		jmp short .1
 .2:		cmp byte [eax], 0
 		jne .3
 		xor ecx, ecx
@@ -53,7 +53,7 @@ mini_strtok:  ; char *mini_strtok(char *__restrict__ s, const char *__restrict__
 		cmp dl, [eax]
 		je .5
 		inc eax
-		jmp .4
+		jmp short .4
 .5:		mov [ebx], eax
 		cmp byte [eax], 0
 		je .set0_return
