@@ -12,11 +12,11 @@ int main(int argc, char **argv) {
   char buf[123];  /* Make it a small odd number for testing interactions of various buffer sizes. */
   int got, got2;
   char mode;
-  off_t ofs;
+  off_t ofs, ofs_delta;
   (void)argc;
   /* We need exactly 2 arguments: argv[1] and argv[2]. */
   if (!argv[0] || !argv[1] || !argv[2]) return 1;
-  if (argv[3] && (argv[3][0] == 'r' || argv[3][0] == 'c' || argv[3][0] == 'a') && argv[3][1] == '\0') {
+  if (argv[3] && (argv[3][0] == 'r' || argv[3][0] == 'c' || argv[3][0] == 'a' || argv[3][0] == 's') && argv[3][1] == '\0') {
     mode = argv[3][0];
   } else if (!argv[3]) {
     mode = 'r';  /* Default. */
@@ -47,7 +47,15 @@ int main(int argc, char **argv) {
     ofs += got;
    check_ofs:
     if (mini_ftell(fin) != ofs) return 8;
-    if (mini_ftell(fin) != ofs) return 9;
+    if (mini_ftell(fout) != ofs) return 9;
+    ofs_delta = (ofs % 13) + (ofs % 17);
+    if (mode == 's' && ofs_delta < got) {
+      if (mini_fseek(fin, -ofs_delta, SEEK_CUR) != 0) return 12;
+      if (mini_fseek(fout, -ofs_delta, SEEK_CUR) != 0) return 13;
+      ofs -= ofs_delta;
+      if (mini_ftell(fin) != ofs) return 14;
+      if (mini_ftell(fout) != ofs) return 15;
+    }
   }
   if (mini_ftell(fin) != ofs) return 10;
   if (mini_ftell(fin) != ofs) return 11;
@@ -55,6 +63,5 @@ int main(int argc, char **argv) {
     if (mini_fclose(fout)) return 4;
     if (mini_fclose(fin)) return 4;
   }
-  /* !! TODO(pts): Also test mini_fseek(...). */
   return 0;
 }
