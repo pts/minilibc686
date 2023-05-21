@@ -7,12 +7,14 @@
 cd "${0%/*}" || exit 1
 
 if test "$NASM"; then :
+elif test -f tools/nasm-0.98.39 && tools/nasm-0.98.39 -h 2>/dev/null >&2; then NASM=tools/nasm-0.98.39
 elif nasm-0.98.39 -h 2>/dev/null >&2; then NASM=nasm-0.98.39
 elif nasm -h 2>/dev/null >&2; then NASM=nasm
 else NASM=nasm  # Will fail.
 fi
 
 if test "$NDISASM"; then :
+elif test -f tools/ndisasm-0.98.39 && tools/ndisasm-0.98.39 -h 2>/dev/null >&2; then NDISASM=tools/ndisasm-0.98.39
 elif ndisasm-0.98.39 -h 2>/dev/null >&2; then NDISASM=ndisasm-0.98.39
 elif ndisasm -h 2>/dev/null >&2; then NDISASM=ndisasm
 else NDISASM=  # Disabled.
