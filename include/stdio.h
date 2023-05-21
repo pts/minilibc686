@@ -16,9 +16,9 @@ int printf(const char *format, ...) __asm__("mini_printf");
 
 typedef struct _SFS_FILE FILE;  /* Different from _FILE. */
 
-#if 0  /* Not implemented yet explicitly. */
+#ifdef __UCLIBC__  /* Not implemented yet explicitly. */
 extern FILE *stdin __asm__("mini_stdin");
-#endif
+#endif  /* __UCLIBC__ */
 extern FILE *stdout __asm__("mini_stdout");
 extern FILE *stderr __asm__("mini_stderr");
 
@@ -30,5 +30,12 @@ size_t fwrite(const void *ptr, size_t size, size_t nmemb, FILE *filep) __asm__("
 int fseek(FILE *filep, off_t offset, int whence) __asm__("mini_fseek");  /* Only 32-bit off_t. */
 off_t ftell(FILE *filep) __asm__("mini_ftell");  /* Only 32-bit off_t */
 int fgetc(FILE *filep) __asm__("mini_fgetc");
+
+#ifdef __UCLIBC__
+int fprintf(FILE *stream, const char *format, ...) __asm__("mini_fprintf");
+int sprintf(char *str, const char *format, ...) __asm__("mini_sprintf");
+int ferror(FILE *stream) __asm__("mini_ferror");
+int remove(const char *pathname) __asm__("mini_remove");
+#endif  /* __UCLIBC__ */
 
 #endif  /* _STDIO_H */
