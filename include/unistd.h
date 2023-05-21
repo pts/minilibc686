@@ -24,6 +24,10 @@ long syscall1(long nr, long arg1) __asm__("mini_syscall3_RP1") __attribute__((__
 long syscall2(long nr, long arg1, long arg2) __asm__("mini_syscall3_RP1") __attribute__((__regparm__(1)));
 long syscall3(long nr, long arg1, long arg2, long arg3) __asm__("mini_syscall3_RP1") __attribute__((__regparm__(1)));
 /*long syscall_upto_3(long nr, ...) __asm__("mini_syscall3_RP1") __attribute__((__regparm__(1)));*/  /* Unfortunately this doesn't work, __regparm__(1) is ignored. */
+/* Returns 0 on success, anything else (and sets errno) on error. The
+ * implementation quite shorter than lseek64(...).
+ */
+int lseek64_set(int fd, off64_t offset) __asm__("mini_lseek64_set_RP3") __attribute__((__regparm__(3)));
 #endif  /* !__UCLIBC__ */
 
 #endif  /* _UNISTD_H */
