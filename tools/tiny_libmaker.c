@@ -25,7 +25,8 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA.
  */
 
-#if defined(__WATCOMC__) && defined(__LINUX__) && defined(_M_I386)
+#if (!defined(DO_INLINE_STDLIB) || DO_INLINE_STDLIB) && defined(__WATCOMC__) && defined(__LINUX__) && defined(_M_I386)
+#undef  DO_INLINE_STDLIB
 #define DO_INLINE_STDLIB 1  /* Make it work without #include()s. */
 struct __iobuf {
   unsigned char        *_ptr;
@@ -44,7 +45,8 @@ typedef struct _FILE FILE;
  */
 #define stderr ((FILE*)&__iob[2])  /* sizeof(__iobuf) matters. */
 #else
-#if (defined(__TINYC__) || defined(__GNUC__)) && defined(__i386__) && defined(__linux__)
+#if (!defined(DO_INLINE_STDLIB) || DO_INLINE_STDLIB) && (defined(__TINYC__) || defined(__GNUC__)) && defined(__i386__) && defined(__linux__)
+#undef  DO_INLINE_STDLIB
 #define DO_INLINE_STDLIB 1  /* Make it work without #include()s. */
 typedef struct _FILE FILE;
 extern FILE *stderr;
@@ -100,9 +102,23 @@ int fclose(FILE *stream);
 int remove(const char *pathname);
 /**/
 #else  /* Use standard .h files (by default). */
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#  include <stdio.h>
+#  include <stdlib.h>
+#  include <string.h>
+#  ifndef __int8_t_defined
+#  ifndef _WIN32
+#    include <inttypes.h>
+#  else
+    typedef signed char int8_t;
+    typedef short int int16_t;
+    typedef int int32_t;
+    typedef long long int int64_t;
+    typedef unsigned char           uint8_t;
+    typedef unsigned short int      uint16_t;
+    typedef unsigned int            uint32_t;
+    typedef unsigned long long int  uint64_t;
+   #endif
+  #endif
 #endif
 
 /* --- <elf.h>, with only the needed features. */
@@ -125,21 +141,6 @@ int remove(const char *pathname);
    License along with the GNU C Library; if not, see
    <http://www.gnu.org/licenses/>.  */
 
-#ifndef _WIN32
-#include <inttypes.h>
-#else
-#ifndef __int8_t_defined
-#define __int8_t_defined
-typedef signed char int8_t;
-typedef short int int16_t;
-typedef int int32_t;
-typedef long long int int64_t;
-typedef unsigned char           uint8_t;
-typedef unsigned short int      uint16_t;
-typedef unsigned int            uint32_t;
-typedef unsigned long long int  uint64_t;
-#endif
-#endif
 
 /* Standard ELF types.  */
 
