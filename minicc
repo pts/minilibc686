@@ -1,0 +1,149 @@
+#! /bin/sh --
+#
+# minicc: compiler frontend for building with minilib686
+# by pts@fazekas.hu at Sun May 21 02:21:27 CEST 2023
+#
+
+export LC_ALL=C  # To avoid surprises.
+
+unset MYDIR
+MYDIR="$(readlink "$0" 2>/dev/null)"
+if test "$MYDIR"; then
+  test "${MYDIR#/}" = "$MYDIR" && MYDIR="${0%/*}/$MYDIR"
+else
+  MYDIR="$0"
+fi
+MYDIR="${MYDIR%/*}"
+
+if ! test -f "$MYDIR/gcctooldir/collect2"; then
+  echo "fatal: missing tool: $MYDIR/gcctooldir/collect2" >&2
+  exit 1
+fi
+if ! test -x "$MYDIR/gcctooldir/collect2"; then
+  echo "fatal: tool not executable: $MYDIR/gcctooldir/collect2" >&2
+  exit 1
+fi
+
+ARCH=i686
+GCC=gcc
+TCC=
+TCCLD=
+DO_ADD_LIB=1
+DO_LINK=1
+HAD_OFLAG=
+HAD_V=
+ARCH=i686
+
+SKIPARG=
+APPENDARG=
+NL="
+"
+ARGS=""
+for ARG in "$@"; do
+  if test "$SKIPARG"; then
+    SKIPARG=
+    continue
+  elif test "$APPENDARG"; then
+    ARGS="$ARGS$NL$APPENDARG$NL$ARG"
+    APPENDARG=
+    continue
+  fi
+  case "$ARG" in
+   *"$NL"*) echo "fatal: unexpected newline in arg" >&2; exit 1 ;;
+   --gcc) TCC=; GCC=gcc ;;
+   --gcc=*) TCC=; GCC="${ARG#*=}" ;;
+   --tcc) GCC=; TCC="$MYDIR"/tools/pts-tcc ;;
+   --tcc=*) GCC=; TCC="${ARG#*=}" ;;
+   --tccld) TCCLD="$MYDIR"/tools/pts-tcc ;;
+   --tccld=*) TCCLD="${ARG#*=}" ;;
+   -static | -m32 | -fno-pic | -fpic | -fno-pie | -pie | -no-pie | -flto | -fno-lto | -nostartfiles) ;;
+   -march=i[36]86) ARCH="${ARG#*=}" ;;
+   -march=*) echo "fatal: unsupported minicc arch flag: $ARG" >&2; exit 1 ;;
+   -[Wfmg]*) ARGS="$ARGS$NL$ARG" ;;
+   -[DU]*?) ARGS="$ARGS$NL$ARG" ;;
+   -O*) ARGS="$ARGS$NL$ARG"; HAD_OFLAG=1 ;;
+   -nostdlib | -nodefaultlibs) DO_ADD_LIB= ;;
+   -[cSE]) ARGS="$ARGS$NL$ARG"; DO_ADD_LIB=; DO_LINK= ;;
+   -s) ARGS="$ARGS$NL$ARG" ;;
+   -v) HAD_V=1; ARGS="$ARGS$NL$ARG" ;;
+   -o) APPENDARG="$ARG" ;;
+   -L*) echo "fatal: unsupported minicc library path flag: $ARG" >&2; exit 1 ;;
+   -l*) echo "fatal: unsupported minicc library flag: $ARG" >&2; exit 1 ;;
+   -*) echo "fatal: unsupported minicc flag: $ARG" >&2; exit 1 ;;
+   *.[aocsS])
+    if ! test -f "$ARG"; then echo "fatal: missing source file: $ARG" >&2; exit 1; fi
+    ARGS="$ARGS$NL$ARG"
+    ;;
+   *) echo "fatal: unsupported input file extension: $ARG" >&2; exit 1 ;;
+  esac
+done
+
+if test "$TCC" && test "$TCCLD"; then  # $TCCLD should work with $GCC
+  if test "$TCCLD" != "$TCC"; then
+    echo "fatal: conflicting combination of --tcc=... and --tccld=..." >&2
+    exit 1
+  fi
+  TCCLD=
+fi
+if test "$TCC" && test "$GCC"; then
+  echo "fatal: conflicting compilers, both --tcc=... and --gcc=..." >&2
+  exit 1
+fi
+if ! test "$TCC" && test ! "$GCC"; then
+  echo "fatal: missing compiler, neither --tcc=... nor --gcc=..." >&2
+  exit 1
+fi
+
+if ! test "$GCC"; then
+  :
+elif test "$TCCLD"; then
+  export MINICC_LD=
+  export MINICC_TCCLD="$TCCLD"
+  export MINICC_LDV="$HAD_V"
+else
+  export MINICC_TCCLD=
+  # gcctooldir/collect2 (== gcctooldir/ld) uses it.
+  export MINICC_LD="$("$GCC" -print-prog-name=ld)"
+  if test -z "$MINICC_LD"; then
+    echo "fatal: linker not found by gcc: $GCC" >&2
+    exit 2
+  fi
+  # Sometimes it's not found, but still returned nonempty.
+  export MINICC_LDV="$HAD_V"
+fi
+
+OFLAG_ARGS=
+if test -z "$HAD_OFLAG"; then  # Add some size-optimizing flags.
+  case "$GCC" in
+   "") ;;
+   *clang*) OFLAG_ARGS="-Os$NL-mstack-alignment=2" ;;
+   *) OFLAG_ARGS="-Os$NL-falign-functions=1$NL-falign-jumps=1$NL-falign-loops=1$NL-mpreferred-stack-boundary=2" ;;
+  esac
+  test "$TCC" && OFLAG_ARGS="-Os"
+fi
+
+# The `-B$MYDIR/gcctooldir' argument makes our gcctooldir/collect2 or gcctooldir/ld run.
+ARGS="$TCC$NL$GCC$NL-B$MYDIR/gcctooldir$NL-m32$NL-march=$ARCH$NL-static$NL-fno-pic$NL-U_FORTIFY_SOURCE$NL-fno-stack-protector$NL-fno-unwind-tables$NL-fno-asynchronous-unwind-tables$NL-fno-builtin$NL-fno-ident$NL-fsigned-char$NL-ffreestanding$NL-fno-lto$NL-nostdlib$NL-nostdinc$NL-I$MYDIR/include$NL$OFLAG_ARGS$NL$ARGS"
+if test "$DO_ADD_LIB"; then
+  LIBFN="$MYDIR/libmin$ARCH.a"
+  if ! test -f "$LIBFN"; then
+    if ! "$MYDIR/build.sh" !| test -f "$LIBFN"; then
+      echo "fatal: failed to build libc .a: $LIBFN" >&2
+      exit 3
+    fi
+  fi
+  if test "$TCC" || test "$TCCLD"; then  # TCC needs an explicit start*.o in the command line -- or does it?
+    OBJFN="$MYDIR/need_start.o"
+    if ! test -f "$OBJFN"; then
+      echo "fatal: missing libc start .o: $OBJFN" >&2
+      exit 3
+    fi
+    ARGS="$ARGS$NL$OBJFN"
+  fi
+  ARGS="$ARGS$NL$LIBFN"
+fi
+
+IFS="$NL"  # Argument splitting will happen over newlines only.
+test "$HAD_V" && echo "info: running compiler:" $ARGS
+exec $ARGS
+# TODO(pts): With `-s' and linking output, strip the executable properly.

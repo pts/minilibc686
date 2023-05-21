@@ -1,0 +1,52 @@
+#! /bin/sh --
+# by pts@fazekas.hu at Sun May 21 02:05:37 CEST 2023
+
+NL="
+"
+if test "$MINICC_TCCLD"; then
+  # TCC accepts all these flags (and ignores -m elf_i386).
+  ARGS="${MINICC_TCCLD:-ld}$NL-nostdlib$NL-m${NL}elf_i386$NL-static"
+else
+  ARGS="${MINICC_LD:-ld}$NL-nostdlib$NL-m${NL}elf_i386$NL-static"
+fi
+test "$MINICC_LDV" && ARGS="$ARGS$NL-v"
+
+SKIPARG=
+APPENDARG=
+for ARG in "$@"; do
+  if test "$SKIPARG"; then
+    SKIPARG=
+    continue
+  elif test "$APPENDARG"; then
+    ARGS="$ARGS$NL$APPENDARG$NL$ARG"
+    APPENDARG=
+    continue
+  fi
+  case "$ARG" in
+   *"$NL"*) echo "fatal: unexpected newline in hooked ld arg" >&2; exit 1 ;;
+   -fno-lto) ;;
+   --build-id | --build-id=*) ;;
+   --hash-style=*) ;;  # --hash-style=gnu
+   --sysroot=*) ;;  # --sysroot=/
+   --as-needed) ;;
+   -static) ;;
+   -s) ARGS="$ARGS$NL$ARG" ;;  # Strip all symbols.
+   -L*) ;;  # Many.
+   -l*) echo "fatal: unsupported hooked ld library flag: $ARG" >&2; exit 1 ;;
+   -z) SKIPARG=1 ;;  # -z relro. TODO(pts): Make `-z execstack' and `-z noexecstack' go through.
+   -m) SKIPARG=1 ;;  # -m elf_i386.
+   -o) APPENDARG="$ARG" ;;
+   -e) APPENDARG="$ARG" ;;  # -e _start (implicit).
+   -[Nv]) ARGS="$ARGS$NL$ARG" ;;
+   -*) echo "fatal: unsupported hooked ld flag: $ARG" >&2; exit 1 ;;
+   *.a | *.o)
+    if ! test -f "$ARG"; then echo "fatal: missing hooked ld source file: $ARG" >&2; exit 1; fi
+    ARGS="$ARGS$NL$ARG"
+    ;;
+   *) echo "fatal: unsupported hooked ld input file extension: $ARG" >&2; exit 1 ;;
+  esac
+done
+
+IFS="$NL"  # Argument splitting will happen over newlines only.
+test "$MINICC_LDV" && echo "info: running linker:" $ARGS
+exec $ARGS
