@@ -146,6 +146,9 @@ Linker problems:
     ```
   Linking command is:
   `ld -z execstack -nostdlib -m elf_i386 -static -o prog f1.o f2.o lib.a`
+
+  FYI mark stack as nonexecutable in GNU as:
+  `.section .note.GNU-stack,"",@progbits`
 * pts-tcc 0.9.26 (`pts-tcc -nostdlib'):
   * (incorrect?!) It puts string contants (.rodata.str1.1) to .data (writable)
   * It aligns sections to 0x20 bytes.
