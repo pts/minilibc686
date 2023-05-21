@@ -60,7 +60,7 @@ for ARG in "$@"; do
    -march=i[36]86) ARCH="${ARG#*=}" ;;
    -march=*) echo "fatal: unsupported minicc arch flag: $ARG" >&2; exit 1 ;;
    -[Wfmg]*) ARGS="$ARGS$NL$ARG" ;;
-   -[DU]*?) ARGS="$ARGS$NL$ARG" ;;
+   -[DUI]*?) ARGS="$ARGS$NL$ARG" ;;
    -O*) ARGS="$ARGS$NL$ARG"; HAD_OFLAG=1 ;;
    -nostdlib | -nodefaultlibs) DO_ADD_LIB= ;;
    -[cSE]) ARGS="$ARGS$NL$ARG"; DO_ADD_LIB=; DO_LINK= ;;
