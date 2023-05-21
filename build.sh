@@ -82,7 +82,7 @@ for ARCH in i386 i686; do
   else LIB_OBJS="$LIBI686_OBJS"
   fi
   set -ex
-  # TODO(pts): Remove local symbols first, to make the .o files smaller.
+  # !! TODO(pts): Remove local symbols first, to make the .o files smaller.
   $AR crs libmin"$ARCH".a $LIB_OBJS
   set +ex
 done
