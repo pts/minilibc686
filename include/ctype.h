@@ -2,6 +2,9 @@
 #define _CTYPE_H
 
 #ifdef __UCLIBC__
+/* These functions are also included in minilibc686, but, the *_RP1 variants
+ * are more efficient to use in newly compiled code.
+ */
 int isalpha(int c) __asm__("mini_isalpha");
 int isdigit(int c) __asm__("mini_isdigit");
 int isxdigit(int c) __asm__("mini_isxdigit");
