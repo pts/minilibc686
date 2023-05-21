@@ -10,4 +10,3 @@
 /c_*.nasm
 /*.ndisasm
 /libmini?86*.a
-/mini?86_start.o

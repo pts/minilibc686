@@ -33,7 +33,7 @@ fi
 set -ex
 
 CFLAGS="${*:-}"
-OFS="vfprintf_noplus.o printf_callvf.o fputc_unbuffered.o write_linux.o start_nomini_linux.o"
+OFS="vfprintf_noplus.o printf_callvf.o fputc_unbuffered.o write_linux.o start_nomini_linux.o need_start.o"
 for OF in $OFS; do
   $NASM $CFLAGS -O999999999 -w+orphan-labels -f elf -o "$OF" "${OF%.*}.nasm"
 done
@@ -57,7 +57,7 @@ fi
 
 if test "$TCC"; then
   # tcc needs the _start symbol be defined in an .o file (why?) -- or does it try to be smart with linking?
-  $TCC $GCC_TCC_FLAGS -Os -W -Wall -o demo_c_hello_linux.tcc.elf demo_c_hello.c libmini686_hello.a start_nomini_linux.o
+  $TCC $GCC_TCC_FLAGS -Os -W -Wall -o demo_c_hello_linux.tcc.elf demo_c_hello.c need_start.o libmini686_hello.a
   ./demo_c_hello_linux.tcc.elf  # Prints: Hello, World!
   ./demo_c_hello_linux.tcc.elf there  # Prints: Hello, there!
 fi

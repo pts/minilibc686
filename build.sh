@@ -55,6 +55,7 @@ for F in *.nasm; do
     set +ex
     LA=
     case "$F" in
+     need_start.nasm) ;;
      exit_linux.nasm) ;;
      # fputc_unbuffered.nasm) ;;
      # malloc_mmap_linux.nasm) ;;
@@ -88,5 +89,5 @@ done
 cp -a start_stdio_file_linux.o mini686_start.o
 cp -a start_stdio_file_linux.i386.o mini386_start.o
 
-ls -l libmini386.a libmini686.a mini386_start.o mini686_start.o
+ls -l libmini386.a libmini686.a mini386_start.o need_start.o
 echo : "$0" OK.
