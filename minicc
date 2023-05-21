@@ -171,10 +171,24 @@ if test "$DO_ADD_LIB"; then
   if test "$TCC" || test "$TCCLD"; then  # TCC needs an explicit start*.o in the command line -- or does it?
     OBJFN="$MYDIR/need_start.o"
     if ! test -f "$OBJFN"; then
-      echo "fatal: missing libc need-start .o: $OBJFN" >&2
-      exit 3
+      test "$HAD_V" && echo "info: compiling: $MYDIR/need_start.nasm" >&2
+      if "$MYDIR/tools/nasm-0.98.39" -O0 -w+orphan-labels -f elf -o "$OBJFN" "$MYDIR/need_start.nasm" && test -f "$OBJFN"; then :; else
+        echo "fatal: failed to build need-start .o: $OBJFN" >&2
+        exit 3
+      fi
     fi
     ARGS="$ARGS$NL$OBJFN"
+    if test "$USE_UCLIBC"; then
+      OBJFN="$MYDIR/need_uclibc_main.o"
+      if ! test -f "$OBJFN"; then
+        test "$HAD_V" && echo "info: compiling: $MYDIR/need_uclibc_main.nasm" >&2
+        if "$MYDIR/tools/nasm-0.98.39" -O0 -w+orphan-labels -f elf -o "$OBJFN" "$MYDIR/need_uclibc_main.nasm" && test -f "$OBJFN"; then :; else
+          echo "fatal: failed to build need-uclibc-main .o: $OBJFN" >&2
+          exit 3
+        fi
+      fi
+      ARGS="$ARGS$NL$OBJFN"
+    fi
   fi
   ARGS="$ARGS$NL$LIBWL$LIBFN"
   if test "$USE_UCLIBC"; then
