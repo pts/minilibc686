@@ -1,6 +1,8 @@
 #ifndef _STRING_H
 #define _STRING_H
 
+#include <sys/types.h>
+
 int strcasecmp(const char *l, const char *r) __asm__("mini_strcasecmp");
 int strncasecmp(const char *l, const char *r, size_t n) __asm__("mini_strncasecmp");
 char *strchr(const char *s, int c) __asm__("mini_strchr");
@@ -11,10 +13,10 @@ char *strtok(char *__restrict__ s, const char *__restrict__ sep) __asm__("mini_s
 long strtol(const char *nptr, char **endptr, int base) __asm__("mini_strtol");
 char *strcpy(char *dest, const char *src) __asm__("mini_strcpy");
 int strcmp(const char *s1, const char *s2) __asm__("mini_strcmp");
+void *memcpy(void *dest, const void *src, size_t n) __asm__("mini_memcpy");
 
 #ifdef __UCLIBC__
 char *strstr(const char *haystack, const char *needle) __asm__("mini_strstr");
-void *memcpy(void *dest, const void *src, size_t n) __asm__("mini_memcpy");
 void *memset(void *s, int c, size_t n) __asm__("mini_memset");
 #endif  /* __UCLIBC__ */
 
