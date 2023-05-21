@@ -18,7 +18,6 @@ section .rodata align=4
 section .data align=4
 section .bss align=4
 %else
-extern main
 section .text align=1
 section .rodata align=1
 section .data align=1
