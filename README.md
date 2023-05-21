@@ -137,6 +137,13 @@ Linker problems:
   * With `-N`, it can merge all sections (rwx).
   * It supports linking weak ELF symbols properly.
   * Binary size is huge: 2 082 968 bytes.
+  * !! TODO(pts): For mininasm, why does --tccld create a smaller program?
+    ```
+    $ qq ./minicc --tccld -s -Os -W -Wall -Werror -o mininasm mininasm.c && sstrip.static mininasm && ls -ld mininasm
+    -rwxr-xr-x 1 pts pts 23200 May 21 17:12 mininasm
+    qq ./minicc -s -Os -W -Wall -Werror -o mininasm mininasm.c && sstrip.static mininasm && ls -ld mininasm
+    -rwxr-xr-x 1 pts pts 24636 May 21 17:12 mininasm
+    ```
   Linking command is:
   `ld -z execstack -nostdlib -m elf_i386 -static -o prog f1.o f2.o lib.a`
 * pts-tcc 0.9.26 (`pts-tcc -nostdlib'):
