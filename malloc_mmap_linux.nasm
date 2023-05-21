@@ -80,7 +80,7 @@ mini_malloc:  ; void *mini_malloc(size_t size);
 		jmp short .done
 
 ; TODO(pts): Split to separate .o file, to avoid unnecessary linking.
-mini_realloc:  ; void *realloc(void *ptr, size_t size);
+mini_realloc:  ; void *mini_realloc(void *ptr, size_t size);
 		mov eax, [esp+4]
 		test eax, eax
 		jnz .existing

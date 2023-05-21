@@ -42,7 +42,7 @@ $AR crs libmini686_hello.a $OFS
 
 # -Wl,-e,mini__start is not supported by tcc.
 # tcc either supports or silently ignores these $GCC_FLAGS.
-GCC_TCC_FLAGS="-m32 -march=i386 -static -s -fno-pic -Os -W -Wall -Werror -U_FORTIFY_SOURCE -fno-stack-protector -fno-unwind-tables -fno-asynchronous-unwind-tables -fno-builtin -fno-ident -fsigned-char -ffreestanding -fno-lto -nostdlib -nostdinc"
+GCC_TCC_FLAGS="-m32 -march=i386 -static -s -fno-pic -Os -W -Wall -Werror -U_FORTIFY_SOURCE -fno-stack-protector -fno-unwind-tables -fno-asynchronous-unwind-tables -fno-builtin -fno-ident -fsigned-char -ffreestanding -fno-lto -nostdlib -nostdinc -Iinclude"
 GCC_FLAGS="-Wl,--build-id=none"
 case "$GCC" in
 *clang*) GCC_FLAGS="$GCC_FLAGS -mstack-alignment=2" ;;
