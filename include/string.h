@@ -12,6 +12,7 @@ double strtod(const char *str, char **endptr) __asm__("mini_strtod");
 char *strtok(char *__restrict__ s, const char *__restrict__ sep) __asm__("mini_strtok");
 long strtol(const char *nptr, char **endptr, int base) __asm__("mini_strtol");
 char *strcpy(char *dest, const char *src) __asm__("mini_strcpy");
+char *strcat(char *dest, const char *src) __asm__("mini_strcat");
 int strcmp(const char *s1, const char *s2) __asm__("mini_strcmp");
 void *memcpy(void *dest, const void *src, size_t n) __asm__("mini_memcpy");
 

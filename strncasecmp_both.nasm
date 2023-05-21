@@ -25,6 +25,8 @@ section .bss align=4
 %endif
 
 section .text
+; TODO(pts): Do this with smart linking.
+;
 ; This only adds 5 bytes to the existing mini_strncasecmp(...) implementation.
 mini_strcasecmp:  ; int mini_strcasecmp(const char *l, const char *r);
 		or ecx, byte -1  ; ECX := -1.
