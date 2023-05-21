@@ -101,6 +101,7 @@ Design limitations:
 * No minimalist, tiny executable linking built in. To build an executable,
   the user has to use external C compilers, linkers and build
   configurations.
+* File offsets (off_t) are 32-bit. (This can be relaxed later.)
 
 Calling convention:
 
