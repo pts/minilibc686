@@ -98,7 +98,7 @@ if test -z "$TCC" && test -z "$GCC"; then
   echo "fatal: missing compiler, neither --tcc=... nor --gcc=..." >&2
   exit 1
 fi
-if test "$USE_UCLIBC" && test "$DO_ADD_LIB" && test "${TCC%/pts-tcc}" = "$TCC"; then
+if test "$USE_UCLIBC" && test "$DO_ADD_LIB" && test -z "$TCCLD" && test "${TCC%/pts-tcc}" = "$TCC"; then
   # That's because ///tmp///LIBTCC1.a is embedded in the tools/pts-tcc executable.
   # TODO(pts): Extract it.
   echo "fatal: currently uClibc needs pts-tcc" >&2
@@ -155,7 +155,9 @@ else
   ARGS="$TCC$NL$GCC$NL-B$MYDIR/gcctooldir$NL-m32$NL-march=$ARCH$NL-static$NL-fno-pic$NL-U_FORTIFY_SOURCE$NL-fno-stack-protector$NL-fno-unwind-tables$NL-fno-asynchronous-unwind-tables$NL-fno-builtin$NL-fno-ident$NL-fsigned-char$NL-ffreestanding$NL-fno-lto$NL-nostdlib$NL-nostdinc$NL$OFLAG_ARGS$NL$DEF_ARG$NL$ARGS$NL$INCLUDEDIR_ARG"
 fi
 if test "$DO_ADD_LIB"; then
+  LIBWL=
   if test "$USE_UCLIBC"; then
+    test "$GCC" && LIBWL=-Wl,  # -Wl, is needed, otherwise GCC will complain that it is not able to find "$LIBFN" (which doesn't exist on the filesystem).
     LIBFN=///tmp///LIBTCC1.a  # Embedded in tools/pts-tcc.
   else
     LIBFN="$MYDIR/libmin$ARCH.a"
@@ -174,6 +176,7 @@ if test "$DO_ADD_LIB"; then
     fi
     ARGS="$ARGS$NL$OBJFN"
   fi
+  ARGS="$ARGS$NL$LIBWL$LIBFN"
   if test "$USE_UCLIBC"; then
     OBJFN="$MYDIR/start_uclibc_linux.o"
     if ! test -f "$OBJFN"; then
@@ -183,9 +186,8 @@ if test "$DO_ADD_LIB"; then
         exit 3
       fi
     fi
-    ARGS="$ARGS$NL$OBJFN"
+    ARGS="$ARGS$NL$LIBWL$OBJFN"
   fi
-  ARGS="$ARGS$NL$LIBFN"
 fi
 
 IFS="$NL"  # Argument splitting will happen over newlines only.

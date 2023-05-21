@@ -40,7 +40,11 @@ for ARG in "$@"; do
    -[Nv]) ARGS="$ARGS$NL$ARG" ;;
    -*) echo "fatal: unsupported hooked ld flag: $ARG" >&2; exit 1 ;;
    *.a | *.o)
-    if ! test -f "$ARG"; then echo "fatal: missing hooked ld source file: $ARG" >&2; exit 1; fi
+    if ! test -f "$ARG"; then
+      if test "$MINICC_TCCLD" && test "$ARG" = ///tmp///LIBTCC1.a; then :; else
+        echo "fatal: missing hooked ld source file: $ARG" >&2; exit 1
+      fi
+    fi
     ARGS="$ARGS$NL$ARG"
     ;;
    *) echo "fatal: unsupported hooked ld input file extension: $ARG" >&2; exit 1 ;;
