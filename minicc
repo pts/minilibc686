@@ -191,6 +191,14 @@ if test "$DO_ADD_LIB"; then
     fi
   fi
   ARGS="$ARGS$NL$LIBWL$LIBFN"
+  if test "$TCC" && test -z "$USE_UCLIBC"; then
+    LIBFN="$MYDIR/libminitcc1.a"
+    if ! test -f "$LIBFN"; then
+      echo "fatal: missing libtcc1 .a: $LIBFN" >&2
+      exit 3
+    fi
+    ARGS="$ARGS$NL$LIBFN"
+  fi
   if test "$USE_UCLIBC"; then
     OBJFN="$MYDIR/start_uclibc_linux.o"
     if ! test -f "$OBJFN"; then
