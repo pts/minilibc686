@@ -44,6 +44,13 @@ bundled TinyCC compiler (`tools/pts-tcc`). Without that flag, it will use the
 system GCC. To use the system Clang, specify `--gcc=clang`. Please note that
 *minicc* is work in progress.
 
+For convienience, `./minicc --utcc` links against a bundled uClibc 0.9.30.1
+(built for `-march=pentium3`, which is newer than `-march=i686`) rather than
+minilibc686. uClibc provides more functionality and compatibility than
+minilibc686, but it has more overhead (i.e. the program becomes a few KiB
+larger). The full uClibc .h files are not provided, but the minilibc686
+.h files work as a subset.
+
 An end-to-end demo for building a printf-hello-world program in NASM
 assembly with minilibc686, targeting Linux i386 32-bit ELF (actually i686
 processors), is provided in test_demo_hello_linux.sh. For the build you need
@@ -148,7 +155,9 @@ Linker problems:
 
 TODOs:
 
-* !! Make sure that the binary output is bitwise identical with NASM 2.13.02.
+* Make sure that the binary output is bitwise identical with NASM 2.13.02: `NASM=nasm build.sh`.
+* Rebuild the uClibc 0.9.30.1 within pts-tcc for `-march=i686` (1995).
+  Currently it's built for the newer `-march=pentium3` (1999).
 * ELF patch: .o change a symbol from global to weak in an .o file
 * ELF patch: implement sstrip
 * ELF patch: change the EI_OSABI to Linux

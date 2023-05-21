@@ -76,6 +76,10 @@ for F in *.nasm; do
   done
 done
 
+set -ex
+$NASM -O0 -w+orphan-labels -f elf -o start_uclibc_linux.o start_uclibc_linux.nasm
+set +ex
+
 for ARCH in i386 i686; do
   rm -f libmini686_hello.a  # Some versions of ar(1) such as GNU ar(1) do something different if the .a file already exists.
   if test "$ARCH" = i386; then LIB_OBJS="$LIBI386_OBJS"
