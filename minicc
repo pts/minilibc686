@@ -194,8 +194,10 @@ if test "$DO_ADD_LIB"; then
   if test "$TCC" && test -z "$USE_UCLIBC"; then
     LIBFN="$MYDIR/libminitcc1.a"
     if ! test -f "$LIBFN"; then
-      echo "fatal: missing libtcc1 .a: $LIBFN" >&2
-      exit 3
+      if "$MYDIR/build.sh" && test -f "$LIBFN"; then :; else
+       echo "fatal: failed to build libtcc1 .a: $LIBFN" >&2
+        exit 3
+      fi
     fi
     ARGS="$ARGS$NL$LIBFN"
   fi

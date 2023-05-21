@@ -77,13 +77,16 @@ for F in *.nasm; do
   done
 done
 
-for F in start_uclibc_linux.nasm need_start.nasm need_uclibc_main.nasm; do
+for F in start_uclibc_linux.nasm need_start.nasm need_uclibc_main.nasm tcc_alloca.nasm; do
   echo "info: compiling: $F" >&2
   BF="${F%.*}"
   set -ex
   $NASM -O0 -w+orphan-labels -f elf -o "$BF".o "$F"
   set +ex
 done
+
+rm -f libminitcc1.a  # Some versions of ar(1) such as GNU ar(1) do something different if the .a file already exists.
+$AR crs libminitcc1.a tcc_alloca.o
 
 for ARCH in i386 i686; do
   rm -f libmini686_hello.a  # Some versions of ar(1) such as GNU ar(1) do something different if the .a file already exists.
