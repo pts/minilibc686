@@ -10,6 +10,7 @@ ssize_t read(int fd, void *buf, size_t count) __asm__("mini_read");
 ssize_t write(int fd, const void *buf, size_t count) __asm__("mini_write");
 off_t lseek(int fd, off_t offset, int whence) __asm__("mini_lseek");
 long syscall(long nr, ...) __asm__("mini_syscall");
+int unlink(const char *pathname) __asm__("mini_unlink");
 
 #ifndef __UCLIBC__
 long syscall0(long nr) __asm__("mini_syscall3_RP1") __attribute__((__regparm__(1)));

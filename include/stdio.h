@@ -31,6 +31,8 @@ int fseek(FILE *filep, off_t offset, int whence) __asm__("mini_fseek");  /* Only
 off_t ftell(FILE *filep) __asm__("mini_ftell");  /* Only 32-bit off_t */
 int fgetc(FILE *filep) __asm__("mini_fgetc");
 
+int remove(const char *pathname) __asm__("mini_remove");
+
 #ifdef __UCLIBC__
 int fprintf(FILE *stream, const char *format, ...) __asm__("mini_fprintf");
 int sprintf(char *str, const char *format, ...) __asm__("mini_sprintf");

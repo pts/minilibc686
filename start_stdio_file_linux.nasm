@@ -13,6 +13,7 @@ cpu 386
 %endif
 global mini__start
 global mini__exit
+global mini_syscall3_AL
 global mini_syscall3_RP1
 global mini_exit
 global mini_open
@@ -72,6 +73,7 @@ _exit:
 		mov al, 1  ; __NR_exit.
 		; Fall through to progx_syscall3.
 syscall3:
+mini_syscall3_AL:  ; Useful from assembly language.
 ; Calls syscall(number, arg1, arg2, arg3).
 ;
 ; It takes the syscall number from AL (8 bits only!), arg1 (optional) from
@@ -106,6 +108,7 @@ mini_close:	mov al, 6  ; __NR_close.
 		jmp strict short syscall3
 mini_lseek:	mov al, 19  ; __NR_lseek.
 		jmp strict short syscall3
+; TODO(pts): Automatically add creat(2), remove(2) etc.
 ;mini_time:	mov al, 13  ; __NR_time.
 ;		jmp strict short syscall3
 ;mini_ioctl:	mov al, 54  ; __NR_ioctl.
