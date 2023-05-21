@@ -13,6 +13,7 @@ cpu 386
 %endif
 global mini__start
 global mini__exit
+global mini_syscall3_RP1
 global mini_exit
 global mini_open
 global mini_close
@@ -80,15 +81,16 @@ syscall3:
 ; It can EAX, EDX and ECX as scratch.
 ;
 ; It returns result (or -1 as error) in EAX.
-		push ebx  ; Save it, it's not a scratch register.
 		movzx eax, al  ; number.
+mini_syscall3_RP1:  ; long mini_syscall3_RP1(long nr, long arg1, long arg2, long arg3) __attribute__((__regparm__(1)));
+		push ebx  ; Save it, it's not a scratch register.
 		mov ebx, [esp+8]  ; arg1.
 		mov ecx, [esp+0xc]  ; arg2.
 		mov edx, [esp+0x10]  ; arg3.
 		int 0x80  ; Linux i386 syscall.
 		; test eax, eax
 		; jns .final_result
-		cmp eax, -0x100  ; TODO(pts): Treat very large (e.g. <-0x100; with Linux 5.4.0, 0x85 seems to be the smallest) non-negative return values as success rather than errno. This is needed by time(2) when it returns a negative timestamp. uClibc has -0x1000 here.
+		cmp eax, -0x100  ; Treat very large (e.g. <-0x100; with Linux 5.4.0, 0x85 seems to be the smallest) non-negative return values as success rather than errno. This is needed by time(2) when it returns a negative timestamp. uClibc has -0x1000 here.
 		jna .final_result
 		or eax, byte -1  ; EAX := -1 (error).
 .final_result:	pop ebx
