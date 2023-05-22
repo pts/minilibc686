@@ -13,9 +13,8 @@
  *
  * * Only these functions are implemented: fopen, fclose, fread, fwrite,
  *   fseek, ftell, fileno, fgetc, getc (defined in <stdio.h>), fputc, putc
- *   (defined in <stdio.h>).
- * * !! Implement stdin, stdout and stderr.
- * * !! TODO(pts): Implement printf, fprintf, vfprintf.
+ *   (defined in <stdio.h>), printf, fprintf, vfprintf.
+ * * !! Implement stdin and stderr.
  * * !! TODO(pts): Implement sprintf, vsprintf snprintf, vsnprintf.
  * * !! mini_fseek(...) doesn't work (can do anything) if the file size is
  *   larger than 4 GiB - 4 KiB. That's because the return value of lseek(2)
@@ -32,8 +31,6 @@
  * * !! Implement fgets.
  * * !! Implement getchar.
  * * !! Implement putchar.
- * * !! Implement getc as an alias for fgetc, also at the C header level.
- * * !! Implement gets as an alias for fgets, also at the C header level.
  * * !! Implement line buffering for stdin.
  * * !! Implement line buffering for stdout.
  * * Only fopen modes "rb" (same as "r", for reading) and "wb" (same as "w",
@@ -178,7 +175,7 @@ int mini_fclose(FILE *filep) {
 static __inline__ __attribute__((__always_inline__)) int fileno(FILE *filep) { return *(int*)(void*)(((char**)(filep))+4); }
 #endif
 
-int mini_fileno(FILE *filep) {  /* !! test this with stdout etc. */
+int mini_fileno(FILE *filep) {
   return filep->fd;  /* EOF if closed. */
 }
 
@@ -315,8 +312,13 @@ __attribute__((__regparm__(1))) int mini___M_writebuf_unrelax_RP1(FILE *filep) {
   return filep->dire == FD_WRITE_RELAXED ? toggle_relaxed(filep) : 0;
 }
 
+FILE *mini___M_stdout_for_flushall;  /* This is a common symbol, so stdio_medium_stdout.o won't be linked just because of this. */
+
 /* Called from mini_exit(...). */
 void mini___M_flushall(void) {
+  FILE *filep;
+  (void)filep;
+  if (mini___M_stdout_for_flushall) mini_fflush(mini___M_stdout_for_flushall);
 #if FILE_CAPACITY <= 0
 #else
 #if FILE_CAPACITY == 1
@@ -326,7 +328,6 @@ void mini___M_flushall(void) {
   mini_fflush(global_files);
   mini_fflush(global_files + 1);
 #else
-  FILE *filep;
   for (filep = global_files; filep != global_files + sizeof(global_files) / sizeof(global_files[0]); ++filep) {
     mini_fflush(filep);
   }

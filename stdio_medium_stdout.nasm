@@ -9,6 +9,7 @@ bits 32
 cpu 386
 
 global mini_stdout
+global mini___M_stdout_for_flushall
 %ifdef CONFIG_SECTIONS_DEFINED
 %elifidn __OUTPUT_FORMAT__, bin
 section .text align=1
@@ -23,6 +24,7 @@ section .bss align=4
 %endif
 
 section .data
+mini___M_stdout_for_flushall:
 mini_stdout:	dd mini_stdout_struct
 mini_stdout_struct:  ; Layout must match `struct _SMS_FILE' in stdio_medium_*.nasm and c_stdio_medium.c.
 .buf_write_ptr	dd stdout_buf

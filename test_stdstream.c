@@ -9,9 +9,11 @@ int main(int argc, char **argv) {
   if (fprintf(stderr, "%s, ", "Hello") != 7) return 5;
   if (printf("World!\n") != 7) return 6;
 #else
-  if (fprintf(stdout, "%s, ", "Hello") != 7) return 5;
-  if (printf("World!\n") != 7) return 6;
+  if (fwrite("Hel", 1, 3, stdout) != 3) return 5;
+  if (fflush(stdout)) return 6;
+  if (fprintf(stdout, "%s, ", "lo") != 4) return 7;
+  if (printf("World!\n") != 7) return 8;
 #endif
-  if (fflush(stdout)) return 7;  /* !! This shouldn't be needed, because of flushall. !! */
+  /* Don't flush(stdout); here, libc flushall takes care of it at exit time. */
   return 0;
 }
