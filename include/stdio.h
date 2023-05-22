@@ -14,6 +14,10 @@ int printf(const char *format, ...) __asm__("mini_printf");
 #define SEEK_CUR 1
 #define SEEK_END 2
 
+#define STDIN_FILENO 0
+#define STDOUT_FILENO 1
+#define STDERR_FILENO 2
+
 typedef struct _SFS_FILE FILE;  /* Different from _FILE. */
 
 #ifdef __UCLIBC__  /* Not implemented yet explicitly. */
