@@ -312,7 +312,10 @@ __attribute__((__regparm__(1))) int mini___M_writebuf_unrelax_RP1(FILE *filep) {
   return filep->dire == FD_WRITE_RELAXED ? toggle_relaxed(filep) : 0;
 }
 
-FILE *mini___M_stdout_for_flushall;  /* This is a common symbol, so stdio_medium_stdout.o won't be linked just because of this. */
+/* start_stdio_medium_linux.nasm defines this as a common symbol. This is a
+ * trick so that stdio_medium_stdout.o won't be linked just because of this.
+ */
+extern FILE *mini___M_stdout_for_flushall;
 
 /* Called from mini_exit(...). */
 void mini___M_flushall(void) {

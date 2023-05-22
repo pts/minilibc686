@@ -32,6 +32,7 @@ mini___M_flushall equ +0x12345679
 %else
 extern main
 extern mini___M_flushall
+common mini___M_stdout_for_flushall 4:4
 section .text align=1
 section .rodata align=1
 section .data align=1

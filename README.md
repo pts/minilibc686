@@ -163,6 +163,10 @@ Linker problems:
     1 PT_LOAD?)
   * It may be too slow for large projects.
   * It supports linking weak ELF symbols properly.
+  * The linker handles common symbols, but the C compiler generates a global
+    symbol instead. Workaround: add `common` to one of the .nasm files.
+  * See ct2/ctabc.sh for harmless linker error of common symbols depending on
+    .o file order.
 
 TODOs:
 

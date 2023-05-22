@@ -4,8 +4,8 @@ set -ex
 # Similar to test_c_stdio_file_simple_unbuffered.sh .
 
 CFLAGS="${*:-}"
-nasm-0.98.39 $CFLAGS -O999999999 -w+orphan-labels -f elf -Dmini__start=_start -o start_stdio_file_linux.o start_stdio_file_linux.nasm
-ARGS="-D__MINILIBC686__ -m32 -Os -W -Wall -s -Werror=implicit-function-declaration -ffreestanding -Iinclude -nostdlib -nostdinc -pedantic c_stdio_medium.c demo_file_medium_copy.c start_stdio_file_linux.o"
+nasm-0.98.39 $CFLAGS -O999999999 -w+orphan-labels -f elf -Dmini__start=_start -o start_stdio_medium_linux.o start_stdio_medium_linux.nasm
+ARGS="-D__MINILIBC686__ -m32 -Os -W -Wall -s -Werror=implicit-function-declaration -ffreestanding -Iinclude -nostdlib -nostdinc -pedantic c_stdio_medium.c demo_file_medium_copy.c start_stdio_medium_linux.o"
 #clang -static -o test_c_stdio_medium_file.prog -ansi $ARGS
 qq xstatic gcc -o test_c_stdio_medium_file.prog -ansi $ARGS
 qq xstatic gcc -o test_c_stdio_medium_file.macro.prog -ansi -DCONFIG_MACRO_GETC_PUTC -DCONFIG_MACRO_FILENO $ARGS
