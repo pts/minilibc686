@@ -14,9 +14,13 @@ int main(int argc, char **argv) {
   if (fgetc(stderr) != EOF) return 13;  /* Not open for reading. */
   if (getc(stderr) != EOF) return 14;  /* Not open for reading. */
   mode = argv[0] && argv[1] && argv[1][0] ? argv[1][0] : '.';
-  if (mode == 'c') {  /* Cat: copy from stdin to stdout. */
+  if (mode == 'c') {  /* Cat: copy from stdin to stdout using getc and putc. */
     while ((c = getc(stdin)) != EOF) {
       putc(c, stdout);
+    }
+  } else if (mode == 'h') {  /* Cat: copy from stdin to stdout using getchar and putchar. */
+    while ((c = getchar()) != EOF) {
+      putchar(c);
     }
   } else {
     if (fwrite("Hel", 1, 3, stdout) != 3) return 5;
