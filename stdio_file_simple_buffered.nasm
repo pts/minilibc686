@@ -310,7 +310,7 @@ mini_ftell:  ; off_t mini_ftell(FILE *filep);  /* Only 32-bit off_t */
 		mov edx, [esp+0x4]
 		mov al, [edx]
 		lea ecx, [eax-0x1]
-		xor eax, eax
+		or eax, byte -1
 		cmp cl, 0x1
 		ja .74
 		lea eax, [edx+0x14]

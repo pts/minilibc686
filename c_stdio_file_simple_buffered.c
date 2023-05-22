@@ -192,7 +192,7 @@ int mini_fseek(FILE *filep, off_t offset, int whence) {
 }
 
 off_t mini_ftell(FILE *filep) {
-  if (filep->dire != FD_READ && filep->dire != FD_WRITE) return 0;
+  if (filep->dire != FD_READ && filep->dire != FD_WRITE) return EOF;
   return filep->buf_off + (filep->buf_ptr - filep->buf);
 }
 
