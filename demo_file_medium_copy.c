@@ -23,9 +23,14 @@ int main(int argc, char **argv) {
     return 2;
   }
   if ((fin = fopen(argv[1], "rb")) == NULL) return 2;
+  got = fileno(fin);
+  if (got < 3 || got > 0xff) return 16;
   if ((fout = fopen(argv[2], "wb")) == NULL) return 3;
-  if (fgetc(fout) != EOF) return 13;  /* fout is only opened for reading. */
-  if (fputc('*', fin) != EOF) return 14;  /* fin is only opened for writing. */
+  got2 = fileno(fout);
+  if (got2 < 3 || got2 > 0xff) return 17;
+  if (got == got2) return 18;
+  if (fgetc(fout) != EOF) return 19;  /* fout is only opened for reading. */
+  if (fputc('*', fin) != EOF) return 20;  /* fin is only opened for writing. */
   if (mode == 'c') {  /* Just to check that it works. */
     fflush(fin);
     fflush(fout);

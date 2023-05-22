@@ -12,7 +12,8 @@
  * Limitations:
  *
  * * Only these functions are implemented: fopen, fclose, fread, fwrite,
- *   fseek, ftell, fgetc.
+ *   fseek, ftell, fileno, fgetc, getc (defined in <stdio.h>), fputc, putc
+ *   (defined in <stdio.h>).
  * * !! Implement stdin, stdout and stderr.
  * * !! TODO(pts): Implement printf, fprintf, vfprintf.
  * * !! TODO(pts): Implement sprintf, vsprintf snprintf, vsnprintf.
@@ -79,15 +80,16 @@ typedef struct _SMS_FILE FILE;  /* Different from _FILE. */
 #define _STDIO_SUPPORTS_LINE_BUFFERING 0  /* If changed, also update include/stdio.h. */
 
 struct _SMS_FILE {
-  /* The first two pointers must be buf_write_ptr and buf_end, for the getc(c, filep) macro to work. */
+  /* The first two pointers must be buf_write_ptr and buf_end, for the putc(c, filep) macro to work. */
   char *buf_write_ptr;  /* For writing: points to the first available byte in buf. */
   char *buf_end;  /* Points to the end of the buffer (i.e. byte after the buffer). */
-  /* The next two pointers must be buf_write_ptr and buf_end, for the getc(c, filep) macro to work. */
+  /* The next two pointers must be buf_write_ptr and buf_end, for the getc(filep) macro to work. */
   char *buf_read_ptr;  /* For reading: points to the first unreturned byte in buf. */
   char *buf_last;  /* For reading: points after the last byte read from file. */
-  char dire;  /* Direction. One of FD_... . FD_CLOSED by default. */
-  char gap[sizeof(int) - 1];
+  /* fd must come right after the 4 pointers above, for the fileno(filep) macro to work. */
   int fd;
+  char dire;  /* Direction. One of FD_... . FD_CLOSED by default. */
+  char padding[sizeof(int) - 1];
   /* Invariant: buf_start <= buf_write_ptr <= buf_end. */
   /* Invariant: buf_start <= buf_read_ptr <= buf_last <= buf_end. */
   char *buf_start;  /* Points to the start of the buffer. */
@@ -165,8 +167,16 @@ int mini_fclose(FILE *filep) {
   got = (filep->dire == FD_READ) ? 0 : mini_fflush(filep);
   mini_close(filep->fd);
   filep->dire = FD_CLOSED;
-  /*filep->fd = EOF;*/  /* Unnecessary work. !! Make it happen for fileno. */
+  filep->fd = EOF;  /* Sentinel for future calls to fileno(filep) etc. */
   return got;
+}
+
+#if defined(__GNUC__) || defined(__TINYC__)  /* Copied from <stdio.h>. */
+static __inline__ __attribute__((__always_inline__)) int fileno(FILE *filep) { return *(int*)(void*)(((char**)(filep))+4); }
+#endif
+
+int mini_fileno(FILE *filep) {  /* !! test this with stdout etc. */
+  return filep->fd;  /* EOF if closed. */
 }
 
 size_t mini_fread(void *ptr, size_t size, size_t nmemb, FILE *filep) {

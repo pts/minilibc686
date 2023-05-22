@@ -53,6 +53,15 @@ int fputc(int c, FILE *filep) __asm__("mini_fputc");
     static __inline__ __attribute__((__always_inline__)) int putc(int c, FILE *filep) { return (((char**)filep)[0]/*->buf_write_ptr*/ == ((char**)filep)[1]/*->buf_end*/) || (_STDIO_SUPPORTS_LINE_BUFFERING && (unsigned char)c == '\n') ? fputc(c, filep) : (unsigned char)(*((char**)filep)[0]/*->buf_write_ptr*/++ = c); }
 #  endif
 #endif
+#if !(defined(__MINILIBC686__) && !defined(__UCLIBC__)) || defined(CONFIG_FUNC_FILENO) || !(defined(CONFIG_INLINE_FILENO) || defined(CONFIG_MACRO_FILENO))
+  int fileno(FILE *filep) __asm__("mini_fileno");
+#else
+#  if defined(CONFIG_MACRO_FILENO)  /* This only works with stdio_medium of minilibc686. */
+#    define fileno(_filep) (*(int*)(void*)(((char**)(_filep))+4))
+#  else  /* defined(CONFIG_INLINE_FILENO) */  /* This only works with stdio_medium of minilibc686. */
+    static __inline__ __attribute__((__always_inline__)) int fileno(FILE *filep) { return *(int*)(void*)(((char**)(filep))+4); }
+#  endif
+#endif
 
 int remove(const char *pathname) __asm__("mini_remove");
 
