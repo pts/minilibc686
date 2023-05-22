@@ -10,3 +10,4 @@
 /c_*.nasm
 /*.ndisasm
 /libmini?86*.a
+/libminitcc1.a
