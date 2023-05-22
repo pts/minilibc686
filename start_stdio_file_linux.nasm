@@ -98,6 +98,7 @@ mini_syscall3_RP1:  ; long mini_syscall3_RP1(long nr, long arg1, long arg2, long
 .final_result:	pop ebx
 		ret
 
+; TODO(pts): Use smart linking to get rid of the unnecessary syscalls.
 mini_read:	mov al, 3  ; __NR_read.
 		jmp strict short syscall3
 mini_write:	mov al, 4  ; __NR_write.
@@ -108,10 +109,10 @@ mini_close:	mov al, 6  ; __NR_close.
 		jmp strict short syscall3
 mini_lseek:	mov al, 19  ; __NR_lseek.
 		jmp strict short syscall3
+mini_ioctl:	mov al, 54  ; __NR_ioctl.
+		jmp strict short syscall3
 ; TODO(pts): Automatically add creat(2), remove(2) etc.
 ;mini_time:	mov al, 13  ; __NR_time.
-;		jmp strict short syscall3
-;mini_ioctl:	mov al, 54  ; __NR_ioctl.
 ;		jmp strict short syscall3
 ;mini_gettimeofday:  mov al, 78  ; __NR_gettimeofday.
 ;		jmp strict short syscall3

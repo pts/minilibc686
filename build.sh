@@ -61,6 +61,7 @@ for F in *.nasm; do
      # fputc_unbuffered.nasm) ;;
      # malloc_mmap_linux.nasm) ;;
      # start_stdio_file_linux.nasm) ;;
+     isatty_linux_syscall.nasm) ;;  # The libc uses isatty_linux.nasm instead.
      strcasecmp.nasm) ;;  # TODO(pts): How to link strcasecmp.nasm if only strcasecmp(3) is needed, and strncasecmp_both.nasm if both strcasecmp(3) and strncasecmp(3) are needed?
      strtok_sep1.nasm) ;;  # TODO(pts): Link it with the symbol name strtok_sep.
      vfprintf_noplus.nasm) ;;  # vfprintf_plus provides more functionality.
