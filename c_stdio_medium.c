@@ -254,15 +254,14 @@ off_t mini_ftell(FILE *filep) {
   return filep->buf_off + (p - filep->buf_start);
 }
 
-/* This is not stdandard C. */
-int mini__fgetc_slow(FILE *filep) {  /* TODO(pts): In the assembly implementation, merge with mini_fgetc. */
+__attribute__((__regparm__(1))) int mini___M_fgetc_fallback_RP1(FILE *filep) {
   unsigned char uc;
   return mini_fread(&uc, 1, 1, filep) ? uc : EOF;
 }
 
 #if defined(__GNUC__) || defined(__TINYC__)  /* Copied from <stdio.h>. */
-/* If the there are bytes to read from the buffer (filep->buf_read_ptr != filep->buf_last), get and return a byte, otherwise call mini__fgetc_slow(...). */
-static __inline__ __attribute__((__always_inline__)) int getc(FILE *filep) { return (((char**)filep)[2]/*->buf_read_ptr*/ == ((char**)filep)[3]/*->buf_last*/) ? mini__fgetc_slow(filep) : (unsigned char)*((char**)filep)[2]/*->buf_read_ptr*/++; }
+/* If the there are bytes to read from the buffer (filep->buf_read_ptr != filep->buf_last), get and return a byte, otherwise call mini___M_fgetc_fallback_RP1(...). */
+static __inline__ __attribute__((__always_inline__)) int getc(FILE *filep) { return (((char**)filep)[2]/*->buf_read_ptr*/ == ((char**)filep)[3]/*->buf_last*/) ? mini___M_fgetc_fallback_RP1(filep) : (unsigned char)*((char**)filep)[2]/*->buf_read_ptr*/++; }
 #endif
 
 int mini_fgetc(FILE *filep) {
@@ -286,9 +285,13 @@ int mini_fputc(int c, FILE *filep) {
   return uc;
 }
 
+__attribute__((__regparm__(2))) int mini___M_fputc_RP2(int c, FILE *filep) {  /* A trampoline for shorter inlining of putc(...) below. */
+  return mini_fputc(c, filep);
+}
+
 #if defined(__GNUC__) || defined(__TINYC__)  /* Copied from <stdio.h>. */
 /* If the buffer is not full (filep->buf_write_ptr != filep->buf_end), append single byte, otherwise call fputc(...). */
-static __inline__ __attribute__((__always_inline__)) int putc(int c, FILE *filep) { return (((char**)filep)[0]/*->buf_write_ptr*/ == ((char**)filep)[1]/*->buf_end*/) || (_STDIO_SUPPORTS_LINE_BUFFERING && (unsigned char)c == '\n') ? mini_fputc(c, filep) : (unsigned char)(*((char**)filep)[0]/*->buf_write_ptr*/++ = c); }
+static __inline__ __attribute__((__always_inline__)) int putc(int c, FILE *filep) { return (((char**)filep)[0]/*->buf_write_ptr*/ == ((char**)filep)[1]/*->buf_end*/) || (_STDIO_SUPPORTS_LINE_BUFFERING && (unsigned char)c == '\n') ? mini___M_fputc_RP2(c, filep) : (unsigned char)(*((char**)filep)[0]/*->buf_write_ptr*/++ = c); }
 #endif
 
 /* Called from mini_exit(...). */
