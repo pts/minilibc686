@@ -16,8 +16,7 @@ int main(int argc, char **argv) {
   (void)argc;
   /* We need exactly 2 arguments: argv[1] and argv[2]. */
   if (!argv[0] || !argv[1] || !argv[2]) return 1;
-  if (argv[3] && (argv[3][0] == 'r' || argv[3][0] == 'c' || argv[3][0] == 'a' || argv[3][0] == 's' || argv[3][0] == 'p') && argv[3][1] == '\0') {
-    mode = argv[3][0];
+  if (argv[3] && (mode = argv[3][0], mode == 'r' || mode == 'c' || mode == 'd' || mode == 'a' || mode == 's' || mode == 'p' || mode == 'q') && argv[3][1] == '\0') {
   } else if (!argv[3]) {
     mode = 'r';  /* Default. */
   } else {
@@ -34,10 +33,10 @@ int main(int argc, char **argv) {
   ofs = got = 0;
   goto check_ofs;
   for (;;) {
-    if (mode != 'c') {
+    if (mode != 'c' && mode != 'd') {
       if ((got = fread(buf, 1, sizeof(buf), fin)) == 0) break;
-    } else {  /* mode == 'c'. */
-      got = fgetc(fin);
+    } else {  /* mode == 'c' || mode == 'd'. */
+      got = mode == 'c' ? fgetc(fin) : getc(fin);
       if (got == EOF) break;
       buf[0] = got;
       got = 1;
@@ -46,6 +45,10 @@ int main(int argc, char **argv) {
     if (mode == 'p') {
       for (i = 0; i < got; ++i) {
         if (fputc(buf[i], fout) != buf[i]) return 5;
+      }
+    } else if (mode == 'q') {
+      for (i = 0; i < got; ++i) {
+        if (putc(buf[i], fout) != buf[i]) return 5;
       }
     } else {
       if ((got2 = fwrite(buf, 1, got, fout)) == 0) return 5;

@@ -76,19 +76,21 @@ typedef struct _SMS_FILE FILE;  /* Different from _FILE. */
 #define FD_WRITE 2
 
 #define _STDIO_SUPPORTS_EMPTY_BUFFERS 0
-#define _STDIO_SUPPORTS_LINE_BUFFERING 0
+#define _STDIO_SUPPORTS_LINE_BUFFERING 0  /* If changed, also update include/stdio.h. */
 
 struct _SMS_FILE {
+  /* The first two pointers must be buf_write_ptr and buf_end, for the getc(c, filep) macro to work. */
+  char *buf_write_ptr;  /* For writing: points to the first available byte in buf. */
+  char *buf_end;  /* Points to the end of the buffer (i.e. byte after the buffer). */
+  /* The next two pointers must be buf_write_ptr and buf_end, for the getc(c, filep) macro to work. */
+  char *buf_read_ptr;  /* For reading: points to the first unreturned byte in buf. */
+  char *buf_last;  /* For reading: points after the last byte read from file. */
   char dire;  /* Direction. One of FD_... . FD_CLOSED by default. */
-  char gap1, gap2, gap3;
+  char gap[sizeof(int) - 1];
   int fd;
   /* Invariant: buf_start <= buf_write_ptr <= buf_end. */
   /* Invariant: buf_start <= buf_read_ptr <= buf_last <= buf_end. */
-  char *buf_write_ptr;  /* For writing: points to the first available byte in buf. */
-  char *buf_read_ptr;  /* For reading: points to the first unreturned byte in buf. */
-  char *buf_end;  /* Points to the end of the buffer (i.e. byte after the buffer). */
   char *buf_start;  /* Points to the start of the buffer. */
-  char *buf_last;  /* For reading: points after the last byte read from file. */
   off_t buf_off;  /* Points to the file offset of buf. */
 };
 
@@ -163,7 +165,7 @@ int mini_fclose(FILE *filep) {
   got = (filep->dire == FD_READ) ? 0 : mini_fflush(filep);
   mini_close(filep->fd);
   filep->dire = FD_CLOSED;
-  /*filep->fd = 0;*/  /* Unnecessary work. */
+  /*filep->fd = EOF;*/  /* Unnecessary work. !! Make it happen for fileno. */
   return got;
 }
 
@@ -242,6 +244,17 @@ off_t mini_ftell(FILE *filep) {
   return filep->buf_off + (p - filep->buf_start);
 }
 
+/* This is not stdandard C. */
+int mini__fgetc_slow(FILE *filep) {  /* TODO(pts): In the assembly implementation, merge with mini_fgetc. */
+  unsigned char uc;
+  return mini_fread(&uc, 1, 1, filep) ? uc : EOF;
+}
+
+#if defined(__GNUC__) || defined(__TINYC__)  /* Copied from <stdio.h>. */
+/* If the there are bytes to read from the buffer (filep->buf_read_ptr != filep->buf_last), get and return a byte, otherwise call mini__fgetc_slow(...). */
+static __inline__ __attribute__((__always_inline__)) int getc(FILE *filep) { return (((char**)filep)[2]/*->buf_read_ptr*/ == ((char**)filep)[3]/*->buf_last*/) ? mini__fgetc_slow(filep) : (unsigned char)*((char**)filep)[2]/*->buf_read_ptr*/++; }
+#endif
+
 int mini_fgetc(FILE *filep) {
   unsigned char uc;
   /*if (filep->dire != FD_READ) return EOF;*/  /* No need to check, mini_fread(...) below checks it. */
@@ -262,6 +275,11 @@ int mini_fputc(int c, FILE *filep) {
   if (_STDIO_SUPPORTS_LINE_BUFFERING && uc == '\n') mini_fflush(filep);
   return uc;
 }
+
+#if defined(__GNUC__) || defined(__TINYC__)  /* Copied from <stdio.h>. */
+/* If the buffer is not full (filep->buf_write_ptr != filep->buf_end), append single byte, otherwise call fputc(...). */
+static __inline__ __attribute__((__always_inline__)) int putc(int c, FILE *filep) { return (((char**)filep)[0]/*->buf_write_ptr*/ == ((char**)filep)[1]/*->buf_end*/) || (_STDIO_SUPPORTS_LINE_BUFFERING && (unsigned char)c == '\n') ? mini_fputc(c, filep) : (unsigned char)(*((char**)filep)[0]/*->buf_write_ptr*/++ = c); }
+#endif
 
 /* Called from mini_exit(...). */
 void mini___M_flushall(void) {

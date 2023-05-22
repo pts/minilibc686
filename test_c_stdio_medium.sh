@@ -5,7 +5,12 @@ set -ex
 
 CFLAGS="${*:-}"
 nasm-0.98.39 $CFLAGS -O999999999 -w+orphan-labels -f elf -Dmini__start=_start -o start_stdio_file_linux.o start_stdio_file_linux.nasm
-qq xstatic gcc -m32 -Os -W -Wall -s -Werror=implicit-function-declaration -Iinclude -nostdlib -nostdinc -ansi -pedantic -o test_c_stdio_medium.prog c_stdio_medium.c demo_file_medium_copy.c start_stdio_file_linux.o
+ARGS="-D__MINILIBC686__ -m32 -Os -W -Wall -s -Werror=implicit-function-declaration -Iinclude -nostdlib -nostdinc -pedantic c_stdio_medium.c demo_file_medium_copy.c start_stdio_file_linux.o"
+#clang -static -o test_c_stdio_medium.prog -ansi $ARGS
+qq xstatic gcc -o test_c_stdio_medium.prog -ansi $ARGS
+qq xstatic gcc -o test_c_stdio_medium.macro.prog -ansi -DCONFIG_MACRO_GETC_PUTC $ARGS
+qq xstatic gcc -o test_c_stdio_medium.inline.prog -ansi -DCONFIG_INLINE_GETC_PUTC $ARGS
+tools/pts-tcc -o test_c_stdio_medium.tcc.prog -DCONFIG_MACRO_GETC_PUTC $ARGS
 echo foobar >f1.tmp.dat
 : t1
 rm -f f2.tmp.dat
@@ -35,7 +40,39 @@ cmp f1.tmp.dat f2.tmp.dat
 rm -f f2.tmp.dat
 if ./test_c_stdio_medium.prog f1.tmp.dat f2.tmp.dat p; then :; else echo "$?"; exit 1; fi  # Copies long file f1.tmp.dat to f2.tmp.dat.
 cmp f1.tmp.dat f2.tmp.dat
-: t7 fseek
+: t7 putc
+rm -f f2.tmp.dat
+if ./test_c_stdio_medium.prog f1.tmp.dat f2.tmp.dat q; then :; else echo "$?"; exit 1; fi  # Copies long file f1.tmp.dat to f2.tmp.dat.
+cmp f1.tmp.dat f2.tmp.dat
+: t8 putc macro
+rm -f f2.tmp.dat
+if ./test_c_stdio_medium.macro.prog f1.tmp.dat f2.tmp.dat q; then :; else echo "$?"; exit 1; fi  # Copies long file f1.tmp.dat to f2.tmp.dat.
+cmp f1.tmp.dat f2.tmp.dat
+: t9 putc inline
+rm -f f2.tmp.dat
+if ./test_c_stdio_medium.inline.prog f1.tmp.dat f2.tmp.dat q; then :; else echo "$?"; exit 1; fi  # Copies long file f1.tmp.dat to f2.tmp.dat.
+cmp f1.tmp.dat f2.tmp.dat
+: t10 putc tcc
+rm -f f2.tmp.dat
+if ./test_c_stdio_medium.tcc.prog f1.tmp.dat f2.tmp.dat q; then :; else echo "$?"; exit 1; fi  # Copies long file f1.tmp.dat to f2.tmp.dat.
+cmp f1.tmp.dat f2.tmp.dat
+: t11 getc
+rm -f f2.tmp.dat
+if ./test_c_stdio_medium.prog f1.tmp.dat f2.tmp.dat d; then :; else echo "$?"; exit 1; fi  # Copies long file f1.tmp.dat to f2.tmp.dat.
+cmp f1.tmp.dat f2.tmp.dat
+: t12 getc macro
+rm -f f2.tmp.dat
+if ./test_c_stdio_medium.macro.prog f1.tmp.dat f2.tmp.dat d; then :; else echo "$?"; exit 1; fi  # Copies long file f1.tmp.dat to f2.tmp.dat.
+cmp f1.tmp.dat f2.tmp.dat
+: t13 getc inline
+rm -f f2.tmp.dat
+if ./test_c_stdio_medium.inline.prog f1.tmp.dat f2.tmp.dat d; then :; else echo "$?"; exit 1; fi  # Copies long file f1.tmp.dat to f2.tmp.dat.
+cmp f1.tmp.dat f2.tmp.dat
+: t14 getc tcc
+rm -f f2.tmp.dat
+if ./test_c_stdio_medium.tcc.prog f1.tmp.dat f2.tmp.dat d; then :; else echo "$?"; exit 1; fi  # Copies long file f1.tmp.dat to f2.tmp.dat.
+cmp f1.tmp.dat f2.tmp.dat
+: t15 fseek
 rm -f f2.tmp.dat
 if ./test_c_stdio_medium.prog f1.tmp.dat f2.tmp.dat s; then :; else echo "$?"; exit 1; fi  # Copies long file f1.tmp.dat to f2.tmp.dat.
 cmp f1.tmp.dat f2.tmp.dat
