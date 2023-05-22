@@ -25,6 +25,8 @@ int main(int argc, char **argv) {
   }
   if ((fin = fopen(argv[1], "rb")) == NULL) return 2;
   if ((fout = fopen(argv[2], "wb")) == NULL) return 3;
+  if (fgetc(fout) != EOF) return 13;  /* fout is only opened for reading. */
+  if (fputc('*', fin) != EOF) return 14;  /* fin is only opened for writing. */
   if (mode == 'c') {  /* Just to check that it works. */
     fflush(fin);
     fflush(fout);
