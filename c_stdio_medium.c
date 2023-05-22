@@ -27,7 +27,6 @@
  * * fread(...) and fwrite(...) always do full buffering. To get line buffering,
  *   use fprintf(...), vfprintf(...), puts(...), fputs(...), putchar(...),
  *   putc(...), getchar(...), getc(...), fgetc(...) or fgets(...).
- * * !! Implement fgetc.
  * * !! Implement puts.
  * * !! Implement fgets.
  * * !! Implement getchar.
@@ -75,6 +74,9 @@ typedef struct _SMS_FILE FILE;  /* Different from _FILE. */
 #define FD_CLOSED 0
 #define FD_READ 1
 #define FD_WRITE 2
+
+#define _STDIO_SUPPORTS_EMPTY_BUFFERS 0
+#define _STDIO_SUPPORTS_LINE_BUFFERING 0
 
 struct _SMS_FILE {
   char dire;  /* Direction. One of FD_... . FD_CLOSED by default. */
@@ -232,9 +234,23 @@ off_t mini_ftell(FILE *filep) {
 
 int mini_fgetc(FILE *filep) {
   unsigned char uc;
-  /*if (filep->dire != FD_READ) return 0;*/  /* No need to check, mini_fread(...) below checks it. */
+  /*if (filep->dire != FD_READ) return EOF;*/  /* No need to check, mini_fread(...) below checks it. */
   if (filep->buf_ptr != filep->buf_last) return (unsigned char)*filep->buf_ptr++;
   return mini_fread(&uc, 1, 1, filep) ? uc : EOF;
+}
+
+int mini_fputc(int c, FILE *filep) {
+  const unsigned char uc = c;
+  if (filep->dire != FD_WRITE) return EOF;  /* !! Add sentinel, and make mini_fflush(...) check it. No need to check, mini_fflush(...) below checks it. */
+  while (filep->buf_ptr == filep->buf_end) {
+    if (mini_fflush(filep)) return EOF;  /* Also returns EOF if filep->dire != FD_WRITE. Good, because we don't want to write. */
+    if (_STDIO_SUPPORTS_EMPTY_BUFFERS && filep->buf_ptr == filep->buf_end) {
+      return mini_fwrite(&uc, 1, 1, filep) ? uc : EOF;
+    }
+  }
+  *filep->buf_ptr++ = uc;
+  if (_STDIO_SUPPORTS_LINE_BUFFERING && uc == '\n') mini_fflush(filep);
+  return uc;
 }
 
 /* Called from mini_exit(...). */

@@ -30,6 +30,7 @@ size_t fwrite(const void *ptr, size_t size, size_t nmemb, FILE *filep) __asm__("
 int fseek(FILE *filep, off_t offset, int whence) __asm__("mini_fseek");  /* Only 32-bit off_t. */
 off_t ftell(FILE *filep) __asm__("mini_ftell");  /* Only 32-bit off_t */
 int fgetc(FILE *filep) __asm__("mini_fgetc");
+int fputc(int c, FILE *filep) __asm__("mini_fputc");
 
 int remove(const char *pathname) __asm__("mini_remove");
 

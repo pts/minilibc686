@@ -1,5 +1,5 @@
 /*
- * demo_file_simply_copy.c: a demo program which copies file argv[1] to argv[2] using stdio functions.
+ * demo_file_simple_copy.c: a demo program which copies file argv[1] to argv[2] using stdio functions.
  * by pts@fazekas.hu at Sat May 20 12:06:27 CEST 2023
  */
 
