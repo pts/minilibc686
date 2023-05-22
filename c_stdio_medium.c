@@ -214,8 +214,8 @@ size_t mini_fwrite(const void *ptr, size_t size, size_t nmemb, FILE *filep) {
   if (!mini_fflush(filep)) {  /* Successfully flushed. */
     while ((size_t)(got = mini_write(filep->fd, p, bc)) + 1U > 1U) {  /* Written at least 1 byte. */
       p += got;
-      bc -= got;
       filep->buf_off += got;
+      if ((bc -= got) == 0) break;
     }
   }
  done:
