@@ -80,15 +80,16 @@ struct _SMS_FILE {
   char dire;  /* Direction. One of FD_... . FD_CLOSED by default. */
   char gap1, gap2, gap3;
   int fd;
-  /* For reading: buf <= buf_ptr <= buf_last <= buf + BUF_SIZE. */
-  /* For writing: buf <= buf_ptr <= buf + BUF_SIZE. */
+  /* Invariant: buf_start <= buf_ptr <= buf_last <= buf_end. */
   char *buf_ptr;  /* For reading: points to the first unreturned byte in buf. For writing: points to the first available byte in buf. */
+  char *buf_end;  /* Points to the end of the buffer (i.e. byte after the buffer). */
+  char *buf_start;  /* Points to the start of the buffer. */
   char *buf_last;  /* For reading: points after the last byte read from file. */
   off_t buf_off;  /* Points to the file offset of buf. */
-  char buf[BUF_SIZE];
 };
 
 static FILE global_files[FILE_CAPACITY];
+static char global_file_bufs[FILE_CAPACITY * BUF_SIZE];
 
 /* Underlying syscall API. */
 #define O_RDONLY 0
@@ -105,22 +106,25 @@ extern ssize_t mini_write(int fd, const void *buf, size_t count);
 extern off_t mini_lseek(int fd, off_t offset, int whence);
 
 static void discard_buf(FILE *filep) {
-  filep->buf_ptr = filep->buf_last = filep->buf;
+  filep->buf_ptr = filep->buf_last = filep->buf_start;
 }
 
 FILE *mini_fopen(const char *pathname, const char *mode) {
   FILE *filep;
+  char *buf = global_file_bufs;
   int fd;
   char is_write;
 #if FILE_CAPACITY > 0
   is_write = mode[0] == 'w';
-  for (filep = global_files; filep != global_files + sizeof(global_files) / sizeof(global_files[0]); ++filep) {
+  for (filep = global_files; filep != global_files + sizeof(global_files) / sizeof(global_files[0]); ++filep, buf += BUF_SIZE) {
     if (filep->dire == FD_CLOSED) {
       fd = mini_open(pathname, is_write ? O_WRONLY | O_TRUNC | O_CREAT : O_RDONLY, 0666);
       if (fd < 0) return NULL;  /* open(2) has failed. */
       filep->dire = 1 + is_write;
       filep->fd = fd;
       filep->buf_off = 0;
+      filep->buf_start = buf;
+      filep->buf_end = buf + BUF_SIZE;
       discard_buf(filep);
       return filep;
     }
@@ -133,7 +137,7 @@ int mini_fflush(FILE *filep) {
   const char *p;
   ssize_t got;
   if (filep->dire != FD_WRITE) return EOF;
-  p = filep->buf;
+  p = filep->buf_start;
   while (p != filep->buf_ptr) {
     if ((got = mini_write(filep->fd, p, filep->buf_ptr - p)) + 1U <= 1U) {
       got = EOF;
@@ -143,7 +147,7 @@ int mini_fflush(FILE *filep) {
   }
   got = 0;  /* Success. */
  done:
-  filep->buf_off += p - filep->buf;
+  filep->buf_off += p - filep->buf_start;
   discard_buf(filep);
   return got;
 }
@@ -169,9 +173,9 @@ size_t mini_fread(void *ptr, size_t size, size_t nmemb, FILE *filep) {
       --bc;
     }
     if (bc == 0) break;
-    filep->buf_off += filep->buf_last - filep->buf;
+    filep->buf_off += filep->buf_last - filep->buf_start;
     discard_buf(filep);
-    if ((size_t)(got = mini_read(filep->fd, filep->buf, sizeof(filep->buf))) + 1U <= 1U) break;
+    if ((size_t)(got = mini_read(filep->fd, filep->buf_start, filep->buf_end - filep->buf_start)) + 1U <= 1U) break;
     filep->buf_last += got;
   }
   return (size_t)(p - (char*)ptr) / size;
@@ -182,10 +186,10 @@ size_t mini_fwrite(const void *ptr, size_t size, size_t nmemb, FILE *filep) {
   ssize_t got;
   const char *p = (char*)ptr;
   if (filep->dire != FD_WRITE || bc == 0) return 0;
-  if (filep->buf_ptr == filep->buf && bc >= sizeof(filep->buf)) {
+  if (filep->buf_ptr == filep->buf_start && bc >= (size_t)(filep->buf_end - filep->buf_start)) {
     /* Buffer is empty and too small. As a speed optimization, write directly to filep->fd. */
   } else {
-    while (filep->buf_ptr != filep->buf + sizeof(filep->buf)) {  /* TODO(pts): Is it faster or smaller with memcpy(3)? */
+    while (filep->buf_ptr != filep->buf_end) {  /* TODO(pts): Is it faster or smaller with memcpy(3)? */
       *filep->buf_ptr++ = *p++;
       if (--bc == 0) goto done;
     }
@@ -205,7 +209,7 @@ int mini_fseek(FILE *filep, off_t offset, int whence) {
   off_t got;
   if (filep->dire == FD_READ) {
     if (whence == SEEK_CUR) {
-      filep->buf_off += filep->buf_ptr - filep->buf;
+      filep->buf_off += filep->buf_ptr - filep->buf_start;
       whence = SEEK_SET;
       offset += filep->buf_off;
     }
@@ -223,7 +227,7 @@ int mini_fseek(FILE *filep, off_t offset, int whence) {
 
 off_t mini_ftell(FILE *filep) {
   if (filep->dire != FD_READ && filep->dire != FD_WRITE) return 0;
-  return filep->buf_off + (filep->buf_ptr - filep->buf);
+  return filep->buf_off + (filep->buf_ptr - filep->buf_start);
 }
 
 int mini_fgetc(FILE *filep) {
