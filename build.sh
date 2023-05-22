@@ -58,7 +58,7 @@ for F in *.nasm; do
     LA=
     case "$F" in
      exit_linux.nasm) ;;
-     # fputc_unbuffered.nasm) ;;
+     fputc_unbuffered.nasm) ;;  # The libc uses stdio_medium instead.
      # malloc_mmap_linux.nasm) ;;
      isatty_linux_syscall.nasm) ;;  # The libc uses isatty_linux.nasm instead.
      vfprintf_*.nasm)  ;;  # The libc uses stdio_medium_vfprintf.nasm instead.
