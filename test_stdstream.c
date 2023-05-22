@@ -1,4 +1,11 @@
+#include <stdarg.h>
 #include <stdio.h>
+
+static int my_printf(const char *format, ...) {
+  va_list ap;
+  va_start(ap, format);
+  return vfprintf(stdout, format, ap);
+}
 
 int main(int argc, char **argv) {
   char mode;
@@ -26,7 +33,7 @@ int main(int argc, char **argv) {
     if (fwrite("Hel", 1, 3, stdout) != 3) return 5;
     if (fflush(stdout)) return 6;
     if (fprintf(stderr, "%s, ", "lo") != 4) return 7;
-    if (printf("World!\n") != 7) return 8;
+    if (my_printf("World!\n") != 7) return 8;
   }
   /* Don't flush(stdout); here, libc flushall takes care of it at exit time. */
   return 0;

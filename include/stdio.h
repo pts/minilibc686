@@ -1,11 +1,8 @@
 #ifndef _STDIO_H
 #define _STDIO_H
 
+#include <stdarg_internal.h>  /* Defines __libc__va_list. */
 #include <sys/types.h>
-
-int printf(const char *format, ...) __asm__("mini_printf");
-/*int fprintf(FILE *f, const char *format, ...) __asm__("mini_fprintf");*/  /* TODO(pts): Make it work. */
-/*int vfprintf(FILE *f, const char *format, va_list ap) __asm__("mini_vfprintf");*/  /* TODO(pts): Make it work. */
 
 #define EOF -1  /* Indicates end-of-file (EOF) or error. */
 
@@ -26,6 +23,13 @@ extern FILE *stderr __asm__("mini_stderr");
 
 #ifndef _STDIO_SUPPORTS_LINE_BUFFERING
 #define _STDIO_SUPPORTS_LINE_BUFFERING 0
+#endif
+
+int printf(const char *format, ...) __asm__("mini_printf");
+int fprintf(FILE *stream, const char *format, ...) __asm__("mini_fprintf");
+int vfprintf(FILE *f, const char *format, __libc__va_list ap) __asm__("mini_vfprintf");
+#ifdef __UCLIBC__
+int sprintf(char *str, const char *format, ...) __asm__("mini_sprintf");
 #endif
 
 FILE *fopen(const char *pathname, const char *mode) __asm__("mini_fopen");
@@ -78,12 +82,8 @@ int fputc(int c, FILE *filep) __asm__("mini_fputc");
 
 int remove(const char *pathname) __asm__("mini_remove");
 
-int fprintf(FILE *stream, const char *format, ...) __asm__("mini_fprintf");
-int printf(const char *format, ...) __asm__("mini_printf");
 #ifdef __UCLIBC__
-int sprintf(char *str, const char *format, ...) __asm__("mini_sprintf");
 int ferror(FILE *stream) __asm__("mini_ferror");
-int remove(const char *pathname) __asm__("mini_remove");
 #endif  /* __UCLIBC__ */
 
 #endif  /* _STDIO_H */
