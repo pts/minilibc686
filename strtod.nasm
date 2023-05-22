@@ -7,7 +7,7 @@
 ; Uses: %ifdef CONFIG_PIC
 ; Uses: %ifdef CONFIG_I386
 ;
-; It doesn't set errno, see -D_STDTOD_ERRNO c_strtod.c for that.
+; Limitation: it doesn't set errno, see -D_STDTOD_ERRNO c_strtod.c for that.
 ;
 ; The results are still accurate, test_strtod_f64.sh passes.
 ;

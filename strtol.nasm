@@ -4,6 +4,8 @@
 ;
 ; Code+data size: 0xd7 bytes; best with C compiler (c_strtol.c): 0x112 bytes.
 ;
+; Limitation: it doesn't set errno, see c_strtol.c for that.
+;
 ; Uses: %ifdef CONFIG_PIC
 ;
 
