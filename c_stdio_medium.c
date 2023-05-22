@@ -74,12 +74,13 @@ typedef struct _SMS_FILE FILE;  /* Different from _FILE. */
 /* _FILE.dire (direction) constant. */
 #define FD_CLOSED 0
 #define FD_READ 1
-#define FD_WRITE 2
+#define FD_WRITE 2  /* Must be even. */
+#define FD_WRITE_RELAXED (FD_WRITE+1)  /* Like FD_WRITE, but the buffer size will be set to 0 by mini___M_writebuf_unrelax(...). */
 
-#define _STDIO_SUPPORTS_EMPTY_BUFFERS 0
+#define _STDIO_SUPPORTS_EMPTY_BUFFERS 1
 #define _STDIO_SUPPORTS_LINE_BUFFERING 0  /* If changed, also update include/stdio.h. */
 
-struct _SMS_FILE {
+struct _SMS_FILE {  /* Layout must match stdio_medium_*.nasm. */
   /* The first two pointers must be buf_write_ptr and buf_end, for the putc(c, filep) macro to work. */
   char *buf_write_ptr;  /* For writing: points to the first available byte in buf. */
   char *buf_end;  /* Points to the end of the buffer (i.e. byte after the buffer). */
@@ -88,11 +89,12 @@ struct _SMS_FILE {
   char *buf_last;  /* For reading: points after the last byte read from file. */
   /* fd must come right after the 4 pointers above, for the fileno(filep) macro to work. */
   int fd;
-  char dire;  /* Direction. One of FD_... . FD_CLOSED by default. */
+  unsigned char dire;  /* Direction. One of FD_... . FD_CLOSED by default. */
   char padding[sizeof(int) - 1];
-  /* Invariant: buf_start <= buf_write_ptr <= buf_end. */
-  /* Invariant: buf_start <= buf_read_ptr <= buf_last <= buf_end. */
+  /* Invariant: buf_start <= buf_write_ptr <= buf_end <= buf_capacity_end (unless FD_WRITE_RELAXED). */
+  /* Invariant: buf_start <= buf_read_ptr <= buf_last <= buf_end. <= buf_capacity. */
   char *buf_start;  /* Points to the start of the buffer. */
+  char *buf_capacity_end;  /* Indicates the end of the buffer data available (unless FD_WRITE_RELAXED). The region buf_end...buf_capacity_end is currently disabled. */
   off_t buf_off;  /* Points to the file offset of buf. */
 };
 
@@ -133,7 +135,7 @@ FILE *mini_fopen(const char *pathname, const char *mode) {
       filep->fd = fd;
       filep->buf_off = 0;
       filep->buf_start = buf;
-      filep->buf_end = buf + BUF_SIZE;
+      filep->buf_capacity_end = filep->buf_end = buf + BUF_SIZE;
       discard_buf(filep);
       return filep;
     }
@@ -142,10 +144,11 @@ FILE *mini_fopen(const char *pathname, const char *mode) {
   return NULL;  /* No free slots in global_files. */
 }
 
+/* Always calls discard_buf(...). */
 int mini_fflush(FILE *filep) {
   const char *p;
   ssize_t got;
-  if (filep->dire != FD_WRITE) return EOF;
+  if (filep->dire < FD_WRITE) return EOF;
   p = filep->buf_start;
   while (p != filep->buf_write_ptr) {
     if ((got = mini_write(filep->fd, p, filep->buf_write_ptr - p)) + 1U <= 1U) {
@@ -202,11 +205,11 @@ size_t mini_fwrite(const void *ptr, size_t size, size_t nmemb, FILE *filep) {
   size_t bc = size * nmemb;  /* Byte count. We don't care about overflow. */
   ssize_t got;
   const char *p = (char*)ptr;
-  if (filep->dire != FD_WRITE || bc == 0) return 0;
+  if (filep->dire < FD_WRITE || bc == 0) return 0;
   if (filep->buf_write_ptr == filep->buf_start && bc >= (size_t)(filep->buf_end - filep->buf_start)) {
     /* Buffer is empty and too small. As a speed optimization, write directly to filep->fd. */
   } else {
-    while (filep->buf_write_ptr != filep->buf_end) {  /* TODO(pts): Is it faster or smaller with memcpy(3)? */
+    while (filep->buf_write_ptr != filep->buf_end) {  /* !! TODO(pts): Is it faster or smaller with memcpy(3)? */
       *filep->buf_write_ptr++ = *p++;
       if (--bc == 0) goto done;
     }
@@ -231,7 +234,7 @@ int mini_fseek(FILE *filep, off_t offset, int whence) {
       offset += filep->buf_off;
     }
     discard_buf(filep);  /* The caller expects us to discard the buffer, even if mini_lseek(...) below fails. */
-  } else if (filep->dire == FD_WRITE) {
+  } else if (filep->dire >= FD_WRITE) {
     if (mini_fflush(filep)) return EOF;
   } else {
     return EOF;
@@ -246,7 +249,7 @@ off_t mini_ftell(FILE *filep) {
   const char *p;
   if (filep->dire == FD_READ) {
     p = filep->buf_read_ptr;
-  } else if (filep->dire == FD_WRITE) {
+  } else if (filep->dire >= FD_WRITE) {
     p = filep->buf_write_ptr;
   } else {
     return EOF;
@@ -273,9 +276,9 @@ int mini_fgetc(FILE *filep) {
 
 int mini_fputc(int c, FILE *filep) {
   const unsigned char uc = c;
-  /*if (filep->dire != FD_WRITE) return EOF;*/  /* No need to check, the while condition is true, and mini_fflush(...) below checks it. */
+  /*if (filep->dire < FD_WRITE) return EOF;*/  /* No need to check, the while condition is true, and mini_fflush(...) below checks it. */
   while (filep->buf_write_ptr == filep->buf_end) {
-    if (mini_fflush(filep)) return EOF;  /* Also returns EOF if filep->dire != FD_WRITE. Good, because we don't want to write. */
+    if (mini_fflush(filep)) return EOF;  /* Also returns EOF if filep->dire < FD_WRITE. Good, because we don't want to write. */
     if (_STDIO_SUPPORTS_EMPTY_BUFFERS && filep->buf_write_ptr == filep->buf_end) {
       return mini_fwrite(&uc, 1, 1, filep) ? uc : EOF;
     }
@@ -293,6 +296,24 @@ __attribute__((__regparm__(2))) int mini___M_fputc_RP2(int c, FILE *filep) {  /*
 /* If the buffer is not full (filep->buf_write_ptr != filep->buf_end), append single byte, otherwise call fputc(...). */
 static __inline__ __attribute__((__always_inline__)) int putc(int c, FILE *filep) { return (((char**)filep)[0]/*->buf_write_ptr*/ == ((char**)filep)[1]/*->buf_end*/) || (_STDIO_SUPPORTS_LINE_BUFFERING && (unsigned char)c == '\n') ? mini___M_fputc_RP2(c, filep) : (unsigned char)(*((char**)filep)[0]/*->buf_write_ptr*/++ = c); }
 #endif
+
+static int toggle_relaxed(FILE *filep) {
+  char *p;
+  const int result = filep->dire == FD_WRITE_RELAXED ? mini_fflush(filep) : 0;
+  filep->dire ^= 1;  /* Toggle FD_WRITE and FD_WRITE_RELAXED. */
+  p = filep->buf_capacity_end;
+  filep->buf_capacity_end = filep->buf_end;
+  filep->buf_end = p;
+  return result;
+}
+
+__attribute__((__regparm__(1))) void mini___M_writebuf_relax_RP1(FILE *filep) {
+  if (filep->dire == FD_WRITE && filep->buf_capacity_end > filep->buf_end) toggle_relaxed(filep);
+}
+
+__attribute__((__regparm__(1))) int mini___M_writebuf_unrelax_RP1(FILE *filep) {
+  return filep->dire == FD_WRITE_RELAXED ? toggle_relaxed(filep) : 0;
+}
 
 /* Called from mini_exit(...). */
 void mini___M_flushall(void) {

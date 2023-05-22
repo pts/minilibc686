@@ -20,11 +20,11 @@ int printf(const char *format, ...) __asm__("mini_printf");
 
 typedef struct _SFS_FILE FILE;  /* Different from _FILE. */
 
+extern FILE *stdout __asm__("mini_stdout");
 #ifdef __UCLIBC__  /* Not implemented yet explicitly. */
 extern FILE *stdin __asm__("mini_stdin");
-#endif  /* __UCLIBC__ */
-extern FILE *stdout __asm__("mini_stdout");
 extern FILE *stderr __asm__("mini_stderr");
+#endif  /* __UCLIBC__ */
 
 #ifndef _STDIO_SUPPORTS_LINE_BUFFERING
 #define _STDIO_SUPPORTS_LINE_BUFFERING 0
@@ -70,8 +70,9 @@ int fputc(int c, FILE *filep) __asm__("mini_fputc");
 
 int remove(const char *pathname) __asm__("mini_remove");
 
-#ifdef __UCLIBC__
 int fprintf(FILE *stream, const char *format, ...) __asm__("mini_fprintf");
+int printf(const char *format, ...) __asm__("mini_printf");
+#ifdef __UCLIBC__
 int sprintf(char *str, const char *format, ...) __asm__("mini_sprintf");
 int ferror(FILE *stream) __asm__("mini_ferror");
 int remove(const char *pathname) __asm__("mini_remove");
