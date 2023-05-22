@@ -11,6 +11,9 @@
 bits 32
 cpu 386
 
+%ifdef mini__start
+  global $mini__start  ; Without expanding the macro.
+%endif
 global mini__start
 global mini__exit
 global mini_exit
@@ -30,6 +33,9 @@ section .bss align=1
 %endif
 
 section .text
+%ifdef mini__start
+  $mini__start:  ; Without expanding the macro.
+%endif
 mini__start:  ; Entry point (_start) of the Linux i386 executable.
 		; Now the stack looks like (from top to bottom):
 		;   dword [esp]: argc

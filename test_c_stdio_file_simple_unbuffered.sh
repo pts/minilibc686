@@ -2,8 +2,8 @@
 set -ex
 
 CFLAGS="${*:-}"
-nasm-0.98.39 $CFLAGS -O999999999 -w+orphan-labels -f elf -o start_stdio_file_nomini_linux.o start_stdio_file_nomini_linux.nasm
-qq xstatic gcc -m32 -Os -W -Wall -s -Werror=implicit-function-declaration -nostdlib -nostdinc -o test_c_stdio_file_simple_unbuffered.prog c_stdio_file_simple_unbuffered.c demo_file_simple_copy.c start_stdio_file_nomini_linux.o
+nasm-0.98.39 $CFLAGS -O999999999 -w+orphan-labels -f elf -Dmini__start=_start -o start_stdio_file_linux.o start_stdio_file_linux.nasm
+qq xstatic gcc -m32 -Os -W -Wall -s -Werror=implicit-function-declaration -nostdlib -nostdinc -o test_c_stdio_file_simple_unbuffered.prog c_stdio_file_simple_unbuffered.c demo_file_simple_copy.c start_stdio_file_linux.o
 echo foobar >f1.tmp.dat
 : t1
 rm -f f2.tmp.dat

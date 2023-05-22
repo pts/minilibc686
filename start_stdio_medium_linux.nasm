@@ -109,8 +109,8 @@ mini_close:	mov al, 6  ; __NR_close.
 		jmp strict short syscall3
 mini_lseek:	mov al, 19  ; __NR_lseek.
 		jmp strict short syscall3
-;mini_ioctl:	mov al, 54  ; __NR_ioctl.
-;		jmp strict short syscall3
+mini_ioctl:	mov al, 54  ; __NR_ioctl.
+		jmp strict short syscall3
 ; TODO(pts): Automatically add creat(2), remove(2) etc.
 ;mini_time:	mov al, 13  ; __NR_time.
 ;		jmp strict short syscall3

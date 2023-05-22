@@ -33,10 +33,12 @@ fi
 set -ex
 
 CFLAGS="${*:-}"
-OFS="vfprintf_noplus.o printf_callvf.o fputc_unbuffered.o write_linux.o start_nomini_linux.o need_start.o"
+OFS="vfprintf_noplus.o printf_callvf.o fputc_unbuffered.o write_linux.o need_start.o"
 for OF in $OFS; do
   $NASM $CFLAGS -O999999999 -w+orphan-labels -f elf -o "$OF" "${OF%.*}.nasm"
 done
+$NASM $CFLAGS -O999999999 -w+orphan-labels -f elf -Dmini__start=_start -o start_stdio_linux.o start_linux.nasm
+OFS="$OFS start_linux.o"
 rm -f libmini686_hello.a  # Some versions of ar(1) such as GNU ar(1) do something different if the .a file already exists.
 $AR crs libmini686_hello.a $OFS
 

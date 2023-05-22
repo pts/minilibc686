@@ -30,8 +30,8 @@ export LC_ALL=C  # For consistency.
 
 LIBI386_OBJS=
 LIBI686_OBJS=
-if ! test -f start_stdio_file_linux.nasm; then
-  echo "fatal: missing: start_stdio_file_linux.nasm" >&2
+if ! test -f start_stdio_medium_linux.nasm; then
+  echo "fatal: missing: start_stdio_medium_linux.nasm" >&2
   exit 2
 fi
 for F in *.nasm; do
@@ -60,14 +60,13 @@ for F in *.nasm; do
      exit_linux.nasm) ;;
      # fputc_unbuffered.nasm) ;;
      # malloc_mmap_linux.nasm) ;;
-     # start_stdio_file_linux.nasm) ;;
      isatty_linux_syscall.nasm) ;;  # The libc uses isatty_linux.nasm instead.
      strcasecmp.nasm) ;;  # TODO(pts): How to link strcasecmp.nasm if only strcasecmp(3) is needed, and strncasecmp_both.nasm if both strcasecmp(3) and strncasecmp(3) are needed?
      strtok_sep1.nasm) ;;  # TODO(pts): Link it with the symbol name strtok_sep.
      vfprintf_noplus.nasm) ;;  # vfprintf_plus provides more functionality.
-     write_linux.nasm) ;;  # start_stdio_file_linux.nasm provides it.
+     write_linux.nasm) ;;  # start_stdio_medium_linux.nasm provides it.
      m_flushall_dummy.nasm) ;;
-     start_stdio_file_linux.nasm) LA=1 ;;
+     start_stdio_medium_linux.nasm) LA=1 ;;
      start_*.nasm) ;;
      *.nasm) LA=1 ;;
     esac
@@ -99,8 +98,8 @@ for ARCH in i386 i686; do
   $AR crs libmin"$ARCH".a $LIB_OBJS
   set +ex
 done
-cp -a start_stdio_file_linux.o mini686_start.o
-cp -a start_stdio_file_linux.i386.o mini386_start.o
+cp -a start_stdio_medium_linux.o mini686_start.o
+cp -a start_stdio_medium_linux.i386.o mini386_start.o
 
 ls -l libmini386.a libmini686.a mini386_start.o need_start.o
 echo : "$0" OK.

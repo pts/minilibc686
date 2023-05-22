@@ -17,7 +17,17 @@ set -ex
 # Similar to test_c_stdio_file_simple_unbuffered.sh .
 
 CFLAGS="${*:-}"
-"$NASM" $CFLAGS -O999999999 -w+orphan-labels -f elf -o start_stdio_file_nomini_linux.o start_stdio_file_nomini_linux.nasm
+
+nasm-0.98.39 $CFLAGS -O999999999 -w+orphan-labels -f elf -Dmini__start=_start -o start_stdio_file_linux.o start_stdio_file_linux.nasm
+nasm-0.98.39 $CFLAGS -O999999999 -w+orphan-labels -f bin -o start_stdio_file_linux.bin start_stdio_file_linux.nasm
+nasm-0.98.39 $CFLAGS -O0 -w+orphan-labels -f bin -o start_stdio_file_linux.o0.bin start_stdio_file_linux.nasm
+ndisasm -b 32 start_stdio_file_linux.bin | tail  # For the size.
+if ! cmp start_stdio_file_linux.bin start_stdio_file_linux.o0.bin; then
+  ndisasm-0.98.39 -b 32 start_stdio_file_linux.bin >start_stdio_file_linux.ndisasm
+  ndisasm-0.98.39 -b 32 start_stdio_file_linux.o0.bin >start_stdio_file_linux.o0.ndisasm
+  diff -U3 start_stdio_file_linux.ndisasm start_stdio_file_linux.o0.ndisasm
+fi
+
 "$NASM" $CFLAGS -O999999999 -w+orphan-labels -f elf -o stdio_file_simple_buffered.o stdio_file_simple_buffered.nasm
 "$NASM" $CFLAGS -O999999999 -w+orphan-labels -f bin -o stdio_file_simple_buffered.bin stdio_file_simple_buffered.nasm
 "$NASM" $CFLAGS -O0 -w+orphan-labels -f bin -o stdio_file_simple_buffered.o0.bin stdio_file_simple_buffered.nasm
@@ -27,7 +37,8 @@ if ! cmp stdio_file_simple_buffered.bin stdio_file_simple_buffered.o0.bin; then
   "$NDISASM" -b 32 stdio_file_simple_buffered.o0.bin >stdio_file_simple_buffered.o0.ndisasm
   diff -U3 stdio_file_simple_buffered.ndisasm stdio_file_simple_buffered.o0.ndisasm
 fi
-qq xstatic gcc -m32 -Os -W -Wall -s -Werror=implicit-function-declaration -nostdlib -nostdinc -o test_stdio_file_simple_buffered.prog stdio_file_simple_buffered.o demo_file_simple_copy.c start_stdio_file_nomini_linux.o
+
+qq xstatic gcc -m32 -Os -W -Wall -s -Werror=implicit-function-declaration -nostdlib -nostdinc -o test_stdio_file_simple_buffered.prog stdio_file_simple_buffered.o demo_file_simple_copy.c start_stdio_file_linux.o
 echo foobar >f1.tmp.dat
 : t1
 rm -f f2.tmp.dat
