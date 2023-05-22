@@ -17,6 +17,8 @@ off_t lseek(int fd, off_t offset, int whence) __asm__("mini_lseek");
 off64_t lseek64(int fd, off64_t offset, int whence) __asm__("mini_lseek64");
 long syscall(long nr, ...) __asm__("mini_syscall");
 int unlink(const char *pathname) __asm__("mini_unlink");
+/* Limitation: it doesn't always set errno in minilibc686. */
+int isatty(int fd) __asm__("mini_isatty");
 
 #ifndef __UCLIBC__
 long syscall0(long nr) __asm__("mini_syscall3_RP1") __attribute__((__regparm__(1)));
