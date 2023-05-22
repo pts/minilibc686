@@ -152,7 +152,8 @@ else
   # This also works with TCC, but it's too much cruft.
   # The `-B$MYDIR/gcctooldir' argument makes our gcctooldir/collect2 or gcctooldir/ld run.
   # Add $INCLUDEDIR_ARG last, so that -I... specified by the user takes precedence.
-  ARGS="$TCC$NL$GCC$NL-B$MYDIR/gcctooldir$NL-m32$NL-march=$ARCH$NL-static$NL-fno-pic$NL-U_FORTIFY_SOURCE$NL-fno-stack-protector$NL-fno-unwind-tables$NL-fno-asynchronous-unwind-tables$NL-fno-builtin$NL-fno-ident$NL-fsigned-char$NL-ffreestanding$NL-fno-lto$NL-nostdlib$NL-nostdinc$NL$OFLAG_ARGS$NL$DEF_ARG$NL$ARGS$NL$INCLUDEDIR_ARG"
+  # Specifying -fcommon since -fno-common is the default since GCC 10 and Clang 11: https://maskray.me/blog/2022-02-06-all-about-common-symbols
+  ARGS="$TCC$NL$GCC$NL-B$MYDIR/gcctooldir$NL-m32$NL-march=$ARCH$NL-static$NL-fno-pic$NL-U_FORTIFY_SOURCE$NL-fcommon$NL-fno-stack-protector$NL-fno-unwind-tables$NL-fno-asynchronous-unwind-tables$NL-fno-builtin$NL-fno-ident$NL-fsigned-char$NL-ffreestanding$NL-fno-lto$NL-nostdlib$NL-nostdinc$NL$OFLAG_ARGS$NL$DEF_ARG$NL$ARGS$NL$INCLUDEDIR_ARG"
 fi
 if test "$DO_ADD_LIB"; then
   LIBWL=
