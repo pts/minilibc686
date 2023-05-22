@@ -20,11 +20,9 @@ int printf(const char *format, ...) __asm__("mini_printf");
 
 typedef struct _SFS_FILE FILE;  /* Different from _FILE. */
 
+extern FILE *stdin __asm__("mini_stdin");
 extern FILE *stdout __asm__("mini_stdout");
 extern FILE *stderr __asm__("mini_stderr");
-#ifdef __UCLIBC__  /* Not implemented yet explicitly. */
-extern FILE *stdin __asm__("mini_stdin");
-#endif  /* __UCLIBC__ */
 
 #ifndef _STDIO_SUPPORTS_LINE_BUFFERING
 #define _STDIO_SUPPORTS_LINE_BUFFERING 0
