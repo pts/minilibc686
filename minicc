@@ -143,7 +143,11 @@ INCLUDEDIR_ARG=
 DEF_ARG=
 if test "$DO_ADD_INCLUDEDIR"; then
   INCLUDEDIR_ARG="-I$MYDIR/include"
-  test "$USE_UCLIBC" && DEF_ARG="-D__asm__(x)=$NL-D__UCLIBC__"   # Make it ignore __asm__("mini_printf") in stdio.h, so that the linker will find the uClibc printf(...).
+  if test "$USE_UCLIBC"; then
+    DEF_ARG="-D__asm__(x)=$NL-D__UCLIBC__"   # Make it ignore __asm__("mini_printf") in stdio.h, so that the linker will find the uClibc printf(...).
+  else
+    DEF_ARG="-D__MINILIBC686__$NL-DCONFIG_INLINE_FILENO"
+  fi
 fi
 if test "$TCC"; then
   # TODO(pts): Does TCC really generate i386-only code?
