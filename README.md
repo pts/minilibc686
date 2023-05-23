@@ -167,6 +167,8 @@ Linker problems:
     symbol instead. Workaround: add `common` to one of the .nasm files.
   * See ct2/ctabc.sh for harmless linker error of common symbols depending on
     .o file order.
+  * See `tcc_common_lib_bug.sh` for TCC failing to link in symbol
+    mini___M_init_isatty even though it's referenced as extern and common.
 
 TODOs:
 
