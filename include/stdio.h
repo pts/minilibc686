@@ -26,6 +26,7 @@ extern FILE *stderr __asm__("mini_stderr");
 #endif
 
 int printf(const char *format, ...) __asm__("mini_printf");
+int vprintf(const char *format, __libc__va_list ap) __asm__("mini_vprintf");
 int fprintf(FILE *stream, const char *format, ...) __asm__("mini_fprintf");
 int vfprintf(FILE *f, const char *format, __libc__va_list ap) __asm__("mini_vfprintf");
 int sprintf(char *str, const char *format, ...) __asm__("mini_sprintf");
