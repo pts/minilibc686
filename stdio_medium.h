@@ -70,6 +70,7 @@ typedef struct _SMS_FILE FILE;  /* Different from _FILE. */
 #define FD_WRITE_RELAXED (FD_WRITE+1)  /* Like FD_WRITE, but the buffer size will be set to 0 by mini___M_writebuf_unrelax(...). */
 #define FD_READ_LINEBUF (FD_READ+2)  /* Line buffered, for reading. */
 #define FD_WRITE_LINEBUF (FD_WRITE+2)  /* Line buffered, for writing. */
+#define FD_WRITE_SATURATE (FD_WRITE+3)  /* Like FD_WRITE, but silently ignore further writes when the buffer is full. Used and implemented by mini_snprintf(...) and mini_vsnprintf(...). */
 
 #define IS_FD_ANY_READ(dire) ((unsigned char)((dire) - FD_READ) < (unsigned char)(FD_WRITE - FD_READ + 0U))
 #define IS_FD_ANY_WRITE(dire) ((unsigned char)(dire) >= (unsigned char)FD_WRITE)

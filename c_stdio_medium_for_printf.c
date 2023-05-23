@@ -26,6 +26,9 @@ int mini_fflush(FILE *filep) {
 }
 
 __attribute__((__regparm__(2))) int mini___M_fputc_RP2(int c, FILE *filep) {
+  /* It's not allowed to call mini___M_fputc_RP2 with filep->dire ==
+   * FD_WRITE_SATURATE, the caller has to handle it.
+   */
   const unsigned char uc = c;
   /*if (!IS_FD_ANY_WRITE(filep->dire)) return EOF;*/  /* No need to check, the while condition is true, and mini_fflush(...) below checks it. */
   if (filep->buf_write_ptr == filep->buf_end) {

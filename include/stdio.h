@@ -4,6 +4,8 @@
 #include <stdarg_internal.h>  /* Defines __libc__va_list. */
 #include <sys/types.h>
 
+#define NULL ((void*)0)  /* Defined in multiple .h files: https://en.cppreference.com/w/c/types/NULL */
+
 #define EOF -1  /* Indicates end-of-file (EOF) or error. */
 
 /* fseek(..., ..., whence) constants. */
@@ -31,6 +33,7 @@ int fprintf(FILE *stream, const char *format, ...) __asm__("mini_fprintf");
 int vfprintf(FILE *f, const char *format, __libc__va_list ap) __asm__("mini_vfprintf");
 int sprintf(char *str, const char *format, ...) __asm__("mini_sprintf");
 int vsprintf(char *str, const char *format, __libc__va_list ap) __asm__("mini_vsprintf");
+int snprintf(char *str, size_t size, const char *format, ...) __asm__("mini_snprintf");
 
 FILE *fopen(const char *pathname, const char *mode) __asm__("mini_fopen");
 int fflush(FILE *filep) __asm__("mini_fflush");

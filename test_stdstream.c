@@ -38,8 +38,17 @@ int main(int argc, char **argv) {
 
   if (sprintf(buf, "answer=%04d", 42) != 11) return 21;
   if (strcmp(buf, "answer=0042") != 0) return 22;
-  if (my_sprintf(buf, "short") != 5) return 21;
-  if (strcmp(buf, "short") != 0) return 22;
+  if (my_sprintf(buf, "short") != 5) return 23;
+  if (strcmp(buf, "short") != 0) return 24;
+  if (snprintf(buf, 1, "short") != 5) return 25;
+  if (strcmp(buf, "") != 0) return 26;
+  if (snprintf(buf, 10, "short") != 5) return 27;
+  if (strcmp(buf, "short") != 0) return 28;
+  if (snprintf(buf, 3, "short") != 5) return 29;
+  if (strcmp(buf, "sh") != 0) return 30;
+  if (snprintf(buf, 0, "short") != 5) return 31;
+  if (strcmp(buf, "sh") != 0) return 32;  /* Not modified. */
+  if (snprintf(NULL, 0, "short") != 5) return 33;
 
   mode = argv[0] && argv[1] && argv[1][0] ? argv[1][0] : '.';
   if (mode == 'c') {  /* Cat: copy from stdin to stdout using getc and putc. */
