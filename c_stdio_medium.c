@@ -25,9 +25,9 @@
  *   is a TTY (terminal), otherwise it's full buffering.
  * * !! Implement puts.
  * * !! Implement fgets.
- * * Only fopen modes "rb" (same as "r", for reading) and "wb" (same as "w",
- *   for writing) are implemented. Thus the file can be opened only in one
- *   direction at a time.
+ * * Only fopen modes "rb" (same as "r", for reading), "wb" (same as "w",
+ *   for writing), "ab" (same as "a", for appending) are implemented. Thus
+ *   the file can be opened only in one direction at a time.
  * * !! There is no error indicator bit, subsequent read(2) and write(2) will
  *   be attempted even after an I/O error.
  * * Only up to a compile-time fixed number of files (default:
@@ -38,6 +38,9 @@
  *   functions will also be linked.
  * * The behavior is undefined if `size * nmemb' is overflows (i.e. at
  *   least 2 ** 32 == 4 GiB).
+ * * When the file is opened for appending, the result of ftell(...) is not
+ *   reliable. As a workaround, fseek(filep, 0, SEEK_CUR) first, and then
+ *   call ftell(filep).
  */
 
 /* See the public API in <stdio.h>. */
@@ -103,6 +106,7 @@ extern char mini___M_global_file_bufs[];
 #define O_CREAT 0100  /* Linux-specific. */
 #define O_EXCL  0200  /* Linux-specific. */
 #define O_TRUNC 01000  /* Linux-specific. */
+#define O_APPEND 02000  /* Linux-specific. */
 typedef unsigned mode_t;
 extern int mini_open(const char *pathname, int flags, mode_t mode);
 extern int mini_close(int fd);
@@ -223,11 +227,12 @@ FILE *mini_fopen(const char *pathname, const char *mode) {
   FILE *filep;
   char *buf = mini___M_global_file_bufs;
   int fd;
-  char is_write;
-  is_write = mode[0] == 'w';  /* !! Add 'a'. */
+  const char is_write = (mode[0] == 'w' || mode[0] == 'a');
+  mode_t fmode = is_write ? O_WRONLY | O_TRUNC | O_CREAT : O_RDONLY;
+  if (mode[0] == 'a') fmode |= O_APPEND;
   for (filep = mini___M_global_files; filep != mini___M_global_files_end; ++filep, buf += BUF_SIZE) {
     if (filep->dire == FD_CLOSED) {
-      fd = mini_open(pathname, is_write ? O_WRONLY | O_TRUNC | O_CREAT : O_RDONLY, 0666);
+      fd = mini_open(pathname, fmode, 0666);
       if (fd < 0) return NULL;  /* open(2) has failed. */
       filep->dire = is_write ? FD_WRITE : FD_READ;
       filep->fd = fd;
