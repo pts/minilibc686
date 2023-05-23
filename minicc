@@ -75,6 +75,8 @@ for ARG in "$@"; do
    -L*) echo "fatal: unsupported minicc library path flag: $ARG" >&2; exit 1 ;;
    -l*) echo "fatal: unsupported minicc library flag: $ARG" >&2; exit 1 ;;
    -*) echo "fatal: unsupported minicc flag: $ARG" >&2; exit 1 ;;
+   *//////*)
+    echo "fatal: too many slashes in input file name: $ARG" >&2; exit 1 ;;  # We use this to detect TMPDIR.
    *.[aocsS])
     if ! test -f "$ARG"; then echo "fatal: missing source file: $ARG" >&2; exit 1; fi
     ARGS="$ARGS$NL$ARG"
@@ -219,7 +221,16 @@ if test "$DO_ADD_LIB"; then
   fi
 fi
 
+test "$TMPDIR" || TMPDIR=/tmp
+if test "${TMPDIR#/}" = "$TMPDIR"; then TMPDIR=".//////$TMPDIR"
+else TMPDIR="/////$TMPDIR"
+fi
+export TMPDIR
+# Now $TMPDIR contains ////// (at least 6 consecutive slashes), this is how
+# we are going to detect temporary .o files in the linker.
+
 IFS="$NL"  # Argument splitting will happen over newlines only.
-test "$HAD_V" && echo "info: running compiler:" $ARGS
+export MINICC_TOOLS="$MYDIR/tools"
+test "$HAD_V" && echo "info: running compiler:" $ARGS >&2  # !! TODO(pts): Write to stdout if GCC also writes there.
 exec $ARGS
 # TODO(pts): With `-s' and linking output, strip the executable properly.

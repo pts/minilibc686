@@ -11,6 +11,7 @@ else
 fi
 test "$MINICC_LDV" && ARGS="$ARGS$NL-v"
 
+LDTMPOARGS=
 SKIPARG=
 APPENDARG=
 for ARG in "$@"; do
@@ -45,6 +46,9 @@ for ARG in "$@"; do
         echo "fatal: missing hooked ld source file: $ARG" >&2; exit 1
       fi
     fi
+    case "$ARG" in
+     //////*.o | .//////*.o) LDTMPOARGS="$LDTMPOARGS$NL$ARG"
+    esac
     ARGS="$ARGS$NL$ARG"
     ;;
    *) echo "fatal: unsupported hooked ld input file extension: $ARG" >&2; exit 1 ;;
@@ -52,5 +56,15 @@ for ARG in "$@"; do
 done
 
 IFS="$NL"  # Argument splitting will happen over newlines only.
-test "$MINICC_LDV" && echo "info: running linker:" $ARGS
+
+# GCC adds the .note.GNU-stack ELF section header to the .o file, adding
+# 0x20 bytes unnecessary. We remove it, so ld(1) won't generate the
+# PT_GNU_STACK program header in the executable. To get it, specify
+# -Wl,-z,execstack or -Wl,-z,noexecstack.
+for ARG in $LDTMPOARGS; do
+  test "$MINICC_LDV" && echo "info: removing .note.GNU-stack from: $ARG" >&2
+  "$MINICC_TOOLS/elfnostack" "$ARG" || exit "$?"
+done
+
+test "$MINICC_LDV" && echo "info: running linker:" $ARGS >&2
 exec $ARGS
