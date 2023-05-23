@@ -172,7 +172,6 @@ size_t mini_fwrite(const void *ptr, size_t size, size_t nmemb, FILE *filep) {
   } else if (filep->dire == FD_WRITE_LINEBUF) {
     for (q = p + bc; q != p && q[-1] != '\n'; --q) {}  /* Find the last '\n'. */
     do {
-      /* !! TODO(pts): Flush the buffer if full (but not overfull)? What does glibc do? */
       if (filep->buf_write_ptr == filep->buf_end) {
         if (mini_fflush(filep)) goto done;  /* Error flushing, so stop. */
       }
@@ -185,7 +184,10 @@ size_t mini_fwrite(const void *ptr, size_t size, size_t nmemb, FILE *filep) {
   } else if (filep->buf_write_ptr == filep->buf_start && bc >= (size_t)(filep->buf_end - filep->buf_start)) {
     /* Buffer is empty and too small. As a speed optimization, write directly to filep->fd. */
   } else {
-    /* !! TODO(pts): Flush the buffer if full (but not overfull)? What does glibc do? */
+    /* We could flush the buffer 1 byte earlier (i.e. when it's full but not
+     * yet overfull). However, none of uClibc 0.9.30.1, glibc 2.19 and glibc
+     * 2.27. So we don't flush earlier either (here and elsewhere).
+     */
     while (filep->buf_write_ptr != filep->buf_end) {  /* !! TODO(pts): Is it faster or smaller with memcpy(3)? */
       *filep->buf_write_ptr++ = *p++;
       if (--bc == 0) goto done;
