@@ -91,7 +91,8 @@ done
 # !! Replace this with something simpler in tools.
 # !! Bad relocations for the weak symbol.
 #objcopy -W mini___M_start_isatty_stdin -W mini___M_start_isatty_stdout -W mini___M_start_flush_stdout -W mini___M_start_flush_opened start_stdio_medium_linux.o start_stdio_medium_linux_weak.o
-yasm-1.3.0 $CFLAGS -O999999999 -w+orphan-labels -f elf -Dmini__start=_start -o start_stdio_medium_linux_weak.o start_stdio_medium_linux.nasm
+#yasm-1.3.0 $CFLAGS -O999999999 -w+orphan-labels -f elf -Dmini__start=_start -o start_stdio_medium_linux_weak.o start_stdio_medium_linux.nasm  # Works, but with suboptimal relocations.
+as --32 -march=i386 -o start_stdio_medium_linux_weak.o start_stdio_medium_linux.s
 
 LIB_OBJS_SPECIAL_ORDER="stdio_medium_flush_opened.o start_stdio_medium_linux_weak.o"
 

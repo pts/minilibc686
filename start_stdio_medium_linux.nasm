@@ -2,6 +2,9 @@
 ; written by pts@fazekas.hu at Fri May 19 17:25:38 CEST 2023
 ; Compile to i386 ELF .o object: nasm -O999999999 -w+orphan-labels -f elf -o start_stdio_file_linux.o start_stdio_file_linux.nasm
 ;
+; This file is not in active use! Its replacement is currently
+; start_stdio_medium_linux.s.
+;
 ; Uses: %ifdef CONFIG_PIC
 ;
 
@@ -69,6 +72,10 @@ mini__start:  ; Entry point (_start) of the Linux i386 executable.
 		push edx  ; Argument argv for main.
 		push eax  ; Argument argc for main.
 %if 1  ; TODO(pts): Omit this with smart linking.
+		; We can't replace it with `call ...', because then YASM
+		; won't emit the required R_386_PC32 relocation. To fix
+		; that, this file has been migrated to
+		; start_stdio_medium_linux.s, and compiled with GNU as(1).
 		mov eax, mini___M_start_isatty_stdin
 		call eax
 %endif
