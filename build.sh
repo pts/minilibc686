@@ -59,9 +59,10 @@ for F in *.nasm; do
     case "$F" in
      exit_linux.nasm) ;;
      fputc_unbuffered.nasm) ;;  # The libc uses stdio_medium instead.
+     stdio_file_simple_buffered.nasm) ;;  # The libc uses stdio_medium instead.
      # malloc_mmap_linux.nasm) ;;
      isatty_linux_syscall.nasm) ;;  # The libc uses isatty_linux.nasm instead.
-     vfprintf_*.nasm)  ;;  # The libc uses stdio_medium_vfprintf.nasm instead.
+     vfprintf_*.nasm) ;;  # The libc uses stdio_medium_vfprintf.nasm instead.
      strcasecmp.nasm) ;;  # TODO(pts): How to link strcasecmp.nasm if only strcasecmp(3) is needed, and strncasecmp_both.nasm if both strcasecmp(3) and strncasecmp(3) are needed?
      strtok_sep1.nasm) ;;  # TODO(pts): Link it with the symbol name strtok_sep.
      write_linux.nasm) ;;  # start_stdio_medium_linux.nasm provides it.
@@ -98,8 +99,6 @@ for ARCH in i386 i686; do
   $AR crs libmin"$ARCH".a $LIB_OBJS
   set +ex
 done
-cp -a start_stdio_medium_linux.o mini686_start.o
-cp -a start_stdio_medium_linux.i386.o mini386_start.o
 
-ls -l libmini386.a libmini686.a mini386_start.o need_start.o
+ls -l libmini386.a libmini686.a need_start.o
 echo : "$0" OK.
