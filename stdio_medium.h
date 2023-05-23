@@ -13,8 +13,8 @@
  *
  * * Only these functions are implemented: fopen, fclose, fread, fwrite,
  *   fseek, ftell, fileno, fgetc, getc (defined in <stdio.h>), fputc, putc
- *   (defined in <stdio.h>), printf, fprintf, vfprintf.
- * * !! TODO(pts): Implement sprintf, vsprintf snprintf, vsnprintf.
+ *   (defined in <stdio.h>), printf, vprintf, fprintf, vfprintf,
+ *   sprintf, vsprintf, snprintf, vsnprintf.
  * * !! mini_fseek(...) doesn't work (can do anything) if the file size is
  *   larger than 4 GiB - 4 KiB. That's because the return value of lseek(2)
  *   (without errno) doesn't fit to 32 bits.
@@ -24,6 +24,7 @@
  *   fopen(...). For stdin and stdout, it's linue buffering (_IOLBF) if it
  *   is a TTY (terminal), otherwise it's full buffering.
  * * !! Implement puts.
+ * * !! Implement gets.
  * * !! Implement fgets.
  * * Only fopen modes "rb" (same as "r", for reading), "wb" (same as "w",
  *   for writing), "ab" (same as "a", for appending) are implemented. Thus

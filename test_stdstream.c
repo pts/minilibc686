@@ -69,8 +69,9 @@ int main(int argc, char **argv) {
     if (fwrite("Hel", 1, 3, stdout) != 3) return 5;
     if (fflush(stdout)) return 6;
     if (fprintf(stderr, "%s, ", "lo") != 4) return 7;
-    if (my_printf1("Worl") != 4) return 8;
-    if (my_printf2("d!\n") != 3) return 8;
+    if (my_printf1("Wo") != 2) return 8;
+    if (fputs("rl", stdout) < 0) return 18;
+    if (my_printf2("d!\n") != 3) return 19;
   }
   /* Don't flush(stdout); here, libc flushall takes care of it at exit time. */
   return 0;
