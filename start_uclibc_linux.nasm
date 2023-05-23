@@ -37,6 +37,6 @@ _start:
 		xor ebp, ebp
 		call __uClibc_main  ; It never returns.
 
-%ifdef CONFIG__PIC  ; Double underscore, because we don't want build.sh to build it.
+%ifdef CONFIG_PIC
 %error Not PIC because of _init_and_fini.
-endif
+%endif

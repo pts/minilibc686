@@ -40,21 +40,6 @@ for F in *.nasm; do
   echo "info: compiling: $F" >&2
   BF="${F%.*}"
   for ARCH in i386 i686; do
-    CFLAGS_ARCH=
-    BFA="$BF"
-    test "$ARCH" = i386 && CFLAGS_ARCH=-DCONFIG_I386 && BFA="$BF.i386"
-    test "${F#start_}" != "$F" && CFLAGS_ARCH="$CFLAGS_ARCH -Dmini__start=_start"  # Makes both _start and mini__start defined.
-    set -ex
-    $NASM $CFLAGS_ARCH $CFLAGS -O999999999 -w+orphan-labels -f elf -o "$BFA".o "$F"
-    $NASM $CFLAGS_ARCH $CFLAGS -O999999999 -w+orphan-labels -f bin -o "$BFA".bin "$F"
-    $NASM $CFLAGS_ARCH $CFLAGS -O0 -w+orphan-labels -f bin -o "$BFA".o0.bin "$F"
-    # $NDISASM -b 32 "$BFA".bin | tail  # For the size.
-    if ! cmp "$BFA".bin "$BFA".o0.bin; then
-      $NDISASM -b 32 "$BFA".bin >"$BFA".ndisasm
-      $NDISASM -b 32 "$BFA".o0.bin >"$BFA".o0.ndisasm
-      diff -U3 "$BFA".ndisasm "$BFA".o0.ndisasm
-    fi
-    set +ex
     LA=
     case "$F" in
      exit_linux.nasm) ;;
@@ -67,24 +52,43 @@ for F in *.nasm; do
      strtok_sep1.nasm) ;;  # TODO(pts): Link it with the symbol name strtok_sep.
      write_linux.nasm) ;;  # start_stdio_medium_linux.nasm provides it.
      m_flushall_dummy.nasm) ;;
-     start_stdio_medium_linux.nasm) LA=1 ;;
+     start_uclibc_linux.nasm) LA=3 ;;
+     need_start.nasm) LA=3 ;;
+     need_uclibc_main.nasm) LA=3 ;;
+     tcc_alloca.nasm) LA=3 ;;
+     stdio_medium_init_isatty.nasm) LA=3 ;;  # We want special order in the .a file, for pts-tcc. !! Fix pts-tcc so that it doesn't need this order (tcc_common_lib_bug.sh).
+     stdio_medium_flushall.nasm) LA=3 ;;  # We want special order in the .a file, for pts-tcc.
+     start_stdio_medium_linux.nasm) LA=3 ;;  # We want special order in the .a file, for pts-tcc.
      start_*.nasm) ;;
      *.nasm) LA=1 ;;
     esac
-    if test -z "$LA"; then :
+    BFA="$BF"
+    if test "$LA" = 3; then  # Build only the 386 version.
+      test "$ARCH" != i386 && continue
+      CFLAGS_ARCH=-DCONFIG_I386
+    else
+      CFLAGS_ARCH=
+      test "$ARCH" = i386 && CFLAGS_ARCH=-DCONFIG_I386 && BFA="$BF.i386"
+    fi
+    test "${F#start_}" != "$F" && CFLAGS_ARCH="$CFLAGS_ARCH -Dmini__start=_start"  # Makes both _start and mini__start defined.
+    set -ex
+    $NASM $CFLAGS_ARCH $CFLAGS -O999999999 -w+orphan-labels -f elf -o "$BFA".o "$F"
+    $NASM $CFLAGS_ARCH $CFLAGS -O999999999 -w+orphan-labels -f bin -o "$BFA".bin "$F"
+    $NASM $CFLAGS_ARCH $CFLAGS -O0 -w+orphan-labels -f bin -o "$BFA".o0.bin "$F"
+    # $NDISASM -b 32 "$BFA".bin | tail  # For the size.
+    if ! cmp "$BFA".bin "$BFA".o0.bin; then
+      $NDISASM -b 32 "$BFA".bin >"$BFA".ndisasm
+      $NDISASM -b 32 "$BFA".o0.bin >"$BFA".o0.ndisasm
+      diff -U3 "$BFA".ndisasm "$BFA".o0.ndisasm
+    fi
+    set +ex
+    if test -z "$LA" || test "$LA" = 3; then :
     elif test "$ARCH" = i386; then LIBI386_OBJS="$LIBI386_OBJS $BFA.o"
     else LIBI686_OBJS="$LIBI686_OBJS $BFA.o"
     fi
   done
 done
-
-for F in start_uclibc_linux.nasm need_start.nasm need_uclibc_main.nasm tcc_alloca.nasm; do
-  echo "info: compiling: $F" >&2
-  BF="${F%.*}"
-  set -ex
-  $NASM -O0 -w+orphan-labels -f elf -o "$BF".o "$F"
-  set +ex
-done
+LIB_OBJS_SPECIAL_ORDER="stdio_medium_init_isatty.o stdio_medium_flushall.o start_stdio_medium_linux.o"
 
 rm -f libminitcc1.a  # Some versions of ar(1) such as GNU ar(1) do something different if the .a file already exists.
 $AR crs libminitcc1.a tcc_alloca.o
@@ -96,7 +100,8 @@ for ARCH in i386 i686; do
   fi
   set -ex
   # !! TODO(pts): Remove local symbols first, to make the .o files smaller.
-  $AR crs libmin"$ARCH".a $LIB_OBJS
+  # Work around pts-tcc common symbol linking bug (tcc_common_lib_bug.sh).
+  $AR crs libmin"$ARCH".a $LIB_OBJS $LIB_OBJS_SPECIAL_ORDER
   set +ex
 done
 

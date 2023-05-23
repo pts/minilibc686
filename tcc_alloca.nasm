@@ -36,7 +36,7 @@ alloca:
 		push edx
 		ret
 
-%ifdef CONFIG__PIC  ; Double underscore, because we don't want build.sh to build it.
+%ifdef CONFIG_PIC
 %endif
 
 ; __END__

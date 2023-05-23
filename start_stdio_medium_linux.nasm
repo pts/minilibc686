@@ -33,7 +33,7 @@ mini___M_flushall equ +0x12345679
 mini___M_init_isatty equ +0x1234567a
 %else
 extern main
-extern mini___M_flushall
+common mini___M_flushall 1:1
 common mini___M_stdout_for_flushall 4:4
 common mini___M_init_isatty 1:1
 section .text align=1
@@ -74,7 +74,11 @@ mini__start:  ; Entry point (_start) of the Linux i386 executable.
 		push eax  ; Fake return address, for mini__exit.
 		; Fall through to mini_exit(...).
 mini_exit:  ; void mini_exit(int exit_code);
-		call mini___M_flushall  ; Flush all stdio streams.
+		mov eax, mini___M_flushall
+		cmp byte [eax], 0  ; First byte of machine code is nonzero => real code, otherwise 0 implemented as common symbol.
+		je .after_flushall
+		call eax  ; Call mini___M_flushall to flush all stdio streams.
+.after_flushall:
 		; Fall through to mini__exit(...).
 mini__exit:  ; void mini__exit(int exit_code);
 _exit:

@@ -25,8 +25,6 @@
  *   is a TTY (terminal), otherwise it's full buffering.
  * * !! Implement puts.
  * * !! Implement fgets.
- * * !! Implement line buffering for stdin. Does it mean fread returns earlier?
- * * !! Implement line buffering for stdout.
  * * Only fopen modes "rb" (same as "r", for reading) and "wb" (same as "w",
  *   for writing) are implemented. Thus the file can be opened only in one
  *   direction at a time.
@@ -95,8 +93,8 @@ struct _SMS_FILE {  /* Layout must match stdio_medium_*.nasm. */
   off_t buf_off;  /* Points to the file offset of buf. */
 };
 
-static FILE global_files[FILE_CAPACITY];
-static char global_file_bufs[FILE_CAPACITY * BUF_SIZE];
+extern FILE mini___M_global_files[], mini___M_global_files_end[];
+extern char mini___M_global_file_bufs[];
 
 /* Underlying syscall API. */
 #define O_RDONLY 0
@@ -117,14 +115,16 @@ static void discard_buf(FILE *filep) {
   if (IS_FD_ANY_READ(filep->dire)) filep->buf_write_ptr = filep->buf_end;  /* Sentinel. */
 }
 
+extern void mini___M_flushall(void);
+__extension__ void *mini___M_flushall_ptr = (void*)mini___M_flushall;  /* Force `extern' declaration, for mini_fopen(...). In .nasm source we won't need this hack. */
+
 FILE *mini_fopen(const char *pathname, const char *mode) {
   FILE *filep;
-  char *buf = global_file_bufs;
+  char *buf = mini___M_global_file_bufs;
   int fd;
   char is_write;
-#if FILE_CAPACITY > 0
   is_write = mode[0] == 'w';  /* !! Add 'a'. */
-  for (filep = global_files; filep != global_files + sizeof(global_files) / sizeof(global_files[0]); ++filep, buf += BUF_SIZE) {
+  for (filep = mini___M_global_files; filep != mini___M_global_files_end; ++filep, buf += BUF_SIZE) {
     if (filep->dire == FD_CLOSED) {
       fd = mini_open(pathname, is_write ? O_WRONLY | O_TRUNC | O_CREAT : O_RDONLY, 0666);
       if (fd < 0) return NULL;  /* open(2) has failed. */
@@ -137,7 +137,6 @@ FILE *mini_fopen(const char *pathname, const char *mode) {
       return filep;
     }
   }
-#endif
   return NULL;  /* No free slots in global_files. */
 }
 
@@ -338,31 +337,4 @@ __attribute__((__regparm__(1))) void mini___M_writebuf_relax_RP1(FILE *filep) {
 
 __attribute__((__regparm__(1))) int mini___M_writebuf_unrelax_RP1(FILE *filep) {
   return filep->dire == FD_WRITE_RELAXED ? toggle_relaxed(filep) : 0;
-}
-
-/* start_stdio_medium_linux.nasm defines this as a common symbol. This is a
- * trick so that stdio_medium_stdout.o won't be linked just because of this.
- */
-extern FILE *mini___M_stdout_for_flushall;
-
-/* Called from mini_exit(...). */
-void mini___M_flushall(void) {
-  FILE *filep;
-  (void)filep;
-  if (mini___M_stdout_for_flushall) mini_fflush(mini___M_stdout_for_flushall);
-#if FILE_CAPACITY <= 0
-#else
-#if FILE_CAPACITY == 1
-  mini_fflush(global_files);
-#else
-#if FILE_CAPACITY == 2  /* Size optimization. */
-  mini_fflush(global_files);
-  mini_fflush(global_files + 1);
-#else
-  for (filep = global_files; filep != global_files + sizeof(global_files) / sizeof(global_files[0]); ++filep) {
-    mini_fflush(filep);
-  }
-#endif
-#endif
-#endif
 }
