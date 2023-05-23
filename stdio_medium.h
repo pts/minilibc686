@@ -113,6 +113,14 @@ extern ssize_t mini_read(int fd, void *buf, size_t count);
 extern ssize_t mini_write(int fd, const void *buf, size_t count);
 extern off_t mini_lseek(int fd, off_t offset, int whence);
 
+#ifdef __WATCOMC__
+#  define REGPARM1 __watcall
+#  define REGPARM2 __watcall  /* REGPARM3 wouldn't work, __watcall expects 3rd argument in ECX, __regparm__(3) expects in EBX. */
+#else
+#  define REGPARM1 __attribute__((__regparm__(1)))
+#  define REGPARM2 __attribute__((__regparm__(2)))
+#endif
+
 void mini___M_discard_buf(FILE *filep);
-int mini___M_fputc_RP2(int c, FILE *filep) __attribute__((__regparm__(2)));
+int REGPARM2 mini___M_fputc_RP2(int c, FILE *filep);
 int mini_fflush(FILE *filep);

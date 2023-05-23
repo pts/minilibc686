@@ -25,7 +25,7 @@ int mini_fflush(FILE *filep) {
   return got;
 }
 
-__attribute__((__regparm__(2))) int mini___M_fputc_RP2(int c, FILE *filep) {
+int REGPARM2 mini___M_fputc_RP2(int c, FILE *filep) {
   /* It's not allowed to call mini___M_fputc_RP2 with filep->dire ==
    * FD_WRITE_SATURATE, the caller has to handle it.
    */
@@ -44,7 +44,7 @@ __attribute__((__regparm__(2))) int mini___M_fputc_RP2(int c, FILE *filep) {
   return uc;
 }
 
-static __attribute__((__regparm__(1))) int toggle_relaxed(FILE *filep) {
+static int REGPARM1 toggle_relaxed(FILE *filep) {
   char *p;
   const int result = filep->dire == FD_WRITE_RELAXED ? mini_fflush(filep) : 0;
   filep->dire ^= 1;  /* Toggle FD_WRITE and FD_WRITE_RELAXED. */
@@ -60,13 +60,13 @@ static __attribute__((__regparm__(1))) int toggle_relaxed(FILE *filep) {
  * TODO(pts): Use smart linking to eplace this with a no-op if mini_stderr
  * and mini_setvbuf(...). are not linked.
  */
-__attribute__((__regparm__(1))) void mini___M_writebuf_relax_RP1(FILE *filep) {
+void REGPARM1 mini___M_writebuf_relax_RP1(FILE *filep) {
   if (filep->dire == FD_WRITE && filep->buf_capacity_end > filep->buf_end) toggle_relaxed(filep);
 }
 
 /* TODO(pts): Use smart linking to eplace this with a no-op if mini_stderr
  * and mini_setvbuf(...). are not linked.
  */
-__attribute__((__regparm__(1))) int mini___M_writebuf_unrelax_RP1(FILE *filep) {
+int REGPARM1 mini___M_writebuf_unrelax_RP1(FILE *filep) {
   return filep->dire == FD_WRITE_RELAXED ? toggle_relaxed(filep) : 0;
 }
