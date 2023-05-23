@@ -11,7 +11,7 @@ bits 32
 cpu 386
 
 global mini_snprintf
-;global mini_snprintf.do
+global mini_snprintf.do
 %ifdef CONFIG_SECTIONS_DEFINED
 %elifidn __OUTPUT_FORMAT__, bin
 section .text align=1
@@ -31,7 +31,7 @@ section .text
 mini_snprintf:  ; int mini_snprintf(char *str, size_t size, const char *format, ...);
 		lea edx, [esp+4]  ; Address of argument str.
 		lea eax, [edx+0xc]  ; Address of `...'.
-;mini_snprintf.do:  ; !! mini_vsnprintf(...) jumps here.
+mini_snprintf.do:  ; !! mini_vsnprintf(...) jumps here.
 		; It matches struct _SMS_FILE defined in c_stdio_medium.c. sizeof(struct _SMS_FILE).
 		push byte 0  ; .buf_off.
 		push byte -1  ; .buf_capacity_end.

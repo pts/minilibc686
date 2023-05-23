@@ -21,6 +21,12 @@ static int my_sprintf(char *str, const char *format, ...) {
   return vsprintf(str, format, ap);
 }
 
+static int my_snprintf(char *str, size_t size, const char *format, ...) {
+  va_list ap;
+  va_start(ap, format);
+  return vsnprintf(str, size, format, ap);
+}
+
 int main(int argc, char **argv) {
   char buf[0x20];
   char mode;
@@ -44,11 +50,11 @@ int main(int argc, char **argv) {
   if (strcmp(buf, "") != 0) return 26;
   if (snprintf(buf, 10, "short") != 5) return 27;
   if (strcmp(buf, "short") != 0) return 28;
-  if (snprintf(buf, 3, "short") != 5) return 29;
+  if (my_snprintf(buf, 3, "short") != 5) return 29;
   if (strcmp(buf, "sh") != 0) return 30;
-  if (snprintf(buf, 0, "short") != 5) return 31;
+  if (my_snprintf(buf, 0, "short") != 5) return 31;
   if (strcmp(buf, "sh") != 0) return 32;  /* Not modified. */
-  if (snprintf(NULL, 0, "short") != 5) return 33;
+  if (my_snprintf(NULL, 0, "short") != 5) return 33;
 
   mode = argv[0] && argv[1] && argv[1][0] ? argv[1][0] : '.';
   if (mode == 'c') {  /* Cat: copy from stdin to stdout using getc and putc. */
