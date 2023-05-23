@@ -180,5 +180,6 @@ TODOs:
 * ELF patch: .o change section alignments
 * ELF patch: change the last 12 bits of the 1st PT_LOAD to 0 (pts-tcc needs
   it, maybe for compression with UPX)
+* !! Make .o files with full (long) filenames in the .a file (tiny_libmaker).
 
 __END__
