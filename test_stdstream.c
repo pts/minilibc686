@@ -71,7 +71,9 @@ int main(int argc, char **argv) {
     if (fprintf(stderr, "%s, ", "lo") != 4) return 7;
     if (my_printf1("Wo") != 2) return 8;
     if (fputs("rl", stdout) < 0) return 18;
-    if (my_printf2("d!\n") != 3) return 19;
+    if (my_printf2("d") != 1) return 19;
+    if (puts("!") < 0) return 20;
+    if (putchar('.') != '.') return 30;
   }
   /* Don't flush(stdout); here, libc flushall takes care of it at exit time. */
   return 0;

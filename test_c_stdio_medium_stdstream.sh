@@ -18,11 +18,12 @@ nasm-0.98.39 $CFLAGS -O999999999 -w+orphan-labels -f elf -o stdio_medium_vsprint
 nasm-0.98.39 $CFLAGS -O999999999 -w+orphan-labels -f elf -o stdio_medium_snprintf.o stdio_medium_snprintf.nasm
 nasm-0.98.39 $CFLAGS -O999999999 -w+orphan-labels -f elf -o stdio_medium_vsnprintf.o stdio_medium_vsnprintf.nasm
 nasm-0.98.39 $CFLAGS -O999999999 -w+orphan-labels -f elf -o stdio_medium_fputs.o stdio_medium_fputs.nasm
+nasm-0.98.39 $CFLAGS -O999999999 -w+orphan-labels -f elf -o stdio_medium_puts.o stdio_medium_puts.nasm
 nasm-0.98.39 $CFLAGS -O999999999 -w+orphan-labels -f elf -o isatty_linux.o isatty_linux.nasm
 nasm-0.98.39 $CFLAGS -O999999999 -w+orphan-labels -f elf -o strcmp.o strcmp.nasm
 nasm-0.98.39 $CFLAGS -O999999999 -w+orphan-labels -f elf -Dmini__start=_start -o start_stdio_medium_linux.o start_stdio_medium_linux.nasm
 # Moving start_stdio_medium_linux.o earlier to avoid (harmless, exit(0)) pts-tcc linker error: start_stdio_medium_linux.o: error: 'mini___M_stdout_for_flushall' defined twice.
-ARGS="-D__MINILIBC686__ -m32 -Os -W -Wall -s -Werror=implicit-function-declaration -ffreestanding -Iinclude -nostdlib -nostdinc -pedantic c_stdio_medium_rest.c c_stdio_medium_for_printf.c test_stdstream.c stdio_medium_sprintf.o stdio_medium_vsprintf.o stdio_medium_snprintf.o stdio_medium_vsnprintf.o stdio_medium_fputs.o stdio_medium_vfprintf.o printf_callvf.o vprintf_callvf.o fprintf_callvf.o stdio_medium_getchar.o stdio_medium_putchar.o start_stdio_medium_linux.o stdio_medium_init_isatty.o isatty_linux.o stdio_medium_flushall.o stdio_medium_stdin.o stdio_medium_stdout.o stdio_medium_stderr.o strcmp.o"
+ARGS="-D__MINILIBC686__ -m32 -Os -W -Wall -s -Werror=implicit-function-declaration -ffreestanding -Iinclude -nostdlib -nostdinc -pedantic c_stdio_medium_rest.c c_stdio_medium_for_printf.c test_stdstream.c stdio_medium_sprintf.o stdio_medium_vsprintf.o stdio_medium_snprintf.o stdio_medium_vsnprintf.o stdio_medium_fputs.o stdio_medium_vfprintf.o printf_callvf.o vprintf_callvf.o fprintf_callvf.o stdio_medium_puts.o stdio_medium_getchar.o stdio_medium_putchar.o start_stdio_medium_linux.o stdio_medium_init_isatty.o isatty_linux.o stdio_medium_flushall.o stdio_medium_stdin.o stdio_medium_stdout.o stdio_medium_stderr.o strcmp.o"
 #clang -static -o test_c_stdio_medium_stdstream.prog -ansi $ARGS
 qq xstatic gcc -o test_c_stdio_medium_stdstream.prog -ansi $ARGS
 qq xstatic gcc -o test_c_stdio_medium_stdstream.macro.prog -ansi -DCONFIG_MACRO_GETC_PUTC $ARGS
@@ -31,7 +32,8 @@ tools/pts-tcc -o test_c_stdio_medium_stdstream.tcc.prog -DCONFIG_INLINE_GETC_PUT
 
 if ./test_c_stdio_medium_stdstream.prog; then :; else echo "$?"; exit 1; fi  # Copies f1.tmp.dat to f2.tmp.dat.
 RESULT="$(./test_c_stdio_medium_stdstream.prog 2>&1 ||:)"
-test "$RESULT" = "Hello, World!"
+test "$RESULT" = "Hello, World!
+."
 RESULT="$(echo foobar | ./test_c_stdio_medium_stdstream.prog c ||:)"
 test "$RESULT" = "foobar"
 

@@ -23,7 +23,6 @@
  * * Only full buffering (_IOFBF) is implemented for files opened with
  *   fopen(...). For stdin and stdout, it's linue buffering (_IOLBF) if it
  *   is a TTY (terminal), otherwise it's full buffering.
- * * !! Implement puts.
  * * !! Implement gets.
  * * !! Implement fgets.
  * * Only fopen modes "rb" (same as "r", for reading), "wb" (same as "w",

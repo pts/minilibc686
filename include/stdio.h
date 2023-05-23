@@ -44,6 +44,7 @@ size_t fwrite(const void *ptr, size_t size, size_t nmemb, FILE *filep) __asm__("
 int fseek(FILE *filep, off_t offset, int whence) __asm__("mini_fseek");  /* Only 32-bit off_t. */
 off_t ftell(FILE *filep) __asm__("mini_ftell");  /* Only 32-bit off_t */
 int fputs(const char *s, FILE *filep) __asm__("mini_fputs");
+int puts(const char *s) __asm__("mini_puts");
 int fgetc(FILE *filep) __asm__("mini_fgetc");
 #if !defined(__MINILIBC686__) || defined(__UCLIBC__)
   int fputc(int c, FILE *filep) __asm__("mini_fputc");  /* minilibc686 also defines it, but we use the other one. */
