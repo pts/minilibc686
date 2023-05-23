@@ -72,35 +72,6 @@ int mini_fputc_calling_fwrite(int c, FILE *filep) {
 }
 #endif
 
-extern void mini___M_flushall(void);
-__extension__ void *mini___M_flushall_ptr = (void*)mini___M_flushall;  /* Force `extern' declaration, for mini_fopen(...). In .nasm source we won't need this hack. */
-
-extern FILE mini___M_global_files[], mini___M_global_files_end[];
-extern char mini___M_global_file_bufs[];
-
-FILE *mini_fopen(const char *pathname, const char *mode) {
-  FILE *filep;
-  char *buf = mini___M_global_file_bufs;
-  int fd;
-  const char is_write = (mode[0] == 'w' || mode[0] == 'a');
-  mode_t fmode = is_write ? O_WRONLY | O_TRUNC | O_CREAT : O_RDONLY;
-  if (mode[0] == 'a') fmode |= O_APPEND;
-  for (filep = mini___M_global_files; filep != mini___M_global_files_end; ++filep, buf += BUF_SIZE) {
-    if (filep->dire == FD_CLOSED) {
-      fd = mini_open(pathname, fmode, 0666);
-      if (fd < 0) return NULL;  /* open(2) has failed. */
-      filep->dire = is_write ? FD_WRITE : FD_READ;
-      filep->fd = fd;
-      filep->buf_off = 0;
-      filep->buf_start = buf;
-      filep->buf_capacity_end = filep->buf_end = buf + BUF_SIZE;
-      mini___M_discard_buf(filep);
-      return filep;
-    }
-  }
-  return NULL;  /* No free slots in global_files. */
-}
-
 int mini_fclose(FILE *filep) {
   int got;
   if (filep->dire == FD_CLOSED) return EOF;

@@ -56,8 +56,7 @@ for F in *.nasm; do
      need_start.nasm) LA=3 ;;
      need_uclibc_main.nasm) LA=3 ;;
      tcc_alloca.nasm) LA=3 ;;
-     stdio_medium_init_isatty.nasm) LA=3 ;;  # We want special order in the .a file, for pts-tcc. !! Fix pts-tcc so that it doesn't need this order (tcc_common_lib_bug.sh).
-     stdio_medium_flushall.nasm) LA=3 ;;  # We want special order in the .a file, for pts-tcc.
+     stdio_medium_flush_opened.nasm) LA=3 ;;  # We want special order in the .a file, for pts-tcc.
      start_stdio_medium_linux.nasm) LA=3 ;;  # We want special order in the .a file, for pts-tcc.
      start_*.nasm) ;;
      *.nasm) LA=1 ;;
@@ -88,7 +87,13 @@ for F in *.nasm; do
     fi
   done
 done
-LIB_OBJS_SPECIAL_ORDER="stdio_medium_init_isatty.o stdio_medium_flushall.o start_stdio_medium_linux.o"
+
+# !! Replace this with something simpler in tools.
+# !! Bad relocations for the weak symbol.
+#objcopy -W mini___M_start_isatty_stdin -W mini___M_start_isatty_stdout -W mini___M_start_flush_stdout -W mini___M_start_flush_opened start_stdio_medium_linux.o start_stdio_medium_linux_weak.o
+yasm-1.3.0 $CFLAGS -O999999999 -w+orphan-labels -f elf -Dmini__start=_start -o start_stdio_medium_linux_weak.o start_stdio_medium_linux.nasm
+
+LIB_OBJS_SPECIAL_ORDER="stdio_medium_flush_opened.o start_stdio_medium_linux_weak.o"
 
 rm -f libminitcc1.a  # Some versions of ar(1) such as GNU ar(1) do something different if the .a file already exists.
 $AR crs libminitcc1.a tcc_alloca.o

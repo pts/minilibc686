@@ -4,9 +4,12 @@ set -ex
 # Similar to test_c_stdio_file_simple_unbuffered.sh .
 
 CFLAGS="${*:-}"
-nasm-0.98.39 $CFLAGS -O999999999 -w+orphan-labels -f elf -o stdio_medium_flushall.o stdio_medium_flushall.nasm  # We need this because of mini_fopen(...).
-nasm-0.98.39 $CFLAGS -O999999999 -w+orphan-labels -f elf -Dmini__start=_start -o start_stdio_medium_linux.o start_stdio_medium_linux.nasm
-ARGS="-D__MINILIBC686__ -m32 -Os -W -Wall -s -Werror=implicit-function-declaration -ffreestanding -Iinclude -nostdlib -nostdinc -pedantic c_stdio_medium_rest.c c_stdio_medium_for_printf.c demo_file_medium_copy.c start_stdio_medium_linux.o stdio_medium_flushall.o"
+nasm-0.98.39 $CFLAGS -O999999999 -w+orphan-labels -f elf -o stdio_medium_flush_opened.o stdio_medium_flush_opened.nasm  # We need this because of mini_fopen(...).
+# !! Bad relocations for the weak symbol.
+#nasm-0.98.39 $CFLAGS -O999999999 -w+orphan-labels -f elf -Dmini__start=_start -o start_stdio_medium_linux.o start_stdio_medium_linux.nasm
+#objcopy -W mini___M_start_isatty_stdin -W mini___M_start_isatty_stdout -W mini___M_start_flush_stdout -W mini___M_start_flush_opened start_stdio_medium_linux.o start_stdio_medium_linux_weak.o  # !! Better tool.
+yasm-1.3.0 $CFLAGS -O999999999 -w+orphan-labels -f elf -Dmini__start=_start -o start_stdio_medium_linux_weak.o start_stdio_medium_linux.nasm
+ARGS="-D__MINILIBC686__ -m32 -Os -W -Wall -s -Werror=implicit-function-declaration -ffreestanding -Iinclude -nostdlib -nostdinc -pedantic c_stdio_medium_rest.c c_stdio_medium_for_printf.c c_stdio_medium_fopen.c demo_file_medium_copy.c stdio_medium_flush_opened.o start_stdio_medium_linux_weak.o"
 #clang -static -o test_c_stdio_medium_file.prog -ansi $ARGS
 qq xstatic gcc -o test_c_stdio_medium_file.prog -ansi $ARGS
 qq xstatic gcc -o test_c_stdio_medium_file.macro.prog -ansi -DCONFIG_MACRO_GETC_PUTC -DCONFIG_MACRO_FILENO $ARGS

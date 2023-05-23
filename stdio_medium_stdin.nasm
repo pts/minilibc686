@@ -9,24 +9,32 @@ bits 32
 cpu 386
 
 global mini_stdin
-global mini___M_stdin_for_init_isatty
+global mini___M_start_isatty_stdin
 %ifdef CONFIG_SECTIONS_DEFINED
 %elifidn __OUTPUT_FORMAT__, bin
 section .text align=1
 section .rodata align=1
-section .data align=1
-section .bss align=1
-mini___M_init_isatty equ +0x12345678
+section .data align=4
+section .bss align=4
+mini_isatty equ +0x12345678
 %else
-extern mini___M_init_isatty  ; Force linking it.
+extern mini_isatty  ; Force linking it.
 section .text align=1
 section .rodata align=4
 section .data align=4
 section .bss align=4
 %endif
 
+section .text
+mini___M_start_isatty_stdin:
+		push byte 0  ; STDIN_FILENO.
+		call mini_isatty
+		pop edx  ; Clean up the argument of mini_isatty from the stack.
+		add eax, eax
+		add [mini_stdin_struct.dire], al  ; filep->dire = FD_WRITE_LINEBUF, changed from FD_WRITE.
+		ret
+
 section .data
-mini___M_stdin_for_init_isatty:
 mini_stdin:	dd mini_stdin_struct
 mini_stdin_struct:  ; Layout must match `struct _SMS_FILE' in stdio_medium_*.nasm and c_stdio_medium.c.
 .buf_write_ptr	dd stdin_buf.end  ; Sentinel to prevent writes.

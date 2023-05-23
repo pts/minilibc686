@@ -22,6 +22,14 @@ global mini_read
 global mini_write
 global mini_lseek
 global mini_ioctl
+%ifdef __YASM_MAJOR__
+%define global weak
+%endif
+; !! These have to be weak!
+global mini___M_start_isatty_stdin  ; Falback, will be converted to a weak symbol.
+global mini___M_start_isatty_stdout  ; Falback, will be converted to a weak symbol.
+global mini___M_start_flush_stdout  ; Falback, will be converted to a weak symbol.
+global mini___M_start_flush_opened  ; Falback, will be converted to a weak symbol.
 %ifdef CONFIG_SECTIONS_DEFINED
 %elifidn __OUTPUT_FORMAT__, bin
 section .text align=1
@@ -29,13 +37,8 @@ section .rodata align=4
 section .data align=4
 section .bss align=4
 main equ +0x12345678
-mini___M_flushall equ +0x12345679
-mini___M_init_isatty equ +0x1234567a
 %else
 extern main
-common mini___M_flushall 1:1
-common mini___M_stdout_for_flushall 4:4
-common mini___M_init_isatty 1:1
 section .text align=1
 section .rodata align=1
 section .data align=1
@@ -65,20 +68,27 @@ mini__start:  ; Entry point (_start) of the Linux i386 executable.
 		push ecx  ; Argument envp for main.
 		push edx  ; Argument argv for main.
 		push eax  ; Argument argc for main.
-		mov eax, mini___M_init_isatty
-		cmp byte [eax], 0  ; First byte of machine code is nonzero => real code, otherwise 0 implemented as common symbol.
-		je .after_isatty
-		call eax  ; Call mini___M_init_isatty without arguments.
-.after_isatty:	call main  ; Return value (exit code) in EAX (AL).
+%if 1  ; TODO(pts): Omit this with smart linking.
+		mov eax, mini___M_start_isatty_stdin
+		call eax
+%endif
+%if 1  ; TODO(pts): Omit this with smart linking.
+		mov eax, mini___M_start_isatty_stdout
+		call eax
+%endif
+		call main  ; Return value (exit code) in EAX (AL).
 		push eax  ; Save exit code, for mini__exit.
 		push eax  ; Fake return address, for mini__exit.
 		; Fall through to mini_exit(...).
 mini_exit:  ; void mini_exit(int exit_code);
-		mov eax, mini___M_flushall
-		cmp byte [eax], 0  ; First byte of machine code is nonzero => real code, otherwise 0 implemented as common symbol.
-		je .after_flushall
-		call eax  ; Call mini___M_flushall to flush all stdio streams.
-.after_flushall:
+%if 1  ; TODO(pts): Omit this with smart linking.
+		mov eax, mini___M_start_flush_stdout
+		call eax
+%endif
+%if 1  ; TODO(pts): Omit this with smart linking.
+		mov eax, mini___M_start_flush_opened
+		call eax
+%endif
 		; Fall through to mini__exit(...).
 mini__exit:  ; void mini__exit(int exit_code);
 _exit:
@@ -108,6 +118,10 @@ mini_syscall3_RP1:  ; long mini_syscall3_RP1(long nr, long arg1, long arg2, long
 		jna .final_result
 		or eax, byte -1  ; EAX := -1 (error).
 .final_result:	pop ebx
+mini___M_start_isatty_stdin:  ; Falback, will be converted to a weak symbol.
+mini___M_start_isatty_stdout:  ; Falback, will be converted to a weak symbol.
+mini___M_start_flush_stdout:  ; Falback, will be converted to a weak symbol.
+mini___M_start_flush_opened:  ; Falback, will be converted to a weak symbol.
 		ret
 
 ; TODO(pts): Use smart linking to get rid of the unnecessary syscalls.

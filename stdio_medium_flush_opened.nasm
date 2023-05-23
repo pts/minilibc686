@@ -1,6 +1,6 @@
 ;
 ; written by pts@fazkeas.hu at Tue May 23 03:06:53 CEST 2023
-; Compile to i386 ELF .o object: nasm -O999999999 -w+orphan-labels -f elf -o stdio_medium_flushall.o stdio_medium_flushall.nasm
+; Compile to i386 ELF .o object: nasm -O999999999 -w+orphan-labels -f elf -o stdio_medium_flush_opened.o stdio_medium_flush_opened.nasm
 ;
 ; Uses: %ifdef CONFIG_PIC
 ;
@@ -8,7 +8,7 @@
 bits 32
 cpu 386
 
-global mini___M_flushall
+global mini___M_start_flush_opened
 global mini___M_global_files
 global mini___M_global_files_end
 global mini___M_global_file_bufs
@@ -19,10 +19,8 @@ section .rodata align=1
 section .data align=1
 section .bss align=4
 mini_fflush equ +0x12345678
-mini___M_stdout_for_flushall equ +0x12345679
 %else
 extern mini_fflush
-common mini___M_stdout_for_flushall 4:4
 section .text align=1
 section .rodata align=4
 section .data align=4
@@ -34,19 +32,14 @@ BUF_SIZE equ 0x1000  ; It matches BUF_SIZE defined in c_stdio_medium.c.
 FILE_CAPACITY equ 2
 
 section .text
-mini___M_flushall:
+mini___M_start_flush_opened:
 ; Called from mini_exit(...).
-; It flushes mini_stdout, then it flushes all files opened by mini_fopen(...).
-		push ebx ; TODO(pts): Don't save and restore EBX, since this function is called at exit time. Also document this non-standard ABI.
-		mov ebx, [mini___M_stdout_for_flushall]
-		test ebx, ebx
-		jz .after_stdout
-		push ebx
-		call mini_fflush
-		pop eax  ; Clean up argument of mini_fflush.
+; It flushes all files opened by mini_fopen(...).
 .after_stdout:
 %if FILE_CAPACITY <= 0
-%elif FILE_CAPACITY == 1
+%else
+		push ebx
+%if FILE_CAPACITY == 1
 		push strict dword mini___M_global_files
 		call mini_fflush
 		pop eax  ; Clean up argument of mini_fflush.
@@ -75,6 +68,7 @@ mini___M_flushall:
 		jmp short .next_file
 %endif
 .after_files:	pop ebx
+%endif
 		ret 
 
 section .bss
