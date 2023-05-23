@@ -99,7 +99,7 @@ for ARCH in i386 i686; do
   else LIB_OBJS="$LIBI686_OBJS"
   fi
   set -ex
-  # !! TODO(pts): Remove local symbols first, to make the .o files smaller.
+  # !! TODO(pts): Remove local symbols first, to make the .o files smaller, e.g. objcopy -x in.o out.o
   # Work around pts-tcc common symbol linking bug (tcc_common_lib_bug.sh).
   $AR crs libmin"$ARCH".a $LIB_OBJS $LIB_OBJS_SPECIAL_ORDER
   set +ex
