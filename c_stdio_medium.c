@@ -115,6 +115,88 @@ static void discard_buf(FILE *filep) {
   if (IS_FD_ANY_READ(filep->dire)) filep->buf_write_ptr = filep->buf_end;  /* Sentinel. */
 }
 
+/* Always calls discard_buf(...). */
+int mini_fflush(FILE *filep) {
+  const char *p;
+  ssize_t got;
+  if (!IS_FD_ANY_WRITE(filep->dire)) return EOF;
+  p = filep->buf_start;
+  while (p != filep->buf_write_ptr) {
+    if ((got = mini_write(filep->fd, p, filep->buf_write_ptr - p)) + 1U <= 1U) {
+      got = EOF;
+      goto done; /* Silently ignore rest of the buffer not written. */
+    }
+    p += got;
+  }
+  got = 0;  /* Success. */
+ done:
+  filep->buf_off += p - filep->buf_start;
+  discard_buf(filep);
+  return got;
+}
+
+size_t mini_fwrite(const void *ptr, size_t size, size_t nmemb, FILE *filep) {
+  size_t bc = size * nmemb;  /* Byte count. We don't care about overflow. */
+  ssize_t got;
+  const char *p = (char*)ptr;
+  const char *q;
+  if (!IS_FD_ANY_WRITE(filep->dire) || bc == 0) return 0;
+  if (filep->buf_end == filep->buf_start) {
+    goto write_remaining;
+  } else if (filep->dire == FD_WRITE_LINEBUF) {
+    for (q = p + bc; q != p && q[-1] != '\n'; --q) {}  /* Find the last '\n'. */
+    do {
+      /* !! TODO(pts): Flush the buffer if full (but not overfull)? What does glibc do? */
+      if (filep->buf_write_ptr == filep->buf_end) {
+        if (mini_fflush(filep)) goto done;  /* Error flushing, so stop. */
+      }
+      *filep->buf_write_ptr++ = *p++;
+      if (p == q) {  /* Last newline ('\n') found. */
+        if (mini_fflush(filep)) goto done;  /* Error flushing, so stop. */
+      }
+    } while (--bc != 0);
+    goto done;
+  } else if (filep->buf_write_ptr == filep->buf_start && bc >= (size_t)(filep->buf_end - filep->buf_start)) {
+    /* Buffer is empty and too small. As a speed optimization, write directly to filep->fd. */
+  } else {
+    /* !! TODO(pts): Flush the buffer if full (but not overfull)? What does glibc do? */
+    while (filep->buf_write_ptr != filep->buf_end) {  /* !! TODO(pts): Is it faster or smaller with memcpy(3)? */
+      *filep->buf_write_ptr++ = *p++;
+      if (--bc == 0) goto done;
+    }
+  }
+  if (!mini_fflush(filep)) {  /* Successfully flushed. */
+   write_remaining:
+    while ((size_t)(got = mini_write(filep->fd, p, bc)) + 1U > 1U) {  /* Written at least 1 byte. */
+      p += got;
+      filep->buf_off += got;
+      if ((bc -= got) == 0) break;
+    }
+  }
+ done:
+  return (size_t)(p - (const char*)ptr) / size;
+}
+
+int mini_fputc(int c, FILE *filep) {
+  const unsigned char uc = c;
+  /*if (!IS_FD_ANY_WRITE(filep->dire)) return EOF;*/  /* No need to check, the while condition is true, and mini_fflush(...) below checks it. */
+  while (filep->buf_write_ptr == filep->buf_end) {
+    if (mini_fflush(filep)) return EOF;  /* Also returns EOF if !IS_FD_ANY_WRITE(filep->dire). Good, because we don't want to write. */
+    if (_STDIO_SUPPORTS_EMPTY_BUFFERS && filep->buf_write_ptr == filep->buf_end) {
+      return mini_fwrite(&uc, 1, 1, filep) ? uc : EOF;
+    }
+  }
+  *filep->buf_write_ptr++ = uc;
+  if (uc == '\n' && filep->dire == FD_WRITE_LINEBUF) mini_fflush(filep);
+  return uc;
+}
+
+__attribute__((__regparm__(2))) int mini___M_fputc_RP2(int c, FILE *filep) {  /* A trampoline for shorter inlining of putc(...) below. */
+  return mini_fputc(c, filep);
+}
+
+#ifndef CONFIG_STDIO_MEDIUM_PRINTF_ONLY  /* Only the functionality needed by mini_vfprintf(...). */
+
 extern void mini___M_flushall(void);
 __extension__ void *mini___M_flushall_ptr = (void*)mini___M_flushall;  /* Force `extern' declaration, for mini_fopen(...). In .nasm source we won't need this hack. */
 
@@ -138,26 +220,6 @@ FILE *mini_fopen(const char *pathname, const char *mode) {
     }
   }
   return NULL;  /* No free slots in global_files. */
-}
-
-/* Always calls discard_buf(...). */
-int mini_fflush(FILE *filep) {
-  const char *p;
-  ssize_t got;
-  if (!IS_FD_ANY_WRITE(filep->dire)) return EOF;
-  p = filep->buf_start;
-  while (p != filep->buf_write_ptr) {
-    if ((got = mini_write(filep->fd, p, filep->buf_write_ptr - p)) + 1U <= 1U) {
-      got = EOF;
-      goto done; /* Silently ignore rest of the buffer not written. */
-    }
-    p += got;
-  }
-  got = 0;  /* Success. */
- done:
-  filep->buf_off += p - filep->buf_start;
-  discard_buf(filep);
-  return got;
 }
 
 int mini_fclose(FILE *filep) {
@@ -205,48 +267,6 @@ size_t mini_fread(void *ptr, size_t size, size_t nmemb, FILE *filep) {
   }
  done:
   return (size_t)(p - (char*)ptr) / size;
-}
-
-size_t mini_fwrite(const void *ptr, size_t size, size_t nmemb, FILE *filep) {
-  size_t bc = size * nmemb;  /* Byte count. We don't care about overflow. */
-  ssize_t got;
-  const char *p = (char*)ptr;
-  const char *q;
-  if (!IS_FD_ANY_WRITE(filep->dire) || bc == 0) return 0;
-  if (filep->buf_end == filep->buf_start) {
-    goto write_remaining;
-  } else if (filep->dire == FD_WRITE_LINEBUF) {
-    for (q = p + bc; q != p && q[-1] != '\n'; --q) {}  /* Find the last '\n'. */
-    do {
-      /* !! TODO(pts): Flush the buffer if full (but not overfull)? What does glibc do? */
-      if (filep->buf_write_ptr == filep->buf_end) {
-        if (mini_fflush(filep)) goto done;  /* Error flushing, so stop. */
-      }
-      *filep->buf_write_ptr++ = *p++;
-      if (p == q) {  /* Last newline ('\n') found. */
-        if (mini_fflush(filep)) goto done;  /* Error flushing, so stop. */
-      }
-    } while (--bc != 0);
-    goto done;
-  } else if (filep->buf_write_ptr == filep->buf_start && bc >= (size_t)(filep->buf_end - filep->buf_start)) {
-    /* Buffer is empty and too small. As a speed optimization, write directly to filep->fd. */
-  } else {
-    /* !! TODO(pts): Flush the buffer if full (but not overfull)? What does glibc do? */
-    while (filep->buf_write_ptr != filep->buf_end) {  /* !! TODO(pts): Is it faster or smaller with memcpy(3)? */
-      *filep->buf_write_ptr++ = *p++;
-      if (--bc == 0) goto done;
-    }
-  }
-  if (!mini_fflush(filep)) {  /* Successfully flushed. */
-   write_remaining:
-    while ((size_t)(got = mini_write(filep->fd, p, bc)) + 1U > 1U) {  /* Written at least 1 byte. */
-      p += got;
-      filep->buf_off += got;
-      if ((bc -= got) == 0) break;
-    }
-  }
- done:
-  return (size_t)(p - (const char*)ptr) / size;
 }
 
 int mini_fseek(FILE *filep, off_t offset, int whence) {
@@ -298,28 +318,12 @@ int mini_fgetc(FILE *filep) {
   return mini_fread(&uc, 1, 1, filep) ? uc : EOF;
 }
 
-int mini_fputc(int c, FILE *filep) {
-  const unsigned char uc = c;
-  /*if (!IS_FD_ANY_WRITE(filep->dire)) return EOF;*/  /* No need to check, the while condition is true, and mini_fflush(...) below checks it. */
-  while (filep->buf_write_ptr == filep->buf_end) {
-    if (mini_fflush(filep)) return EOF;  /* Also returns EOF if !IS_FD_ANY_WRITE(filep->dire). Good, because we don't want to write. */
-    if (_STDIO_SUPPORTS_EMPTY_BUFFERS && filep->buf_write_ptr == filep->buf_end) {
-      return mini_fwrite(&uc, 1, 1, filep) ? uc : EOF;
-    }
-  }
-  *filep->buf_write_ptr++ = uc;
-  if (uc == '\n' && filep->dire == FD_WRITE_LINEBUF) mini_fflush(filep);
-  return uc;
-}
-
-__attribute__((__regparm__(2))) int mini___M_fputc_RP2(int c, FILE *filep) {  /* A trampoline for shorter inlining of putc(...) below. */
-  return mini_fputc(c, filep);
-}
-
 #if defined(__GNUC__) || defined(__TINYC__)  /* Copied from <stdio.h>. */
 /* If the buffer is not full (filep->buf_write_ptr != filep->buf_end), append single byte, otherwise call fputc(...). */
 static __inline__ __attribute__((__always_inline__)) int putc(int c, FILE *filep) { return (((char**)filep)[0]/*->buf_write_ptr*/ == ((char**)filep)[1]/*->buf_end*/) || (_STDIO_SUPPORTS_LINE_BUFFERING && (unsigned char)c == '\n') ? mini___M_fputc_RP2(c, filep) : (unsigned char)(*((char**)filep)[0]/*->buf_write_ptr*/++ = c); }
 #endif
+
+#endif  /* !CONFIG_STDIO_MEDIUM_PRINTF_ONLY */
 
 static int toggle_relaxed(FILE *filep) {
   char *p;
