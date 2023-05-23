@@ -10,9 +10,11 @@ nasm-0.98.39 $CFLAGS -O999999999 -w+orphan-labels -f elf -o stdio_medium_stdout.
 nasm-0.98.39 $CFLAGS -O999999999 -w+orphan-labels -f elf -o stdio_medium_stderr.o stdio_medium_stderr.nasm
 nasm-0.98.39 $CFLAGS -O999999999 -w+orphan-labels -f elf -o stdio_medium_getchar.o stdio_medium_getchar.nasm
 nasm-0.98.39 $CFLAGS -O999999999 -w+orphan-labels -f elf -o stdio_medium_putchar.o stdio_medium_putchar.nasm
+nasm-0.98.39 $CFLAGS -O999999999 -w+orphan-labels -f elf -o stdio_medium_init_isatty.o stdio_medium_init_isatty.nasm
+nasm-0.98.39 $CFLAGS -O999999999 -w+orphan-labels -f elf -o isatty_linux.o isatty_linux.nasm
 nasm-0.98.39 $CFLAGS -O999999999 -w+orphan-labels -f elf -Dmini__start=_start -o start_stdio_medium_linux.o start_stdio_medium_linux.nasm
 # Moving start_stdio_medium_linux.o earlier to avoid (harmless, exit(0)) pts-tcc linker error: start_stdio_medium_linux.o: error: 'mini___M_stdout_for_flushall' defined twice.
-ARGS="-D__MINILIBC686__ -m32 -Os -W -Wall -s -Werror=implicit-function-declaration -ffreestanding -Iinclude -nostdlib -nostdinc -pedantic c_stdio_medium.c test_stdstream.c stdio_medium_vfprintf.o printf_callvf.o fprintf_callvf.o stdio_medium_getchar.o stdio_medium_putchar.o start_stdio_medium_linux.o stdio_medium_stdin.o stdio_medium_stdout.o stdio_medium_stderr.o"
+ARGS="-D__MINILIBC686__ -m32 -Os -W -Wall -s -Werror=implicit-function-declaration -ffreestanding -Iinclude -nostdlib -nostdinc -pedantic c_stdio_medium.c test_stdstream.c stdio_medium_vfprintf.o printf_callvf.o fprintf_callvf.o stdio_medium_getchar.o stdio_medium_putchar.o stdio_medium_init_isatty.o isatty_linux.o start_stdio_medium_linux.o stdio_medium_stdin.o stdio_medium_stdout.o stdio_medium_stderr.o"
 #clang -static -o test_c_stdio_medium_stdstream.prog -ansi $ARGS
 qq xstatic gcc -o test_c_stdio_medium_stdstream.prog -ansi $ARGS
 qq xstatic gcc -o test_c_stdio_medium_stdstream.macro.prog -ansi -DCONFIG_MACRO_GETC_PUTC $ARGS
@@ -51,6 +53,8 @@ cmp f1.tmp.dat f2.tmp.dat
 
 ./test_c_stdio_medium_stdstream.tcc.prog h <f1.tmp.dat >f2.tmp.dat
 cmp f1.tmp.dat f2.tmp.dat
+
+: 'To test line buffering of stdin and stdout on a TTY manually, run ./test_c_stdio_medium_stdstream.prog, type something and press <Enter>. It should be repeated.'
 
 rm -f f1.tmp.dat f2.tmp.dat
 

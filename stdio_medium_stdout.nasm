@@ -32,7 +32,7 @@ mini_stdout_struct:  ; Layout must match `struct _SMS_FILE' in stdio_medium_*.na
 .buf_read_ptr	dd stdout_buf
 .buf_last	dd stdout_buf
 .fd		dd 1  ; STDOUT_FILENO.
-.dire		db 2  ; FD_WRITE.
+.dire		db 4  ; FD_WRITE.
 .padding	db 0, 0, 0
 .buf_start	dd stdout_buf
 .buf_capacity_end dd stdout_buf.end

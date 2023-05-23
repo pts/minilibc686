@@ -30,7 +30,7 @@ mini_stderr_struct:  ; Layout must match `struct _SMS_FILE' in stdio_medium_*.na
 .buf_read_ptr	dd stderr_buf
 .buf_last	dd stderr_buf
 .fd		dd 2  ; STDERR_FILENO.
-.dire		db 2  ; FD_WRITE.
+.dire		db 4  ; FD_WRITE.
 .padding	db 0, 0, 0
 .buf_start	dd stderr_buf
 .buf_capacity_end dd stderr_buf.end

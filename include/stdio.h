@@ -22,7 +22,7 @@ extern FILE *stdout __asm__("mini_stdout");
 extern FILE *stderr __asm__("mini_stderr");
 
 #ifndef _STDIO_SUPPORTS_LINE_BUFFERING
-#define _STDIO_SUPPORTS_LINE_BUFFERING 0
+#define _STDIO_SUPPORTS_LINE_BUFFERING 1
 #endif
 
 int printf(const char *format, ...) __asm__("mini_printf");

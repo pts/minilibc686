@@ -14,7 +14,6 @@
  * * Only these functions are implemented: fopen, fclose, fread, fwrite,
  *   fseek, ftell, fileno, fgetc, getc (defined in <stdio.h>), fputc, putc
  *   (defined in <stdio.h>), printf, fprintf, vfprintf.
- * * !! Implement stdin and stderr.
  * * !! TODO(pts): Implement sprintf, vsprintf snprintf, vsnprintf.
  * * !! mini_fseek(...) doesn't work (can do anything) if the file size is
  *   larger than 4 GiB - 4 KiB. That's because the return value of lseek(2)
@@ -24,14 +23,9 @@
  * * Only full buffering (_IOFBF) is implemented for files opened with
  *   fopen(...). For stdin and stdout, it's linue buffering (_IOLBF) if it
  *   is a TTY (terminal), otherwise it's full buffering.
- * * fread(...) and fwrite(...) always do full buffering. To get line buffering,
- *   use fprintf(...), vfprintf(...), puts(...), fputs(...), putchar(...),
- *   putc(...), getchar(...), getc(...), fgetc(...) or fgets(...).
  * * !! Implement puts.
  * * !! Implement fgets.
- * * !! Implement getchar.
- * * !! Implement putchar.
- * * !! Implement line buffering for stdin.
+ * * !! Implement line buffering for stdin. Does it mean fread returns earlier?
  * * !! Implement line buffering for stdout.
  * * Only fopen modes "rb" (same as "r", for reading) and "wb" (same as "w",
  *   for writing) are implemented. Thus the file can be opened only in one
@@ -71,11 +65,16 @@ typedef struct _SMS_FILE FILE;  /* Different from _FILE. */
 /* _FILE.dire (direction) constant. */
 #define FD_CLOSED 0
 #define FD_READ 1
-#define FD_WRITE 2  /* Must be even. */
+#define FD_WRITE 4  /* Must be even, so that `^= 1' can toggle between FD_WRITE and FD_WRITE_RELAXED. */
 #define FD_WRITE_RELAXED (FD_WRITE+1)  /* Like FD_WRITE, but the buffer size will be set to 0 by mini___M_writebuf_unrelax(...). */
+#define FD_READ_LINEBUF (FD_READ+2)  /* Line buffered, for reading. */
+#define FD_WRITE_LINEBUF (FD_WRITE+2)  /* Line buffered, for writing. */
+
+#define IS_FD_ANY_READ(dire) ((unsigned char)((dire) - FD_READ) < (unsigned char)(FD_WRITE - FD_READ + 0U))
+#define IS_FD_ANY_WRITE(dire) ((unsigned char)(dire) >= (unsigned char)FD_WRITE)
 
 #define _STDIO_SUPPORTS_EMPTY_BUFFERS 1
-#define _STDIO_SUPPORTS_LINE_BUFFERING 0  /* If changed, also update include/stdio.h. */
+#define _STDIO_SUPPORTS_LINE_BUFFERING 1  /* If changed, also update include/stdio.h. */
 
 struct _SMS_FILE {  /* Layout must match stdio_medium_*.nasm. */
   /* The first two pointers must be buf_write_ptr and buf_end, for the putc(c, filep) macro to work. */
@@ -86,6 +85,7 @@ struct _SMS_FILE {  /* Layout must match stdio_medium_*.nasm. */
   char *buf_last;  /* For reading: points after the last byte read from file. */
   /* fd must come right after the 4 pointers above, for the fileno(filep) macro to work. */
   int fd;
+  /* dire must come right after fd above, for mini___M_init_isatty(...) to work. */
   unsigned char dire;  /* Direction. One of FD_... . FD_CLOSED by default. */
   char padding[sizeof(int) - 1];
   /* Invariant: buf_start <= buf_write_ptr <= buf_end <= buf_capacity_end (unless FD_WRITE_RELAXED). */
@@ -114,7 +114,7 @@ extern off_t mini_lseek(int fd, off_t offset, int whence);
 
 static void discard_buf(FILE *filep) {
   filep->buf_read_ptr = filep->buf_write_ptr = filep->buf_last = filep->buf_start;
-  if (filep->dire == FD_READ) filep->buf_write_ptr = filep->buf_end;  /* Sentinel. */
+  if (IS_FD_ANY_READ(filep->dire)) filep->buf_write_ptr = filep->buf_end;  /* Sentinel. */
 }
 
 FILE *mini_fopen(const char *pathname, const char *mode) {
@@ -123,12 +123,12 @@ FILE *mini_fopen(const char *pathname, const char *mode) {
   int fd;
   char is_write;
 #if FILE_CAPACITY > 0
-  is_write = mode[0] == 'w';
+  is_write = mode[0] == 'w';  /* !! Add 'a'. */
   for (filep = global_files; filep != global_files + sizeof(global_files) / sizeof(global_files[0]); ++filep, buf += BUF_SIZE) {
     if (filep->dire == FD_CLOSED) {
       fd = mini_open(pathname, is_write ? O_WRONLY | O_TRUNC | O_CREAT : O_RDONLY, 0666);
       if (fd < 0) return NULL;  /* open(2) has failed. */
-      filep->dire = 1 + is_write;
+      filep->dire = is_write ? FD_WRITE : FD_READ;
       filep->fd = fd;
       filep->buf_off = 0;
       filep->buf_start = buf;
@@ -145,7 +145,7 @@ FILE *mini_fopen(const char *pathname, const char *mode) {
 int mini_fflush(FILE *filep) {
   const char *p;
   ssize_t got;
-  if (filep->dire < FD_WRITE) return EOF;
+  if (!IS_FD_ANY_WRITE(filep->dire)) return EOF;
   p = filep->buf_start;
   while (p != filep->buf_write_ptr) {
     if ((got = mini_write(filep->fd, p, filep->buf_write_ptr - p)) + 1U <= 1U) {
@@ -164,7 +164,7 @@ int mini_fflush(FILE *filep) {
 int mini_fclose(FILE *filep) {
   int got;
   if (filep->dire == FD_CLOSED) return EOF;
-  got = (filep->dire == FD_READ) ? 0 : mini_fflush(filep);
+  got = (IS_FD_ANY_READ(filep->dire)) ? 0 : mini_fflush(filep);
   mini_close(filep->fd);
   filep->dire = FD_CLOSED;
   filep->fd = EOF;  /* Sentinel for future calls to fileno(filep) etc. */
@@ -183,11 +183,20 @@ size_t mini_fread(void *ptr, size_t size, size_t nmemb, FILE *filep) {
   size_t bc = size * nmemb;  /* Byte count. We don't care about overflow. */
   ssize_t got;
   char *p = (char*)ptr;
-  if (filep->dire != FD_READ || bc == 0) return 0;
+  char c;
+  if (!IS_FD_ANY_READ(filep->dire) || bc == 0) return 0;
   for (;;) {
-    while (bc != 0 && filep->buf_read_ptr != filep->buf_last) {  /* TODO(pts): Is it faster or smaller with memcpy(3)? */
-      *p++ = *filep->buf_read_ptr++;
-      --bc;
+    if (filep->dire == FD_READ_LINEBUF) {
+      while (bc != 0 && filep->buf_read_ptr != filep->buf_last) {
+        *p++ = c = *filep->buf_read_ptr++;
+        --bc;
+        if (c == '\n') goto done;  /* !! Is this consistent with glibc and uClibc? */
+      }
+    } else {
+      while (bc != 0 && filep->buf_read_ptr != filep->buf_last) {  /* TODO(pts): Is it faster or smaller with memcpy(3)? */
+        *p++ = *filep->buf_read_ptr++;
+        --bc;
+      }
     }
     if (bc == 0) break;
     filep->buf_off += filep->buf_last - filep->buf_start;
@@ -195,6 +204,7 @@ size_t mini_fread(void *ptr, size_t size, size_t nmemb, FILE *filep) {
     if ((size_t)(got = mini_read(filep->fd, filep->buf_start, filep->buf_end - filep->buf_start)) + 1U <= 1U) break;
     filep->buf_last += got;
   }
+ done:
   return (size_t)(p - (char*)ptr) / size;
 }
 
@@ -202,16 +212,34 @@ size_t mini_fwrite(const void *ptr, size_t size, size_t nmemb, FILE *filep) {
   size_t bc = size * nmemb;  /* Byte count. We don't care about overflow. */
   ssize_t got;
   const char *p = (char*)ptr;
-  if (filep->dire < FD_WRITE || bc == 0) return 0;
-  if (filep->buf_write_ptr == filep->buf_start && bc >= (size_t)(filep->buf_end - filep->buf_start)) {
+  const char *q;
+  if (!IS_FD_ANY_WRITE(filep->dire) || bc == 0) return 0;
+  if (filep->buf_end == filep->buf_start) {
+    goto write_remaining;
+  } else if (filep->dire == FD_WRITE_LINEBUF) {
+    for (q = p + bc; q != p && q[-1] != '\n'; --q) {}  /* Find the last '\n'. */
+    do {
+      /* !! TODO(pts): Flush the buffer if full (but not overfull)? What does glibc do? */
+      if (filep->buf_write_ptr == filep->buf_end) {
+        if (mini_fflush(filep)) goto done;  /* Error flushing, so stop. */
+      }
+      *filep->buf_write_ptr++ = *p++;
+      if (p == q) {  /* Last newline ('\n') found. */
+        if (mini_fflush(filep)) goto done;  /* Error flushing, so stop. */
+      }
+    } while (--bc != 0);
+    goto done;
+  } else if (filep->buf_write_ptr == filep->buf_start && bc >= (size_t)(filep->buf_end - filep->buf_start)) {
     /* Buffer is empty and too small. As a speed optimization, write directly to filep->fd. */
   } else {
+    /* !! TODO(pts): Flush the buffer if full (but not overfull)? What does glibc do? */
     while (filep->buf_write_ptr != filep->buf_end) {  /* !! TODO(pts): Is it faster or smaller with memcpy(3)? */
       *filep->buf_write_ptr++ = *p++;
       if (--bc == 0) goto done;
     }
   }
   if (!mini_fflush(filep)) {  /* Successfully flushed. */
+   write_remaining:
     while ((size_t)(got = mini_write(filep->fd, p, bc)) + 1U > 1U) {  /* Written at least 1 byte. */
       p += got;
       filep->buf_off += got;
@@ -224,14 +252,14 @@ size_t mini_fwrite(const void *ptr, size_t size, size_t nmemb, FILE *filep) {
 
 int mini_fseek(FILE *filep, off_t offset, int whence) {
   off_t got;
-  if (filep->dire == FD_READ) {
+  if (IS_FD_ANY_READ(filep->dire)) {
     if (whence == SEEK_CUR) {
       filep->buf_off += filep->buf_read_ptr - filep->buf_start;
       whence = SEEK_SET;
       offset += filep->buf_off;
     }
     discard_buf(filep);  /* The caller expects us to discard the buffer, even if mini_lseek(...) below fails. */
-  } else if (filep->dire >= FD_WRITE) {
+  } else if (IS_FD_ANY_WRITE(filep->dire)) {
     if (mini_fflush(filep)) return EOF;
   } else {
     return EOF;
@@ -244,9 +272,9 @@ int mini_fseek(FILE *filep, off_t offset, int whence) {
 
 off_t mini_ftell(FILE *filep) {
   const char *p;
-  if (filep->dire == FD_READ) {
+  if (IS_FD_ANY_READ(filep->dire)) {
     p = filep->buf_read_ptr;
-  } else if (filep->dire >= FD_WRITE) {
+  } else if (IS_FD_ANY_WRITE(filep->dire)) {
     p = filep->buf_write_ptr;
   } else {
     return EOF;
@@ -266,22 +294,22 @@ static __inline__ __attribute__((__always_inline__)) int getc(FILE *filep) { ret
 
 int mini_fgetc(FILE *filep) {
   unsigned char uc;
-  /*if (filep->dire != FD_READ) return EOF;*/  /* No need to check, mini_fread(...) below checks it. */
+  /*if (!IS_FD_ANY_READ(filep->dire)) return EOF;*/  /* No need to check, mini_fread(...) below checks it. */
   if (filep->buf_read_ptr != filep->buf_last) return (unsigned char)*filep->buf_read_ptr++;
   return mini_fread(&uc, 1, 1, filep) ? uc : EOF;
 }
 
 int mini_fputc(int c, FILE *filep) {
   const unsigned char uc = c;
-  /*if (filep->dire < FD_WRITE) return EOF;*/  /* No need to check, the while condition is true, and mini_fflush(...) below checks it. */
+  /*if (!IS_FD_ANY_WRITE(filep->dire)) return EOF;*/  /* No need to check, the while condition is true, and mini_fflush(...) below checks it. */
   while (filep->buf_write_ptr == filep->buf_end) {
-    if (mini_fflush(filep)) return EOF;  /* Also returns EOF if filep->dire < FD_WRITE. Good, because we don't want to write. */
+    if (mini_fflush(filep)) return EOF;  /* Also returns EOF if !IS_FD_ANY_WRITE(filep->dire). Good, because we don't want to write. */
     if (_STDIO_SUPPORTS_EMPTY_BUFFERS && filep->buf_write_ptr == filep->buf_end) {
       return mini_fwrite(&uc, 1, 1, filep) ? uc : EOF;
     }
   }
   *filep->buf_write_ptr++ = uc;
-  if (_STDIO_SUPPORTS_LINE_BUFFERING && uc == '\n') mini_fflush(filep);
+  if (uc == '\n' && filep->dire == FD_WRITE_LINEBUF) mini_fflush(filep);
   return uc;
 }
 
