@@ -135,6 +135,27 @@ int mini_fflush(FILE *filep) {
   return got;
 }
 
+int mini_fputc(int c, FILE *filep) {
+  const unsigned char uc = c;
+  /*if (!IS_FD_ANY_WRITE(filep->dire)) return EOF;*/  /* No need to check, the while condition is true, and mini_fflush(...) below checks it. */
+  if (filep->buf_write_ptr == filep->buf_end) {
+    if (mini_fflush(filep)) return EOF;  /* Also returns EOF if !IS_FD_ANY_WRITE(filep->dire). Good, because we don't want to write. */
+    if (_STDIO_SUPPORTS_EMPTY_BUFFERS && filep->buf_write_ptr == filep->buf_end) {
+      /* return mini_fwrite(&uc, 1, 1, filep) ? uc : EOF; */
+      if (mini_write(filep->fd, &uc, 1) != 1) return EOF;
+      ++filep->buf_off;
+    }
+  }
+  *filep->buf_write_ptr++ = uc;
+  if (uc == '\n' && filep->dire == FD_WRITE_LINEBUF) mini_fflush(filep);
+  return uc;
+}
+
+__attribute__((__regparm__(2))) int mini___M_fputc_RP2(int c, FILE *filep) {  /* A trampoline for shorter inlining of putc(...) below. */
+  return mini_fputc(c, filep);
+}
+
+#ifndef CONFIG_STDIO_MEDIUM_PRINTF_ONLY  /* Only the functionality needed by mini_vfprintf(...). */
 size_t mini_fwrite(const void *ptr, size_t size, size_t nmemb, FILE *filep) {
   size_t bc = size * nmemb;  /* Byte count. We don't care about overflow. */
   ssize_t got;
@@ -177,7 +198,9 @@ size_t mini_fwrite(const void *ptr, size_t size, size_t nmemb, FILE *filep) {
   return (size_t)(p - (const char*)ptr) / size;
 }
 
-int mini_fputc(int c, FILE *filep) {
+#if 0
+/* With smart linking, we could use this if mini_write(...) is also linked. */
+int mini_fputc_calling_fwrite(int c, FILE *filep) {
   const unsigned char uc = c;
   /*if (!IS_FD_ANY_WRITE(filep->dire)) return EOF;*/  /* No need to check, the while condition is true, and mini_fflush(...) below checks it. */
   while (filep->buf_write_ptr == filep->buf_end) {
@@ -190,12 +213,7 @@ int mini_fputc(int c, FILE *filep) {
   if (uc == '\n' && filep->dire == FD_WRITE_LINEBUF) mini_fflush(filep);
   return uc;
 }
-
-__attribute__((__regparm__(2))) int mini___M_fputc_RP2(int c, FILE *filep) {  /* A trampoline for shorter inlining of putc(...) below. */
-  return mini_fputc(c, filep);
-}
-
-#ifndef CONFIG_STDIO_MEDIUM_PRINTF_ONLY  /* Only the functionality needed by mini_vfprintf(...). */
+#endif
 
 extern void mini___M_flushall(void);
 __extension__ void *mini___M_flushall_ptr = (void*)mini___M_flushall;  /* Force `extern' declaration, for mini_fopen(...). In .nasm source we won't need this hack. */
