@@ -135,7 +135,7 @@ int mini_fflush(FILE *filep) {
   return got;
 }
 
-int mini_fputc(int c, FILE *filep) {
+__attribute__((__regparm__(2))) int mini___M_fputc_RP2(int c, FILE *filep) {
   const unsigned char uc = c;
   /*if (!IS_FD_ANY_WRITE(filep->dire)) return EOF;*/  /* No need to check, the while condition is true, and mini_fflush(...) below checks it. */
   if (filep->buf_write_ptr == filep->buf_end) {
@@ -151,11 +151,12 @@ int mini_fputc(int c, FILE *filep) {
   return uc;
 }
 
-__attribute__((__regparm__(2))) int mini___M_fputc_RP2(int c, FILE *filep) {  /* A trampoline for shorter inlining of putc(...) below. */
-  return mini_fputc(c, filep);
-}
 
 #ifndef CONFIG_STDIO_MEDIUM_PRINTF_ONLY  /* Only the functionality needed by mini_vfprintf(...). */
+int mini_fputc(int c, FILE *filep) {
+  return mini___M_fputc_RP2(c, filep);
+}
+
 size_t mini_fwrite(const void *ptr, size_t size, size_t nmemb, FILE *filep) {
   size_t bc = size * nmemb;  /* Byte count. We don't care about overflow. */
   ssize_t got;
