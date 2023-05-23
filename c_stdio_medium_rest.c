@@ -15,6 +15,11 @@ size_t mini_fwrite(const void *ptr, size_t size, size_t nmemb, FILE *filep) {
   if (filep->buf_end == filep->buf_start) {
     goto write_remaining;
   } else if (filep->dire == FD_WRITE_LINEBUF) {
+    /* !! This is a bit different from glibc 2.27: both flush until and
+     * including the last '\n', but for glibc 2.27 if buf_end is also reached,
+     * then it flushes all the buffer. It looks like it unconditionally copies
+     * to the buffer first.
+     */
     for (q = p + bc; q != p && q[-1] != '\n'; --q) {}  /* Find the last '\n'. */
     do {
       if (filep->buf_write_ptr == filep->buf_end) {
@@ -121,11 +126,11 @@ size_t mini_fread(void *ptr, size_t size, size_t nmemb, FILE *filep) {
   char c;
   if (!IS_FD_ANY_READ(filep->dire) || bc == 0) return 0;
   for (;;) {
-    if (filep->dire == FD_READ_LINEBUF) {
+    if (_STDIO_EARLY_FREAD_ON_NL && filep->dire == FD_READ_LINEBUF) {
       while (bc != 0 && filep->buf_read_ptr != filep->buf_last) {
         *p++ = c = *filep->buf_read_ptr++;
         --bc;
-        if (c == '\n') goto done;  /* !! Is this consistent with glibc and uClibc? */
+        if (c == '\n') goto done;
       }
     } else {
       while (bc != 0 && filep->buf_read_ptr != filep->buf_last) {  /* TODO(pts): Is it faster or smaller with memcpy(3)? */
