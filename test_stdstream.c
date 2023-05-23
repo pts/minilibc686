@@ -9,6 +9,12 @@ static int my_printf(const char *format, ...) {
   return vfprintf(stdout, format, ap);
 }
 
+static int my_sprintf(char *str, const char *format, ...) {
+  va_list ap;
+  va_start(ap, format);
+  return vsprintf(str, format, ap);
+}
+
 int main(int argc, char **argv) {
   char buf[0x20];
   char mode;
@@ -26,7 +32,7 @@ int main(int argc, char **argv) {
 
   if (sprintf(buf, "answer=%04d", 42) != 11) return 21;
   if (strcmp(buf, "answer=0042") != 0) return 22;
-  if (sprintf(buf, "short") != 5) return 21;
+  if (my_sprintf(buf, "short") != 5) return 21;
   if (strcmp(buf, "short") != 0) return 22;
 
   mode = argv[0] && argv[1] && argv[1][0] ? argv[1][0] : '.';

@@ -29,6 +29,7 @@ int printf(const char *format, ...) __asm__("mini_printf");
 int fprintf(FILE *stream, const char *format, ...) __asm__("mini_fprintf");
 int vfprintf(FILE *f, const char *format, __libc__va_list ap) __asm__("mini_vfprintf");
 int sprintf(char *str, const char *format, ...) __asm__("mini_sprintf");
+int vsprintf(char *str, const char *format, __libc__va_list ap) __asm__("mini_vsprintf");
 
 FILE *fopen(const char *pathname, const char *mode) __asm__("mini_fopen");
 int fflush(FILE *filep) __asm__("mini_fflush");

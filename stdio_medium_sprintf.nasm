@@ -9,6 +9,7 @@ bits 32
 cpu 386
 
 global mini_sprintf
+global mini_sprintf.do
 %ifdef CONFIG_SECTIONS_DEFINED
 %elifidn __OUTPUT_FORMAT__, bin
 section .text align=1
@@ -27,6 +28,8 @@ section .bss align=4
 section .text
 mini_sprintf:  ; int mini_sprintf(char *str, const char *format, ...);
 		lea edx, [esp+0xc]  ; Argument `...'.
+		mov eax, edx  ; Smart linking could eliminate this (and use EDX instead) if mini_vsprintf(...) wasn't in use.
+mini_sprintf.do:  ; mini_vsprintf(...) jumps here.
 		; It matches struct _SMS_FILE defined in c_stdio_medium.c. sizeof(struct _SMS_FILE).
 		push byte 0  ; .buf_off.
 		push byte -1  ; .buf_capacity_end.
@@ -38,10 +41,10 @@ mini_sprintf:  ; int mini_sprintf(char *str, const char *format, ...);
 		push byte -1  ; .buf_end: practically unlimited buffer.
 		push dword [edx-8]  ; .buf_write_ptr == str argument.
 		; int mini_vfprintf(FILE *filep, const char *format, va_list ap);
-		mov eax, esp  ; Address of newly created struct _SMS_FILE on stack.
-		push edx  ; Argument ap of mini_vfprintf(...).
+		mov ecx, esp  ; Address of newly created struct _SMS_FILE on stack.
+		push eax  ; Argument ap of mini_vfprintf(...).
 		push dword [edx-4]  ; Argument format of mini_vfprintf(...).
-		push eax  ; Argument filep of mini_vfprintf(...).
+		push ecx  ; Argument filep of mini_vfprintf(...). Address of newly created struct _SMS_FILE on stack.
 		call mini_vfprintf
 		mov edx, [esp+3*4]  ; .buf_write_ptr.
 		mov byte [edx], 0  ; Add '\0'.
