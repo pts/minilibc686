@@ -274,13 +274,15 @@ mini_vfprintf:  ; int mini_vfprintf(FILE *filep, const char *format, va_list ap)
 		je .call_mini_fputc
 		cmp al, 10  ; '\n'.
 		je .call_mini_fputc  ; In case filep == stdout and it's line buffered (_IOLBF).
+		;test ecx, ecx  ; if buf_write_ptr is NULL, then don't write the AL byte, but still increment the counter in EBP. This is for mini_snprintf(...).
+		;jz .after_putc
 		mov [ecx], al  ; *buf_write_ptr := AL.
 		inc dword [edx]  ; buf_write_ptr += 1.
-		inc ebp  ; Increment EBP on success (as per .call_mini_putc contract).
+.after_putc:	inc ebp  ; Increment EBP on success (as per .call_mini_putc contract).
 		ret
 .call_mini_fputc:
 		; movsx eax, al : Not needed, mini_fputc ignores the high 24 bits anyway.
-		call mini___M_fputc_RP2
+		call mini___M_fputc_RP2  ; With extra smart linking, we could hardcore an EOF (-1) return if only mini_snprintf(...) etc., bur no mini_fprintf(...) etc. is used.
 		add eax, byte 1  ; CF := (EAX != 1).
 		sbb ebp, byte -1  ; If EAX wasn't -1 (EOF), then EBP += 1.
 		ret

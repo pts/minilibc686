@@ -1,5 +1,7 @@
+#include <string.h>
 #include <stdarg.h>
 #include <stdio.h>
+#include <unistd.h>  /* STDIN_FILENO etc. for glibc and uClibc. */
 
 static int my_printf(const char *format, ...) {
   va_list ap;
@@ -8,6 +10,7 @@ static int my_printf(const char *format, ...) {
 }
 
 int main(int argc, char **argv) {
+  char buf[0x20];
   char mode;
   int c;
   (void)argc; (void)argv;
@@ -20,6 +23,12 @@ int main(int argc, char **argv) {
   if (getc(stdout) != EOF) return 12;  /* Not open for reading. */
   if (fgetc(stderr) != EOF) return 13;  /* Not open for reading. */
   if (getc(stderr) != EOF) return 14;  /* Not open for reading. */
+
+  if (sprintf(buf, "answer=%04d", 42) != 11) return 21;
+  if (strcmp(buf, "answer=0042") != 0) return 22;
+  if (sprintf(buf, "short") != 5) return 21;
+  if (strcmp(buf, "short") != 0) return 22;
+
   mode = argv[0] && argv[1] && argv[1][0] ? argv[1][0] : '.';
   if (mode == 'c') {  /* Cat: copy from stdin to stdout using getc and putc. */
     while ((c = getc(stdin)) != EOF) {
