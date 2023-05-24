@@ -17,6 +17,10 @@ char *strcpy(char *dest, const char *src) __asm__("mini_strcpy");
 char *strcat(char *dest, const char *src) __asm__("mini_strcat");
 int strcmp(const char *s1, const char *s2) __asm__("mini_strcmp");
 char *strstr(const char *haystack, const char *needle) __asm__("mini_strstr");
+#ifdef __MINILIBC686__
+/* It is like strstr(...), but scanning haystack for needle[0] is much faster. */
+char *strstr_faster(const char *haystack, const char *needle) __asm__("mini_strstr_faster");
+#endif
 void *memcpy(void *dest, const void *src, size_t n) __asm__("mini_memcpy");
 int memcmp(const void *s1, const void *s2, size_t n) __asm__("mini_memcmp");
 void *memset(void *s, int c, size_t n) __asm__("mini_memset");
