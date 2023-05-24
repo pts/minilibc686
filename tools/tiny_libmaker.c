@@ -45,7 +45,7 @@ typedef struct _FILE FILE;
  */
 #define stderr ((FILE*)&__iob[2])  /* sizeof(__iobuf) matters. */
 #else
-#if (!defined(DO_INLINE_STDLIB) || DO_INLINE_STDLIB) && (defined(__TINYC__) || defined(__GNUC__)) && defined(__i386__) && defined(__linux__)
+#if (!defined(DO_INLINE_STDLIB) || DO_INLINE_STDLIB) && (defined(__TINYC__) || defined(__GNUC__)) && defined(__i386__) && defined(__linux__) && !defined(__MINILIBC686__)
 #undef  DO_INLINE_STDLIB
 #define DO_INLINE_STDLIB 1  /* Make it work without #include()s. */
 typedef struct _FILE FILE;
