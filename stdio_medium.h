@@ -2,6 +2,10 @@
  * stdio_medium.h: a medium-partial, buffered stdio implementation for files and standard streams (stdin, stdout or stderr)
  * by pts@fazekas.h at Mon May 22 15:20:04 CEST 2023
  *
+ * This API is stable. Changes should be added to a new API (probably
+ * stdio_full.h). The ABI is also stable (across .nasm files), struct
+ * _SMS_FILE shouldn't be changed.
+ *
  * Features:
  *
  * * Open files are flushed at mini_exit(...) time, including when returning
@@ -15,27 +19,25 @@
  *   fseek, ftell, fileno, fgetc, getc (defined in <stdio.h>), fputc, putc
  *   (defined in <stdio.h>), printf, vprintf, fprintf, vfprintf,
  *   sprintf, vsprintf, snprintf, vsnprintf.
- * * !! mini_fseek(...) doesn't work (can do anything) if the file size is
+ * * mini_fseek(...) doesn't work (can do anything) if the file size is
  *   larger than 4 GiB - 4 KiB. That's because the return value of lseek(2)
  *   (without errno) doesn't fit to 32 bits.
- * * !! mini_ftell(...) returns garbage if the file size is larger than 4 GiB -
+ * *  mini_ftell(...) returns garbage if the file size is larger than 4 GiB -
  *   4 KiB.
  * * Only full buffering (_IOFBF) is implemented for files opened with
  *   fopen(...). For stdin and stdout, it's linue buffering (_IOLBF) if it
  *   is a TTY (terminal), otherwise it's full buffering.
- * * !! Implement gets.
- * * !! Implement fgets.
+ * * TODO(pts) Implement gets.
+ * * TODO(pts) Implement fgets.
  * * Only fopen modes "rb" (same as "r", for reading), "wb" (same as "w",
  *   for writing), "ab" (same as "a", for appending) are implemented. Thus
  *   the file can be opened only in one direction at a time.
- * * !! There is no error indicator bit, subsequent read(2) and write(2) will
+ * * There is no error indicator bit, subsequent read(2) and write(2) will
  *   be attempted even after an I/O error.
  * * Only up to a compile-time fixed number of files (default:
  *   FILE_CAPACITY == 2) can be open at the same time.
  * * Buffer size is fixed at compile time (default: BUF_SIZE == 0x1000).
  *   stdin, stdout and stderr have a default, smaller buffer size.
- * * !! Currently functions are not split to multiple .c files, thus unneeded
- *   functions will also be linked.
  * * The behavior is undefined if `size * nmemb' is overflows (i.e. at
  *   least 2 ** 32 == 4 GiB).
  * * When the file is opened for appending, the result of ftell(...) is not
