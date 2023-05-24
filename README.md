@@ -18,10 +18,14 @@ Typical code sizes (total size of the executable program file):
 
 * A hello-world program using printf (demo_hello_linux_printf.nasm):
   **1240 bytes**. Only the very short main(...) function was written in C,
-  the rest of the code is part of the libc, written in NASM assembly. As a
-  comparison, musl (`zig cc -target i386-linux-musl -s -O2`) is 15548 bytes
-  after stripping, and uClibc 0.9.30.1 (`./minicc --utcc --gcc --tccld -s`)
-  is 14526 bytes after stripping.
+  the rest of the code is part of the libc, written in NASM assembly.
+  Comparison:
+  * musl (`zig cc -target i386-linux-musl -O2`) is
+    15548 bytes after stripping
+  * uClibc 0.9.30.1 (`./minicc --utcc --gcc --tccld`) is
+    14526 bytes, already stripped
+  * OpenWatcom (`owcc -blinux -Os -fno-stack-check`) is
+    12934 bytes after strippong
 
 The following components are included:
 
