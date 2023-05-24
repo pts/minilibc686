@@ -21,7 +21,7 @@ headers, program code and libc code):
   **1240 bytes**. Only the very short main(...) function was written in C,
   the rest of the code is part of the libc, written in NASM assembly.
   Comparison:
-  * minilibc686 (`./minicc --gcc -s`) is
+  * minilibc686 (`./minicc --gcc`) is
     1240 bytes, already stripped
   * [diet libc](https://www.fefe.de/dietlibc/) 0.34 (`diet gcc`) is
     8196 bytes after stripping
@@ -63,8 +63,8 @@ The following components are included:
   executables. By default, these executables link against minilibc686, but
   with the usual `-nostdlib` flag, you can add your own libc. It can use GCC
   and Clang compilers installed onto the system, and it runs the compiler
-  and the linker with many size-optimization flags, and it can most
-  unnecessary stuff from the final executable (use the `-s` flag). In
+  and the linker with many size-optimization flags, and it removes most
+  unnecessary stuff from the final executable. In
   addition to these compilers, it can use the bundled TinyCC compiler
   (tools/pts-tcc) (use the `--tcc` flag).
 
@@ -104,7 +104,7 @@ Features:
 Try it on Linux i386 or Linux amd64 (without the leading `$`):
 
 ```
-$ ./minicc --tcc -s -W -Wall -o demo demo_c_hello.c
+$ ./minicc --tcc -W -Wall -o demo demo_c_hello.c
 $ ./demo
 Hello, World!
 ```
@@ -214,9 +214,9 @@ Linker problems:
   * Binary size is huge: 2 082 968 bytes.
   * !! TODO(pts): For mininasm, why does --tccld create a smaller program?
     ```
-    $ qq ./minicc --tccld -s -Os -W -Wall -Werror -o mininasm mininasm.c && sstrip.static mininasm && ls -ld mininasm
+    $ qq ./minicc --tccld -Os -W -Wall -Werror -o mininasm mininasm.c && sstrip.static mininasm && ls -ld mininasm
     -rwxr-xr-x 1 pts pts 23200 May 21 17:12 mininasm
-    qq ./minicc -s -Os -W -Wall -Werror -o mininasm mininasm.c && sstrip.static mininasm && ls -ld mininasm
+    qq ./minicc -Os -W -Wall -Werror -o mininasm mininasm.c && sstrip.static mininasm && ls -ld mininasm
     -rwxr-xr-x 1 pts pts 24636 May 21 17:12 mininasm
     ```
   Linking command is:

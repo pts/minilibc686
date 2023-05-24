@@ -31,6 +31,7 @@ TCCLD=
 DO_ADD_LIB=1
 DO_ADD_INCLUDEDIR=1
 DO_LINK=1
+SFLAG=-s
 HAD_OFLAG=
 HAD_V=
 ARCH=i686
@@ -63,9 +64,10 @@ for ARG in "$@"; do
    -static | -m32 | -fno-pic | -fpic | -fno-pie | -pie | -no-pie | -flto | -fno-lto | -nostartfiles) ;;
    -march=i[36]86) ARCH="${ARG#*=}" ;;
    -march=*) echo "fatal: unsupported minicc arch flag: $ARG" >&2; exit 1 ;;
-   -[Wfmg]*) ARGS="$ARGS$NL$ARG" ;;
+   -[Wfm]*) ARGS="$ARGS$NL$ARG" ;;
    -[DUI]*?) ARGS="$ARGS$NL$ARG" ;;
    -O*) ARGS="$ARGS$NL$ARG"; HAD_OFLAG=1 ;;
+   -g*) ARGS="$ARGS$NL$ARG"; SFLAG= ;;
    -nostdlib | -nodefaultlibs) DO_ADD_LIB= ;;
    -nostdinc) DO_ADD_INCLUDEDIR= ;;
    -[cSE]) ARGS="$ARGS$NL$ARG"; DO_ADD_LIB=; DO_LINK= ;;
@@ -140,6 +142,7 @@ if test -z "$HAD_OFLAG"; then  # Add some size-optimizing flags.
    *) OFLAG_ARGS="-Os$NL-falign-functions=1$NL-falign-jumps=1$NL-falign-loops=1$NL-mpreferred-stack-boundary=2" ;;
   esac
   test "$TCC" && OFLAG_ARGS="-Os"
+  OFLAG_ARGS="$OFLAG_ARGS$NL$SFLAG"  # Use -O0 to prevent.
 fi
 INCLUDEDIR_ARG=
 DEF_ARG=
