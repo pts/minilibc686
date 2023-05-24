@@ -13,7 +13,6 @@
 #define STDERR_FILENO 2
 
 void _exit(int exit_code) __asm__("mini__exit") __attribute__((__noreturn__));  /* Doesn't flush stdio streams first. */
-void exit(int exit_code) __asm__("mini_exit") __attribute__((__noreturn__));  /* Flushes stdio streams first. */
 int close(int fd) __asm__("mini_close");
 ssize_t read(int fd, void *buf, size_t count) __asm__("mini_read");
 ssize_t write(int fd, const void *buf, size_t count) __asm__("mini_write");

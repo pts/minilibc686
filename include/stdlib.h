@@ -3,6 +3,8 @@
 
 #define NULL ((void*)0)
 
+void exit(int exit_code) __asm__("mini_exit") __attribute__((__noreturn__));  /* Flushes stdio streams first. */
+
 int rand(void) __asm__("mini_rand");
 void srand(unsigned seed) __asm__("mini_srand");
 
