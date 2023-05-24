@@ -45,6 +45,7 @@ case "$1" in
  *)
   BASENAME="${1##*/}"
   case "$BASENAME" in
+   utcc) GCC=; TCC="$MYDIR"/tools/pts-tcc; USE_UCLIBC=1 ;;  # Same as: --utcc
    *tcc*) TCC="$1"; GCC= ;;
    *) GCC="$1"; TCC= ;;
   esac
