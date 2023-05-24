@@ -26,7 +26,9 @@ global mini_write
 global mini_lseek
 global mini_ioctl
 %ifdef __YASM_MAJOR__
-%define global weak
+  %ifnidn __OUTPUT_FORMAT__, bin
+    %define global weak
+  %endif
 %endif
 ; !! These have to be weak!
 global mini___M_start_isatty_stdin  ; Falback, will be converted to a weak symbol.
@@ -46,6 +48,21 @@ section .text align=1
 section .rodata align=1
 section .data align=1
 section .bss align=1
+%endif
+
+%ifidn __OUTPUT_FORMAT__, bin
+%macro call_weak 1
+		call %1
+%endmacro
+%else
+%macro call_weak 1
+		; We can't replace it with `call ...', because then YASM
+		; won't emit the required R_386_PC32 relocation. To fix
+		; that, this file has been migrated to
+		; start_stdio_medium_linux.s, and compiled with GNU as(1).
+		mov eax, %1
+		call eax
+%endmacro
 %endif
 
 section .text
@@ -72,16 +89,10 @@ mini__start:  ; Entry point (_start) of the Linux i386 executable.
 		push edx  ; Argument argv for main.
 		push eax  ; Argument argc for main.
 %if 1  ; TODO(pts): Omit this with smart linking.
-		; We can't replace it with `call ...', because then YASM
-		; won't emit the required R_386_PC32 relocation. To fix
-		; that, this file has been migrated to
-		; start_stdio_medium_linux.s, and compiled with GNU as(1).
-		mov eax, mini___M_start_isatty_stdin
-		call eax
+		call_weak $mini___M_start_isatty_stdin
 %endif
 %if 1  ; TODO(pts): Omit this with smart linking.
-		mov eax, mini___M_start_isatty_stdout
-		call eax
+		call_weak $mini___M_start_isatty_stdout
 %endif
 		call main  ; Return value (exit code) in EAX (AL).
 		push eax  ; Save exit code, for mini__exit.
@@ -89,12 +100,10 @@ mini__start:  ; Entry point (_start) of the Linux i386 executable.
 		; Fall through to mini_exit(...).
 mini_exit:  ; void mini_exit(int exit_code);
 %if 1  ; TODO(pts): Omit this with smart linking.
-		mov eax, mini___M_start_flush_stdout
-		call eax
+		call_weak $mini___M_start_flush_stdout
 %endif
 %if 1  ; TODO(pts): Omit this with smart linking.
-		mov eax, mini___M_start_flush_opened
-		call eax
+		call_weak $mini___M_start_flush_opened
 %endif
 		; Fall through to mini__exit(...).
 mini__exit:  ; void mini__exit(int exit_code);
