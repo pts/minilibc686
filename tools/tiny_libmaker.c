@@ -305,6 +305,8 @@ int main(int argc, char **argv)
     int ret = 2;
     char *ops_conflict = "habdioptxN";  // unsupported but destructive if ignored.
     int verbose = 0;
+    int got;
+    static char copybuf[0x1000];
 
     i_lib = 0; i_obj = 0;  // will hold the index of the lib and first obj
     for (i = 1; i < argc; i++) {
@@ -474,21 +476,19 @@ int main(int argc, char **argv)
     }
     fsize = ftell(fo);
     if (fseek(fo, 0, SEEK_SET) != 0) goto error_seeking_fo;
-    if ((buf = malloc(fsize)) == NULL) {
-        fprintf(stderr, "Out of memory.\n");
-        goto the_end;
+    while (fsize > 0) {
+        if ((got = fread(copybuf, 1, fsize + 0U <= sizeof(copybuf) ? fsize + 0U : sizeof(copybuf), fo)) <= 0) {
+            fprintf(stderr, "Error reading file: %s\n", tfile);
+            goto the_end;
+        }
+        if (fwrite(copybuf, 1, got, fh) != got + 0U) {
+          error_writing:
+            fprintf(stderr, "Error write file: %s\n", argv[i_lib]);
+            goto the_end;
+        }
+        fsize -= got;
     }
-    if (fread(buf, fsize, 1, fo) != 1) {
-        fprintf(stderr, "Error reading file: %s\n", tfile);
-        goto the_end;
-    }
-    fwrite(buf, fsize, 1, fh);
-    free(buf);
-    fflush(fh);
-    if (ferror(fh)) {
-        fprintf(stderr, "Error writing file: %s\n", argv[i_lib]);
-        goto the_end;
-    }
+    if (fflush(fh)) goto error_writing;
     ret = 0;
 the_end:
     if (anames)
