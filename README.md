@@ -7,7 +7,8 @@ language, and it is manually optimized for size (rather than speed) in
 assembly. Feature tradeoffs were made to achieve small code sizes, so
 minilibc686 deviates from standard C in many aspects.
 
-Typical code sizes (total size of the executable program file):
+Typical code sizes (total size of the executable program file, including ELF
+headers, program code and libc code):
 
 * A hello-world program in NASM assembly language, using Linux syscalls
   (demo_hello_linux_nolibc.nasm): **118 bytes**. This is not the world
@@ -20,12 +21,16 @@ Typical code sizes (total size of the executable program file):
   **1240 bytes**. Only the very short main(...) function was written in C,
   the rest of the code is part of the libc, written in NASM assembly.
   Comparison:
-  * musl (`zig cc -target i386-linux-musl -O2`) is
-    15548 bytes after stripping
+  * minilibc686 (`./minicc --gcc -s`) is
+    1240 bytes, already stripped
+  * [diet libc](https://www.fefe.de/dietlibc/) 0.34 (`diet gcc`) is
+    8196 bytes after stripping
+  * OpenWatcom 2023-02 (`owcc -blinux -Os -fno-stack-check`) is
+    12934 bytes after stripping
   * uClibc 0.9.30.1 (`./minicc --utcc --gcc --tccld`) is
     14526 bytes, already stripped
-  * OpenWatcom (`owcc -blinux -Os -fno-stack-check`) is
-    12934 bytes after strippong
+  * musl (`zig cc -target i386-linux-musl -Os`) is
+    15548 bytes after stripping
 
 The following components are included:
 
