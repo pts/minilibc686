@@ -63,8 +63,11 @@ str_hello	db 'Hello, %s!', 10, 0
 %include "printf_callvf.nasm"
 %include "stdio_medium_stdout.nasm"
 %include "stdio_medium_vfprintf.nasm"
+%include "stdio_medium_writebuf_relax.nasm"
 %include "start_stdio_medium_linux.nasm"
 %include "isatty_linux.nasm"
-%include "stdio_medium_for_printf.nasm"
+%include "stdio_medium_fflush.nasm"
+%include "stdio_medium_fputc_rp2.nasm"
+%include "stdio_medium_discard_buf.nasm"
 
 _end  ; __END__
