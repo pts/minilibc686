@@ -139,8 +139,8 @@ phdr0:					; Elf32_Phdr
 		dd 0			;   p_offset
 		dd ehdr			;   p_vaddr
 		dd ehdr			;   p_paddr
-		dd file_size_before_data  ;   p_filesz
-		dd file_size_before_data  ;   p_memsz
+		dd file_size_before_data-alignment_size_before_data  ;   p_filesz
+		dd file_size_before_data-alignment_size_before_data  ;   p_memsz
 		dd 5			;   p_flags: r-x: read and execute, no write
 		dd 0x1000		;   p_align
 .size		equ $-phdr0
@@ -168,10 +168,13 @@ phdr_end:
 elfhdr_end:
 
 section .text
-times have_bytes_in_rodata*(-(($-$$)+(elfhdr_end-ehdr))&(ALIGN_RODATA-1)) db 0
+alignment_size_after_text equ have_bytes_in_rodata*(-(($-$$)+(elfhdr_end-ehdr))&(ALIGN_RODATA-1))
+times alignment_size_after_text db 0
 text_end:
 section .rodata
-times have_bytes_in_data*(-(($-$$)+(text_end-text_start)+(elfhdr_end-ehdr))&(ALIGN_DATA-1)) db 0
+alignment_size_after_rodata equ have_bytes_in_data*(-(($-$$)+(text_end-text_start)+(elfhdr_end-ehdr))&(ALIGN_DATA-1))
+times alignment_size_after_rodata db 0
+alignment_size_before_data equ alignment_size_after_rodata  ; This is correct even if !have_bytes_in_rodata.
 rodata_end:
 section .data
 data_end:
