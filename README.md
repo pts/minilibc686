@@ -52,7 +52,7 @@ The following components are included:
 
 * minicc: A C compiler frontend to build small, statically linked ELF-32
   executables. By default, these executables link against minilibc686, but
-  with the usual `-nostdlib' flag, you can add your own libc. It can use GCC
+  with the usual `-nostdlib` flag, you can add your own libc. It can use GCC
   and Clang compilers installed onto the system, and it runs the compiler
   and the linker with many size-optimization flags, and it can most
   unnecessary stuff from the final executable (use the `-s` flag). In
@@ -215,7 +215,7 @@ Linker problems:
 
   FYI mark stack as nonexecutable in GNU as:
   `.section .note.GNU-stack,"",@progbits`
-* pts-tcc 0.9.26 (`pts-tcc -nostdlib'):
+* pts-tcc 0.9.26 (`pts-tcc -nostdlib`):
   * (incorrect?!) It puts string contants (.rodata.str1.1) to .data (writable)
   * It aligns sections to 0x20 bytes.
   * It doesn't have -Wl,-e,_start to specify the entry point symbol.
