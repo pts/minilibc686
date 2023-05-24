@@ -92,6 +92,18 @@ cc` with various targets.) It's also not well-documented. However, if you
 start writing simple, new command-line tools for Linux, you may want to give
 it a try.
 
+Other tiny libc projects targeting Windows:
+
+* [LIBCTINY](http://www.wheaty.net/libctiny.zip) by Matt Pietrek ([2001](https://documentation.help/Far-Manager/msdnmag-issues-01-01-hood-default.aspx.html), originally in 1996), [tutorial](https://www.catch22.net/tuts/system/reducing-executable-size/)
+* [Tiny C Runtime Library] (https://www.codeproject.com/Articles/15156/Tiny-C-Runtime-Library) by Mike V (2007)
+* [minicrt of Google Omaha](https://chromium.googlesource.com/external/omaha/+/7274410f62ef28144a49ac54e315f037f5e01b96/third_party/minicrt), also [on GitHub](https://github.com/google/omaha/tree/5b1e98d4c6a1ff1f16249ee85fe49bff043f498a/third_party/minicrt) (2009)
+* [leepa/libctiny](https://github.com/leepa/libctiny) by Lee Packham (2009)
+* [Minicrt](https://www.benshoof.org/blog/minicrt) by Chris Benshoof (2010)
+* [dreckard/minicrt](https://github.com/dreckard/minicrt) (2014)
+* [liupengs/Mini-CRT](https://github.com/liupengs/Mini-CRT) (2016, also targets Linux)
+* [MiniCRT](http://www.malsmith.net/minicrt/) by Malcolm Smith, also [on GitHub](https://github.com/dreckard/minicrt) (2017)
+* [malxau/minicrt](https://github.com/malxau/minicrt) (2019)
+
 ---
 
 Features:
