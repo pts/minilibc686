@@ -40,6 +40,18 @@ HAD_V=
 ARCH=i686
 USE_UCLIBC=
 
+case "$1" in
+ "" | -* | *.[aocisS]) ;;  # A flag or a source file name is not a program name.
+ *)
+  BASENAME="${1##*/}"
+  case "$BASENAME" in
+   *tcc*) TCC="$1"; GCC= ;;
+   *) GCC="$1"; TCC= ;;
+  esac
+  shift
+  ;;
+esac
+
 SKIPARG=
 APPENDARG=
 ARGS=""
@@ -82,7 +94,7 @@ for ARG in "$@"; do
    -*) echo "fatal: unsupported minicc flag: $ARG" >&2; exit 1 ;;
    *//////*)
     echo "fatal: too many slashes in input file name: $ARG" >&2; exit 1 ;;  # We use this to detect TMPDIR.
-   *.[aocsS])
+   *.[aocisS])
     if ! test -f "$ARG"; then echo "fatal: missing source file: $ARG" >&2; exit 1; fi
     ARGS="$ARGS$NL$ARG"
     ;;
