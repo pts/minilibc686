@@ -307,6 +307,7 @@ int main(int argc, char **argv)
     int got;
     static char copybuf[0x1000];
 
+    tfile[0] = '\0';
     i_lib = 0; i_obj = 0;  // will hold the index of the lib and first obj
     for (i = 1; i < argc; i++) {
         const char *a = argv[i];
@@ -328,15 +329,15 @@ int main(int argc, char **argv)
     if (!i_obj)  // i_obj implies also i_lib. we require both.
         return usage(1);
 
-    if ((fh = fopen(argv[i_lib], "wb")) == NULL)
-    {
+    if ((fh = fopen(argv[i_lib], "ab")) == NULL) {
         fprintf(stderr, "Can't open file %s \n", argv[i_lib]);
         goto the_end;
     }
+    fclose(fh);
+    fh = NULL;
 
     sprintf(tfile, "%s.tmp", argv[i_lib]);
-    if ((fo = fopen(tfile, "wb+")) == NULL)
-    {
+    if ((fo = fopen(tfile, "wb")) == NULL) {
         fprintf(stderr, "Can't create temporary file %s\n", tfile);
         goto the_end;
     }
@@ -451,11 +452,16 @@ int main(int argc, char **argv)
         i_obj++;
         fpos += (fsize + sizeof(arhdro));
     }
+    fclose(fo);
     hofs = 8 + sizeof(arhdr) + strpos + (funccnt+1) * sizeof(int);
     fpos = 0;
     if ((hofs & 1)) // align
         hofs++, fpos = 1;
     // write header
+    if ((fh = fopen(argv[i_lib], "wb")) == NULL) {
+        fprintf(stderr, "Can't open file %s \n", argv[i_lib]);
+        goto the_end;
+    }
     fwrite("!<arch>\n", 8, 1, fh);
     sprintf(stmp, "%-10d", (int)(strpos + (funccnt+1) * sizeof(int)));
     memcpy(&arhdr.ar_size, stmp, 10);
@@ -468,6 +474,10 @@ int main(int argc, char **argv)
     if (fpos)
         fwrite("", 1, 1, fh);
     // write objects
+    if ((fo = fopen(tfile, "rb")) == NULL) {
+        fprintf(stderr, "Can't create temporary file %s\n", tfile);
+        goto the_end;
+    }
     if (fseek(fo, 0, SEEK_END) != 0) {
       error_seeking_fo:
         fprintf(stderr, "Error seeking file: %s\n", tfile);
@@ -496,7 +506,9 @@ the_end:
         free(afpos);
     if (fh)
         fclose(fh);
-    if (fo)
-        fclose(fo), remove(tfile);
+    if (fo) {
+        fclose(fo);
+        if (tfile[0] != '\0') remove(tfile);
+    }
     return ret;
 }
