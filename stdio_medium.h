@@ -124,3 +124,6 @@ extern off_t mini_lseek(int fd, off_t offset, int whence);
 void mini___M_discard_buf(FILE *filep);
 int REGPARM2 mini___M_fputc_RP2(int c, FILE *filep);
 int mini_fflush(FILE *filep);
+
+size_t mini_fread(void *ptr, size_t size, size_t nmemb, FILE *filep);
+int REGPARM1 mini___M_fgetc_fallback_RP1(FILE *filep);

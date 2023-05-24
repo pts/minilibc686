@@ -10,7 +10,7 @@ nasm-0.98.39 $CFLAGS -O999999999 -w+orphan-labels -f elf -o stdio_medium_flush_o
 #objcopy -W mini___M_start_isatty_stdin -W mini___M_start_isatty_stdout -W mini___M_start_flush_stdout -W mini___M_start_flush_opened start_stdio_medium_linux.o start_stdio_medium_linux_weak.o  # !! Better tool.
 #yasm-1.3.0 $CFLAGS -O999999999 -w+orphan-labels -f elf -Dmini__start=_start -o start_stdio_medium_linux_weak.o start_stdio_medium_linux.nasm
 as --32 -march=i386 -o start_stdio_medium_linux_weak.o start_stdio_medium_linux.s
-ARGS="-D__MINILIBC686__ -m32 -Os -W -Wall -s -Werror=implicit-function-declaration -ffreestanding -Iinclude -nostdlib -nostdinc -pedantic c_stdio_medium_rest.c c_stdio_medium_for_printf.c c_stdio_medium_fopen.c demo_file_medium_copy.c stdio_medium_flush_opened.o start_stdio_medium_linux_weak.o"
+ARGS="-D__MINILIBC686__ -m32 -Os -W -Wall -s -Werror=implicit-function-declaration -ffreestanding -Iinclude -nostdlib -nostdinc -pedantic c_stdio_medium_fread.c c_stdio_medium_fwrite.c c_stdio_medium_fgetc.c c_stdio_medium_ftell.c c_stdio_medium_fseek.c c_stdio_medium_fgetc_fallback.c c_stdio_medium_fputc.c c_stdio_medium_fclose.c c_stdio_medium_fileno.c c_stdio_medium_for_printf.c c_stdio_medium_fopen.c demo_file_medium_copy.c stdio_medium_flush_opened.o start_stdio_medium_linux_weak.o"
 #clang -static -o test_c_stdio_medium_file.prog -ansi $ARGS
 qq xstatic gcc -o test_c_stdio_medium_file.prog -ansi $ARGS
 qq xstatic gcc -o test_c_stdio_medium_file.macro.prog -ansi -DCONFIG_MACRO_GETC_PUTC -DCONFIG_MACRO_FILENO $ARGS
