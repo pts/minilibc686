@@ -83,7 +83,7 @@ int mini_fclose(FILE *filep) {
 }
 
 #if defined(__GNUC__) || defined(__TINYC__)  /* Copied from <stdio.h>. */
-static __inline__ __attribute__((__always_inline__)) int fileno(FILE *filep) { return *(int*)(void*)(((char**)(filep))+4); }
+static __inline__ __attribute__((__always_inline__)) __attribute__((__used__)) int fileno(FILE *filep) { return *(int*)(void*)(((char**)(filep))+4); }
 #endif
 
 int mini_fileno(FILE *filep) {
@@ -158,7 +158,7 @@ __attribute__((__regparm__(1))) int mini___M_fgetc_fallback_RP1(FILE *filep) {
 
 #if defined(__GNUC__) || defined(__TINYC__)  /* Copied from <stdio.h>. */
 /* If the there are bytes to read from the buffer (filep->buf_read_ptr != filep->buf_last), get and return a byte, otherwise call mini___M_fgetc_fallback_RP1(...). */
-static __inline__ __attribute__((__always_inline__)) int getc(FILE *filep) { return (((char**)filep)[2]/*->buf_read_ptr*/ == ((char**)filep)[3]/*->buf_last*/) ? mini___M_fgetc_fallback_RP1(filep) : (unsigned char)*((char**)filep)[2]/*->buf_read_ptr*/++; }
+static __inline__ __attribute__((__always_inline__)) __attribute__((__used__)) int getc(FILE *filep) { return (((char**)filep)[2]/*->buf_read_ptr*/ == ((char**)filep)[3]/*->buf_last*/) ? mini___M_fgetc_fallback_RP1(filep) : (unsigned char)*((char**)filep)[2]/*->buf_read_ptr*/++; }
 #endif
 
 int mini_fgetc(FILE *filep) {
@@ -170,5 +170,5 @@ int mini_fgetc(FILE *filep) {
 
 #if defined(__GNUC__) || defined(__TINYC__)  /* Copied from <stdio.h>. */
 /* If the buffer is not full (filep->buf_write_ptr != filep->buf_end), append single byte, otherwise call fputc(...). */
-static __inline__ __attribute__((__always_inline__)) int putc(int c, FILE *filep) { return (((char**)filep)[0]/*->buf_write_ptr*/ == ((char**)filep)[1]/*->buf_end*/) || (_STDIO_SUPPORTS_LINE_BUFFERING && (unsigned char)c == '\n') ? mini___M_fputc_RP2(c, filep) : (unsigned char)(*((char**)filep)[0]/*->buf_write_ptr*/++ = c); }
+static __inline__ __attribute__((__always_inline__)) __attribute__((__used__)) int putc(int c, FILE *filep) { return (((char**)filep)[0]/*->buf_write_ptr*/ == ((char**)filep)[1]/*->buf_end*/) || (_STDIO_SUPPORTS_LINE_BUFFERING && (unsigned char)c == '\n') ? mini___M_fputc_RP2(c, filep) : (unsigned char)(*((char**)filep)[0]/*->buf_write_ptr*/++ = c); }
 #endif
