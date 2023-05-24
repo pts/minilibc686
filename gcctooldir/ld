@@ -9,13 +9,14 @@ if test "$MINICC_TCCLD"; then
 else
   ARGS="${MINICC_LD:-ld}$NL-nostdlib$NL-m${NL}elf_i386$NL-static"
 fi
-test "$MINICC_LDV" && ARGS="$ARGS$NL-v"
+test "$MINICC_LDV" && ARGS="$ARGS$NL-v" && MINICC_LDV=-v
 
 LDTMPOARGS=
 SKIPARG=
 APPENDARG=
 DO_STRIP=
 OUTFILE=a.out
+
 for ARG in "$@"; do
   if test "$SKIPARG"; then
     SKIPARG=
@@ -71,8 +72,37 @@ done
 
 test "$MINICC_LDV" && echo "info: running linker:" $ARGS >&2
 if test "$DO_STRIP"; then
-  $ARGS || exit "$?"
-  ARGS="$MINICC_TOOLS/elfxfix$NL-l$NL-a$NL-s$NL--$NL$OUTFILE"
-  test "$MINICC_LDV" && echo "info: running extra strip:" $ARGS >&2
+  $ARGS >&2 || exit "$?"
+  FIX_O_FN=
+  if ! test "$MINICC_TCCLD"; then
+    # TODO(pts): Choose a random one in TMPDIR?
+    FIX_O_FN="$OUTFILE.bssfix.o"  # TODO(pts): Use $TMPDIR with a random filename.
+    rm -f -- "$FIX_O_FN"
+  fi
+  PARGS=
+  test "$FIX_O_FN" && PARGS="-p$NL$FIX_O_FN"
+  EFARGS="$MINICC_TOOLS/elfxfix$NL-l$NL-a$NL-s$NL$PARGS$NL$MINICC_LDV$NL--$NL$OUTFILE"
+  test "$MINICC_LDV" && echo "info: running extra strip:" $EFARGS >&2
+  if test "$FIX_O_FN"; then
+    $EFARGS >&2; EC="$?"
+    if test "$EC" != 0; then
+      rm -f -- "$FIX_O_FN"
+      exit "$EC"
+    fi
+    if test -f "$FIX_O_FN"; then  # elfxfix has created it.
+      ARGS="$ARGS$NL$FIX_O_FN"  # Make .bss larger by the size recommended by tools/elfxfix.
+      test "$MINICC_LDV" && echo "info: running linker again:" $ARGS >&2
+      $ARGS >&2; EC="$?"
+      if test "$EC" = 0; then
+        PARGS=  # !! TODO(pts): Remove the extra .bss added.
+        EFARGS="$MINICC_TOOLS/elfxfix$NL-l$NL-a$NL-s$NL$PARGS$NL$MINICC_LDV$NL--$NL$OUTFILE"
+        test "$MINICC_LDV" && echo "info: running extra strip again:" $EFARGS >&2
+        $EFARGS >&2; EC="$?"
+      fi
+    fi
+    rm -f -- "$FIX_O_FN"
+    exit "$EC"
+  fi
+  ARGS="$EFARGS"
 fi
-exec $ARGS
+exec $ARGS >&2  # We need 2 to redirect stdout to stderr of GNU `ld -v'.

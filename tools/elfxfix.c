@@ -80,27 +80,41 @@ typedef struct {
 
 /* --- */
 
+#define CHR4(a, b, c, d) ((Elf32_Off)(a) | (Elf32_Off)(b) << 8 | (Elf32_Off)(c) << 16 | (Elf32_Off)(d) << 24)
+
+const unsigned bss_o_bss_size_idx = 0x20;
+static Elf32_Off bss_o[] = {  /* ELF-32 .o file containing a .bss of the specified size. */
+    CHR4(0x7f, 'E', 'L', 'F'), 0x10101, 0, 0, 0x30001, 1, 0, 0, 0x44, 0,
+    0x34, 0x280000, 0x20003,
+    CHR4(0, '.', 's', 'h'), CHR4('s', 't', 'r', 't'), CHR4('a', 'b', 0, '.'),
+    CHR4('b', 's', 's', 0), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xb, 8, 3, 0, 0x34,
+    0 /* EXTRA_BSS_SIZE */, 0, 0, 1, 0, 1, 3, 0, 0, 0x34, 0x10, 0, 0, 1, 0};
+
 int main(int argc, char **argv) {
   char new_char[1];
-  int fd;
+  int fd, fd2;
   const char *filename;
   Elf32_Ehdr ehdr;
   off_t off;
   size_t want;
   static Elf32_Phdr phdrs[0x80];
-  Elf32_Phdr *phdr, *phdr_end;
+  Elf32_Phdr *phdr, *phdr_end, *phdrl0;
   const char *arg;
   char **argp;
-  char flag_l = 0, flag_a = 0, flag_s = 0;
+  char flag_l = 0, flag_a = 0, flag_s = 0, flag_p = 0, is_verbose = 0;
   char phdr_has_changed = 0, ehdr_has_changed = 1;
   char is_first_pt_load = 1;
-  Elf32_Off end_off, last_off;
+  char can_fix;
+  const char *fix_o_fn = NULL;  /* Use NULL to pacify GCC. */
+  Elf32_Off end_off, last_off, sz, sz2;
   (void)argc; (void)argv;
   if (!argv[0] || !argv[1] || strcmp(argv[1], "--help") == 0) {
     fprintf(stderr, "Usage: %s [<flag>...] <elfprog>\nFlags:\n"
-            "-l: Change the ELF OSABI to Linux\n"
-            "-a: Align the early PT_LOAD phdr to page size\n"
-            "-s: Strip beyond the last PT_LOAD\n",
+            "-v: verbose operation, write info to stderr\n"
+            "-l: change the ELF OSABI to Linux\n"
+            "-a: align the early PT_LOAD phdr to page size\n"
+            "-s: strip beyond the last PT_LOAD\n"
+            "-p <fix.o>: detect the GNU ld .data padding bug\n",
             argv[0]);
     return !argv[0] || !argv[1];  /* 0 (EXIT_SUCCESS) for--help. */
   }
@@ -110,13 +124,21 @@ int main(int argc, char **argv) {
     if (arg[1] == '-' && arg[2] == '\0') {
       ++argp;
       break;
-    } else if (arg[1] == 'l' && arg[2] == '\0') {
+    } else if (arg[2] != '\0') {
+      goto unknown_flag;
+    } else if (arg[1] == 'v') {
+      is_verbose = 1;
+    } else if (arg[1] == 'l') {
       flag_l = 1;
-    } else if (arg[1] == 'a' && arg[2] == '\0') {
+    } else if (arg[1] == 'a') {
       flag_a = 1;
-    } else if (arg[1] == 's' && arg[2] == '\0') {
+    } else if (arg[1] == 's') {
       flag_s = 1;
+    } else if (arg[1] == 'p' && argp[1]) {
+      flag_p = 1;
+      fix_o_fn = *++argp;
     } else {
+     unknown_flag:
       fprintf(stderr, "fatal: unknown command-line flag: %s\n", arg);
       return 1;
     }
@@ -159,7 +181,7 @@ int main(int argc, char **argv) {
   if (flag_l && ehdr.e_ident[EI_OSABI] != ELFOSABI_LINUX) {
     ehdr.e_ident[EI_OSABI] = new_char[0] = ELFOSABI_LINUX;
     ehdr_has_changed = 1;
-    if (!flag_s) {
+    if (!flag_s && !flag_a && !flag_p) {
       off = EI_OSABI;
       if (lseek(fd, off, SEEK_SET) != off) {  /* This succeeds even if the file is shorter. */
         fprintf(stderr, "fatal: error seeking to ELF e_ident EI_OSABI: %s\n", filename);
@@ -169,9 +191,9 @@ int main(int argc, char **argv) {
         fprintf(stderr, "fatal: error changing ELF e_ident EI_OSABI: %s\n", filename);
         return 10;
       }
+      return 0;  /* EXIT_SUCCESS. */
     }
   }
-  if (!flag_a && !flag_s) return 0;  /* No more work to do. */
   if (ehdr.e_phoff < 0x34) {
     fprintf(stderr, "fatal: bad ELF e_phoff: %s\n", filename);
     return 11;
@@ -200,6 +222,7 @@ int main(int argc, char **argv) {
   }
   phdr_end = phdrs + ehdr.e_phnum;
   last_off = ehdr.e_phoff + want;
+  phdrl0 = NULL;
   for (phdr = phdrs; phdr != phdr_end; ++phdr) {
     if (phdr->p_type == PT_LOAD) {
       if (flag_a && is_first_pt_load && phdr->p_offset < phdr->p_align &&
@@ -214,7 +237,34 @@ int main(int argc, char **argv) {
         end_off = phdr->p_offset + phdr->p_filesz;
         if (end_off > last_off) last_off = end_off;
       }
-      is_first_pt_load = 0;
+      if (flag_p && !is_first_pt_load &&
+          phdrl0->p_vaddr == phdrl0->p_paddr &&
+          phdr->p_vaddr == phdr->p_paddr &&
+          phdrl0->p_filesz == phdrl0->p_memsz &&
+          phdr->p_offset >= (sz = phdrl0->p_offset + phdrl0->p_memsz) + 4 &&
+          (phdr->p_offset & 0xfff) == (phdr->p_vaddr & 0xfff) &&
+          (phdr->p_offset & 0xfff) == 0) {
+        /* GNU ld(1) 2.24, GNU ld(1) 2.30, GNU gold(1) 2.22 adds this unnecessary padding. */
+        sz2 = (sz + (((phdr->p_memsz & 0xfff) + 3) & ~3)) & 0xfff;
+        can_fix = sz2 != 0 && sz2 <= sz;
+        if (is_verbose) fprintf(stderr, "info: found 0x%x useless bytes between .rodata and .data, we can%s fix it\n", phdr->p_offset - sz, can_fix ? "" : "'t");
+        if (can_fix) {
+          bss_o[bss_o_bss_size_idx] = sz - sz2 + 1;  /* -3 still works instead of +1, but -4 doesn't. */
+          if ((fd2 = open(fix_o_fn, O_WRONLY | O_TRUNC | O_CREAT, 0666)) < 0) {
+            fprintf(stderr, "fatal: error opening for write fix.o: %s\n", fix_o_fn);
+            return 24;
+          }
+          if ((size_t)write(fd2, bss_o, sizeof(bss_o)) != sizeof(bss_o)) {
+            fprintf(stderr, "fatal: error writing fix.o: %s\n", fix_o_fn);
+            return 25;
+          }
+          close(fd2);
+        }
+      }
+      if (is_first_pt_load) {
+        phdrl0 = phdr;
+        is_first_pt_load = 0;
+      }
     }
   }
   if (phdr_has_changed) {
@@ -245,18 +295,18 @@ int main(int argc, char **argv) {
     ehdr.e_shoff = 0;
     ehdr.e_shnum = 0;
     ehdr.e_shstrndx = 0;
-    if (ehdr_has_changed) {
-      off = 0;
-      if (lseek(fd, off, SEEK_SET) != off) {  /* This succeeds even if the file is shorter. */
-        fprintf(stderr, "fatal: error seeking to ELF ehdr: %s\n", filename);
-        return 22;
-      }
-      if ((size_t)write(fd, &ehdr, sizeof(ehdr)) != sizeof(ehdr)) {
-        fprintf(stderr, "fatal: error changing ELF ehdr: %s\n", filename);
-        return 23;
-      }
+  }
+  if (ehdr_has_changed) {
+    off = 0;
+    if (lseek(fd, off, SEEK_SET) != off) {  /* This succeeds even if the file is shorter. */
+      fprintf(stderr, "fatal: error seeking to ELF ehdr: %s\n", filename);
+      return 22;
+    }
+    if ((size_t)write(fd, &ehdr, sizeof(ehdr)) != sizeof(ehdr)) {
+      fprintf(stderr, "fatal: error changing ELF ehdr: %s\n", filename);
+      return 23;
     }
   }
-  /*close(fd);*/  /* No need, we exit anyway. */
+  /*close(fd);*/  /* No need, we are exiting anyway. */
   return 0;
 }
