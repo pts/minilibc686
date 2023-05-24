@@ -23,7 +23,7 @@ mini_fflush equ +0x12345679
 extern mini_isatty  ; Force linking it.
 extern mini_fflush
 section .text align=1
-section .rodata align=4
+section .rodata align=1
 section .data align=4
 section .bss align=4
 %endif

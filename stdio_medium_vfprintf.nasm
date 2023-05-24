@@ -26,7 +26,7 @@ extern mini___M_fputc_RP2
 extern mini___M_writebuf_relax_RP1
 extern mini___M_writebuf_unrelax_RP1
 section .text align=1
-section .rodata align=4
+section .rodata align=1
 section .data align=4
 section .bss align=4
 %endif

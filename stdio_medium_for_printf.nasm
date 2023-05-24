@@ -21,7 +21,7 @@ mini_write equ +0x12345678
 %else
 extern mini_write
 section .text align=1
-section .rodata align=4
+section .rodata align=1
 section .data align=4
 section .bss align=4
 %endif
