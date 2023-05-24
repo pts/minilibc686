@@ -114,6 +114,7 @@ extern ssize_t mini_write(int fd, const void *buf, size_t count);
 extern off_t mini_lseek(int fd, off_t offset, int whence);
 
 #ifdef __WATCOMC__
+#  define __extension__
 #  define REGPARM1 __watcall
 #  define REGPARM2 __watcall  /* REGPARM3 wouldn't work, __watcall expects 3rd argument in ECX, __regparm__(3) expects in EBX. */
 #else
