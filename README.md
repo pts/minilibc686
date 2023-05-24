@@ -1,16 +1,82 @@
-# minilibc686: minimalistic libc for Linux i386 and i686, for static linking
+# minilibc686: size-optimized libc for Linux i386 and i686, for static linking
 
-minilibc686 is a minimalistic C library (libc) targeting Linux i386 and
-i686, for building statically linked ELF-32 executables, written in NASM
-assembly lanuage. Most of the code is manually optimized for size (rather
-than speed) in assembly. Feature tradeoffs were made to achieve small sizes.
+minilibc686 is a minimalistic, size-optimized C runtime library (libc)
+targeting Linux i386 and i686, for building statically linked ELF-32
+executables. Most of the code of minilibc686 is written in NASM assembly
+language, and it is manually optimized for size (rather than speed) in
+assembly. Feature tradeoffs were made to achieve small code sizes, so
+minilibc686 deviates from standard C in many aspects.
+
+Typical code sizes (total size of the executable program file):
+
+* A hello-world program in NASM assembly language, using Linux syscalls
+  (demo_hello_linux_nolibc.nasm): **118 bytes**. This is not the world
+  record, because e.g. 88 bytes is achievable (see
+  [hellofli3.nasm](https://github.com/pts/mininasm/blob/master/demo/hello/hellofli3.nasm)),
+  but it is a good demonstration of what is conveniently achievable with
+  Linux syscalls only.
+
+* A hello-world program using printf (demo_hello_linux_printf.nasm):
+  **1240 bytes**. Only the very short main(...) function was written in C,
+  the rest of the code is part of the libc, written in NASM assembly. As a
+  comparison, musl (`zig cc -target i386-linux-musl -s -O2`) is 15548 bytes
+  after stripping, and uClibc 0.9.30.1 (`./minicc --utcc --gcc --tccld -s`)
+  is 14526 bytes after stripping.
+
+The following components are included:
+
+* elf0.inc.nasm, a NASM library for creating ELF-32 executables written in
+  NASM assembly language, entirely using NASM. (A C compiler or linker is
+  not necessary.) The library takes care of adding headers and alignment.
+  See demo_hello_linux_nolibc.nasm and demo_hello_linux_printf.nasm
+  as example users of elf0.inc.nasm.
+
+* *.nasm: libc functions written in NASM assembly language. They can be
+  indiviually copy-pasted to ther projects.
+
+* include/*.h and include/sys/*.h: C #include files for the users of
+  minilibc686.
+
+* soptcc.pl: Perl script to run many C compilers with many settings on the
+  same source file, choose the shortest output, and generate NASM source
+  code. This is useful for adding a new function to the libc. The first
+  implementation of the function can be created by a C compiler (using
+  soptcc.pl), and then manually optimized later
+
+* tools/pts-tcc: A combined C compiler, ELF-32 linker and libc in a single
+  Linux i386 statically linked executable. The C compiler and linker is
+  [TinyCC](https://bellard.org/tcc/) 0.9.26, and the libc is uClibc 0.9.30.1
+  (released on 2009-03-02). The C #include files are not provided, but the
+  minilibc686 #include files can be used (they have the proper #ifdef()s).
+  To build a program, run `./minicc --utcc -o prog prog.c'.
+
+* minicc: A C compiler frontend to build small, statically linked ELF-32
+  executables. By default, these executables link against minilibc686, but
+  with the usual `-nostdlib' flag, you can add your own libc. It can use GCC
+  and Clang compilers installed onto the system, and it runs the compiler
+  and the linker with many size-optimization flags, and it can most
+  unnecessary stuff from the final executable (use the `-s` flag). In
+  addition to these compilers, it can use the bundled TinyCC compiler
+  (tools/pts-tcc) (use the `--tcc` flag).
+
+Please note that minilibc686 is more like am experimental technological demo
+rather than a feature-complete and battle-tested libc, and it is not ready
+for production use, it's especially not ready for easy porting of random
+prewritten software. (If you need something like that, use musl with `zig
+cc` with various targets.) It's also not well-documented. However, if you
+start writing simple, new command-line tools for Linux, you may want to give
+it a try.
+
+---
 
 Features:
 
 * It targets the i386 (first implemented by the Intel 80386 CPU introduced
   in 1985-10) or i686 (P6, first implemented by the Intel Pentium Pro CPU
-  introduced in 1995-11), selectable at compile time (`-DCONFIG_I386`).
-* It uses the https://en.wikipedia.org/wiki/X86_calling_conventions#cdecl
+  introduced in 1995-11). Both versions are built, and the user can select
+  at program compile time.
+* It uses the
+  [cdecl](https://en.wikipedia.org/wiki/X86_calling_conventions#cdecl)
   calling convention (same as System V ABI), see details below.
 * Some of the functions have a position-independent implementation,
   selectable at compile time (`-DCONFIG_PIC`). This is similar to
@@ -176,12 +242,7 @@ TODOs:
 * Rebuild the uClibc 0.9.30.1 within pts-tcc for `-march=i686` (1995).
   Currently it's built for the newer `-march=pentium3` (1999).
 * ELF patch: .o change a symbol from global to weak in an .o file
-* ELF patch: implement sstrip
-* ELF patch: change the EI_OSABI to Linux
-* ELF patch: .o remove section .note.GNU-stack
 * ELF patch: .o change section alignments
-* ELF patch: change the last 12 bits of the 1st PT_LOAD to 0 (pts-tcc needs
-  it, maybe for compression with UPX)
 * !! Make .o files with full (long) filenames in the .a file (tiny_libmaker).
 
 __END__
