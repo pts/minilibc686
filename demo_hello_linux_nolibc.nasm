@@ -4,15 +4,15 @@
 ;
 ; Compile to Linux i386 32-bit ELF executable:
 ;
-;     nasm -O999999999 -w+orphan-labels -f bin -o demo_hello_linux_nolibc demo_hello_linux_nolibc.nasm &&
-;     chmod +x demo_hello_linux_nolibc
+;     nasm -O999999999 -w+orphan-labels -f bin -o demo_hello_linux_nolibc.prog demo_hello_linux_nolibc.nasm &&
+;     chmod +x demo_hello_linux_nolibc.prog
 ;
 ; Alternatively, you can compile with Yasm (tested with 1.2.0 and 1.3.0)
 ; instead of NASM. The output is bitwise identical.
 ;
 ; Run it on Linux i386 or Linux amd64 systems:
 ;
-;     ./demo_hello_linux_nolibc
+;     ./demo_hello_linux_nolibc.prog
 ;
 ; Please note that this is an educational example program, and it's not
 ; intended to be absolutely minimal in size. For that, see
