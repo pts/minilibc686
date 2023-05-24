@@ -14,11 +14,14 @@ test "$MINICC_LDV" && ARGS="$ARGS$NL-v"
 LDTMPOARGS=
 SKIPARG=
 APPENDARG=
+DO_STRIP=
+OUTFILE=a.out
 for ARG in "$@"; do
   if test "$SKIPARG"; then
     SKIPARG=
     continue
   elif test "$APPENDARG"; then
+    test "$APPENDARG" = -o && OUTFILE="$ARG"
     ARGS="$ARGS$NL$APPENDARG$NL$ARG"
     APPENDARG=
     continue
@@ -31,7 +34,7 @@ for ARG in "$@"; do
    --sysroot=*) ;;  # --sysroot=/
    --as-needed) ;;
    -static) ;;
-   -s) ARGS="$ARGS$NL$ARG" ;;  # Strip all symbols.
+   -s) ARGS="$ARGS$NL$ARG"; DO_STRIP=1 ;;  # Strip all symbols.
    -L*) ;;  # Many.
    -l*) echo "fatal: unsupported hooked ld library flag: $ARG" >&2; exit 1 ;;
    -z) SKIPARG=1 ;;  # -z relro. TODO(pts): Make `-z execstack' and `-z noexecstack' go through.
@@ -67,4 +70,9 @@ for ARG in $LDTMPOARGS; do
 done
 
 test "$MINICC_LDV" && echo "info: running linker:" $ARGS >&2
+if test "$DO_STRIP"; then
+  $ARGS || exit "$?"
+  ARGS="$MINICC_TOOLS/elfxfix$NL-l$NL-a$NL-s$NL--$NL$OUTFILE"
+  test "$MINICC_LDV" && echo "info: running extra strip:" $ARGS >&2
+fi
 exec $ARGS
