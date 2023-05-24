@@ -478,24 +478,22 @@ int main(int argc, char **argv)
         fprintf(stderr, "Can't create temporary file %s\n", tfile);
         goto the_end;
     }
-    if (fseek(fo, 0, SEEK_END) != 0) {
-      error_seeking_fo:
+    fsize = 0;
+    while ((got = fread(copybuf, 1, sizeof(copybuf), fo)) > 0) {
+        if (fwrite(copybuf, 1, got, fh) != got + 0U) {
+          error_writing:
+            fprintf(stderr, "Error writing file: %s\n", argv[i_lib]);
+            goto the_end;
+        }
+        fsize += got;
+    }
+    if (fseek(fo, 0, SEEK_END)) {
         fprintf(stderr, "Error seeking file: %s\n", tfile);
         goto the_end;
     }
-    fsize = ftell(fo);
-    if (fseek(fo, 0, SEEK_SET) != 0) goto error_seeking_fo;
-    while (fsize > 0) {
-        if ((got = fread(copybuf, 1, fsize + 0U <= sizeof(copybuf) ? fsize + 0U : sizeof(copybuf), fo)) <= 0) {
-            fprintf(stderr, "Error reading file: %s\n", tfile);
-            goto the_end;
-        }
-        if (fwrite(copybuf, 1, got, fh) != got + 0U) {
-          error_writing:
-            fprintf(stderr, "Error write file: %s\n", argv[i_lib]);
-            goto the_end;
-        }
-        fsize -= got;
+    if (ftell(fo) != fsize) {
+        fprintf(stderr, "Error reading file: %s\n", tfile);
+        goto the_end;
     }
     if (fflush(fh)) goto error_writing;
     ret = 0;
