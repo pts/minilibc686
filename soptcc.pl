@@ -1485,7 +1485,7 @@ my @gcc_cmds = (  # GCC and Clang C compilers.
     ["clang", "-march=i386", "-fomit-frame-pointer", @clang_flags],
     ["clang", "-march=i686", "-fomit-frame-pointer", @clang_flags],
 );
-my @owcc_flags = qw(-blinux -fno-stack-check -fsigned-char -march=i386 -mabi=cdecl -W -Wall -Wextra -Werror);
+my @owcc_flags = qw(-blinux -Os -fno-stack-check -fsigned-char -march=i386 -mabi=cdecl -W -Wall -Wextra -Werror);
 my @owcc_cmds = (  # OpenWatcom C compiler. Good or optimizing for size.
     ["owcc", @owcc_flags],
     ["owcc", "-frerun-optimizer", @owcc_flags],
