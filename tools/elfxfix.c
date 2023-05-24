@@ -234,11 +234,11 @@ int main(int argc, char **argv) {
       return 19;
     }
     if ((off_t)last_off > off) {
-      fprintf(stderr, "fatal: loaded ELF program too short: ^s\n", filename);
+      fprintf(stderr, "fatal: loaded ELF program too short: %s\n", filename);
       return 20;
     }
     if ((off_t)last_off < off && ftruncate(fd, last_off) != 0) {
-      fprintf(stderr, "fatal: error truncating ELF program: ^s\n", filename);
+      fprintf(stderr, "fatal: error truncating ELF program: %s\n", filename);
       return 21;
     }
     if ((ehdr.e_shoff != 0) || (ehdr.e_shnum != 0) || (ehdr.e_shstrndx != 0)) ehdr_has_changed = 1;
