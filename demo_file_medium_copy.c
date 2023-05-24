@@ -49,14 +49,14 @@ int main(int argc, char **argv) {
     if ((ssize_t)got < 0) return 4;  /* fread(...) never neturns negative, such as EOF. */
     if (mode == 'p') {
       for (i = 0; i < got; ++i) {
-        if (fputc(buf[i], fout) != buf[i]) return 5;
+        if (fputc(buf[i], fout) != buf[i]) return 51;
       }
     } else if (mode == 'q') {
       for (i = 0; i < got; ++i) {
-        if (putc(buf[i], fout) != buf[i]) return 5;
+        if (putc(buf[i], fout) != buf[i]) return 52;
       }
     } else {
-      if ((got2 = fwrite(buf, 1, got, fout)) == 0) return 5;
+      if ((got2 = fwrite(buf, 1, got, fout)) == 0) return 53;
       if ((ssize_t)got < 0) return 6;  /* fread(...) never neturns negative, such as EOF. */
       if (got2 != got) return 7;  /* fwrite(...) must go as far as possible. */
     }

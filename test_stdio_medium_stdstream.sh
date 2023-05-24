@@ -2,10 +2,14 @@
 set -ex
 
 CFLAGS="${*:-}"
-nasm-0.98.39 $CFLAGS -O999999999 -w+orphan-labels -f elf -o stdio_medium_vfprintf.o stdio_medium_vfprintf.nasm
 nasm-0.98.39 $CFLAGS -O999999999 -w+orphan-labels -f elf -o printf_callvf.o printf_callvf.nasm
 nasm-0.98.39 $CFLAGS -O999999999 -w+orphan-labels -f elf -o vprintf_callvf.o vprintf_callvf.nasm
 nasm-0.98.39 $CFLAGS -O999999999 -w+orphan-labels -f elf -o fprintf_callvf.o fprintf_callvf.nasm
+nasm-0.98.39 $CFLAGS -O999999999 -w+orphan-labels -f elf -o stdio_medium_discard_buf.o stdio_medium_discard_buf.nasm
+nasm-0.98.39 $CFLAGS -O999999999 -w+orphan-labels -f elf -o stdio_medium_fflush.o stdio_medium_fflush.nasm
+nasm-0.98.39 $CFLAGS -O999999999 -w+orphan-labels -f elf -o stdio_medium_fputc_rp2.o stdio_medium_fputc_rp2.nasm
+nasm-0.98.39 $CFLAGS -O999999999 -w+orphan-labels -f elf -o stdio_medium_writebuf_relax.o stdio_medium_writebuf_relax.nasm
+nasm-0.98.39 $CFLAGS -O999999999 -w+orphan-labels -f elf -o stdio_medium_vfprintf.o stdio_medium_vfprintf.nasm
 nasm-0.98.39 $CFLAGS -O999999999 -w+orphan-labels -f elf -o stdio_medium_stdin.o stdio_medium_stdin.nasm
 nasm-0.98.39 $CFLAGS -O999999999 -w+orphan-labels -f elf -o stdio_medium_stdout.o stdio_medium_stdout.nasm
 nasm-0.98.39 $CFLAGS -O999999999 -w+orphan-labels -f elf -o stdio_medium_stderr.o stdio_medium_stderr.nasm
@@ -19,12 +23,18 @@ nasm-0.98.39 $CFLAGS -O999999999 -w+orphan-labels -f elf -o stdio_medium_fputs.o
 nasm-0.98.39 $CFLAGS -O999999999 -w+orphan-labels -f elf -o stdio_medium_puts.o stdio_medium_puts.nasm
 nasm-0.98.39 $CFLAGS -O999999999 -w+orphan-labels -f elf -o isatty_linux.o isatty_linux.nasm
 nasm-0.98.39 $CFLAGS -O999999999 -w+orphan-labels -f elf -o strcmp.o strcmp.nasm
+nasm-0.98.39 $CFLAGS -O999999999 -w+orphan-labels -f elf -o stdio_medium_fileno.o stdio_medium_fileno.nasm
+nasm-0.98.39 $CFLAGS -O999999999 -w+orphan-labels -f elf -o stdio_medium_fread.o stdio_medium_fread.nasm
+nasm-0.98.39 $CFLAGS -O999999999 -w+orphan-labels -f elf -o stdio_medium_fwrite.o stdio_medium_fwrite.nasm
+nasm-0.98.39 $CFLAGS -O999999999 -w+orphan-labels -f elf -o stdio_medium_fgetc.o stdio_medium_fgetc.nasm
+nasm-0.98.39 $CFLAGS -O999999999 -w+orphan-labels -f elf -o stdio_medium_fgetc_fallback.o stdio_medium_fgetc_fallback.nasm
+nasm-0.98.39 $CFLAGS -O999999999 -w+orphan-labels -f elf -o stdio_medium_fputc.o stdio_medium_fputc.nasm
 # !! Bad relocations for the weak symbol.
 #nasm-0.98.39 $CFLAGS -O999999999 -w+orphan-labels -f elf -Dmini__start=_start -o start_stdio_medium_linux.o start_stdio_medium_linux.nasm
 #objcopy -W mini___M_start_isatty_stdin -W mini___M_start_isatty_stdout -W mini___M_start_flush_stdout -W mini___M_start_flush_opened start_stdio_medium_linux.o start_stdio_medium_linux_weak.o  # !! Better tool.
 #yasm-1.3.0 $CFLAGS -O999999999 -w+orphan-labels -f elf -Dmini__start=_start -o start_stdio_medium_linux_weak.o start_stdio_medium_linux.nasm
 as --32 -march=i386 -o start_stdio_medium_linux_weak.o start_stdio_medium_linux.s
-ARGS="-D__MINILIBC686__ -m32 -Os -W -Wall -s -Werror=implicit-function-declaration -ffreestanding -Iinclude -nostdlib -nostdinc -pedantic c_stdio_medium_fileno.c c_stdio_medium_fwrite.c c_stdio_medium_fread.c c_stdio_medium_fgetc.c c_stdio_medium_fgetc_fallback.c c_stdio_medium_fputc.c c_stdio_medium_for_printf.c test_stdstream.c stdio_medium_sprintf.o stdio_medium_vsprintf.o stdio_medium_snprintf.o stdio_medium_vsnprintf.o stdio_medium_fputs.o stdio_medium_vfprintf.o printf_callvf.o vprintf_callvf.o fprintf_callvf.o stdio_medium_puts.o stdio_medium_getchar.o stdio_medium_putchar.o isatty_linux.o stdio_medium_stdin.o stdio_medium_stdout.o stdio_medium_stderr.o strcmp.o start_stdio_medium_linux_weak.o"
+ARGS="-D__MINILIBC686__ -m32 -Os -W -Wall -s -Werror=implicit-function-declaration -ffreestanding -Iinclude -nostdlib -nostdinc -pedantic stdio_medium_fileno.o stdio_medium_fwrite.o stdio_medium_fread.o stdio_medium_fgetc.o stdio_medium_fgetc_fallback.o stdio_medium_fputc.o test_stdstream.c stdio_medium_sprintf.o stdio_medium_vsprintf.o stdio_medium_snprintf.o stdio_medium_vsnprintf.o stdio_medium_fputs.o stdio_medium_vfprintf.o printf_callvf.o vprintf_callvf.o fprintf_callvf.o stdio_medium_puts.o stdio_medium_getchar.o stdio_medium_putchar.o isatty_linux.o stdio_medium_stdin.o stdio_medium_stdout.o stdio_medium_stderr.o strcmp.o stdio_medium_discard_buf.o stdio_medium_fflush.o stdio_medium_fputc_rp2.o stdio_medium_writebuf_relax.o start_stdio_medium_linux_weak.o"
 #clang -static -o test_c_stdio_medium_stdstream.prog -ansi $ARGS
 qq xstatic gcc -o test_c_stdio_medium_stdstream.prog -ansi $ARGS
 qq xstatic gcc -o test_c_stdio_medium_stdstream.macro.prog -ansi -DCONFIG_MACRO_GETC_PUTC $ARGS
