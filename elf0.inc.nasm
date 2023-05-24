@@ -110,13 +110,23 @@ PT:  ; Symbolic constants for ELF PT_... (program header type).
 .GNU_EH_FRAME equ 0x6474e550
 .GNU_STACK equ 0x6474e551  ; GNU stack.
 
+OSABI:
+.SYSV: equ 0
+.Linux: equ 3
+
+%ifdef CONFIG_ELF_OSABI
+  elf_osabi equ CONFIG_ELF_OSABI
+%else
+  elf_osabi equ OSABI.Linux
+%endif
+
 section .elfhdr
 ehdr:					; Elf32_Ehdr
 		db 0x7f, 'ELF'		;   e_ident[EI_MAG...]
 		db 1			;   e_ident[EI_CLASS]: 32-bit
 		db 1			;   e_ident[EI_DATA]: little endian
 		db 1			;   e_ident[EI_VERSION]
-		db 3			;   e_ident[EI_OSABI]: Linux
+		db elf_osabi		;   e_ident[EI_OSABI]: 3 == Linux by default
 		db 0			;   e_ident[EI_ABIVERSION]
 		db 0, 0, 0, 0, 0, 0, 0	;   e_ident[EI_PAD]
 		dw 2			;   e_type == ET_EXEC.
