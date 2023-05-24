@@ -366,7 +366,10 @@ int main(int argc, char **argv)
         }
         fsize = ftell(fi);
         if (fseek(fi, 0, SEEK_SET) != 0) goto error_seeking_fi;
-        buf = malloc(fsize + 1);
+        if ((buf = malloc(fsize)) == NULL) {
+            fprintf(stderr, "Out of memory.\n");
+            goto the_end;
+        }
         if (fread(buf, fsize, 1, fi) != 1) {
             fprintf(stderr, "Error reading file: %s\n", argv[i_obj]);
             goto the_end;
@@ -471,18 +474,21 @@ int main(int argc, char **argv)
     }
     fsize = ftell(fo);
     if (fseek(fo, 0, SEEK_SET) != 0) goto error_seeking_fo;
-    buf = malloc(fsize + 1);
+    if ((buf = malloc(fsize)) == NULL) {
+        fprintf(stderr, "Out of memory.\n");
+        goto the_end;
+    }
     if (fread(buf, fsize, 1, fo) != 1) {
         fprintf(stderr, "Error reading file: %s\n", tfile);
         goto the_end;
     }
     fwrite(buf, fsize, 1, fh);
+    free(buf);
     fflush(fh);
     if (ferror(fh)) {
         fprintf(stderr, "Error writing file: %s\n", argv[i_lib]);
         goto the_end;
     }
-    free(buf);
     ret = 0;
 the_end:
     if (anames)
