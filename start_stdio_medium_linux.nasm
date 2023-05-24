@@ -68,6 +68,10 @@ section .bss align=1
 section .text
 %ifdef mini__start
   $mini__start:  ; Without expanding the macro.
+%else
+  %ifidn __OUTPUT_FORMAT__, bin
+    _start:
+  %endif
 %endif
 mini__start:  ; Entry point (_start) of the Linux i386 executable.
 		; Now the stack looks like (from top to bottom):
