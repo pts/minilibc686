@@ -17,12 +17,13 @@ void exit(int exit_code) __asm__("mini_exit") __attribute__((__noreturn__));  /*
 int close(int fd) __asm__("mini_close");
 ssize_t read(int fd, void *buf, size_t count) __asm__("mini_read");
 ssize_t write(int fd, const void *buf, size_t count) __asm__("mini_write");
-off_t lseek(int fd, off_t offset, int whence) __asm__("mini_lseek");
+off_t lseek(int fd, off_t offset, int whence) __asm__("mini_lseek");  /* 32-bit offset. See lseek64(...) for 64-bit offset. */
 off64_t lseek64(int fd, off64_t offset, int whence) __asm__("mini_lseek64");
 long syscall(long nr, ...) __asm__("mini_syscall");
 int unlink(const char *pathname) __asm__("mini_unlink");
 /* Limitation: it doesn't always set errno in minilibc686. */
 int isatty(int fd) __asm__("mini_isatty");
+int ftruncate(int fd, off_t length) __asm__("mini_ftruncate");  /* 32-bit length. */
 
 #ifndef __UCLIBC__
 long syscall0(long nr) __asm__("mini_syscall3_RP1") __attribute__((__regparm__(1)));
