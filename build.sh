@@ -97,7 +97,9 @@ as --32 -march=i386 -o start_stdio_medium_linux_weak.o start_stdio_medium_linux.
 LIB_OBJS_SPECIAL_ORDER="stdio_medium_flush_opened.o start_stdio_medium_linux_weak.o"
 
 rm -f libminitcc1.a  # Some versions of ar(1) such as GNU ar(1) do something different if the .a file already exists.
+set -ex
 $AR crs libminitcc1.a tcc_alloca.o
+set +ex
 
 for ARCH in i386 i686; do
   rm -f libmini686_hello.a  # Some versions of ar(1) such as GNU ar(1) do something different if the .a file already exists.
