@@ -16,12 +16,9 @@ long strtol(const char *nptr, char **endptr, int base) __asm__("mini_strtol");
 char *strcpy(char *dest, const char *src) __asm__("mini_strcpy");
 char *strcat(char *dest, const char *src) __asm__("mini_strcat");
 int strcmp(const char *s1, const char *s2) __asm__("mini_strcmp");
+char *strstr(const char *haystack, const char *needle) __asm__("mini_strstr");
 void *memcpy(void *dest, const void *src, size_t n) __asm__("mini_memcpy");
 int memcmp(const void *s1, const void *s2, size_t n) __asm__("mini_memcmp");
 void *memset(void *s, int c, size_t n) __asm__("mini_memset");
-
-#ifdef __UCLIBC__
-char *strstr(const char *haystack, const char *needle) __asm__("mini_strstr");
-#endif  /* __UCLIBC__ */
 
 #endif  /* _STRING_H */
