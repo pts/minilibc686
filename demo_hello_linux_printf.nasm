@@ -2,7 +2,11 @@
 ; demo_hello_linux_printf.nasm: Linux i386 32-bit ELF executable program with printf(3)
 ; by pts@fazekas.hu at Wed May 24 01:08:00 CEST 2023
 ;
-; Total file size: 1240 bytes.
+; Total file size: 1236 bytes.
+;
+; This file matches the output of GCC 7.5.0:
+;
+;     ./minicc --gcc -W -Wall -Werror demo_c_hello.c
 ;
 ; Compile to Linux i386 32-bit ELF executable:
 ;
@@ -26,7 +30,7 @@
 ;%define CONFIG_ELF_OSABI OSABI.Linux  ; Default, good.
 ;%define CONFIG_ELF_OSABI OSABI.SYSV  ; Generic. This is to match an ELF executable created by GCC.
 ;%define CONFIG_NO_RW_SECTIONS
-;%define ALIGN_RODATA 4
+%define ALIGN_RODATA 1
 %include "elf0.inc.nasm"
 
 main:  ; int main(int argc, char **argv, char **envp);  /* envp is optional to declare and/or use. */
@@ -37,15 +41,14 @@ main:  ; int main(int argc, char **argv, char **envp);  /* envp is optional to d
 ;   return 0;
 ; }
 		push ebp
+		mov eax, str_world
 		mov ebp, esp
 		cmp dword [ebp+8], byte 1
-		jle .11
+		jle .14
 		mov eax, [ebp+0xc]
 		mov eax, [eax+4]  ; argv[1].
-		jmp short .16
-.11:		mov eax, str_world
-.16:		push eax
-		push str_hello
+.14:		push eax
+		push strict dword str_hello
 		call mini_printf
 		xor eax, eax
 		leave
