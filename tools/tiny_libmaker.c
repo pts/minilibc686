@@ -71,7 +71,6 @@ typedef unsigned short int      uint16_t;
 typedef unsigned int            uint32_t;
 typedef unsigned long long int  uint64_t;
 /* <string.h> */
-char *strstr(const char *haystack, const char *needle);
 void *memcpy(void *dest, const void *src, size_t n);
 int strcmp(const char *s1, const char *s2);
 size_t strlen(const char *s);
@@ -311,13 +310,13 @@ int main(int argc, char **argv)
     i_lib = 0; i_obj = 0;  // will hold the index of the lib and first obj
     for (i = 1; i < argc; i++) {
         const char *a = argv[i];
-        if (*a == '-' && strstr(a, "."))
+        if (*a == '-' && strchr(a, '.'))
             return usage(1);  // -x.y is always invalid (same as gnu ar)
-        if ((*a == '-') || (i == 1 && !strstr(a, "."))) {  // options argument
+        if ((*a == '-') || (i == 1 && !strchr(a, '.'))) {  // options argument
             if (a[0] == '-' && a[1] == 'h' && a[2] == '\0') return usage(0);
             if (contains_any(a, ops_conflict))
                 return usage(1);
-            if (strstr(a, "v"))
+            if (strchr(a, 'v'))
                 verbose = 1;
         } else {  // lib or obj files: don't abort - keep validating all args.
             if (!i_lib)  // first file is the lib
