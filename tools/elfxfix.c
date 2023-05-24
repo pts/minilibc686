@@ -98,10 +98,11 @@ int main(int argc, char **argv) {
   off_t off;
   size_t want;
   static Elf32_Phdr phdrs[0x80];
-  Elf32_Phdr *phdr, *phdr_end, *phdrl0;
+  static Elf32_Off bss_o_tmp[sizeof(bss_o) / sizeof(bss_o[0])];
+  Elf32_Phdr *phdr, *phdr_end, *phdrl0, *phdr2;
   const char *arg;
   char **argp;
-  char flag_l = 0, flag_a = 0, flag_s = 0, flag_p = 0, is_verbose = 0;
+  char flag_l = 0, flag_a = 0, flag_s = 0, flag_p = 0, flag_r = 0, is_verbose = 0;
   char phdr_has_changed = 0, ehdr_has_changed = 1;
   char is_first_pt_load = 1;
   char can_fix;
@@ -114,7 +115,8 @@ int main(int argc, char **argv) {
             "-l: change the ELF OSABI to Linux\n"
             "-a: align the early PT_LOAD phdr to page size\n"
             "-s: strip beyond the last PT_LOAD\n"
-            "-p <fix.o>: detect the GNU ld .data padding bug\n",
+            "-p <fix.o>: detect the GNU ld .data padding bug\n"
+            "-r <fix.o>: make .bss smaller by fix.o\n",
             argv[0]);
     return !argv[0] || !argv[1];  /* 0 (EXIT_SUCCESS) for--help. */
   }
@@ -137,6 +139,9 @@ int main(int argc, char **argv) {
     } else if (arg[1] == 'p' && argp[1]) {
       flag_p = 1;
       fix_o_fn = *++argp;
+    } else if (arg[1] == 'r' && argp[1]) {
+      flag_r = 1;
+      fix_o_fn = *++argp;
     } else {
      unknown_flag:
       fprintf(stderr, "fatal: unknown command-line flag: %s\n", arg);
@@ -148,7 +153,6 @@ int main(int argc, char **argv) {
     fprintf(stderr, "fatal: too many commad-line arguments\n");
     return 1;
   }
-  
   if ((fd = open(filename, O_RDWR)) < 0) {
     fprintf(stderr, "fatal: error opening for read-write: %s\n", filename);
     return 2;
@@ -259,6 +263,27 @@ int main(int argc, char **argv) {
             return 25;
           }
           close(fd2);
+        }
+      }
+      if (flag_r && !is_first_pt_load &&
+          phdr->p_memsz > phdr->p_filesz) {
+        for (phdr2 = phdr + 1; phdr2 != phdr_end && phdr2->p_type != PT_LOAD; ++phdr2) {}
+        if (phdr2 == phdr_end) {  /* No more PT_LOAD headers. */
+          sz = phdr->p_memsz - phdr->p_filesz;
+          if ((fd2 = open(fix_o_fn, O_RDONLY, 0666)) < 0) {
+            fprintf(stderr, "fatal: error opening for read fix.o: %s\n", fix_o_fn);
+            return 26;
+          }
+          if ((size_t)read(fd2, bss_o_tmp, sizeof(bss_o)) != sizeof(bss_o)) {
+            fprintf(stderr, "fatal: error reading fix.o: %s\n", fix_o_fn);
+            return 27;
+          }
+          close(fd2);
+          sz2 = bss_o_tmp[bss_o_bss_size_idx];
+          if (sz >= sz2) {
+            phdr->p_memsz -= sz2;  /* Make .bss smaller. */
+            phdr_has_changed = 1;
+          }
         }
       }
       if (is_first_pt_load) {

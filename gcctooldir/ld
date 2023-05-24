@@ -94,7 +94,7 @@ if test "$DO_STRIP"; then
       test "$MINICC_LDV" && echo "info: running linker again:" $ARGS >&2
       $ARGS >&2; EC="$?"
       if test "$EC" = 0; then
-        PARGS=  # !! TODO(pts): Remove the extra .bss added.
+        PARGS="-r$NL$FIX_O_FN"
         EFARGS="$MINICC_TOOLS/elfxfix$NL-l$NL-a$NL-s$NL$PARGS$NL$MINICC_LDV$NL--$NL$OUTFILE"
         test "$MINICC_LDV" && echo "info: running extra strip again:" $EFARGS >&2
         $EFARGS >&2; EC="$?"
