@@ -32,6 +32,22 @@ headers, program code and libc code):
   * musl (`zig cc -target i386-linux-musl -Os`) is
     15548 bytes after stripping
 
+How is this possible?
+
+* Most of the code is optimized for size manually.
+* The design is simplified, many standard C features are dropped (e.g. a
+  FILE* can't be opened for both reading and writing, printf(3) doesn't
+  support floating point numbers).
+* C compilers and linkers are run with flags to generate shorter code.
+* Most initialization (.init and .fini) is skipped, the corresponding
+  infrastructure is not present.
+* Dependencies between .o files is kept small and in check (e.g. by using
+  stdin, you won't get stdout or fopen(3) or fclose(3)).
+* The linker is instructed not to generate most of the (unnecessary) ELF
+  headers.
+* A custom stripping step is used to remove bloat from the executable (e.g.
+  ELF section headers are removed, only program headers remain).
+
 The following components are included:
 
 * elf0.inc.nasm, a NASM library for creating ELF-32 executables written in
@@ -247,6 +263,9 @@ Linker problems:
 
 TODOs:
 
+* Break dependencies: by using sprintf(3), don't get fflush(3). We need
+  smart linking or more weak symbols (e.g. mini___M_fputc_RP2 in
+  stdio_medium_vfprintf.nasm).
 * Make sure that the binary output is bitwise identical with NASM 2.13.02: `NASM=nasm build.sh`.
 * Rebuild the uClibc 0.9.30.1 within pts-tcc for `-march=i686` (1995).
   Currently it's built for the newer `-march=pentium3` (1999).
