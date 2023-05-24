@@ -61,8 +61,16 @@ for F in *.nasm; do
      start_*.nasm) ;;
      *.nasm) LA=1 ;;
     esac
+    if test "$ARCH" = i686; then
+      if test "$LA" != 1 || grep -q CONFIG_I386 <"$F"; then :; else
+        # Reuse the i386 version just built, it's the same as the i686 version.
+        cp "$BF.i386.o" "$BF.i686.o"
+        LIBI686_OBJS="$LIBI686_OBJS $BF.i686.o" 
+        continue
+      fi
+    fi
     BFA="$BF"
-    if test "$LA" = 3; then  # Build only the 386 version.
+    if test "$LA" = 3; then  # Build only the i386 version.
       test "$ARCH" != i386 && continue
       CFLAGS_ARCH=-DCONFIG_I386
     else
