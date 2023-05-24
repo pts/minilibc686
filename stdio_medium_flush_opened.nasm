@@ -35,10 +35,8 @@ section .text
 mini___M_start_flush_opened:
 ; Called from mini_exit(...).
 ; It flushes all files opened by mini_fopen(...).
-.after_stdout:
 %if FILE_CAPACITY <= 0
 %else
-		push ebx
 %if FILE_CAPACITY == 1
 		push strict dword mini___M_global_files
 		call mini_fflush
@@ -58,6 +56,7 @@ mini___M_start_flush_opened:
 		call mini_fflush
 		pop eax  ; Clean up argument of mini_fflush.
 %else
+		push ebx
 		mov ebx, mini___M_global_files
 .next_file:	cmp ebx, mini___M_global_files_end
 		je .after_files
@@ -66,8 +65,8 @@ mini___M_start_flush_opened:
 		pop eax  ; Clean up argument of mini_fflush.
 		add ebx, byte SIZEOF_STRUCT_SMS_FILE
 		jmp short .next_file
-%endif
 .after_files:	pop ebx
+%endif
 %endif
 		ret 
 
