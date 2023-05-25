@@ -34,6 +34,7 @@ DO_ADD_LIB=1
 DO_ADD_INCLUDEDIR=1
 DO_LINK=1
 SFLAG=-s
+DO_STRIP=
 WFLAGS="-W$NL-Wall$NL-Werror=implicit-function-declaration"
 HAD_OFLAG=
 HAD_V=
@@ -56,11 +57,13 @@ esac
 SKIPARG=
 APPENDARG=
 ARGS=""
+OUTFILE=a.out
 for ARG in "$@"; do
   if test "$SKIPARG"; then
     SKIPARG=
     continue
   elif test "$APPENDARG"; then
+    test "$APPENDARG" = -o && OUTFILE="$ARG"
     ARGS="$ARGS$NL$APPENDARG$NL$ARG"
     APPENDARG=
     continue
@@ -87,7 +90,7 @@ for ARG in "$@"; do
    -nostdlib | -nodefaultlibs) DO_ADD_LIB= ;;
    -nostdinc) DO_ADD_INCLUDEDIR= ;;
    -[cSE]) ARGS="$ARGS$NL$ARG"; DO_ADD_LIB=; DO_LINK= ;;
-   -s) ARGS="$ARGS$NL$ARG" ;;
+   -s) ARGS="$ARGS$NL$ARG"; DO_STRIP=1 ;;
    -v) HAD_V=1; ARGS="$ARGS$NL$ARG" ;;
    -o) APPENDARG="$ARG" ;;
    -L*) echo "fatal: unsupported minicc library path flag: $ARG" >&2; exit 1 ;;
@@ -102,6 +105,7 @@ for ARG in "$@"; do
    *) echo "fatal: unsupported input file extension: $ARG" >&2; exit 1 ;;
   esac
 done
+test "$SFLAG" && DO_STRIP=1
 
 if test "$TCC" && test "$TCCLD"; then  # $TCCLD should work with $GCC
   if test "$TCCLD" != "$TCC"; then
@@ -252,5 +256,13 @@ export TMPDIR
 IFS="$NL"  # Argument splitting will happen over newlines only.
 export MINICC_TOOLS="$MYDIR/tools"
 test "$HAD_V" && echo "info: running compiler:" $ARGS >&2  # !! TODO(pts): Write to stdout if GCC also writes there.
+if test "$TCC" && test "$DO_LINK" && test "$DO_STRIP"; then
+  $ARGS || exit "$?"
+  # Same functionality as in gcctooldir/ld.
+  MINICC_LDV=
+  test "$HAD_V" && MINICC_LDV=-v
+  EFARGS="$MINICC_TOOLS/elfxfix$NL-l$NL-a$NL-s$NL$MINICC_LDV$NL--$NL$OUTFILE"
+  test "$MINICC_LDV" && echo "info: running extra strip:" $EFARGS >&2
+  ARGS="$EFARGS"
+fi
 exec $ARGS
-# TODO(pts): With `-s' and linking output, strip the executable properly.
