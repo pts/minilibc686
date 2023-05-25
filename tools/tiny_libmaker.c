@@ -449,6 +449,10 @@ int main(int argc, char **argv)
         fwrite(&arhdro, sizeof(arhdro), 1, fo);
         fwrite(buf, fsize, 1, fo);
         free(buf);
+        if (fsize & 1) {  /* Align to even. */
+            ++fsize;
+            fwrite("", 1, 1, fo);
+        }
         i_obj++;
         fpos += (fsize + sizeof(arhdro));
     }
