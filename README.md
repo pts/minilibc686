@@ -105,6 +105,12 @@ cc` with various targets.) It's also not well-documented. However, if you
 start writing simple, new command-line tools for Linux, you may want to give
 it a try.
 
+Similar work:
+
+* [sebastiencs/asm_minilibc](https://github.com/sebastiencs/asm_minilibc/tree/master/x86)
+  targets i386 and amd64. It implements a few mem* str* functions. The code
+  doesn't look too much optimized for size.
+
 Other tiny libc projects targeting Windows:
 
 * [LIBCTINY](http://www.wheaty.net/libctiny.zip) by Matt Pietrek ([2001](https://documentation.help/Far-Manager/msdnmag-issues-01-01-hood-default.aspx.html), originally in 1996), [tutorial](https://www.catch22.net/tuts/system/reducing-executable-size/)
