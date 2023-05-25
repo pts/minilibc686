@@ -253,7 +253,7 @@ unsigned long le2belong(unsigned long ul) {
 
 ArHdr arhdr = {
     "/               ",
-    "            ",
+    "0           ",
     "0     ",
     "0     ",
     "0       ",
@@ -263,7 +263,7 @@ ArHdr arhdr = {
 
 ArHdr arhdro = {
     "                ",
-    "            ",
+    "0           ",
     "0     ",
     "0     ",
     "0       ",
@@ -351,7 +351,7 @@ int main(int argc, char **argv)
 
     funcmax = 250;
     afpos = realloc(NULL, funcmax * sizeof *afpos); // 250 func
-    memcpy(&arhdro.ar_mode, "100666", 6);
+    memcpy(&arhdro.ar_mode, "644   ", 6);
     /* i_obj0 = first input object file. Build a list of long filenames. */
     i_obj0 = i_obj;
 
@@ -512,7 +512,7 @@ int main(int argc, char **argv)
         free(buf);
         if (fsize & 1) {  /* Align to even. */
             ++fsize;
-            fwrite("", 1, 1, fo);
+            fwrite("\n", 1, 1, fo);
         }
         i_obj++;
         fpos += (fsize + sizeof(arhdro));
@@ -530,7 +530,7 @@ int main(int argc, char **argv)
     }
     fwrite("!<arch>\n", 8, 1, fh);
     if (funccnt > 0) {  /* Size optimization, it would work without it. */
-      sprintf(stmp, "%-10d", (int)(strpos + (funccnt+1) * sizeof(int)));
+      sprintf(stmp, "%-10d", (int)((strpos + (funccnt+1) * sizeof(int) + 1) & ~1));
       memcpy(&arhdr.ar_size, stmp, 10);
       fwrite(&arhdr, sizeof(arhdr), 1, fh);
       afpos[0] = le2belong(funccnt);
