@@ -36,8 +36,9 @@ headers, program code and libc code):
     15548 bytes after stripping
   * [lunixbochs/lib43](https://github.com/lunixbochs/lib43) is
     20576 bytes after stripping
-  * [Cosmopolitan libc](https://justine.lol/cosmopolitan/) is
-    258048 bytes; it should be ~16000 bytes; please note that it targets
+  * [Cosmopolitan libc](https://justine.lol/cosmopolitan/)
+    [tinylinux-2.2](https://justine.lol/cosmopolitan/cosmopolitan-amalgamation-tinylinux-2.2.zip) is
+    24576 bytes; it should be ~16000 bytes; please note that it targets
     amd64
   * glibc 2.27 (`gcc -m32 -s -Os -static`) is
     594716 bytes after stripping
