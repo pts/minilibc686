@@ -443,8 +443,8 @@ int main(int argc, char **argv)
                     strcpy(anames + strpos, strtab + sym->st_name);
                     strpos += istrlen;
                     if (++funccnt >= funcmax) {
-                        funcmax += 250;
-                        afpos = realloc(afpos, funcmax * sizeof *afpos); // 250 func more
+                        funcmax <<= 1;
+                        afpos = realloc(afpos, funcmax * sizeof *afpos);
                     }
                     afpos[funccnt] = fpos;
                 }
