@@ -25,12 +25,24 @@ headers, program code and libc code):
     1236 bytes, already stripped
   * [diet libc](https://www.fefe.de/dietlibc/) 0.34 (`diet gcc`) is
     8196 bytes after stripping
+  * [neatlibc](https://github.com/aligrudi/neatlibc) is
+    12684 bytes after stripping;
+    [some functions in 386 assembly]((https://github.com/aligrudi/neatlibc/tree/master/x86)
   * OpenWatcom 2023-02 (`owcc -blinux -Os -fno-stack-check`) is
     12934 bytes after stripping
   * uClibc 0.9.30.1 (`./minicc --utcc --gcc --tccld`) is
     14526 bytes, already stripped
   * musl (`zig cc -target i386-linux-musl -Os`) is
     15548 bytes after stripping
+  * [lunixbochs/lib43](https://github.com/lunixbochs/lib43) is
+    20576 bytes after stripping
+  * [Cosmopolitan libc](https://justine.lol/cosmopolitan/) is
+    258048 bytes; it should be ~16000 bytes; please note that it targets
+    amd64
+  * glibc 2.27 (`gcc -m32 -s -Os -static`) is
+    594716 bytes after stripping
+  * glibc 2.19 (`gcc -m32 -s -Os -static`) is
+    663424 bytes after stripping
 
 How is this possible?
 
