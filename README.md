@@ -122,6 +122,7 @@ Other tiny libc projects targeting Windows:
 * [liupengs/Mini-CRT](https://github.com/liupengs/Mini-CRT) (2016, also targets Linux)
 * [MiniCRT](http://www.malsmith.net/minicrt/) by Malcolm Smith, also [on GitHub](https://github.com/dreckard/minicrt) (2017)
 * [malxau/minicrt](https://github.com/malxau/minicrt) (2019)
+* [nidud/asmc libc](https://github.com/nidud/asmc/tree/master/source/libc) (2023--, implemented in assembly, for amd64)
 
 ---
 
