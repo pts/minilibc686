@@ -459,7 +459,7 @@ int main(int argc, char **argv)
     fclose(fo);
     hofs = 8 + sizeof(arhdr) + strpos + (funccnt+1) * sizeof(int);
     fpos = 0;
-    if ((hofs & 1)) // align
+    if ((hofs & 1))  /* Align to even. */
         hofs++, fpos = 1;
     // write header
     if ((fh = fopen(argv[i_lib], "wb")) == NULL) {
@@ -467,16 +467,18 @@ int main(int argc, char **argv)
         goto the_end;
     }
     fwrite("!<arch>\n", 8, 1, fh);
-    sprintf(stmp, "%-10d", (int)(strpos + (funccnt+1) * sizeof(int)));
-    memcpy(&arhdr.ar_size, stmp, 10);
-    fwrite(&arhdr, sizeof(arhdr), 1, fh);
-    afpos[0] = le2belong(funccnt);
-    for (i=1; i<=funccnt; i++)
-        afpos[i] = le2belong(afpos[i] + hofs);
-    fwrite(afpos, (funccnt+1) * sizeof(int), 1, fh);
-    fwrite(anames, strpos, 1, fh);
-    if (fpos)
-        fwrite("", 1, 1, fh);
+    if (funccnt > 0) {  /* Size optimization, it would work without it. */
+      sprintf(stmp, "%-10d", (int)(strpos + (funccnt+1) * sizeof(int)));
+      memcpy(&arhdr.ar_size, stmp, 10);
+      fwrite(&arhdr, sizeof(arhdr), 1, fh);
+      afpos[0] = le2belong(funccnt);
+      for (i=1; i<=funccnt; i++)
+          afpos[i] = le2belong(afpos[i] + hofs);
+      fwrite(afpos, (funccnt+1) * sizeof(int), 1, fh);
+      fwrite(anames, strpos, 1, fh);
+      if (fpos)
+          fwrite("", 1, 1, fh);  /* Align to even. */
+    }
     // write objects
     if ((fo = fopen(tfile, "rb")) == NULL) {
         fprintf(stderr, "Can't create temporary file %s\n", tfile);
