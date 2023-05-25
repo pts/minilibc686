@@ -108,6 +108,7 @@ int main(int argc, char **argv) {
   char can_fix;
   const char *fix_o_fn = NULL;  /* Use NULL to pacify GCC. */
   Elf32_Off end_off, last_off, sz, sz2;
+
   (void)argc; (void)argv;
   if (!argv[0] || !argv[1] || strcmp(argv[1], "--help") == 0) {
     fprintf(stderr, "Usage: %s [<flag>...] <elfprog>\nFlags:\n"
@@ -148,11 +149,16 @@ int main(int argc, char **argv) {
       return 1;
     }
   }
+  if (*argp == NULL) {
+    fprintf(stderr, "fatal: missing filename argument\n");
+    return 1;
+  }
   filename = *argp++;
   if (*argp != NULL) {
     fprintf(stderr, "fatal: too many commad-line arguments\n");
     return 1;
   }
+
   if ((fd = open(filename, O_RDWR)) < 0) {
     fprintf(stderr, "fatal: error opening for read-write: %s\n", filename);
     return 2;
