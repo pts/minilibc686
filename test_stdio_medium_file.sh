@@ -18,12 +18,9 @@ nasm-0.98.39 $CFLAGS -O999999999 -w+orphan-labels -f elf -o stdio_medium_fseek.o
 nasm-0.98.39 $CFLAGS -O999999999 -w+orphan-labels -f elf -o stdio_medium_fclose.o stdio_medium_fclose.nasm
 nasm-0.98.39 $CFLAGS -O999999999 -w+orphan-labels -f elf -o stdio_medium_fileno.o stdio_medium_fileno.nasm
 nasm-0.98.39 $CFLAGS -O999999999 -w+orphan-labels -f elf -o stdio_medium_fopen.o stdio_medium_fopen.nasm
-# !! Bad relocations for the weak symbol.
-#nasm-0.98.39 $CFLAGS -O999999999 -w+orphan-labels -f elf -Dmini__start=_start -o start_stdio_medium_linux.o start_stdio_medium_linux.nasm
-#objcopy -W mini___M_start_isatty_stdin -W mini___M_start_isatty_stdout -W mini___M_start_flush_stdout -W mini___M_start_flush_opened start_stdio_medium_linux.o start_stdio_medium_linux_weak.o  # !! Better tool.
-#yasm-1.3.0 $CFLAGS -O999999999 -w+orphan-labels -f elf -Dmini__start=_start -o start_stdio_medium_linux_weak.o start_stdio_medium_linux.nasm
-as --32 -march=i386 -o start_stdio_medium_linux_weak.o start_stdio_medium_linux.s
-ARGS="-D__MINILIBC686__ -m32 -Os -W -Wall -s -Werror=implicit-function-declaration -ffreestanding -Iinclude -nostdlib -nostdinc -pedantic stdio_medium_fread.o stdio_medium_fwrite.o stdio_medium_fgetc.o stdio_medium_ftell.o stdio_medium_fseek.o stdio_medium_fgetc_fallback.o stdio_medium_fputc.o stdio_medium_fclose.o stdio_medium_fileno.o stdio_medium_fopen.o demo_file_medium_copy.c stdio_medium_flush_opened.o stdio_medium_fflush.o stdio_medium_discard_buf.o stdio_medium_fputc_rp2.o start_stdio_medium_linux_weak.o"
+nasm-0.98.39 $CFLAGS -O999999999 -w+orphan-labels -f elf -Dmini__start=_start -o start_stdio_medium_linux.o start_stdio_medium_linux.nasm
+tools/elfofix -w -- start_stdio_medium_linux.o  # `-w' fixes weak symbols. .nasm files containing WEAK.. are affected.
+ARGS="-D__MINILIBC686__ -m32 -Os -W -Wall -s -Werror=implicit-function-declaration -ffreestanding -Iinclude -nostdlib -nostdinc -pedantic stdio_medium_fread.o stdio_medium_fwrite.o stdio_medium_fgetc.o stdio_medium_ftell.o stdio_medium_fseek.o stdio_medium_fgetc_fallback.o stdio_medium_fputc.o stdio_medium_fclose.o stdio_medium_fileno.o stdio_medium_fopen.o demo_file_medium_copy.c stdio_medium_flush_opened.o stdio_medium_fflush.o stdio_medium_discard_buf.o stdio_medium_fputc_rp2.o start_stdio_medium_linux.o"
 #clang -static -o test_stdio_medium_file.prog -ansi $ARGS
 qq xstatic gcc -o test_stdio_medium_file.prog -ansi $ARGS
 qq xstatic gcc -o test_stdio_medium_file.macro.prog -ansi -DCONFIG_MACRO_GETC_PUTC -DCONFIG_MACRO_FILENO $ARGS

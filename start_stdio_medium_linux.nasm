@@ -25,16 +25,7 @@ global mini_read
 global mini_write
 global mini_lseek
 global mini_ioctl
-%ifdef __YASM_MAJOR__
-  %ifnidn __OUTPUT_FORMAT__, bin
-    %define global weak
-  %endif
-%endif
-; !! These have to be weak!
-global mini___M_start_isatty_stdin  ; Falback, will be converted to a weak symbol.
-global mini___M_start_isatty_stdout  ; Falback, will be converted to a weak symbol.
-global mini___M_start_flush_stdout  ; Falback, will be converted to a weak symbol.
-global mini___M_start_flush_opened  ; Falback, will be converted to a weak symbol.
+
 %ifdef CONFIG_SECTIONS_DEFINED
 %elifidn __OUTPUT_FORMAT__, bin
 section .text align=1
@@ -42,27 +33,21 @@ section .rodata align=4
 section .data align=4
 section .bss align=4
 main equ +0x12345678
+mini___M_start_isatty_stdin equ +0x12345679
+mini___M_start_isatty_stdout equ +0x1234567a
+mini___M_start_flush_stdout equ +0x1234567b
+mini___M_start_flush_opened equ +0x1234567c
 %else
 extern main
+; These will be converted to weak symbols by tools/elfofix.
+extern mini___M_start_isatty_stdin
+extern mini___M_start_isatty_stdout
+extern mini___M_start_flush_stdout
+extern mini___M_start_flush_opened
 section .text align=1
 section .rodata align=1
 section .data align=1
 section .bss align=1
-%endif
-
-%ifidn __OUTPUT_FORMAT__, bin
-%macro call_weak 1
-		call %1
-%endmacro
-%else
-%macro call_weak 1
-		; We can't replace it with `call ...', because then YASM
-		; won't emit the required R_386_PC32 relocation. To fix
-		; that, this file has been migrated to
-		; start_stdio_medium_linux.s, and compiled with GNU as(1).
-		mov eax, %1
-		call eax
-%endmacro
 %endif
 
 section .text
@@ -93,10 +78,10 @@ mini__start:  ; Entry point (_start) of the Linux i386 executable.
 		push edx  ; Argument argv for main.
 		push eax  ; Argument argc for main.
 %if 1  ; TODO(pts): Omit this with smart linking.
-		call_weak $mini___M_start_isatty_stdin
+		call mini___M_start_isatty_stdin
 %endif
 %if 1  ; TODO(pts): Omit this with smart linking.
-		call_weak $mini___M_start_isatty_stdout
+		call mini___M_start_isatty_stdout
 %endif
 		call main  ; Return value (exit code) in EAX (AL).
 		push eax  ; Save exit code, for mini__exit.
@@ -104,10 +89,10 @@ mini__start:  ; Entry point (_start) of the Linux i386 executable.
 		; Fall through to mini_exit(...).
 mini_exit:  ; void mini_exit(int exit_code);
 %if 1  ; TODO(pts): Omit this with smart linking.
-		call_weak $mini___M_start_flush_stdout
+		call mini___M_start_flush_stdout
 %endif
 %if 1  ; TODO(pts): Omit this with smart linking.
-		call_weak $mini___M_start_flush_opened
+		call mini___M_start_flush_opened
 %endif
 		; Fall through to mini__exit(...).
 mini__exit:  ; void mini__exit(int exit_code);
@@ -138,10 +123,10 @@ mini_syscall3_RP1:  ; long mini_syscall3_RP1(long nr, long arg1, long arg2, long
 		jna .final_result
 		or eax, byte -1  ; EAX := -1 (error).
 .final_result:	pop ebx
-mini___M_start_isatty_stdin:  ; Falback, will be converted to a weak symbol.
-mini___M_start_isatty_stdout:  ; Falback, will be converted to a weak symbol.
-mini___M_start_flush_stdout:  ; Falback, will be converted to a weak symbol.
-mini___M_start_flush_opened:  ; Falback, will be converted to a weak symbol.
+WEAK..mini___M_start_isatty_stdin:   ; Fallback, tools/elfofix will convert it to a weak symbol.
+WEAK..mini___M_start_isatty_stdout:  ; Fallback, tools/elfofix will convert it to a weak symbol.
+WEAK..mini___M_start_flush_stdout:   ; Fallback, tools/elfofix will convert it to a weak symbol.
+WEAK..mini___M_start_flush_opened:   ; Fallback, tools/elfofix will convert it to a weak symbol.
 		ret
 
 ; TODO(pts): Use smart linking to get rid of the unnecessary syscalls.

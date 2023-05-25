@@ -71,6 +71,7 @@ for F in *.nasm; do
     test "${F#start_}" != "$F" && CFLAGS_ARCH="$CFLAGS_ARCH -Dmini__start=_start"  # Makes both _start and mini__start defined.
     set -ex
     $NASM $CFLAGS_ARCH $CFLAGS -O999999999 -w+orphan-labels -f elf -o "$BFA".o "$F"
+    tools/elfofix -v -w -- "$BFA".o  # `-w' fixes weak symbols. .nasm files containing WEAK.. are affected.
     $NASM $CFLAGS_ARCH $CFLAGS -O999999999 -w+orphan-labels -f bin -o "$BFA".bin "$F"
     $NASM $CFLAGS_ARCH $CFLAGS -O0 -w+orphan-labels -f bin -o "$BFA".o0.bin "$F"
     # $NDISASM -b 32 "$BFA".bin | tail  # For the size.
@@ -88,13 +89,7 @@ for F in *.nasm; do
   done
 done
 
-# !! Replace this with something simpler in tools.
-# !! Bad relocations for the weak symbol.
-#objcopy -W mini___M_start_isatty_stdin -W mini___M_start_isatty_stdout -W mini___M_start_flush_stdout -W mini___M_start_flush_opened start_stdio_medium_linux.o start_stdio_medium_linux_weak.o
-#yasm-1.3.0 $CFLAGS -O999999999 -w+orphan-labels -f elf -Dmini__start=_start -o start_stdio_medium_linux_weak.o start_stdio_medium_linux.nasm  # Works, but with suboptimal relocations.
-as --32 -march=i386 -o start_stdio_medium_linux_weak.o start_stdio_medium_linux.s
-
-LIB_OBJS_SPECIAL_ORDER="stdio_medium_flush_opened.o start_stdio_medium_linux_weak.o"
+LIB_OBJS_SPECIAL_ORDER="stdio_medium_flush_opened.o start_stdio_medium_linux.o"
 
 rm -f libminitcc1.a  # Some versions of ar(1) such as GNU ar(1) do something different if the .a file already exists.
 set -ex
