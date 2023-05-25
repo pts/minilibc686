@@ -188,6 +188,8 @@ typedef struct
 
 #define ELFCLASS32	1		/* 32-bit objects */
 
+#define ET_REL		1		/* Relocatable file */
+
 /* Section header.  */
 
 typedef struct
@@ -380,10 +382,25 @@ int main(int argc, char **argv)
 
         // elf header
         ehdr = (ElfW(Ehdr) *)buf;
-        if (ehdr->e_ident[4] != ELFCLASSW)
-        {
-            fprintf(stderr, "Unsupported Elf Class: %s\n", argv[i_obj]);
-            goto the_end;
+        if (memcmp(ehdr->e_ident, "\x7f""ELF", 4) != 0) {
+          /*fprintf(stderr, "fatal: bad ELF signature: %s\n", argv[i_obj]);*/
+          goto add_file;
+        }
+        if (ehdr->e_ident[4] != 1 || (ehdr->e_ident[5] != 1 && ehdr->e_ident[5] != 2) || ehdr->e_ident[6] != 1) {
+          fprintf(stderr, "info: bad ELF e_ident, skipping: %s\n", argv[i_obj]);
+          goto add_file;
+        }
+        if (ehdr->e_type != ET_REL) {
+          if (ehdr->e_type == ET_REL << 8) {
+            fprintf(stderr, "info: bad ELF byte order, skipping: %s\n", argv[i_obj]);
+          } else {
+            fprintf(stderr, "info: not an ELF relocatable (.o file), skipping: %s\n", argv[i_obj]);
+          }
+          goto add_file;
+        }
+        if (ehdr->e_version != 1) {
+          fprintf(stderr, "info: bad ELF e_version, skipping: %s\n", argv[i_obj]);
+          goto add_file;
         }
 
         shdr = (ElfW(Shdr) *) (buf + ehdr->e_shoff + ehdr->e_shstrndx * ehdr->e_shentsize);
@@ -434,6 +451,7 @@ int main(int argc, char **argv)
             }
         }
 
+      add_file:
         file = argv[i_obj];
         for (name = strchr(file, 0);
              name > file && name[-1] != '/' && name[-1] != '\\';
