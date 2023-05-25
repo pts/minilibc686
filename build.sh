@@ -38,44 +38,35 @@ for F in *.nasm; do
   test "${F#c_}" = "$F" || continue  # Skip c_*.nasm.
   grep -q CONFIG_PIC <"$F" || continue  # Not a libc source file.
   echo "info: compiling: $F" >&2
-  BF="${F%.*}"
-  for ARCH in i386 i686; do
+  ARCH_I686=
+  grep -q CONFIG_I386 <"$F" && ARCH_I686=i686
+  for ARCH in i386 $ARCH_I686; do
     LA=
     case "$F" in
      exit_linux.nasm) ;;
      fputc_unbuffered.nasm) ;;  # The libc uses stdio_medium instead.
      stdio_file_simple_buffered.nasm) ;;  # The libc uses stdio_medium instead.
-     # malloc_mmap_linux.nasm) ;;
      isatty_linux_syscall.nasm) ;;  # The libc uses isatty_linux.nasm instead.
      vfprintf_*.nasm) ;;  # The libc uses stdio_medium_vfprintf.nasm instead.
      strcasecmp.nasm) ;;  # TODO(pts): How to link strcasecmp.nasm if only strcasecmp(3) is needed, and strncasecmp_both.nasm if both strcasecmp(3) and strncasecmp(3) are needed?
      strtok_sep1.nasm) ;;  # TODO(pts): Link it with the symbol name strtok_sep.
      write_linux.nasm) ;;  # start_stdio_medium_linux.nasm provides it.
      m_flushall_dummy.nasm) ;;
-     start_uclibc_linux.nasm) LA=3 ;;
-     need_start.nasm) LA=3 ;;
-     need_uclibc_main.nasm) LA=3 ;;
-     tcc_alloca.nasm) LA=3 ;;
-     stdio_medium_flush_opened.nasm) LA=3 ;;  # We want special order in the .a file, for pts-tcc.
-     start_stdio_medium_linux.nasm) LA=3 ;;  # We want special order in the .a file, for pts-tcc.
+     start_uclibc_linux.nasm) ;;
+     need_start.nasm) ;;
+     need_uclibc_main.nasm) ;;
+     tcc_alloca.nasm) ;;
+     stdio_medium_flush_opened.nasm) ;;  # We want special order in the .a file, for pts-tcc.
+     start_stdio_medium_linux.nasm) ;;  # We want special order in the .a file, for pts-tcc.
      start_*.nasm) ;;
      *.nasm) LA=1 ;;
     esac
-    if test "$ARCH" = i686; then
-      if test "$LA" != 1 || grep -q CONFIG_I386 <"$F"; then :; else
-        # Reuse the i386 version just built, it's the same as the i686 version.
-        cp "$BF.i386.o" "$BF.i686.o"
-        LIBI686_OBJS="$LIBI686_OBJS $BF.i686.o" 
-        continue
-      fi
-    fi
+    BF="${F%.*}"
     BFA="$BF"
-    if test "$LA" = 3; then  # Build only the i386 version.
-      test "$ARCH" != i386 && continue
-      CFLAGS_ARCH=-DCONFIG_I386
-    else
-      CFLAGS_ARCH=
-      test "$ARCH" = i386 && CFLAGS_ARCH=-DCONFIG_I386 && BFA="$BF.i386"
+    CFLAGS_ARCH=
+    if test "$ARCH_I686"; then  # .nasm source file contains CONFIG_I386.
+      BFA="$BF.$ARCH"
+      test "$ARCH" = i386 && CFLAGS_ARCH=-DCONFIG_I386
     fi
     test "${F#start_}" != "$F" && CFLAGS_ARCH="$CFLAGS_ARCH -Dmini__start=_start"  # Makes both _start and mini__start defined.
     set -ex
@@ -89,7 +80,8 @@ for F in *.nasm; do
       diff -U3 "$BFA".ndisasm "$BFA".o0.ndisasm
     fi
     set +ex
-    if test -z "$LA" || test "$LA" = 3; then :
+    if test -z "$LA"; then :
+    elif test -z "$ARCH_I686"; then LIBI386_OBJS="$LIBI386_OBJS $BFA.o"; LIBI686_OBJS="$LIBI686_OBJS $BFA.o"
     elif test "$ARCH" = i386; then LIBI386_OBJS="$LIBI386_OBJS $BFA.o"
     else LIBI686_OBJS="$LIBI686_OBJS $BFA.o"
     fi
