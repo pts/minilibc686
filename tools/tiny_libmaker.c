@@ -221,6 +221,16 @@ typedef struct
 #define SHT_SYMTAB	  2		/* Symbol table */
 #define SHT_STRTAB	  3		/* String table */
 
+#define STB_GLOBAL      1               /* Global symbol */
+#define STB_WEAK        2               /* Weak symbol */
+
+#define STT_NOTYPE	0		/* Symbol type is unspecified */
+#define STT_OBJECT	1		/* Symbol is a data object */
+#define STT_FUNC	2		/* Symbol is a code object */
+
+#define ELF32_ST_BIND(val)		(((unsigned char) (val)) >> 4)
+#define ELF32_ST_TYPE(val)		((val) & 0xf)
+
 /* --- End of <elf.h> */
 
 #ifdef TCC_TARGET_X86_64
@@ -313,6 +323,7 @@ int main(int argc, char **argv)
     char *long_listing = NULL;
     unsigned long_listing_idx;
     static char copybuf[0x1000];
+    Elf32_Word sym_type, sym_bind;
 
     tfile[0] = '\0';
     i_lib = 0; i_obj = 0;  // will hold the index of the lib and first obj
@@ -471,11 +482,11 @@ int main(int argc, char **argv)
             for (i = 1; i < nsym; i++)
             {
                 sym = (ElfW(Sym) *) (symtab + i * sizeof(ElfW(Sym)));
-                if (sym->st_shndx &&
-                    (sym->st_info == 0x10
-                    || sym->st_info == 0x11
-                    || sym->st_info == 0x12
-                    )) {
+                if (!sym->st_shndx) continue;
+                sym_bind = ELF32_ST_BIND(sym->st_info);
+                sym_type = ELF32_ST_TYPE(sym->st_info);
+                if ((sym_bind == STB_GLOBAL || sym_bind == STB_WEAK) &&
+                    (sym_type == STT_NOTYPE || sym_type == STT_OBJECT || sym_type == STT_FUNC)) {
                     //printf("symtab: %2Xh %4Xh %2Xh %s\n", sym->st_info, sym->st_size, sym->st_shndx, strtab + sym->st_name);
                     istrlen = strlen(strtab + sym->st_name)+1;
                     anames = realloc(anames, strpos+istrlen);
