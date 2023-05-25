@@ -168,8 +168,7 @@ typedef uint16_t Elf32_Section;
 
 #define EI_NIDENT (16)
 
-typedef struct
-{
+typedef struct {
   unsigned char	e_ident[EI_NIDENT];	/* Magic number and other info */
   Elf32_Half	e_type;			/* Object file type */
   Elf32_Half	e_machine;		/* Architecture */
@@ -192,8 +191,7 @@ typedef struct
 
 /* Section header.  */
 
-typedef struct
-{
+typedef struct {
   Elf32_Word	sh_name;		/* Section name (string tbl index) */
   Elf32_Word	sh_type;		/* Section type */
   Elf32_Word	sh_flags;		/* Section flags */
@@ -206,10 +204,12 @@ typedef struct
   Elf32_Word	sh_entsize;		/* Entry size if section holds table */
 } Elf32_Shdr;
 
+#define SHT_SYMTAB	  2		/* Symbol table */
+#define SHT_STRTAB	  3		/* String table */
+
 /* Symbol table entry.  */
 
-typedef struct
-{
+typedef struct {
   Elf32_Word	st_name;		/* Symbol name (string tbl index) */
   Elf32_Addr	st_value;		/* Symbol value */
   Elf32_Word	st_size;		/* Symbol size */
@@ -217,9 +217,6 @@ typedef struct
   unsigned char	st_other;		/* Symbol visibility */
   Elf32_Section	st_shndx;		/* Section index */
 } Elf32_Sym;
-
-#define SHT_SYMTAB	  2		/* Symbol table */
-#define SHT_STRTAB	  3		/* String table */
 
 #define STB_GLOBAL      1               /* Global symbol */
 #define STB_WEAK        2               /* Weak symbol */
