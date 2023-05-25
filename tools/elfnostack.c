@@ -124,7 +124,7 @@ int main(int argc, char **argv) {
     return 9;
   }
   if (ehdr.e_shentsize != 0x28) {
-    fprintf(stderr, "fatal: unexpected ELF e_shnum: %s\n", filename);
+    fprintf(stderr, "fatal: unexpected ELF shdr size: %s\n", filename);
     return 10;
   }
   if (ehdr.e_shnum == 0) {
