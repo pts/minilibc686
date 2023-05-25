@@ -295,18 +295,23 @@ int main(int argc, char **argv)
     ElfW(Ehdr) *ehdr;
     ElfW(Shdr) *shdr;
     ElfW(Sym) *sym;
-    int i, fsize, i_lib, i_obj;
+    int i, fsize, i_lib, i_obj, i_obj0;
     char *buf, *shstr, *symtab = NULL, *strtab = NULL;
     int symtabsize = 0;//, strtabsize = 0;
     char *anames = NULL;
     int *afpos = NULL;
     int istrlen, strpos = 0, fpos = 0, funccnt = 0, funcmax, hofs;
-    char tfile[260], stmp[20];
+    char tfile[260], stmp[61];
     char *file, *name;
     int ret = 2;
     char *ops_conflict = "habdioptxN";  // unsupported but destructive if ignored.
     int verbose = 0;
     int got;
+    unsigned fnsize;
+    unsigned long_listing_size;  /* Number of bytes in the listing of long filenames. */
+    char *p;
+    char *long_listing = NULL;
+    unsigned long_listing_idx;
     static char copybuf[0x1000];
 
     tfile[0] = '\0';
@@ -347,10 +352,44 @@ int main(int argc, char **argv)
     funcmax = 250;
     afpos = realloc(NULL, funcmax * sizeof *afpos); // 250 func
     memcpy(&arhdro.ar_mode, "100666", 6);
+    /* i_obj0 = first input object file. Build a list of long filenames. */
+    i_obj0 = i_obj;
+
+    long_listing_size = 0;
+    for (i_obj = i_obj0; i_obj < argc; ++i_obj) {
+        if (*argv[i_obj] == '-') continue;
+        fnsize = strlen(argv[i_obj]);
+        if (fnsize >= sizeof(arhdro.ar_name)) {
+            long_listing_size += fnsize + 2;  /* +2 for the "/\n". */
+        }
+    }
+    if (long_listing_size > 0) {
+        if ((long_listing = malloc(long_listing_size)) == NULL) {
+            fprintf(stderr, "Out of memory.\n");
+            goto the_end;
+        }
+        for (i_obj = i_obj0, p = long_listing; i_obj < argc; ++i_obj) {
+            if (*argv[i_obj] == '-') continue;
+            fnsize = strlen(argv[i_obj]);
+            if (fnsize >= sizeof(arhdro.ar_name)) {
+                memcpy(p, argv[i_obj], fnsize);
+                p += fnsize;
+                *p++ = '/';
+                *p++ = '\n';
+            }
+        }
+        if (long_listing_size & 1) {  /* Align to even. */
+            ++long_listing_size;
+            *p++ = '\n';
+        }
+        if ((unsigned)(p - long_listing) != long_listing_size) {
+            fprintf(stderr, "assert: Long listing size mismatch.\n");
+            goto the_end;
+        }
+    }
 
     // i_obj = first input object file
-    while (i_obj < argc)
-    {
+    for (i_obj = i_obj0, long_listing_idx = 0; i_obj < argc;) {
         if (*argv[i_obj] == '-') {  // by now, all options start with '-'
             i_obj++;
             continue;
@@ -457,11 +496,15 @@ int main(int argc, char **argv)
              name > file && name[-1] != '/' && name[-1] != '\\';
              --name);
         istrlen = strlen(name);
-        if (istrlen + 0U >= sizeof(arhdro.ar_name))
-            istrlen = sizeof(arhdro.ar_name) - 1;
         memset(arhdro.ar_name, ' ', sizeof(arhdro.ar_name));
-        memcpy(arhdro.ar_name, name, istrlen);
-        arhdro.ar_name[istrlen] = '/';
+        if (istrlen + 0U >= sizeof(arhdro.ar_name)) {
+            i = sprintf(arhdro.ar_name, "/%u", long_listing_idx);
+            arhdro.ar_name[i] = ' ';
+            long_listing_idx += istrlen + 2;
+        } else {
+            memcpy(arhdro.ar_name, name, istrlen);
+            arhdro.ar_name[istrlen] = '/';
+        }
         sprintf(stmp, "%-10d", fsize);
         memcpy(&arhdro.ar_size, stmp, 10);
         fwrite(&arhdro, sizeof(arhdro), 1, fo);
@@ -476,6 +519,7 @@ int main(int argc, char **argv)
     }
     fclose(fo);
     hofs = 8 + sizeof(arhdr) + strpos + (funccnt+1) * sizeof(int);
+    if (long_listing_size) hofs += 60 + long_listing_size;
     fpos = 0;
     if ((hofs & 1))  /* Align to even. */
         hofs++, fpos = 1;
@@ -496,6 +540,14 @@ int main(int argc, char **argv)
       fwrite(anames, strpos, 1, fh);
       if (fpos)
           fwrite("", 1, 1, fh);  /* Align to even. */
+    }
+    if (long_listing) {
+        sprintf(stmp, "//                                              %-10d`\n", long_listing_size);  /* 60 bytes + '\0'. */
+        fwrite(stmp, 60, 1, fh);
+        fwrite(long_listing, long_listing_size, 1, fh);
+        /*if (long_listing_size & 1) ...*/  /* Align to even. Not needed, it's already even. */
+        free(long_listing);
+        long_listing = NULL;
     }
     // write objects
     if ((fo = fopen(tfile, "rb")) == NULL) {
@@ -522,10 +574,9 @@ int main(int argc, char **argv)
     if (fflush(fh)) goto error_writing;
     ret = 0;
 the_end:
-    if (anames)
-        free(anames);
-    if (afpos)
-        free(afpos);
+    free(long_listing);
+    free(anames);
+    free(afpos);
     if (fh)
         fclose(fh);
     if (fo) {

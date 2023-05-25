@@ -296,6 +296,5 @@ TODOs:
   Currently it's built for the newer `-march=pentium3` (1999).
 * ELF patch: .o change a symbol from global to weak in an .o file
 * ELF patch: .o change section alignments
-* !! Make .o files with full (long) filenames in the .a file (tiny_libmaker).
 
 __END__
