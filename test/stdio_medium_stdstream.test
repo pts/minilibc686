@@ -1,0 +1,67 @@
+"$NASM" $CFLAGS -O999999999 -w+orphan-labels -f elf -o printf_callvf.o "$SRC"/printf_callvf.nasm
+"$NASM" $CFLAGS -O999999999 -w+orphan-labels -f elf -o vprintf_callvf.o "$SRC"/vprintf_callvf.nasm
+"$NASM" $CFLAGS -O999999999 -w+orphan-labels -f elf -o fprintf_callvf.o "$SRC"/fprintf_callvf.nasm
+"$NASM" $CFLAGS -O999999999 -w+orphan-labels -f elf -o stdio_medium_discard_buf.o "$SRC"/stdio_medium_discard_buf.nasm
+"$NASM" $CFLAGS -O999999999 -w+orphan-labels -f elf -o stdio_medium_fflush.o "$SRC"/stdio_medium_fflush.nasm
+"$NASM" $CFLAGS -O999999999 -w+orphan-labels -f elf -o stdio_medium_fputc_rp2.o "$SRC"/stdio_medium_fputc_rp2.nasm
+"$NASM" $CFLAGS -O999999999 -w+orphan-labels -f elf -o stdio_medium_writebuf_relax.o "$SRC"/stdio_medium_writebuf_relax.nasm
+"$NASM" $CFLAGS -O999999999 -w+orphan-labels -f elf -o stdio_medium_vfprintf.o "$SRC"/stdio_medium_vfprintf.nasm
+"$NASM" $CFLAGS -O999999999 -w+orphan-labels -f elf -o stdio_medium_stdin.o "$SRC"/stdio_medium_stdin.nasm
+"$NASM" $CFLAGS -O999999999 -w+orphan-labels -f elf -o stdio_medium_stdout.o "$SRC"/stdio_medium_stdout.nasm
+"$NASM" $CFLAGS -O999999999 -w+orphan-labels -f elf -o stdio_medium_stderr.o "$SRC"/stdio_medium_stderr.nasm
+"$NASM" $CFLAGS -O999999999 -w+orphan-labels -f elf -o stdio_medium_getchar.o "$SRC"/stdio_medium_getchar.nasm
+"$NASM" $CFLAGS -O999999999 -w+orphan-labels -f elf -o stdio_medium_putchar.o "$SRC"/stdio_medium_putchar.nasm
+"$NASM" $CFLAGS -O999999999 -w+orphan-labels -f elf -o stdio_medium_sprintf.o "$SRC"/stdio_medium_sprintf.nasm
+"$NASM" $CFLAGS -O999999999 -w+orphan-labels -f elf -o stdio_medium_vsprintf.o "$SRC"/stdio_medium_vsprintf.nasm
+"$NASM" $CFLAGS -O999999999 -w+orphan-labels -f elf -o stdio_medium_snprintf.o "$SRC"/stdio_medium_snprintf.nasm
+"$NASM" $CFLAGS -O999999999 -w+orphan-labels -f elf -o stdio_medium_vsnprintf.o "$SRC"/stdio_medium_vsnprintf.nasm
+"$NASM" $CFLAGS -O999999999 -w+orphan-labels -f elf -o stdio_medium_fputs.o "$SRC"/stdio_medium_fputs.nasm
+"$NASM" $CFLAGS -O999999999 -w+orphan-labels -f elf -o stdio_medium_puts.o "$SRC"/stdio_medium_puts.nasm
+"$NASM" $CFLAGS -O999999999 -w+orphan-labels -f elf -o isatty_linux.o "$SRC"/isatty_linux.nasm
+"$NASM" $CFLAGS -O999999999 -w+orphan-labels -f elf -o strcmp.o "$SRC"/strcmp.nasm
+"$NASM" $CFLAGS -O999999999 -w+orphan-labels -f elf -o stdio_medium_fileno.o "$SRC"/stdio_medium_fileno.nasm
+"$NASM" $CFLAGS -O999999999 -w+orphan-labels -f elf -o stdio_medium_fread.o "$SRC"/stdio_medium_fread.nasm
+"$NASM" $CFLAGS -O999999999 -w+orphan-labels -f elf -o stdio_medium_fwrite.o "$SRC"/stdio_medium_fwrite.nasm
+"$NASM" $CFLAGS -O999999999 -w+orphan-labels -f elf -o stdio_medium_fgetc.o "$SRC"/stdio_medium_fgetc.nasm
+"$NASM" $CFLAGS -O999999999 -w+orphan-labels -f elf -o stdio_medium_fgetc_fallback.o "$SRC"/stdio_medium_fgetc_fallback.nasm
+"$NASM" $CFLAGS -O999999999 -w+orphan-labels -f elf -o stdio_medium_fputc.o "$SRC"/stdio_medium_fputc.nasm
+"$NASM" $CFLAGS -O999999999 -w+orphan-labels -f elf -Dmini__start=_start -o start_stdio_medium_linux.o "$SRC"/start_stdio_medium_linux.nasm
+"$TOOLS"/elfofix -w -- start_stdio_medium_linux.o  # `-w' fixes weak symbols. .nasm files containing WEAK.. are affected.
+ARGS="-D__MINILIBC686__ -m32 -Os -W -Wall -s -Werror=implicit-function-declaration -ffreestanding -I$INCLUDE -nostdlib -nostdinc -pedantic stdio_medium_fileno.o stdio_medium_fwrite.o stdio_medium_fread.o stdio_medium_fgetc.o stdio_medium_fgetc_fallback.o stdio_medium_fputc.o test_stdstream.c stdio_medium_sprintf.o stdio_medium_vsprintf.o stdio_medium_snprintf.o stdio_medium_vsnprintf.o stdio_medium_fputs.o stdio_medium_vfprintf.o printf_callvf.o vprintf_callvf.o fprintf_callvf.o stdio_medium_puts.o stdio_medium_getchar.o stdio_medium_putchar.o isatty_linux.o stdio_medium_stdin.o stdio_medium_stdout.o stdio_medium_stderr.o strcmp.o stdio_medium_discard_buf.o stdio_medium_fflush.o stdio_medium_fputc_rp2.o stdio_medium_writebuf_relax.o start_stdio_medium_linux.o"
+#clang -static -o test_c_stdio_medium_stdstream.prog -ansi $ARGS
+#qq xstatic gcc -static -o test_c_stdio_medium_stdstream.prog -ansi $ARGS
+"$TESTTCC" -o test_c_stdio_medium_stdstream.prog $ARGS
+"$TESTTCC" -o test_c_stdio_medium_stdstream.macro.prog -DCONFIG_MACRO_GETC_PUTC $ARGS
+"$TESTTCC" -o test_c_stdio_medium_stdstream.inline.prog -DCONFIG_INLINE_GETC_PUTC $ARGS
+
+if ./test_c_stdio_medium_stdstream.prog; then :; else echo "$?"; exit 1; fi  # Copies f1.tmp.dat to f2.tmp.dat.
+RESULT="$(./test_c_stdio_medium_stdstream.prog 2>&1 ||:)"
+test "$RESULT" = "Hello, World!
+."
+RESULT="$(echo foobar | ./test_c_stdio_medium_stdstream.prog c ||:)"
+test "$RESULT" = "foobar"
+
+: copy using getc+putc
+awk 'BEGIN{for(i=0;i<=1000;++i){print "L",i}}' >f1.tmp.dat
+./test_c_stdio_medium_stdstream.prog c <f1.tmp.dat >f2.tmp.dat
+cmp f1.tmp.dat f2.tmp.dat
+
+./test_c_stdio_medium_stdstream.macro.prog c <f1.tmp.dat >f2.tmp.dat
+cmp f1.tmp.dat f2.tmp.dat
+
+./test_c_stdio_medium_stdstream.inline.prog c <f1.tmp.dat >f2.tmp.dat
+cmp f1.tmp.dat f2.tmp.dat
+
+: copy using getchar+putchar
+./test_c_stdio_medium_stdstream.prog h <f1.tmp.dat >f2.tmp.dat
+cmp f1.tmp.dat f2.tmp.dat
+
+./test_c_stdio_medium_stdstream.macro.prog h <f1.tmp.dat >f2.tmp.dat
+cmp f1.tmp.dat f2.tmp.dat
+
+./test_c_stdio_medium_stdstream.inline.prog h <f1.tmp.dat >f2.tmp.dat
+cmp f1.tmp.dat f2.tmp.dat
+
+: 'To test line buffering of stdin and stdout on a TTY manually, run ./test_c_stdio_medium_stdstream.prog, type something and press <Enter>. It should be repeated.'
+
+rm -f f1.tmp.dat f2.tmp.dat
