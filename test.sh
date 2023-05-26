@@ -31,6 +31,23 @@ export LC_ALL=C  # For consistency. With Busybox we don't need it, because the e
 # Out of this TinyCC rejects -ansi.
 _utcc() { "$TESTTCC" -s -Os -W -Wall -Werror=implicit-function-declaration -nostdinc -I"$INCLUDE" -D"__asm__(x)=" "$@"; }
 _mtcc() { "$TESTTCC" -s -Os -W -Wall  -nostdlib -nostdinc -I"$INCLUDE" -D__MINILIBC686__ "$@"; }
+_nasm() {
+  local FNASM FBASE
+  for FNASM in "$@"; do
+    FBASE="${FNASM%.*}"
+    test "${FNASM%.o}" = "$FNASM" || FNASM="$FBASE".nasm
+    "$NASM" $CFLAGS -O999999999 -w+orphan-labels -f elf -o "$FBASE".o "$SRC"/"$FBASE".nasm
+  done
+}
+_nasm_start() {
+  local FNASM FBASE
+  for FNASM in "$@"; do
+    FBASE="${FNASM%.*}"
+    test "${FNASM%.o}" = "$FNASM" || FNASM="$FBASE".nasm
+    "$NASM" $CFLAGS -Dmini__start=_start -O999999999 -w+orphan-labels -f elf -o "$FBASE".o "$SRC"/"$FBASE".nasm
+    "$TOOLS"/elfofix -w -- "$FBASE".o  # `-w' fixes weak symbols. .nasm files containing WEAK.. are affected.
+  done
+}
 _nasm2() {
   local FNASM FBASE
   for FNASM in "$@"; do

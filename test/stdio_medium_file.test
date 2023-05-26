@@ -1,28 +1,17 @@
 # Similar to test_stdio_file_simple_unbuffered.sh .
 
-"$NASM" $CFLAGS -O999999999 -w+orphan-labels -f elf -o stdio_medium_fputc.o "$SRC"/stdio_medium_fputc.nasm
-"$NASM" $CFLAGS -O999999999 -w+orphan-labels -f elf -o stdio_medium_fputc_rp2.o "$SRC"/stdio_medium_fputc_rp2.nasm
-"$NASM" $CFLAGS -O999999999 -w+orphan-labels -f elf -o stdio_medium_discard_buf.o "$SRC"/stdio_medium_discard_buf.nasm
-"$NASM" $CFLAGS -O999999999 -w+orphan-labels -f elf -o stdio_medium_fflush.o "$SRC"/stdio_medium_fflush.nasm
-"$NASM" $CFLAGS -O999999999 -w+orphan-labels -f elf -o stdio_medium_flush_opened.o "$SRC"/stdio_medium_flush_opened.nasm  # We need this because of mini_fopen(...).
-"$NASM" $CFLAGS -O999999999 -w+orphan-labels -f elf -o stdio_medium_fread.o "$SRC"/stdio_medium_fread.nasm
-"$NASM" $CFLAGS -O999999999 -w+orphan-labels -f elf -o stdio_medium_fwrite.o "$SRC"/stdio_medium_fwrite.nasm
-"$NASM" $CFLAGS -O999999999 -w+orphan-labels -f elf -o stdio_medium_fgetc.o "$SRC"/stdio_medium_fgetc.nasm
-"$NASM" $CFLAGS -O999999999 -w+orphan-labels -f elf -o stdio_medium_fgetc_fallback.o "$SRC"/stdio_medium_fgetc_fallback.nasm
-"$NASM" $CFLAGS -O999999999 -w+orphan-labels -f elf -o stdio_medium_ftell.o "$SRC"/stdio_medium_ftell.nasm
-"$NASM" $CFLAGS -O999999999 -w+orphan-labels -f elf -o stdio_medium_fseek.o "$SRC"/stdio_medium_fseek.nasm
-"$NASM" $CFLAGS -O999999999 -w+orphan-labels -f elf -o stdio_medium_fclose.o "$SRC"/stdio_medium_fclose.nasm
-"$NASM" $CFLAGS -O999999999 -w+orphan-labels -f elf -o stdio_medium_fileno.o "$SRC"/stdio_medium_fileno.nasm
-"$NASM" $CFLAGS -O999999999 -w+orphan-labels -f elf -o stdio_medium_fopen.o "$SRC"/stdio_medium_fopen.nasm
-"$NASM" $CFLAGS -O999999999 -w+orphan-labels -f elf -Dmini__start=_start -o start_stdio_medium_linux.o "$SRC"/start_stdio_medium_linux.nasm
-"$TOOLS"/elfofix -w -- start_stdio_medium_linux.o  # `-w' fixes weak symbols. .nasm files containing WEAK.. are affected.
-OBJS="stdio_medium_fread.o stdio_medium_fwrite.o stdio_medium_fgetc.o stdio_medium_ftell.o stdio_medium_fseek.o stdio_medium_fgetc_fallback.o stdio_medium_fputc.o stdio_medium_fclose.o stdio_medium_fileno.o stdio_medium_fopen.o stdio_medium_flush_opened.o stdio_medium_fflush.o stdio_medium_discard_buf.o stdio_medium_fputc_rp2.o start_stdio_medium_linux.o"
+OBJS="stdio_medium_fread.o stdio_medium_fwrite.o stdio_medium_fgetc.o stdio_medium_ftell.o stdio_medium_fseek.o stdio_medium_fgetc_fallback.o stdio_medium_fputc.o stdio_medium_fclose.o stdio_medium_fileno.o stdio_medium_fopen.o stdio_medium_flush_opened.o stdio_medium_fflush.o stdio_medium_discard_buf.o stdio_medium_fputc_rp2.o"
+_nasm $OBJS
+OBJS="$OBJS start_stdio_medium_linux.o"
+_nasm_start start_stdio_medium_linux.o
+
 # TODO(pts): Also test with (system) gcc and clang.
 #clang -static -o test_stdio_medium_file.prog -ansi test_file_medium_copy.c $OBJS
 #qq xstatic gcc -o test_stdio_medium_file.prog -ansi test_file_medium_copy.c $OBJS
 _mtcc -o test_stdio_medium_file.macro.prog -DCONFIG_MACRO_GETC_PUTC -DCONFIG_MACRO_FILENO "$TESTDIR"/test_file_medium_copy.c $OBJS
 _mtcc -o test_stdio_medium_file.inline.prog -DCONFIG_INLINE_GETC_PUTC -DCONFIG_INLINE_FILENO "$TESTDIR"/test_file_medium_copy.c $OBJS
 _mtcc -o test_stdio_medium_file.prog -DCONFIG_MACRO_GETC_PUTC -DCONFIG_MACRO_FILENO "$TESTDIR"/test_file_medium_copy.c $OBJS
+
 echo foobar >f1.tmp.dat
 : t1
 rm -f f2.tmp.dat
