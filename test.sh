@@ -31,6 +31,22 @@ export LC_ALL=C  # For consistency. With Busybox we don't need it, because the e
 # Out of this TinyCC rejects -ansi.
 _utcc() { "$TESTTCC" -s -Os -W -Wall -Werror=implicit-function-declaration -nostdinc -I"$INCLUDE" -D"__asm__(x)=" "$@"; }
 _mtcc() { "$TESTTCC" -s -Os -W -Wall  -nostdlib -nostdinc -I"$INCLUDE" -D__MINILIBC686__ "$@"; }
+_nasm2() {
+  local FNASM FBASE
+  for FNASM in "$@"; do
+    FBASE="${FNASM%.*}"
+    test "${FNASM%.o}" = "$FNASM" || FNASM="$FBASE".nasm
+    "$NASM" $CFLAGS -O999999999 -w+orphan-labels -f elf -o "$FBASE".o "$SRC"/"$FBASE".nasm
+    "$NASM" $CFLAGS -O999999999 -w+orphan-labels -f bin -o "$FBASE".bin "$SRC"/"$FBASE".nasm
+    "$NASM" $CFLAGS -O0 -w+orphan-labels -f bin -o "$FBASE".o0.bin "$SRC"/"$FBASE".nasm
+    "$NDISASM" -b 32 "$FBASE".bin | tail  # For the size.
+    if ! cmp "$FBASE".bin "$FBASE".o0.bin; then
+      "$NDISASM" -b 32 "$FBASE".bin >"$FBASE".ndisasm
+      "$NDISASM" -b 32 "$FBASE".o0.bin >"$FBASE".o0.ndisasm
+      diff -U3 "$FBASE".ndisasm "$FBASE".o0.ndisasm
+    fi
+  done
+}
 
 # ---
 
