@@ -104,12 +104,13 @@ for TF in "$@"; do
     let OKC+=1
     if ! rm -rf -- "$RUNDIR"; then echo "fatal: error deleting recursively: $RUNDIR" >&2; exit 5; fi
   else
+    XC="$?"
     let FAILC+=1
     if test "$DO_STOP"; then
-      printf "fatal: \\033[0;31mtest failed\\033[0m: %s\n" "$TF" >&2  # TODO(pts): Add option to run the subsequent tests.
+      printf "fatal: \\033[0;31mtest failed\\033[0m with exit code %d: %s\n" "$XC" "$TF" >&2  # TODO(pts): Add option to run the subsequent tests.
       exit 3
     else
-      printf "error: \\033[0;31mtest failed\\033[0m: %s\n" "$TF" >&2  # TODO(pts): Add option to run the subsequent tests.
+      printf "error: \\033[0;31mtest failed\\033[0m with exit code %d: %s\n" "$XC" "$TF" >&2  # TODO(pts): Add option to run the subsequent tests.
     fi
   fi
 done
