@@ -4,16 +4,30 @@
 # by pts@fazekas.hu at Sun May 21 02:21:27 CEST 2023
 #
 
-export LC_ALL=C  # To avoid surprises.
+export LC_ALL=C  # To avoid surprises with localized error messages etc.
 
 unset MYDIR
 MYDIR="$(readlink "$0" 2>/dev/null)"
-if test "$MYDIR"; then
-  test "${MYDIR#/}" = "$MYDIR" && MYDIR="${0%/*}/$MYDIR"
-else
-  MYDIR="$0"
+if test "$MYDIR"; then test "${MYDIR#/}" = "$MYDIR" && MYDIR="${0%/*}/$MYDIR"
+else MYDIR="$0"
 fi
 MYDIR="${MYDIR%/*}"
+# Use BusyBox (if available) for consistent shell and coreutils.
+test -z "$BUSYBOX_SH_SCRIPT" && test -f "$MYDIR/shbin/sh" &&
+    export BUSYBOX_SH_SCRIPT=1 PATH="$MYDIR/shbin:$PATH" &&
+    exec sh -- "$0" "$@"
+
+# For very hardcore users and reproducible builds: unset all environment
+# variables, and use a hardcoded --boxed $PATH.
+test "$1" = --noenv && shift && exec env -i PATH="$MYDIR/shbin" BUSYBOX_SH_SCRIPT=1 sh -- "$0" --boxed "$@"
+
+# For hardcore users and testing: --boxed will use only the included shell
+# and coreutils programs. Toolchain tools (e.g. pts-tcc and ld) are not
+# affected by $PATH, they will be run explictly from "$MYDIR/tools". --gcc
+# is affected, --boxed effectively breaks --gcc, so the user has to specify
+# --gcc=/usr/bin/gcc instead.
+IS_BOXED=
+while test "$1" = --boxed; do export PATH="$MYDIR/shbin"; IS_BOXED=1; shift; done
 
 if ! test -f "$MYDIR/gcctooldir/collect2"; then
   echo "fatal: missing tool: $MYDIR/gcctooldir/collect2" >&2
@@ -40,6 +54,7 @@ HAD_OFLAG=
 HAD_V=
 ARCH=i686
 USE_UCLIBC=
+GCC_BARG=-pipe  # Harmless default.
 
 case "$1" in
  "" | -* | *.[aocisS]) ;;  # A flag or a source file name is not a program name.
@@ -70,7 +85,8 @@ for ARG in "$@"; do
   fi
   case "$ARG" in
    *"$NL"*) echo "fatal: unexpected newline in arg" >&2; exit 1 ;;
-   --gcc) TCC=; GCC=gcc ;;
+   --gcc) TCC=; GCC=gcc ;;  # Doesn't work with --boxed. TODO(pts): Look it up on old $PATH.
+   --gcc=*/*) TCC=; GCC="${ARG#*=}"; test "$IS_BOXED" && GCC_BARG="-B${GCC%/*}" ;;
    --gcc=*) TCC=; GCC="${ARG#*=}" ;;
    --tcc) GCC=; TCC="$MYDIR"/tools/pts-tcc ;;
    --tcc=*) GCC=; TCC="${ARG#*=}" ;;
@@ -136,29 +152,43 @@ if test "$USE_UBLIBC" && test "$ARCH" = i386; then
   exit 1
 fi
 
-if ! test "$GCC"; then
-  :
-elif test "$TCCLD"; then
-  export MINICC_LD=
-  export MINICC_TCCLD="$TCCLD"
-  export MINICC_LDV="$HAD_V"
-else
-  export MINICC_TCCLD=
-  # gcctooldir/collect2 (== gcctooldir/ld) uses it.
-  export MINICC_LD="$("$GCC" -print-prog-name=ld)"
-  if test -z "$MINICC_LD"; then
-    echo "fatal: linker not found by gcc: $GCC" >&2
-    exit 2
+if test "$GCC"; then
+  if test "$TCCLD"; then
+    export MINICC_LD=
+    export MINICC_TCCLD="$TCCLD"
+    export MINICC_LDV="$HAD_V"
+    if ! "$GCC" "$GCC_BARG" -print-search-dirs >/dev/null 2>&1; then  # Also works with Clang.
+      echo "fatal: gcc not working: $GCC" >&2
+      exit 2
+    fi
+  else
+    export MINICC_TCCLD=
+    # gcctooldir/collect2 (== gcctooldir/ld) uses it.
+    export MINICC_LD="$("$GCC" "$GCC_BARG" -print-prog-name=ld 2>/dev/null)"  # Also works with Clang.
+    if test -z "$MINICC_LD"; then
+      if ! "$GCC" "$GCC_BARG" -print-search-dirs >/dev/null 2>&1; then
+        echo "fatal: gcc not working: $GCC" >&2
+        exit 2
+      fi
+      echo "fatal: linker not found by gcc: $GCC" >&2
+      exit 2
+    fi
+    # Sometimes it's not found, but still returned nonempty.
+    export MINICC_LDV="$HAD_V"
   fi
-  # Sometimes it's not found, but still returned nonempty.
-  export MINICC_LDV="$HAD_V"
 fi
+test "$GCC_BARG" = -pipe && GCC_BARG=
 
 OFLAG_ARGS=
 if test -z "$HAD_OFLAG"; then  # Add some size-optimizing flags.
   case "$GCC" in
    "") ;;
-   *clang*) OFLAG_ARGS="-Os$NL-mstack-alignment=2" ;;
+   *clang*)
+    OFLAG_ARGS="-Os$NL-mstack-alignment=2";
+    # If we have multiple -B... flags, clang(1) will fail to find our
+    # gcctooldir/ld. And clang(1) (unlike gcc) doesn't need $GCC_BARG to
+    # find as(1).
+    GCC_BARG= ;;
    *) OFLAG_ARGS="-Os$NL-falign-functions=1$NL-falign-jumps=1$NL-falign-loops=1$NL-mpreferred-stack-boundary=2" ;;
   esac
   test "$TCC" && OFLAG_ARGS="-Os"
@@ -183,7 +213,7 @@ else
   # Add $INCLUDEDIR_ARG last, so that -I... specified by the user takes precedence.
   # Specifying -fcommon since -fno-common is the default since GCC 10 and Clang 11: https://maskray.me/blog/2022-02-06-all-about-common-symbols
   # DYI dietlibc 0.34 adds: gcc -Os -fomit-frame-pointer -falign-functions=1 -falign-jumps=1 -falign-loops=1 -mpreferred-stack-boundary=4
-  ARGS="$TCC$NL$GCC$NL-B$MYDIR/gcctooldir$NL-m32$NL-march=$ARCH$NL-static$NL-fno-pic$NL-U_FORTIFY_SOURCE$NL-fcommon$NL-fno-stack-protector$NL-fno-unwind-tables$NL-fno-asynchronous-unwind-tables$NL-fno-builtin$NL-fno-ident$NL-fsigned-char$NL-ffreestanding$NL-fno-lto$NL-nostdlib$NL-nostdinc$NL$OFLAG_ARGS$NL$WFLAGS$NL$DEF_ARG$NL$ARGS$NL$INCLUDEDIR_ARG"
+  ARGS="$TCC$NL$GCC$NL$GCC_BARG$NL-B$MYDIR/gcctooldir$NL-m32$NL-march=$ARCH$NL-static$NL-fno-pic$NL-U_FORTIFY_SOURCE$NL-fcommon$NL-fno-stack-protector$NL-fno-unwind-tables$NL-fno-asynchronous-unwind-tables$NL-fno-builtin$NL-fno-ident$NL-fsigned-char$NL-ffreestanding$NL-fno-lto$NL-nostdlib$NL-nostdinc$NL$OFLAG_ARGS$NL$WFLAGS$NL$DEF_ARG$NL$ARGS$NL$INCLUDEDIR_ARG"
 fi
 if test "$DO_ADD_LIB"; then
   LIBWL=
