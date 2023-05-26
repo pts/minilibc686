@@ -1,0 +1,11 @@
+"$NASM" $CFLAGS -O999999999 -w+orphan-labels -f elf -o strtok.o "$SRC"/strtok.nasm
+"$NASM" $CFLAGS -O999999999 -w+orphan-labels -f bin -o strtok.bin "$SRC"/strtok.nasm
+"$NASM" $CFLAGS -O0 -w+orphan-labels -f bin -o strtok.o0.bin "$SRC"/strtok.nasm
+"$NDISASM" -b 32 strtok.bin | tail  # For the size.
+if ! cmp strtok.bin strtok.o0.bin; then
+  "$NDISASM" -b 32 strtok.bin >strtok.ndisasm
+  "$NDISASM" -b 32 strtok.o0.bin >strtok.o0.ndisasm
+  diff -U3 strtok.ndisasm strtok.o0.ndisasm
+fi
+"$TESTTCC" -Os -W -Wall -s -o test_strtok.prog -I"$INCLUDE" -D"__asm__(x)=" "$TESTDIR"/test_strtok.c strtok.o
+./test_strtok.prog
