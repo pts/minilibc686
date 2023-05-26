@@ -249,7 +249,7 @@ Design limitations:
   configurations.
 * File offsets (off_t) are 32-bit. (This can be relaxed later.)
 
-Calling convention:
+## Calling convention
 
 * minilibc686 uses the
   https://en.wikipedia.org/wiki/X86_calling_conventions#cdecl calling
@@ -341,7 +341,7 @@ This section is mostly an FYI, it doesn't affter minilibc686 users directly.
   * See `tcc_common_lib_bug.sh` for TCC failing to link in symbol
     mini___M_init_isatty even though it's referenced as extern and common.
 
-TODOs:
+# TODOs
 
 * Break dependencies: by using sprintf(3), don't get fflush(3). We need
   smart linking or more weak symbols (e.g. mini___M_fputc_RP2 in
@@ -349,7 +349,6 @@ TODOs:
 * Make sure that the binary output is bitwise identical with NASM 2.13.02: `NASM=nasm build.sh`.
 * Rebuild the uClibc 0.9.30.1 within pts-tcc for `-march=i686` (1995).
   Currently it's built for the newer `-march=pentium3` (1999).
-* ELF patch: .o change a symbol from global to weak in an .o file
 * ELF patch: .o change section alignments
 
 __END__
