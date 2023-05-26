@@ -1,0 +1,2 @@
+_utcc -o test_c_strncasecmp_both.prog "$TESTDIR"/test_strncasecmp_both.c "$MYDIRP"fyi/c_strncasecmp_both.c
+./test_c_strncasecmp_both.prog

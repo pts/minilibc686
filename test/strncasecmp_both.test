@@ -1,0 +1,2 @@
+_utcc_nasm2 strncasecmp_both.nasm -o test_strncasecmp_both.prog "$TESTDIR"/test_strncasecmp_both.c
+./test_strncasecmp_both.prog

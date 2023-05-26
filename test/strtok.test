@@ -1,4 +1,2 @@
-OBJS=strtok.o
-_nasm2 $OBJS
-_utcc -o test_strtok.prog "$TESTDIR"/test_strtok.c $OBJS
+_utcc_nasm2 strtok.nasm -o test_strtok.prog "$TESTDIR"/test_strtok.c
 ./test_strtok.prog

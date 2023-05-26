@@ -1,0 +1,5 @@
+_nasm2 lseek64_linux.o lseek64_set_linux.o  # We test both.
+_nasm m_flushall_dummy.o
+_nasm_start start_stdio_file_linux.o
+_mtcc -o test_lseek64_linux.prog "$TESTDIR"/test_lseek64.c lseek64_linux.o lseek64_set_linux.o m_flushall_dummy.o start_stdio_file_linux.o
+./test_lseek64_linux.prog

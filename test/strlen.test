@@ -1,0 +1,2 @@
+_utcc_nasm2 strlen.nasm -o test_strlen.prog "$TESTDIR"/test_strlen.c
+./test_strlen.prog

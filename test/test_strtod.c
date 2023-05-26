@@ -2,6 +2,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#if defined(__TINYC__) && defined(__UCLIBC__)
+#  define __builtin_isnan(x) isnan(x)
+#endif
+
 extern double mini_strtod(const char *nptr, char **endptr);  /* Function under test. */
 
 #define FP_EQ(a, b) ((a) == (b) || (__builtin_isnan(a) && __builtin_isnan(b)))

@@ -1,0 +1,8 @@
+_nasm printf_callvf.o vfprintf_noplus.o write_linux.o
+_nasm_start start_stdio_linux.o
+_mtcc -o test_c_stdio_stdout_simple1.prog "$TESTDIR"/test_printf.c printf_callvf.o vfprintf_noplus.o "$MYDIRP"fyi/c_stdio_stdout_simple1.c write_linux.o start_stdio_linux.o
+
+./test_c_stdio_stdout_simple1.prog  # Prints: Hello, World!
+test "$(./test_c_stdio_stdout_simple1.prog)" = "Hello, World!"
+./test_c_stdio_stdout_simple1.prog there  # Prints: Hello, there!
+test "$(./test_c_stdio_stdout_simple1.prog there)" = "Hello, there!"

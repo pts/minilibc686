@@ -1,0 +1,6 @@
+OBJS="syscall_linux.o"
+_nasm2 $OBJS
+_nasm m_flushall_dummy.o
+_nasm_start start_stdio_file_linux.o
+_mtcc -o test_syscall_open_read_linux.prog "$TESTDIR"/test_syscall_open_read.c $OBJS m_flushall_dummy.o start_stdio_file_linux.o
+./test_syscall_open_read_linux.prog

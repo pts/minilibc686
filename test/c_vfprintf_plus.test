@@ -1,0 +1,3 @@
+_utcc -o test_c_vfprintf_plus.prog "$TESTDIR"/test_vfprintf_plus.c "$MYDIRP"fyi/c_vfprintf_plus.c
+./test_c_vfprintf_plus.prog a b c d; echo $?
+./test_c_vfprintf_plus.prog a; echo $?

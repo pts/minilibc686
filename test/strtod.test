@@ -1,0 +1,2 @@
+_utcc_nasm2 strtod.nasm -o test_strtod.prog "$TESTDIR"/test_strtod.c
+./test_strtod.prog

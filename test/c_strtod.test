@@ -1,0 +1,2 @@
+_utcc -o test_c_strtod.prog "$TESTDIR"/test_strtod.c "$MYDIRP"fyi/c_strtod.c
+./test_c_strtod.prog

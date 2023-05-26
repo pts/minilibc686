@@ -6,8 +6,8 @@ OBJS="$OBJS start_stdio_medium_linux.o"
 _nasm_start start_stdio_medium_linux.o
 
 # TODO(pts): Also test with (system) gcc and clang.
-#clang -static -o test_stdio_medium_file.prog -ansi test_file_medium_copy.c $OBJS
-#qq xstatic gcc -o test_stdio_medium_file.prog -ansi test_file_medium_copy.c $OBJS
+#clang -static -o test_stdio_medium_file.prog -ansi "$TESTDIR"/test_file_medium_copy.c $OBJS
+#qq xstatic gcc -o test_stdio_medium_file.prog -ansi "$TESTDIR"/test_file_medium_copy.c $OBJS
 _mtcc -o test_stdio_medium_file.macro.prog -DCONFIG_MACRO_GETC_PUTC -DCONFIG_MACRO_FILENO "$TESTDIR"/test_file_medium_copy.c $OBJS
 _mtcc -o test_stdio_medium_file.inline.prog -DCONFIG_INLINE_GETC_PUTC -DCONFIG_INLINE_FILENO "$TESTDIR"/test_file_medium_copy.c $OBJS
 _mtcc -o test_stdio_medium_file.prog -DCONFIG_MACRO_GETC_PUTC -DCONFIG_MACRO_FILENO "$TESTDIR"/test_file_medium_copy.c $OBJS
@@ -15,15 +15,18 @@ _mtcc -o test_stdio_medium_file.prog -DCONFIG_MACRO_GETC_PUTC -DCONFIG_MACRO_FIL
 echo foobar >f1.tmp.dat
 : t1
 rm -f f2.tmp.dat
-if ./test_stdio_medium_file.prog f1.tmp.dat f2.tmp.dat; then :; else echo "$?"; exit 1; fi  # Copies f1.tmp.dat to f2.tmp.dat.
+./test_stdio_medium_file.prog f1.tmp.dat f2.tmp.dat  # Copies f1.tmp.dat to f2.tmp.dat.
+./test_stdio_medium_file.prog f1.tmp.dat f2.tmp.dat  # Copies f1.tmp.dat to f2.tmp.dat.
 cmp f1.tmp.dat f2.tmp.dat
 : t1b autoflush
 rm -f f2.tmp.dat
-if ./test_stdio_medium_file.prog f1.tmp.dat f2.tmp.dat a; then :; else echo "$?"; exit 1; fi  # Copies f1.tmp.dat to f2.tmp.dat.
+./test_stdio_medium_file.prog f1.tmp.dat f2.tmp.dat a  # Copies f1.tmp.dat to f2.tmp.dat.
+./test_stdio_medium_file.prog f1.tmp.dat f2.tmp.dat a  # Copies f1.tmp.dat to f2.tmp.dat.
 cmp f1.tmp.dat f2.tmp.dat
 : t2 overwritten
 echo overwritten >f2.tmp.dat
-if ./test_stdio_medium_file.prog f1.tmp.dat f2.tmp.dat; then :; else echo "$?"; exit 1; fi  # Copies f1.tmp.dat to f2.tmp.dat.
+./test_stdio_medium_file.prog f1.tmp.dat f2.tmp.dat  # Copies f1.tmp.dat to f2.tmp.dat.
+./test_stdio_medium_file.prog f1.tmp.dat f2.tmp.dat  # Copies f1.tmp.dat to f2.tmp.dat.
 cmp f1.tmp.dat f2.tmp.dat
 : t3
 rm -f f1.tmp.dat
@@ -31,41 +34,51 @@ if ./test_stdio_medium_file.prog f1.tmp.dat f2.tmp.dat; then echo unexpected-suc
 : t4
 awk 'BEGIN{for(i=0;i<=1000;++i){print "L",i}}' >f1.tmp.dat
 rm -f f2.tmp.dat
-if ./test_stdio_medium_file.prog f1.tmp.dat f2.tmp.dat; then :; else echo "$?"; exit 1; fi  # Copies long file f1.tmp.dat to f2.tmp.dat.
+./test_stdio_medium_file.prog f1.tmp.dat f2.tmp.dat  # Copies long file f1.tmp.dat to f2.tmp.dat.
+./test_stdio_medium_file.prog f1.tmp.dat f2.tmp.dat  # Copies long file f1.tmp.dat to f2.tmp.dat.
 cmp f1.tmp.dat f2.tmp.dat
 : t5 fgetc
 rm -f f2.tmp.dat
-if ./test_stdio_medium_file.prog f1.tmp.dat f2.tmp.dat c; then :; else echo "$?"; exit 1; fi  # Copies long file f1.tmp.dat to f2.tmp.dat.
+./test_stdio_medium_file.prog f1.tmp.dat f2.tmp.dat c  # Copies long file f1.tmp.dat to f2.tmp.dat.
+./test_stdio_medium_file.prog f1.tmp.dat f2.tmp.dat c  # Copies long file f1.tmp.dat to f2.tmp.dat.
 cmp f1.tmp.dat f2.tmp.dat
 : t6 putc
 rm -f f2.tmp.dat
-if ./test_stdio_medium_file.prog f1.tmp.dat f2.tmp.dat p; then :; else echo "$?"; exit 1; fi  # Copies long file f1.tmp.dat to f2.tmp.dat.
+./test_stdio_medium_file.prog f1.tmp.dat f2.tmp.dat p  # Copies long file f1.tmp.dat to f2.tmp.dat.
+./test_stdio_medium_file.prog f1.tmp.dat f2.tmp.dat p  # Copies long file f1.tmp.dat to f2.tmp.dat.
 cmp f1.tmp.dat f2.tmp.dat
 : t7 fputc
 rm -f f2.tmp.dat
-if ./test_stdio_medium_file.prog f1.tmp.dat f2.tmp.dat q; then :; else echo "$?"; exit 1; fi  # Copies long file f1.tmp.dat to f2.tmp.dat.
+./test_stdio_medium_file.prog f1.tmp.dat f2.tmp.dat q  # Copies long file f1.tmp.dat to f2.tmp.dat.
+./test_stdio_medium_file.prog f1.tmp.dat f2.tmp.dat q  # Copies long file f1.tmp.dat to f2.tmp.dat.
 cmp f1.tmp.dat f2.tmp.dat
 : t8 putc macro
 rm -f f2.tmp.dat
-if ./test_stdio_medium_file.macro.prog f1.tmp.dat f2.tmp.dat q; then :; else echo "$?"; exit 1; fi  # Copies long file f1.tmp.dat to f2.tmp.dat.
+./test_stdio_medium_file.macro.prog f1.tmp.dat f2.tmp.dat q  # Copies long file f1.tmp.dat to f2.tmp.dat.
+./test_stdio_medium_file.macro.prog f1.tmp.dat f2.tmp.dat q  # Copies long file f1.tmp.dat to f2.tmp.dat.
 cmp f1.tmp.dat f2.tmp.dat
 : t9 putc inline
 rm -f f2.tmp.dat
-if ./test_stdio_medium_file.inline.prog f1.tmp.dat f2.tmp.dat q; then :; else echo "$?"; exit 1; fi  # Copies long file f1.tmp.dat to f2.tmp.dat.
+./test_stdio_medium_file.inline.prog f1.tmp.dat f2.tmp.dat q  # Copies long file f1.tmp.dat to f2.tmp.dat.
+./test_stdio_medium_file.inline.prog f1.tmp.dat f2.tmp.dat q  # Copies long file f1.tmp.dat to f2.tmp.dat.
 cmp f1.tmp.dat f2.tmp.dat
 : t11 getc
 rm -f f2.tmp.dat
-if ./test_stdio_medium_file.prog f1.tmp.dat f2.tmp.dat d; then :; else echo "$?"; exit 1; fi  # Copies long file f1.tmp.dat to f2.tmp.dat.
+./test_stdio_medium_file.prog f1.tmp.dat f2.tmp.dat d  # Copies long file f1.tmp.dat to f2.tmp.dat.
+./test_stdio_medium_file.prog f1.tmp.dat f2.tmp.dat d  # Copies long file f1.tmp.dat to f2.tmp.dat.
 cmp f1.tmp.dat f2.tmp.dat
 : t12 getc macro
 rm -f f2.tmp.dat
-if ./test_stdio_medium_file.macro.prog f1.tmp.dat f2.tmp.dat d; then :; else echo "$?"; exit 1; fi  # Copies long file f1.tmp.dat to f2.tmp.dat.
+./test_stdio_medium_file.macro.prog f1.tmp.dat f2.tmp.dat d  # Copies long file f1.tmp.dat to f2.tmp.dat.
+./test_stdio_medium_file.macro.prog f1.tmp.dat f2.tmp.dat d  # Copies long file f1.tmp.dat to f2.tmp.dat.
 cmp f1.tmp.dat f2.tmp.dat
 : t13 getc inline
 rm -f f2.tmp.dat
-if ./test_stdio_medium_file.inline.prog f1.tmp.dat f2.tmp.dat d; then :; else echo "$?"; exit 1; fi  # Copies long file f1.tmp.dat to f2.tmp.dat.
+./test_stdio_medium_file.inline.prog f1.tmp.dat f2.tmp.dat d  # Copies long file f1.tmp.dat to f2.tmp.dat.
+./test_stdio_medium_file.inline.prog f1.tmp.dat f2.tmp.dat d  # Copies long file f1.tmp.dat to f2.tmp.dat.
 cmp f1.tmp.dat f2.tmp.dat
 : t15 fseek
 rm -f f2.tmp.dat
-if ./test_stdio_medium_file.prog f1.tmp.dat f2.tmp.dat s; then :; else echo "$?"; exit 1; fi  # Copies long file f1.tmp.dat to f2.tmp.dat.
+./test_stdio_medium_file.prog f1.tmp.dat f2.tmp.dat s  # Copies long file f1.tmp.dat to f2.tmp.dat.
+./test_stdio_medium_file.prog f1.tmp.dat f2.tmp.dat s  # Copies long file f1.tmp.dat to f2.tmp.dat.
 cmp f1.tmp.dat f2.tmp.dat

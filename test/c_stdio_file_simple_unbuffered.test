@@ -1,0 +1,37 @@
+_nasm_start start_stdio_file_linux.o
+_mtcc -o test_c_stdio_file_simple_unbuffered.prog "$MYDIRP"fyi/c_stdio_file_simple_unbuffered.c "$TESTDIR"/test_file_simple_copy.c start_stdio_file_linux.o
+
+echo foobar >f1.tmp.dat
+: t1
+rm -f f2.tmp.dat
+./test_c_stdio_file_simple_unbuffered.prog f1.tmp.dat f2.tmp.dat  # Copies f1.tmp.dat to f2.tmp.dat.
+./test_c_stdio_file_simple_unbuffered.prog f1.tmp.dat f2.tmp.dat  # Copies f1.tmp.dat to f2.tmp.dat.
+cmp f1.tmp.dat f2.tmp.dat
+: t1b autoflush
+rm -f f2.tmp.dat
+./test_c_stdio_file_simple_unbuffered.prog f1.tmp.dat f2.tmp.dat a  # Copies f1.tmp.dat to f2.tmp.dat.
+./test_c_stdio_file_simple_unbuffered.prog f1.tmp.dat f2.tmp.dat a  # Copies f1.tmp.dat to f2.tmp.dat.
+cmp f1.tmp.dat f2.tmp.dat
+: t2 overwritten
+echo overwritten >f2.tmp.dat
+./test_c_stdio_file_simple_unbuffered.prog f1.tmp.dat f2.tmp.dat  # Copies f1.tmp.dat to f2.tmp.dat.
+./test_c_stdio_file_simple_unbuffered.prog f1.tmp.dat f2.tmp.dat  # Copies f1.tmp.dat to f2.tmp.dat.
+cmp f1.tmp.dat f2.tmp.dat
+: t3
+rm -f f1.tmp.dat
+if ./test_c_stdio_file_simple_unbuffered.prog f1.tmp.dat f2.tmp.dat; then echo unexpected-success; exit 1; fi  # f1.tmp.dat doesn't exist, copy must fail.
+: t4
+awk 'BEGIN{for(i=0;i<=1000;++i){print "L",i}}' >f1.tmp.dat
+rm -f f2.tmp.dat
+./test_c_stdio_file_simple_unbuffered.prog f1.tmp.dat f2.tmp.dat  # Copies long file f1.tmp.dat to f2.tmp.dat.
+./test_c_stdio_file_simple_unbuffered.prog f1.tmp.dat f2.tmp.dat  # Copies long file f1.tmp.dat to f2.tmp.dat.
+: t5 fgetc
+rm -f f2.tmp.dat
+./test_c_stdio_file_simple_unbuffered.prog f1.tmp.dat f2.tmp.dat c  # Copies long file f1.tmp.dat to f2.tmp.dat.
+./test_c_stdio_file_simple_unbuffered.prog f1.tmp.dat f2.tmp.dat c  # Copies long file f1.tmp.dat to f2.tmp.dat.
+: t6 fseek
+rm -f f2.tmp.dat
+./test_c_stdio_file_simple_unbuffered.prog f1.tmp.dat f2.tmp.dat s  # Copies long file f1.tmp.dat to f2.tmp.dat.
+./test_c_stdio_file_simple_unbuffered.prog f1.tmp.dat f2.tmp.dat s  # Copies long file f1.tmp.dat to f2.tmp.dat.
+
+rm -f f1.tmp.dat f2.tmp.dat

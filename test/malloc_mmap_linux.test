@@ -1,0 +1,2 @@
+_utcc_nasm2 malloc_mmap_linux.nasm -o test_malloc_mmap_linux.prog "$TESTDIR"/test_malloc.c
+./test_malloc_mmap_linux.prog

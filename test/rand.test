@@ -1,0 +1,3 @@
+_utcc_nasm2 rand.nasm -o test_rand.prog "$TESTDIR"/test_rand.c
+./test_rand.prog
+./test_rand.prog a

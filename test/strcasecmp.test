@@ -1,0 +1,2 @@
+_utcc_nasm2 strcasecmp.nasm -o test_strcasecmp.prog "$TESTDIR"/test_strcasecmp.c strcasecmp.o
+./test_strcasecmp.prog

@@ -1,0 +1,7 @@
+OBJS="i64_udivdi3.o i64_umoddi3.o i64_divdi3.o i64_moddi3.o i64_u8d.o i64_i8d.o m_flushall_dummy.o strlen.o"
+_nasm2 $OBJS
+_nasm_start start_stdio_file_linux.o
+_mtcc -o test_long_long.prog "$TESTDIR"/test_long_long.c $OBJS start_stdio_file_linux.o
+./test_long_long.prog 1234567890123456789 9876543210
+RESULT="$(./test_long_long.prog 1234567890123456789 9876543210 ||:)"
+test "$RESULT" = 8626543209

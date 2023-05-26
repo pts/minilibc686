@@ -1,0 +1,2 @@
+_utcc_nasm2 exit_linux.nasm -o test_exit_linux.prog "$TESTDIR"/test_exit.c exit_linux.o
+./test_exit_linux.prog

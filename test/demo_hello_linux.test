@@ -1,0 +1,13 @@
+SRC="$MYDIRP"
+CFLAGS=-I"$MYDIRP"
+_nasm2 demo_hello_linux.nasm
+chmod +x demo_hello_linux.bin
+# !! Check this.
+./demo_hello_linux.bin  # Prints: Hello, World!
+test "$(./demo_hello_linux.bin)" = "Hello, World!"
+./demo_hello_linux.bin a  # Prints: ello, World!
+test "$(./demo_hello_linux.bin a)" = "ello, World!"
+./demo_hello_linux.bin foo b  # Prints: llo, World!
+test "$(./demo_hello_linux.bin foo b)" = "llo, World!"
+env -i MYVAR=myvalue ./demo_hello_linux.bin foo b ar  # Prints: MYVAR=myvaluelo, World!
+test "$(env -i MYVAR=myvalue ./demo_hello_linux.bin foo b ar)" = "MYVAR=myvaluelo, World!"

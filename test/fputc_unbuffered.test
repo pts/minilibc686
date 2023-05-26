@@ -1,0 +1,2 @@
+_utcc_nasm2 fputc_unbuffered.nasm -o test_fputc_unbuffered.prog "$TESTDIR"/test_fputc_unbuffered.c
+./test_fputc_unbuffered.prog

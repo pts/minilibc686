@@ -1,0 +1,3 @@
+_nasm memcmp.o
+_utcc_nasm2 memmove.o -o test_memmove.prog "$TESTDIR"/test_memmove.c memcmp.o
+./test_memmove.prog

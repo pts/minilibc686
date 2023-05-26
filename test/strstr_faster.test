@@ -1,0 +1,2 @@
+_utcc_nasm2 strstr_faster.nasm -o test_strstr_faster.prog -Dmini_strstr=mini_strstr_faster "$TESTDIR"/test_strstr.c
+./test_strstr_faster.prog

@@ -1,0 +1,2 @@
+_utcc_nasm2 strchr.nasm -o test_strchr.prog "$TESTDIR"/test_strchr.c strchr.o
+./test_strchr.prog

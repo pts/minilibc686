@@ -1,0 +1,5 @@
+SRC="$MYDIRP"
+CFLAGS=-I"$MYDIRP"
+_nasm2 demo_hello_linux_nolibc.nasm
+chmod +x demo_hello_linux_nolibc.bin
+./demo_hello_linux_nolibc.bin

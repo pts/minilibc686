@@ -1,0 +1,4 @@
+_nasm m_flushall_dummy.o
+_nasm2 start_stdio_linux.o
+_utcc -o test_start_stdio_linux.prog "$TESTDIR"/test_start.c start_stdio_linux.o m_flushall_dummy.o
+./test_start_stdio_linux.prog

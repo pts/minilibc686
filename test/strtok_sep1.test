@@ -1,0 +1,2 @@
+_utcc_nasm2 strtok_sep1.nasm -o test_strtok_sep1.prog "$TESTDIR"/test_strtok.c strtok_sep1.o
+./test_strtok_sep1.prog

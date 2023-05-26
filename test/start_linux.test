@@ -1,0 +1,2 @@
+_utcc_nasm2 start_linux.nasm -o test_start_linux.prog "$TESTDIR"/test_start.c
+./test_start_linux.prog

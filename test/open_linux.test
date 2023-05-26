@@ -1,0 +1,5 @@
+_nasm m_flushall_dummy.o
+CFLAGS=-Dmini__start=_start
+_nasm2 start_stdio_file_linux.o
+_mtcc -o test_open_linux.prog "$TESTDIR"/test_open.c m_flushall_dummy.o start_stdio_file_linux.o
+./test_open_linux.prog

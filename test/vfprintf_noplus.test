@@ -1,0 +1,4 @@
+_utcc_nasm2 vfprintf_noplus.nasm -o test_vfprintf_noplus.prog "$TESTDIR"/test_vfprintf_noplus.c
+# TODO(pts): Add automatic comparisons of adjacent printf outputs.
+./test_vfprintf_noplus.prog a b c d
+./test_vfprintf_noplus.prog a

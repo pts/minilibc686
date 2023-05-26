@@ -1,0 +1,12 @@
+OBJS="vfprintf_noplus.o printf_callvf.o fputc_unbuffered.o write_linux.o need_start.o"
+_nasm $OBJS
+_nasm_start start_linux.o
+OBJS="$OBJS start_linux.o"
+rm -f libmini686_hello.a  # Some versions of ar(1) such as GNU ar(1) do something different if the .a file already exists.
+"$AR" crs libmini686_hello.a $OBJS
+_utcc -o test_c_hello_linux.prog "$TESTDIR"/test_c_hello.c need_start.o libmini686_hello.a
+
+./test_c_hello_linux.prog  # Prints: Hello, World!
+test "$(./test_c_hello_linux.prog)" = "Hello, World!"
+./test_c_hello_linux.prog there  # Prints: Hello, there!
+test "$(./test_c_hello_linux.prog there)" = "Hello, there!"
