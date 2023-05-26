@@ -8,6 +8,9 @@ void exit(int exit_code) __asm__("mini_exit") __attribute__((__noreturn__));  /*
 int rand(void) __asm__("mini_rand");
 void srand(unsigned seed) __asm__("mini_srand");
 
+long int strtol(const char *nptr, char **endptr, int base) __asm__("mini_strtol");
+double strtod(const char *nptr, char **endptr) __asm__("mini_strtod");
+
 /* The current implementation does an mmap(2) call for each allocation, and
  * it rounds up the size to 4 KiB boundary after adding 0x10. Thus it's
  * suitable for a few large allocations.
