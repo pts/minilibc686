@@ -61,9 +61,20 @@ How is this possible?
 * A custom stripping step is used to remove bloat from the executable (e.g.
   ELF section headers are removed, only program headers remain).
 
+Try it on Linux i386 or Linux amd64 (without the leading `$`):
+
+```
+$ ./minicc --tcc -W -Wall -o demo demo_c_hello.c
+$ ./demo
+Hello, World!
+```
+
+The first time you run it, it builds the libmini686.a using the bundled NASM
+(`tools/nasm-0.98.39`).
+
 The following components are included:
 
-* elf0.inc.nasm, a NASM library for creating ELF-32 executables written in
+* elf0.inc.nasm: A NASM library for creating ELF-32 executables written in
   NASM assembly language, entirely using NASM. (A C compiler or linker is
   not necessary.) The library takes care of adding headers and alignment.
   See demo_hello_linux_nolibc.nasm and demo_hello_linux_printf.nasm
@@ -74,6 +85,9 @@ The following components are included:
 
 * include/*.h and include/sys/*.h: C #include files for the users of
   minilibc686.
+
+* build.sh: Shell script to build the minilibc686 (files libmini386.a,
+  libmini686.a etc.) from NASM sources.
 
 * soptcc.pl: Perl script to run many C compilers with many settings on the
   same source file, choose the shortest output, and generate NASM source
@@ -89,15 +103,31 @@ The following components are included:
   To build a program, run `./minicc --utcc -o prog prog.c'.
 
 * minicc: A C compiler frontend to build small, statically linked ELF-32
-  executables. By default, these executables link against minilibc686, but
-  with the usual `-nostdlib` flag, you can add your own libc. It can use GCC
-  and Clang compilers installed onto the system, and it runs the compiler
-  and the linker with many size-optimization flags, and it removes most
-  unnecessary stuff from the final executable. In
-  addition to these compilers, it can use the bundled TinyCC compiler
-  (tools/pts-tcc) (use the `--tcc` flag).
+  executables. Running minicc is the recommended way to build your programs
+  using minilibc686. By default, these executables link against minilibc686,
+  but with the usual `-nostdlib` flag, you can add your own libc. It can use
+  GCC and Clang compilers installed onto the system, and it runs the
+  compiler and the linker with many size-optimization flags, and it removes
+  most unnecessary stuff from the final executable. In addition to these
+  compilers, it can use the bundled TinyCC compiler (tools/pts-tcc) (use the
+  `--tcc` flag).
 
-Please note that minilibc686 is more like am experimental technological demo
+* tools/nasm-0.98.39: NASM (Netwide Assembler) executables to build .o files
+  from the .nasm files. It is invoked by build.sh.
+
+* tools/ndisasm-0.98.39: Simple flat binary disassembler coming with NASM.
+  It is invoked by build.sh to compare the output of various runs of
+  tools/nasm-0.98.39.
+
+* tools/tiny_libmaker: A tool to build static library (.a) files from ELF
+  relocatable (object .o) files. Like GNU ar(1), but much smaller. C source
+  is also included.
+
+* tools/elfnostack, tools/elfofix, tools/elfxfix: Helper programs for
+  manipulating ELF executable and relocatable files. build.sh and minicc
+  invoke them automatically when needed. C source is also included.
+
+Please note that minilibc686 is more like an experimental technological demo
 rather than a feature-complete and battle-tested libc, and it is not ready
 for production use, it's especially not ready for easy porting of random
 prewritten software. (If you need something like that, use musl with `zig
@@ -148,17 +178,6 @@ Features:
   NASM only.
 * For this source code, NASM 0.98.39 generates bitwise identical output no
   matter the optimization level (`-O0` vs `-O999999999`).
-
-Try it on Linux i386 or Linux amd64 (without the leading `$`):
-
-```
-$ ./minicc --tcc -W -Wall -o demo demo_c_hello.c
-$ ./demo
-Hello, World!
-```
-
-The first time you run it, it builds the mini686.a using the bundled NASM
-(`tools/nasm-0.98.39`).
 
 The *minicc* compiler fronted is a drop-in replacement for `gcc`, `clang` or
 `tcc` for building ELF-32 executables for Linux i386, statically linked
