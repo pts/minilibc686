@@ -22,13 +22,6 @@ unset BUSYBOX_SH_SCRIPT
 MYDIRP="$MYDIR/"
 while test "${MYDIRP#./}" != "$MYDIRP"; do MYDIRP="${MYDIRP#./}"; done
 
-SRC="$MYDIRP"src
-INCLUDE="$MYDIRP"include
-TOOLS="$MYDIRP"tools
-NASM="$TOOLS"/nasm-0.98.39
-NDISASM="$TOOLS"/ndisasm-0.98.39
-AR="$TOOLS"/tiny_libmaker
-TESTTCC="$TOOLS"/pts-tcc
 CFLAGS=  # TODO(pts): Make this configurable from the command line.
 export LC_ALL=C  # For consistency. With Busybox we don't need it, because the environment is empty.
 
@@ -43,25 +36,24 @@ for TF in "$@"; do
     echo "info: skipping non-test file: $TF"; continue
   esac
   if ! test -f "$TF"; then echo "fatal: missing test script: $TF"; exit 2; fi
-  DD=
   case "$TF" in
-   /*) ;;
+   /*) DD="$(cd "$MYDIR" && pwd)/"; if test "$DD" = /; then echo "fatal: error getting current directory: $MYDIR"; exit 4; fi ;;
    *//*)  echo "fatal: double slash in test pathname: $TF" >&2; exit 4 ;;
    */*/*/*/*/*) echo "fatal: too many components in test pathname: $TF" >&2; exit 4 ;;  # TODO(pts): Support more.
-   */*/*/*/*) DD=../../../../ ;;
-   */*/*/*) DD=../../../ ;;
-   */*/*) DD=../../ ;;
-   */*) DD=../ ;;
+   */*/*/*/*) DD=../../../../"$MYDIRP" ;;
+   */*/*/*) DD=../../../"$MYDIRP" ;;
+   */*/*) DD=../../"$MYDIRP" ;;
+   */*) DD=../"$MYDIRP" ;;
+   *) DD="$MYDIRP" ;;
   esac
   echo "info: running test: $TF" >&2
   # !! TODO(pts): Create empty tmp directory for test for each run, for better isolation.
   if (cd "${TF%/*}" && export PATH="$DD"shbin && unset OKC FAILC DO_STOP &&
-      export PATH="$DD$MYDIRP"shbin &&
-      MYDIR="$DD$MYDIR" && MYDIRP="$DD$MYDIRP" &&
-      NASM="$DD$NASM" && NDISASM="$DD$NDISASM" &&
-      AR="$DD$AR" && TESTTCC="$DD$TESTTCC" && INCLUDE="$DD$INCLUDE" &&
-      TOOLS="$DD$TOOLS" && SRC="$DD$SRC" &&
-      set -- && set -ex && . "${TF##*/}"); then
+      export PATH="$DD"shbin && : unset SRC INCLUDE TOOLS NASM NDISASM AR TESTTCC &&
+      SRC="$DD"src && INCLUDE="$DD"include && TOOLS="$DD"tools &&
+      NASM="$TOOLS"/nasm-0.98.39 && NDISASM="$TOOLS"/ndisasm-0.98.39 &&
+      AR="$TOOLS"/tiny_libmaker && TESTTCC="$TOOLS"/pts-tcc &&
+      unset DD && set -- && set -ex && . "${TF##*/}"); then
     let OKC+=1
   else
     let FAILC+=1
