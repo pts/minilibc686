@@ -182,6 +182,19 @@ Features:
   NASM only.
 * For this source code, NASM 0.98.39 generates bitwise identical output no
   matter the optimization level (`-O0` vs `-O999999999`).
+* It assumes that an FPU (floating point unit) is available at runtime. (The
+  original name of such a separate FPU was 80387 or 387.) This is always
+  true for i686 (because having an FPU is mandatory since Pentium = P5 ==
+  i586), but some i386 and i486 CPUs come without one. Linux, if the kernel
+  is built with CONFIG_MATH_EMULATION, will transparently emulate an FPU.
+  Currently minilibc686 is unable to target an i386 without an FPU or
+  emulation. (If such support is ever added, then `-mno-80387
+  -mno-fp-ret-in-387` will have to be used to compile C code, and soft-float
+  functions such as `__muldf3` must be added to the libc. Please note that
+  `-mno-fp-ret-in-387` breaks the cdecl ABI, because with that doubles are
+  returned in EDX:EAX rather than ST(0), the latter requiring an FPU.)
+
+for i386 it could be lacking
 
 The *minicc* compiler fronted is a drop-in replacement for `gcc`, `clang` or
 `tcc` for building ELF-32 executables for Linux i386, statically linked
