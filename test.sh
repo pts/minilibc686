@@ -7,42 +7,57 @@
 # Test scripts (shell scripts): test/*.test
 #
 
-# Rerun ourselves with shbin/sh (BusyBox sh), without environment variables
-# (for reproducible builds).
-# !! TODO(pts): Ship with a much smaller busybox executable, which also covers minicc.
-if test "$PATH" != shbin && test -f "${0%/*}/shbin/env"; then
-  cd "${0%/*}" && exec shbin/env -i PATH=shbin sh -- "${0##*/}" "$@"
-  echo "fatal: failed to start busybox sh" >&2; exit 2
+unset MYDIR
+MYDIR="$(readlink "$0" 2>/dev/null)"
+if test "$MYDIR"; then test "${MYDIR#/}" = "$MYDIR" && MYDIR="${0%/*}/$MYDIR"
+else MYDIR="$0"
 fi
+MYDIR="${MYDIR%/*}"
+# Use BusyBox (if available) for consistent shell and coreutils.
+# Use empty environment (env -i) for reproducible tests.
+test -z "$BUSYBOX_SH_SCRIPT" && test -f "$MYDIR/shbin/env" &&
+    exec "$MYDIR/shbin/env" -i BUSYBOX_SH_SCRIPT=1 PATH="$MYDIR/shbin" sh -- "$0" "$@"
+unset BUSYBOX_SH_SCRIPT
 
-NASM=tools/nasm-0.98.39
-NDISASM=tools/ndisasm-0.98.39
-AR=tools/tiny_libmaker
-TESTTCC=tools/pts-tcc
-INCLUDE=include
-TOOLS=tools
-SRC=src
-CFLAGS=
+MYDIRP="$MYDIR/"
+while test "${MYDIRP#./}" != "$MYDIRP"; do MYDIRP="${MYDIRP#./}"; done
+
+SRC="$MYDIRP"src
+INCLUDE="$MYDIRP"include
+TOOLS="$MYDIRP"tools
+NASM="$TOOLS"/nasm-0.98.39
+NDISASM="$TOOLS"/ndisasm-0.98.39
+AR="$TOOLS"/tiny_libmaker
+TESTTCC="$TOOLS"/pts-tcc
+CFLAGS=  # TODO(pts): Make this configurable from the command line.
 export LC_ALL=C  # For consistency. With Busybox we don't need it, because the environment is empty.
 
 DO_STOP=
 if test "$1" == --stop; then shift; DO_STOP=1; fi
 
-test $# = 0 && set x test/*.test && shift
+test $# = 0 && set x "$MYDIRP"test/*.test && shift
 OKC=0; FAILC=0
 for TF in "$@"; do
+  case "$TF" in
+   *.test) ;; *)
+    echo "info: skipping non-test file: $TF"; continue
+  esac
   if ! test -f "$TF"; then echo "fatal: missing test script: $TF"; exit 2; fi
   DD=
   case "$TF" in
    /*) ;;
    *//*)  echo "fatal: double slash in test pathname: $TF" >&2; exit 4 ;;
-   */*/*/*) echo "fatal: too many components in test pathname: $TF" >&2; exit 4 ;;  # TODO(pts): Support more.
+   */*/*/*/*/*) echo "fatal: too many components in test pathname: $TF" >&2; exit 4 ;;  # TODO(pts): Support more.
+   */*/*/*/*) DD=../../../../ ;;
+   */*/*/*) DD=../../../ ;;
    */*/*) DD=../../ ;;
    */*) DD=../ ;;
   esac
   echo "info: running test: $TF" >&2
   # !! TODO(pts): Create empty tmp directory for test for each run, for better isolation.
   if (cd "${TF%/*}" && export PATH="$DD"shbin && unset OKC FAILC DO_STOP &&
+      export PATH="$DD$MYDIRP"shbin &&
+      MYDIR="$DD$MYDIR" && MYDIRP="$DD$MYDIRP" &&
       NASM="$DD$NASM" && NDISASM="$DD$NDISASM" &&
       AR="$DD$AR" && TESTTCC="$DD$TESTTCC" && INCLUDE="$DD$INCLUDE" &&
       TOOLS="$DD$TOOLS" && SRC="$DD$SRC" &&
@@ -65,5 +80,3 @@ else
   printf "fatal: done running tests, %d succeeded, %d \\033[0;31mfailed\\033[0m\n" "$OKC" "$FAILC" >&2
   exit 3
 fi
-
-
