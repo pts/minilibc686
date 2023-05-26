@@ -1317,6 +1317,7 @@ sub convert_to_nasm($$$$$$$) {
 my @oflags;
 my @cflags;
 my $srcfn;
+my $is_i686_enabled = 1;
 my $is_owcc_enabled = 1;
 my $data_alignment = 4;
 {
@@ -1332,6 +1333,8 @@ my $data_alignment = 4;
       $is_owcc_enabled = 1;
     } elsif ($arg eq "-mno-owcc") {
       $is_owcc_enabled = 0;
+    } elsif ($arg eq "-march=i386") {
+      $is_i686_enabled = 0;
     } elsif ($arg =~ m@-malign=(.*)\Z(?!\n)@) {  # Data section alignment.
       my $value = $1;
       # Allowed values: 0, 1, 2, 4, 8, 16, 32.
@@ -1485,6 +1488,7 @@ my @gcc_cmds = (  # GCC and Clang C compilers.
     ["clang", "-march=i386", "-fomit-frame-pointer", @clang_flags],
     ["clang", "-march=i686", "-fomit-frame-pointer", @clang_flags],
 );
+@gcc_cmds = grep { !grep { $_ eq "-march=i686" } @$_ } @gcc_cmds if !$is_i686_enabled;
 my @owcc_flags = qw(-blinux -Os -fno-stack-check -fsigned-char -march=i386 -mabi=cdecl -W -Wall -Wextra -Werror);
 my @owcc_cmds = (  # OpenWatcom C compiler. Good or optimizing for size.
     ["owcc", @owcc_flags],
