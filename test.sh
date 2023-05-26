@@ -64,6 +64,12 @@ _nasm2() {
     fi
   done
 }
+_utcc_nasm2() {
+  local FNASM="$1"
+  _nasm2 "$FNASM"
+  shift
+  _utcc "${FNASM%.*}.o" "$@"
+}
 
 # ---
 
