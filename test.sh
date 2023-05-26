@@ -103,6 +103,7 @@ for TF in "$@"; do
   # !! TODO(pts): Create empty tmp directory for test for each run, for better isolation.
   if (cd "$RUNDIR" && export PATH="$DD"shbin && unset OKC FAILC DO_STOP &&
       export PATH="$DD"shbin && : unset SRC INCLUDE TOOLS NASM NDISASM AR TESTTCC &&
+      MYDIRP="$DD" &&
       SRC="$DD"src && INCLUDE="$DD"include && TOOLS="$DD"tools &&
       NASM="$TOOLS"/nasm-0.98.39 && NDISASM="$TOOLS"/ndisasm-0.98.39 &&
       AR="$TOOLS"/tiny_libmaker && TESTTCC="$TOOLS"/pts-tcc && TESTDIR=.. &&
