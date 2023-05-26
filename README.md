@@ -353,6 +353,7 @@ This section is mostly an FYI, it doesn't affter minilibc686 users directly.
     .o file order.
   * See `tcc_common_lib_bug.sh` for TCC failing to link in symbol
     mini___M_init_isatty even though it's referenced as extern and common.
+  * It displayes `... defined twice` error, but it doesn't fail.
 
 # TODOs
 
