@@ -1,0 +1,4 @@
+OBJS=write_linux.o
+_nasm2 $OBJS
+_utcc -o test_write_linux.prog "$TESTDIR"/test_write.c $OBJS
+./test_write_linux.prog
