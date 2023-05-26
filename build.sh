@@ -44,7 +44,7 @@ AR=tools/tiny_libmaker
 
 export LC_ALL=C  # For consistency. With Busybox we don't need it, because the environment is empty.
 
-OUTFNS='libmini386.a libmini686.a libminitcc1.a need_start.o need_uclibc_main.o need_uclibc_main.o'
+OUTFNS='libmini386.a libmini686.a libminitcc1.a need_start.o need_uclibc_main.o start_uclibc_linux.o'
 LIBI386_OBJS=
 LIBI686_OBJS=
 if ! test -f start_stdio_medium_linux.nasm; then
