@@ -1,0 +1,2 @@
+_utcc_nasm2 isnan_nofpu.nasm -o test_isnan_nofpu.prog -Dmini_isnan=mini_isnan_nofpu "$TESTDIR"/test_isnan.c
+./test_isnan_nofpu.prog

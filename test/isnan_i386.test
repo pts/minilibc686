@@ -1,0 +1,3 @@
+CFLAGS=-DCONFIG_I386
+_utcc_nasm2 isnan.nasm -o test_isnan_i386.prog "$TESTDIR"/test_isnan.c
+./test_isnan_i386.prog

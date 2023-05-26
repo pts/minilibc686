@@ -1,0 +1,2 @@
+_utcc_nasm2 isnan.nasm -o test_isnan_i686.prog "$TESTDIR"/test_isnan.c
+./test_isnan_i686.prog
