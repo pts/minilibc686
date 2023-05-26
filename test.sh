@@ -25,6 +25,15 @@ while test "${MYDIRP#./}" != "$MYDIRP"; do MYDIRP="${MYDIRP#./}"; done
 CFLAGS=  # TODO(pts): Make this configurable from the command line.
 export LC_ALL=C  # For consistency. With Busybox we don't need it, because the environment is empty.
 
+# --- Shell functions callable from the *.test scripts.
+
+# Some gcc flags: -Werror=implicit-function-declaration -freestanding -ansi -pedantic
+# Out of this TinyCC rejects -ansi.
+_utcc() { "$TESTTCC" -s -Os -W -Wall -Werror=implicit-function-declaration -nostdinc -I"$INCLUDE" -D"__asm__(x)=" "$@"; }
+_mtcc() { "$TESTTCC" -s -Os -W -Wall  -nostdlib -nostdinc -I"$INCLUDE" -D__MINILIBC686__ "$@"; }
+
+# ---
+
 DO_STOP=
 if test "$1" == --stop; then shift; DO_STOP=1; fi
 

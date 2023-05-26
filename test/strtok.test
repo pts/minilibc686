@@ -7,5 +7,5 @@ if ! cmp strtok.bin strtok.o0.bin; then
   "$NDISASM" -b 32 strtok.o0.bin >strtok.o0.ndisasm
   diff -U3 strtok.ndisasm strtok.o0.ndisasm
 fi
-"$TESTTCC" -Os -W -Wall -s -o test_strtok.prog -I"$INCLUDE" -D"__asm__(x)=" "$TESTDIR"/test_strtok.c strtok.o
+_utcc -o test_strtok.prog "$TESTDIR"/test_strtok.c strtok.o
 ./test_strtok.prog

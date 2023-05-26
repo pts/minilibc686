@@ -27,12 +27,12 @@
 "$NASM" $CFLAGS -O999999999 -w+orphan-labels -f elf -o stdio_medium_fputc.o "$SRC"/stdio_medium_fputc.nasm
 "$NASM" $CFLAGS -O999999999 -w+orphan-labels -f elf -Dmini__start=_start -o start_stdio_medium_linux.o "$SRC"/start_stdio_medium_linux.nasm
 "$TOOLS"/elfofix -w -- start_stdio_medium_linux.o  # `-w' fixes weak symbols. .nasm files containing WEAK.. are affected.
-ARGS="-D__MINILIBC686__ -m32 -Os -W -Wall -s -Werror=implicit-function-declaration -ffreestanding -I$INCLUDE -nostdlib -nostdinc -pedantic stdio_medium_fileno.o stdio_medium_fwrite.o stdio_medium_fread.o stdio_medium_fgetc.o stdio_medium_fgetc_fallback.o stdio_medium_fputc.o "$TESTDIR"/test_stdstream.c stdio_medium_sprintf.o stdio_medium_vsprintf.o stdio_medium_snprintf.o stdio_medium_vsnprintf.o stdio_medium_fputs.o stdio_medium_vfprintf.o printf_callvf.o vprintf_callvf.o fprintf_callvf.o stdio_medium_puts.o stdio_medium_getchar.o stdio_medium_putchar.o isatty_linux.o stdio_medium_stdin.o stdio_medium_stdout.o stdio_medium_stderr.o strcmp.o stdio_medium_discard_buf.o stdio_medium_fflush.o stdio_medium_fputc_rp2.o stdio_medium_writebuf_relax.o start_stdio_medium_linux.o"
-#clang -static -o test_c_stdio_medium_stdstream.prog -ansi $ARGS
-#qq xstatic gcc -static -o test_c_stdio_medium_stdstream.prog -ansi $ARGS
-"$TESTTCC" -o test_c_stdio_medium_stdstream.prog $ARGS
-"$TESTTCC" -o test_c_stdio_medium_stdstream.macro.prog -DCONFIG_MACRO_GETC_PUTC $ARGS
-"$TESTTCC" -o test_c_stdio_medium_stdstream.inline.prog -DCONFIG_INLINE_GETC_PUTC $ARGS
+OBJS="stdio_medium_fileno.o stdio_medium_fwrite.o stdio_medium_fread.o stdio_medium_fgetc.o stdio_medium_fgetc_fallback.o stdio_medium_fputc.o stdio_medium_sprintf.o stdio_medium_vsprintf.o stdio_medium_snprintf.o stdio_medium_vsnprintf.o stdio_medium_fputs.o stdio_medium_vfprintf.o printf_callvf.o vprintf_callvf.o fprintf_callvf.o stdio_medium_puts.o stdio_medium_getchar.o stdio_medium_putchar.o isatty_linux.o stdio_medium_stdin.o stdio_medium_stdout.o stdio_medium_stderr.o strcmp.o stdio_medium_discard_buf.o stdio_medium_fflush.o stdio_medium_fputc_rp2.o stdio_medium_writebuf_relax.o start_stdio_medium_linux.o"
+#clang -static -o test_c_stdio_medium_stdstream.prog -ansi "$TESTDIR"/test_stdstream.c $OBJS
+#qq xstatic gcc -static -o test_c_stdio_medium_stdstream.prog -ansi "$TESTDIR"/test_stdstream.c $OBJS
+_mtcc -o test_c_stdio_medium_stdstream.prog "$TESTDIR"/test_stdstream.c $OBJS
+_mtcc -o test_c_stdio_medium_stdstream.macro.prog -DCONFIG_MACRO_GETC_PUTC "$TESTDIR"/test_stdstream.c $OBJS
+_mtcc -o test_c_stdio_medium_stdstream.inline.prog -DCONFIG_INLINE_GETC_PUTC "$TESTDIR"/test_stdstream.c $OBJS
 
 if ./test_c_stdio_medium_stdstream.prog; then :; else echo "$?"; exit 1; fi  # Copies f1.tmp.dat to f2.tmp.dat.
 RESULT="$(./test_c_stdio_medium_stdstream.prog 2>&1 ||:)"
