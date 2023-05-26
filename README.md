@@ -270,7 +270,32 @@ Calling convention:
 * Floating-point values are returned in ST(0), ST(1)..ST(7) must be free
   (popped or freed) on return.
 
-Linker problems:
+## Build system
+
+* The build system is implemented in a single Linux shell script, build.sh,
+  which when run (as `./build.sh`), rebuilds the entire minilibc686 library
+  (e.g. minilibc386.a and minilibc686.a) from *.nasm sources.
+* There is no incremental build, it always rebuilds everything. Since the
+  total code size is small, and NASM is fast, the full build takes a few
+  seconds only.
+* The build system is hermetic and fully reproducible. This is achieved by:
+  * NASM generates the same output for the same input.
+  * tools/tiny_libmaker generates the same output from the same input.
+  * *.nasm files are built and added to the *.a files in alphabetical order.
+  * All build tools and helper programs are included in the repository in
+    the form of statically linked Linux i386 executables. They reside in the
+    *tools* and *shlib* directories.
+  * build.sh removes all environment variables, and sets `PATH` to *shlib*
+    only (and directly invokes tools from *tools* when needed).
+* The build system works on any Linux i386 and amd64 system, without the
+  need to install any tools (like GCC, NASM, CMake, GNU make): as soon as
+  the repository is checked out, it doesn't need anything from the system
+  (apart from `/bin/sh` in the very beginning of the build), because all
+  build tools are included in the repository.
+
+## Linker problems:
+
+This section is mostly an FYI, it doesn't affter minilibc686 users directly.
 
 * GNU gold(1) 2.22 is mostly correct.
 
