@@ -127,6 +127,10 @@ The following components are included:
   manipulating ELF executable and relocatable files. build.sh and minicc
   invoke them automatically when needed. C source is also included.
 
+* test_*.sh: Shell script to build parts of minilibc686 and run some unit
+  tests. Please note that there is no full test coverage, and the testing
+  infrastructure (i.e. bunch of hacky shell scripts) is primitive (so far).
+
 Please note that minilibc686 is more like an experimental technological demo
 rather than a feature-complete and battle-tested libc, and it is not ready
 for production use, it's especially not ready for easy porting of random
