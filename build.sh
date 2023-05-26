@@ -3,38 +3,55 @@
 # build.sh: builds the libc as static Linux i386 library from sources
 # by pts@fazekas.hu at Sun May 21 00:33:10 CEST 2023
 #
+# Input files: *.nasm
+# Output files (see also OUTFNS): libmini386.a libmini686.a libminitcc1.a need_start.o need_uclibc_main.o need_uclibc_main.o
+# Temporary output files: other *.o *.bin
+#
 
-cd "${0%/*}" || exit 1
-
-if test "$NASM"; then :
-elif test -f tools/nasm-0.98.39 && tools/nasm-0.98.39 -h 2>/dev/null >&2; then NASM=tools/nasm-0.98.39
-elif nasm-0.98.39 -h 2>/dev/null >&2; then NASM=nasm-0.98.39
-elif nasm -h 2>/dev/null >&2; then NASM=nasm
-else NASM=nasm  # Will fail.
+# Rerun ourselves with shbin/sh (BusyBox sh), without environment variables
+# (for reproducible builds).
+# !! TODO(pts): Ship with a much smaller busybox executable, which also covers minicc.
+if test "$PATH" != shbin && test -f "${0%/*}/shbin/env"; then
+  cd "${0%/*}" && exec shbin/env -i PATH=shbin sh -- "${0##*/}" "$@"
+  echo "fatal: failed to start busybox sh" >&2; exit 2
 fi
 
-if test "$NDISASM"; then :
-elif test -f tools/ndisasm-0.98.39 && tools/ndisasm-0.98.39 -h 2>/dev/null >&2; then NDISASM=tools/ndisasm-0.98.39
-elif ndisasm-0.98.39 -h 2>/dev/null >&2; then NDISASM=ndisasm-0.98.39
-elif ndisasm -h 2>/dev/null >&2; then NDISASM=ndisasm
-else NDISASM=  # Disabled.
-fi
+NASM=tools/nasm-0.98.39
+NDISASM=tools/ndisasm-0.98.39
+AR=tools/tiny_libmaker
 
-if test "$AR"; then :
-elif test -f tools/tiny_libmaker && tools/tiny_libmaker -h 2>/dev/null >&2; then AR=tools/tiny_libmaker
-elif ar -h 2>/dev/null >&2; then AR=ar
-else AR=ar  # Will fail.
-fi
+# !! TODO(pts): Make this work again as command-line flags (no envirnoment variables), e.g. find /usr/bin/nasm.
+# !! TODO(pts): Also make CFLAGS work
+#if test "$NASM"; then :
+#elif test -f tools/nasm-0.98.39 && tools/nasm-0.98.39 -h 2>/dev/null >&2; then NASM=tools/nasm-0.98.39
+#elif nasm-0.98.39 -h 2>/dev/null >&2; then NASM=nasm-0.98.39
+#elif nasm -h 2>/dev/null >&2; then NASM=nasm
+#else NASM=nasm  # Will fail.
+#fi
+#
+#if test "$NDISASM"; then :
+#elif test -f tools/ndisasm-0.98.39 && tools/ndisasm-0.98.39 -h 2>/dev/null >&2; then NDISASM=tools/ndisasm-0.98.39
+#elif ndisasm-0.98.39 -h 2>/dev/null >&2; then NDISASM=ndisasm-0.98.39
+#elif ndisasm -h 2>/dev/null >&2; then NDISASM=ndisasm
+#else NDISASM=  # Disabled.
+#fi
+#
+#if test "$AR"; then :
+#elif test -f tools/tiny_libmaker && tools/tiny_libmaker -h 2>/dev/null >&2; then AR=tools/tiny_libmaker
+#elif ar -h 2>/dev/null >&2; then AR=ar
+#else AR=ar  # Will fail.
+#fi
 
-export LC_ALL=C  # For consistency.
+export LC_ALL=C  # For consistency. With Busybox we don't need it, because the environment is empty.
 
+OUTFNS='libmini386.a libmini686.a libminitcc1.a need_start.o need_uclibc_main.o need_uclibc_main.o'
 LIBI386_OBJS=
 LIBI686_OBJS=
 if ! test -f start_stdio_medium_linux.nasm; then
   echo "fatal: missing: start_stdio_medium_linux.nasm" >&2
   exit 2
 fi
-for F in *.nasm; do
+for F in [a-zA-Z0-9_]*.nasm; do
   test "${F#c_}" = "$F" || continue  # Skip c_*.nasm.
   grep -q CONFIG_PIC <"$F" || continue  # Not a libc source file.
   echo "info: compiling: $F" >&2
@@ -108,5 +125,5 @@ for ARCH in i386 i686; do
   set +ex
 done
 
-ls -l libmini386.a libmini686.a need_start.o
+ls -l $OUTFNS
 echo : "$0" OK.
