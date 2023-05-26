@@ -141,6 +141,8 @@ it a try.
 
 Similar work:
 
+* [aligrudi/neatlibc] has
+  [some functions in 386 assembly]((https://github.com/aligrudi/neatlibc/tree/master/x86).
 * [sebastiencs/asm_minilibc](https://github.com/sebastiencs/asm_minilibc/tree/master/x86)
   targets i386 and amd64. It implements a few mem* str* functions. The code
   doesn't look too much optimized for size.
@@ -193,8 +195,6 @@ Features:
   functions such as `__muldf3` must be added to the libc. Please note that
   `-mno-fp-ret-in-387` breaks the cdecl ABI, because with that doubles are
   returned in EDX:EAX rather than ST(0), the latter requiring an FPU.)
-
-for i386 it could be lacking
 
 The *minicc* compiler fronted is a drop-in replacement for `gcc`, `clang` or
 `tcc` for building ELF-32 executables for Linux i386, statically linked
