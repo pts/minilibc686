@@ -40,21 +40,27 @@ for TF in "$@"; do
    /*) DD="$(cd "$MYDIR" && pwd)/"; if test "$DD" = /; then echo "fatal: error getting current directory: $MYDIR"; exit 4; fi ;;
    *//*)  echo "fatal: double slash in test pathname: $TF" >&2; exit 4 ;;
    */*/*/*/*/*) echo "fatal: too many components in test pathname: $TF" >&2; exit 4 ;;  # TODO(pts): Support more.
-   */*/*/*/*) DD=../../../../"$MYDIRP" ;;
-   */*/*/*) DD=../../../"$MYDIRP" ;;
-   */*/*) DD=../../"$MYDIRP" ;;
-   */*) DD=../"$MYDIRP" ;;
-   *) DD="$MYDIRP" ;;
+   */*/*/*/*) DD=../../../../../"$MYDIRP" ;;
+   */*/*/*) DD=../../../../"$MYDIRP" ;;
+   */*/*) DD=../../../"$MYDIRP" ;;
+   */*) DD=../../"$MYDIRP" ;;
+   *) DD=../"$MYDIRP" ;;
   esac
   echo "info: running test: $TF" >&2
+  RUNDIR="${TF%.*}.rundir"  # TODO(pts): When parallel execution is active, add $$ etc. here.
+  if test -e "$RUNDIR"; then
+    if ! rm -rf -- "$RUNDIR"; then echo "fatal: error deleting recursively: $RUNDIR" >&2; exit 5; fi
+  fi
+  if ! mkdir -- "$RUNDIR"; then echo "fatal: error creating test rundir: $RUNDIR" >&2; exit 6; fi
   # !! TODO(pts): Create empty tmp directory for test for each run, for better isolation.
-  if (cd "${TF%/*}" && export PATH="$DD"shbin && unset OKC FAILC DO_STOP &&
+  if (cd "$RUNDIR" && export PATH="$DD"shbin && unset OKC FAILC DO_STOP &&
       export PATH="$DD"shbin && : unset SRC INCLUDE TOOLS NASM NDISASM AR TESTTCC &&
       SRC="$DD"src && INCLUDE="$DD"include && TOOLS="$DD"tools &&
       NASM="$TOOLS"/nasm-0.98.39 && NDISASM="$TOOLS"/ndisasm-0.98.39 &&
-      AR="$TOOLS"/tiny_libmaker && TESTTCC="$TOOLS"/pts-tcc &&
-      unset DD && set -- && set -ex && . "${TF##*/}"); then
+      AR="$TOOLS"/tiny_libmaker && TESTTCC="$TOOLS"/pts-tcc && TESTDIR=.. &&
+      unset DD RUNDIR && set -- && set -ex && . ../"${TF##*/}"); then
     let OKC+=1
+    if ! rm -rf -- "$RUNDIR"; then echo "fatal: error deleting recursively: $RUNDIR" >&2; exit 5; fi
   else
     let FAILC+=1
     if test "$DO_STOP"; then
