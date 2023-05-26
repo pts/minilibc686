@@ -1,0 +1,2 @@
+_utcc_nasm2 log_complicated.nasm -o test_log_complicated.prog -Dmini_log=mini_log_complicated "$TESTDIR"/test_log.c
+./test_log_complicated.prog

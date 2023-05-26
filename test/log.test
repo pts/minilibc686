@@ -1,0 +1,2 @@
+_utcc_nasm2 log.nasm -o test_log.prog "$TESTDIR"/test_log.c
+./test_log.prog
