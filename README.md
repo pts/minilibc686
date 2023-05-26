@@ -262,6 +262,28 @@ Design limitations:
   configurations.
 * File offsets (off_t) are 32-bit. (This can be relaxed later.)
 
+## Testing
+
+minilibc686 has some unit tess. Run all of them by running `./test.sh`.
+
+The tests are in the `*/*.test` files, which are shell scripts run by
+`./test.sh` after creating some variables and functions.
+
+Typically each test script file compiles the `*.nasm` file under test with
+some test code written in C (`*.c`), runs it, and analyzes the result.
+
+The test framework supports reproducible tests by automatically removing all
+environment variables (including `$PATH`) and then setting some of them to
+known good values; and also it runs each test file in a separte, empty
+directory, to prevent accidental data sharing between tests.
+
+Just like with building (`./build.sh`), the minilibc686 repository contains
+all build tools (e.g. NASM assembler, TinyCC C compiler and linker,
+tiny_libmaker static library creator) used by the tests, so running the
+tests doesn't need tools (e.g. system GCC) installed to the system. As soon
+as you have downloaded the repository to your Linux i386 or amd64 system,
+you can run `./test.sh` without having to install anything.
+
 ## Calling convention
 
 * minilibc686 uses the
