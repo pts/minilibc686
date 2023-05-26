@@ -103,6 +103,7 @@ for TF in "$@"; do
       unset DD RUNDIR && set -- && set -ex && . ../"${TF##*/}"); then
     let OKC+=1
     if ! rm -rf -- "$RUNDIR"; then echo "fatal: error deleting recursively: $RUNDIR" >&2; exit 5; fi
+    printf "info: \\033[0;32mtest succeeded\\033[0m: %s\n" "$TF" >&2  # TODO(pts): Add option to run the subsequent tests.
   else
     XC="$?"
     let FAILC+=1
