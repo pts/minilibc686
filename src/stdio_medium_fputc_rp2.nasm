@@ -29,7 +29,7 @@ mini___M_fputc_RP2:
 		push ebx
 		mov ebx, edx
 		push ecx
-		mov [esp+0x3], al
+		mov [esp+0x3], al  ; Local variable uc.
 		mov eax, [edx+0x4]
 		cmp [edx], eax
 		jne .16
@@ -44,7 +44,7 @@ mini___M_fputc_RP2:
 		cmp [ebx], eax
 		jne .16
 		push byte 1
-		lea eax, [esp+0x7]
+		lea eax, [esp+0x7]  ; Local variable uc.
 		push eax
 		push dword [ebx+0x10]
 		call mini_write
@@ -55,16 +55,16 @@ mini___M_fputc_RP2:
 .16:		mov eax, [ebx]
 		lea edx, [eax+0x1]
 		mov [ebx], edx
-		mov dl, [esp+0x3]
+		mov dl, [esp+0x3]  ; Local variable uc.
 		mov [eax], dl
-		cmp byte [esp+0x3], 0xa
+		cmp byte [esp+0x3], 0xa  ; Local variable uc.
 		jne .21
 		cmp byte [ebx+0x14], 0x6
 		jne .21
 		push ebx
 		call mini_fflush
 		pop ecx
-.21:		movzx eax, byte [esp+0x3]
+.21:		movzx eax, byte [esp+0x3]  ; Local variable uc.
 .14:		pop edx
 		pop ebx
 		ret
