@@ -80,7 +80,7 @@ The following components are included:
   See demo_hello_linux_nolibc.nasm and demo_hello_linux_printf.nasm
   as example users of elf0.inc.nasm.
 
-* *.nasm: libc functions written in NASM assembly language. They can be
+* src/*.nasm: libc functions written in NASM assembly language. They can be
   indiviually copy-pasted to ther projects.
 
 * include/*.h and include/sys/*.h: C #include files for the users of

@@ -69,6 +69,9 @@ mini___M_start_flush_opened:
 %endif
 %endif
 		ret 
+%ifidn __OUTPUT_FORMAT__, bin  ; Affects start_stdio_medium_linux.nasm %included()d later: it won't try to redefine these symbols.
+  %define mini___M_start_flush_opened mini___M_start_flush_opened
+%endif
 
 section .bss
 		alignb 4

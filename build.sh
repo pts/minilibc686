@@ -3,9 +3,9 @@
 # build.sh: builds the libc as static Linux i386 library from sources
 # by pts@fazekas.hu at Sun May 21 00:33:10 CEST 2023
 #
-# Input files: *.nasm
-# Output files (see also OUTFNS): libmini386.a libmini686.a libminitcc1.a need_start.o need_uclibc_main.o need_uclibc_main.o
-# Temporary output files: other *.o *.bin
+# Input source files: src/*.nasm
+# Output files: minilibc686_lib/*.a minilibc686_lib/*.o
+# Temporary output files: build_tmp/*.o build_tmp/*.a
 #
 
 # Rerun ourselves with shbin/sh (BusyBox sh), without environment variables
@@ -45,13 +45,22 @@ AR=tools/tiny_libmaker
 export LC_ALL=C  # For consistency. With Busybox we don't need it, because the environment is empty.
 
 OUTFNS='libmini386.a libmini686.a libminitcc1.a need_start.o need_uclibc_main.o start_uclibc_linux.o'
+OUTDIR=minilibc686_lib
 LIBI386_OBJS=
 LIBI686_OBJS=
-if ! test -f start_stdio_medium_linux.nasm; then
-  echo "fatal: missing: start_stdio_medium_linux.nasm" >&2
+if ! test -f src/start_stdio_medium_linux.nasm; then
+  echo "fatal: missing: src/start_stdio_medium_linux.nasm" >&2
   exit 2
 fi
-for F in [a-zA-Z0-9_]*.nasm; do
+if ! test -d build_tmp; then  # Must have a single component, i.e. no slashes.
+  mkdir build_tmp
+  if ! test -d build_tmp; then echo "fatal: cannot create temporary directory: build_tmp" >&2; exit 2; fi
+fi
+if ! test -d "$OUTDIR"; then
+  mkdir "$OUTDIR"
+  if ! test -d "$OUTDIR"; then echo "fatal: cannot create build output directory: $OUTDIR" >&2; exit 2; fi
+fi
+for F in src/[a-zA-Z0-9_]*.nasm; do
   test "${F#c_}" = "$F" || continue  # Skip c_*.nasm.
   grep -q CONFIG_PIC <"$F" || continue  # Not a libc source file.
   echo "info: compiling: $F" >&2
@@ -59,7 +68,7 @@ for F in [a-zA-Z0-9_]*.nasm; do
   grep -q CONFIG_I386 <"$F" && ARCH_I686=i686
   for ARCH in i386 $ARCH_I686; do
     LA=
-    case "$F" in
+    case "${F#src/}" in
      exit_linux.nasm) ;;
      fputc_unbuffered.nasm) ;;  # The libc uses stdio_medium instead.
      stdio_file_simple_buffered.nasm) ;;  # The libc uses stdio_medium instead.
@@ -78,52 +87,67 @@ for F in [a-zA-Z0-9_]*.nasm; do
      start_*.nasm) ;;
      *.nasm) LA=1 ;;
     esac
-    BF="${F%.*}"
+    BF="${F#src/}"
+    BF=build_tmp/"${BF%.*}"
     BFA="$BF"
     CFLAGS_ARCH=
     if test "$ARCH_I686"; then  # .nasm source file contains CONFIG_I386.
       BFA="$BF.$ARCH"
       test "$ARCH" = i386 && CFLAGS_ARCH=-DCONFIG_I386
     fi
-    test "${F#start_}" != "$F" && CFLAGS_ARCH="$CFLAGS_ARCH -Dmini__start=_start"  # Makes both _start and mini__start defined.
+    test "${F#src/start_}" != "$F" && CFLAGS_ARCH="$CFLAGS_ARCH -Dmini__start=_start"  # Makes both _start and mini__start defined.
     set -ex
-    $NASM $CFLAGS_ARCH $CFLAGS -O999999999 -w+orphan-labels -f elf -o "$BFA".o "$F"
+    # We cd into src, otherwise NASM would insert `build_tmp/' to the "$BFA".o as filename.
+    (cd src && ../"$NASM" $CFLAGS_ARCH $CFLAGS -O999999999 -w+orphan-labels -f elf -o ../"$BFA".o "${F#src/}") || exit 4
+    # !! TODO(pts): Remove local symbols from the .o file, to make it smaller.
     tools/elfofix -v -w -- "$BFA".o  # `-w' fixes weak symbols. .nasm files containing WEAK.. are affected.
-    $NASM $CFLAGS_ARCH $CFLAGS -O999999999 -w+orphan-labels -f bin -o "$BFA".bin "$F"
-    $NASM $CFLAGS_ARCH $CFLAGS -O0 -w+orphan-labels -f bin -o "$BFA".o0.bin "$F"
+    "$NASM" $CFLAGS_ARCH $CFLAGS -O999999999 -w+orphan-labels -f bin -o "$BFA".bin "$F"
+    "$NASM" $CFLAGS_ARCH $CFLAGS -O0 -w+orphan-labels -f bin -o "$BFA".o0.bin "$F"
     # $NDISASM -b 32 "$BFA".bin | tail  # For the size.
     if ! cmp "$BFA".bin "$BFA".o0.bin; then
-      $NDISASM -b 32 "$BFA".bin >"$BFA".ndisasm
-      $NDISASM -b 32 "$BFA".o0.bin >"$BFA".o0.ndisasm
+      "$NDISASM" -b 32 "$BFA".bin >"$BFA".ndisasm
+      "$NDISASM" -b 32 "$BFA".o0.bin >"$BFA".o0.ndisasm
       diff -U3 "$BFA".ndisasm "$BFA".o0.ndisasm
     fi
     set +ex
     if test -z "$LA"; then :
-    elif test -z "$ARCH_I686"; then LIBI386_OBJS="$LIBI386_OBJS $BFA.o"; LIBI686_OBJS="$LIBI686_OBJS $BFA.o"
-    elif test "$ARCH" = i386; then LIBI386_OBJS="$LIBI386_OBJS $BFA.o"
-    else LIBI686_OBJS="$LIBI686_OBJS $BFA.o"
+    elif test -z "$ARCH_I686"; then LIBI386_OBJS="$LIBI386_OBJS ${BFA#build_tmp/}.o"; LIBI686_OBJS="$LIBI686_OBJS ${BFA#build_tmp/}.o"
+    elif test "$ARCH" = i386; then LIBI386_OBJS="$LIBI386_OBJS ${BFA#build_tmp/}.o"
+    else LIBI686_OBJS="$LIBI686_OBJS ${BFA#build_tmp/}.o"
     fi
   done
 done
 
+# Order of these .o files in libmini[34]86.a is importan when linking with
+# pts-tcc, because these .o files contain weak symbols, and if they were
+# early, pts-tcc would pick them (and then use the weak symbols within,
+# rather than the full implementation in another .o file).
+#
+# TODO(pts): Does GNU ld(1) have the same behavior?
 LIB_OBJS_SPECIAL_ORDER="stdio_medium_flush_opened.o start_stdio_medium_linux.o"
-
-rm -f libminitcc1.a  # Some versions of ar(1) such as GNU ar(1) do something different if the .a file already exists.
-set -ex
-$AR crs libminitcc1.a tcc_alloca.o
-set +ex
-
-for ARCH in i386 i686; do
-  rm -f libmini686_hello.a  # Some versions of ar(1) such as GNU ar(1) do something different if the .a file already exists.
-  if test "$ARCH" = i386; then LIB_OBJS="$LIBI386_OBJS"
-  else LIB_OBJS="$LIBI686_OBJS"
-  fi
-  set -ex
-  # !! TODO(pts): Remove local symbols first, to make the .o files smaller, e.g. objcopy -x in.o out.o
-  # Work around pts-tcc common symbol linking bug (tcc_common_lib_bug.sh).
-  $AR crs libmin"$ARCH".a $LIB_OBJS $LIB_OBJS_SPECIAL_ORDER
-  set +ex
+LIB_OBJS_TCC1="tcc_alloca.o"
+ARB="$AR"
+test "${ARB#/}" = "$ARB" && ARB=../"$ARB"
+for OUTFN in $OUTFNS; do
+ case "$OUTFN" in
+  *.a)
+   if test "$OUTFN" = libminitcc1.a; then LIB_OBJS="$LIB_OBJS_TCC1"
+   elif test "$OUTFN" = libmini386.a; then LIB_OBJS="$LIBI386_OBJS $LIB_OBJS_SPECIAL_ORDER"
+   elif test "$OUTFN" = libmini686.a; then LIB_OBJS="$LIBI686_OBJS $LIB_OBJS_SPECIAL_ORDER"
+   else echo "fatal: unknown output library: $OUTFN" >&2; exit 3; fi
+    rm -f "$OUTDIR/$OUTFN"  # Some versions of ar(1) such as GNU ar(1) do something different if the .a file already exists.
+    set -ex
+    (cd build_tmp && "$ARB" crs ../"$OUTDIR/$OUTFN" $LIB_OBJS)
+    set +ex
+   ;;
+  *) cp -a -- build_tmp/"$OUTFN" "$OUTDIR/" ;;
+ esac
 done
 
-ls -l $OUTFNS
+OUTFNSB=
+for OUTFN in $OUTFNS; do
+  OUTFNSB="$OUTFNSB $OUTDIR/$OUTFN"
+done
+ls -l $OUTFNSB || exit "$?"
+
 echo : "$0" OK.

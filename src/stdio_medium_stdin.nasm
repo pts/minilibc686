@@ -33,6 +33,9 @@ mini___M_start_isatty_stdin:
 		add eax, eax
 		add [mini_stdin_struct.dire], al  ; filep->dire = FD_WRITE_LINEBUF, changed from FD_WRITE.
 		ret
+%ifidn __OUTPUT_FORMAT__, bin  ; Affects start_stdio_medium_linux.nasm %included()d later: it won't try to redefine these symbols.
+  %define mini___M_start_isatty_stdin mini___M_start_isatty_stdin
+%endif
 
 section .data
 mini_stdin:	dd mini_stdin_struct

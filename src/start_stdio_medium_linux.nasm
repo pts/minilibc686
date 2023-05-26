@@ -26,6 +26,20 @@ global mini_write
 global mini_lseek
 global mini_ioctl
 
+%macro define_weak 1
+  %ifidn __OUTPUT_FORMAT__, bin  ; E.g. when using elf0.inc.nasm.
+    %ifndef %1
+      %define %1 WEAK..%1
+    %endif
+  %else
+    extern %1
+  %endif
+%endmacro
+define_weak mini___M_start_isatty_stdin
+define_weak mini___M_start_isatty_stdout
+define_weak mini___M_start_flush_stdout
+define_weak mini___M_start_flush_opened
+
 %ifdef CONFIG_SECTIONS_DEFINED
 %elifidn __OUTPUT_FORMAT__, bin
 section .text align=1
@@ -33,17 +47,9 @@ section .rodata align=4
 section .data align=4
 section .bss align=4
 main equ +0x12345678
-mini___M_start_isatty_stdin equ +0x12345679
-mini___M_start_isatty_stdout equ +0x1234567a
-mini___M_start_flush_stdout equ +0x1234567b
-mini___M_start_flush_opened equ +0x1234567c
 %else
 extern main
 ; These will be converted to weak symbols by tools/elfofix.
-extern mini___M_start_isatty_stdin
-extern mini___M_start_isatty_stdout
-extern mini___M_start_flush_stdout
-extern mini___M_start_flush_opened
 section .text align=1
 section .rodata align=1
 section .data align=1

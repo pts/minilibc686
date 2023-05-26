@@ -38,7 +38,7 @@ if ! cmp stdio_file_simple_buffered.bin stdio_file_simple_buffered.o0.bin; then
   diff -U3 stdio_file_simple_buffered.ndisasm stdio_file_simple_buffered.o0.ndisasm
 fi
 
-qq xstatic gcc -m32 -Os -W -Wall -s -Werror=implicit-function-declaration -nostdlib -nostdinc -o test_stdio_file_simple_buffered.prog stdio_file_simple_buffered.o demo_file_simple_copy.c start_stdio_file_linux.o
+qq xstatic gcc -m32 -Os -W -Wall -s -Werror=implicit-function-declaration -nostdlib -nostdinc -o test_stdio_file_simple_buffered.prog stdio_file_simple_buffered.o test_file_simple_copy.c start_stdio_file_linux.o
 echo foobar >f1.tmp.dat
 : t1
 rm -f f2.tmp.dat

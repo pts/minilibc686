@@ -52,11 +52,11 @@ main:  ; int main(int argc, char **argv, char **envp);  /* envp is optional to d
 ;section .bss
 ;buf:		resb 0x100
 
-%include "vfprintf_plus.nasm"
-;%include "strlen.nasm"
-%include "fputc_unbuffered.nasm"
-%include "write_linux.nasm"
-%include "start_linux.nasm"
+%include "src/vfprintf_plus.nasm"
+;%include "src/strlen.nasm"
+%include "src/fputc_unbuffered.nasm"
+%include "src/write_linux.nasm"
+%include "src/start_linux.nasm"
 _start equ mini__start  ; ELF program entry point defined in start_linux.nasm.
 
 section .rodata
