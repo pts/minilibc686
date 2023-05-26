@@ -29,6 +29,16 @@ test "$1" = --noenv && shift && exec env -i PATH="$MYDIR/shbin" BUSYBOX_SH_SCRIP
 IS_BOXED=
 while test "$1" = --boxed; do export PATH="$MYDIR/shbin"; IS_BOXED=1; shift; done
 
+NL="
+"
+
+if test $# = 0 || test "$1" == --help; then
+  test $# = 0 && exec >&2
+  echo "minicc: C compiler fronted for building small Linux i386 executables$NL""Usage: $0 [<gcc-flag>...] <file.c>$NL""There are minicc flags, e.g. --gcc, --tcc, --utcc"
+  test $# = 0 && exit 1
+  exit 0
+fi 
+
 if ! test -f "$MYDIR/gcctooldir/collect2"; then
   echo "fatal: missing tool: $MYDIR/gcctooldir/collect2" >&2
   exit 1
@@ -38,8 +48,6 @@ if ! test -x "$MYDIR/gcctooldir/collect2"; then
   exit 1
 fi
 
-NL="
-"
 ARCH=i686
 GCC=gcc
 TCC=
