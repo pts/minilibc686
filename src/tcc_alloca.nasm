@@ -36,7 +36,7 @@ alloca:
 		push edx
 		ret
 
-%ifdef CONFIG_PIC
+%ifdef CONFIG_PIC  ; Already position-independent code.
 %endif
 
 ; __END__

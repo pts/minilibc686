@@ -81,7 +81,7 @@ for F in src/[a-zA-Z0-9_]*.nasm; do
      start_uclibc_linux.nasm) ;;
      need_start.nasm) ;;
      need_uclibc_main.nasm) ;;
-     tcc_alloca.nasm) ;;
+     tcc_*.nasm) ;;
      stdio_medium_flush_opened.nasm) ;;  # We want special order in the .a file, for pts-tcc.
      start_stdio_medium_linux.nasm) ;;  # We want special order in the .a file, for pts-tcc.
      start_*.nasm) ;;
@@ -125,7 +125,7 @@ done
 #
 # TODO(pts): Does GNU ld(1) have the same behavior?
 LIB_OBJS_SPECIAL_ORDER="stdio_medium_flush_opened.o start_stdio_medium_linux.o"
-LIB_OBJS_TCC1="tcc_alloca.o"
+LIB_OBJS_TCC1="tcc_alloca.o tcc_clear_cache.o"
 ARB="$AR"
 test "${ARB#/}" = "$ARB" && ARB=../"$ARB"
 for OUTFN in $OUTFNS; do
