@@ -25,10 +25,10 @@ section .bss align=4
 
 section .text
 
-mini___M_fputc_RP2:
+mini___M_fputc_RP2:  ; int REGPARM2 mini___M_fputc_RP2(int c, FILE *filep);
 		push ebx
 		mov ebx, edx
-		push ecx
+		push edx  ; Make room for local variable uc on the stack. The push register can be any.
 		mov [esp+0x3], al  ; Local variable uc.
 		mov eax, [edx+0x4]
 		cmp [edx], eax
@@ -43,8 +43,8 @@ mini___M_fputc_RP2:
 .17:		mov eax, [ebx+0x4]
 		cmp [ebx], eax
 		jne .16
+		lea eax, [esp+0x3]  ; Local variable uc.
 		push byte 1
-		lea eax, [esp+0x7]  ; Local variable uc.
 		push eax
 		push dword [ebx+0x10]
 		call mini_write
@@ -63,7 +63,7 @@ mini___M_fputc_RP2:
 		jne .21
 		push ebx
 		call mini_fflush
-		pop ecx
+		pop edx  ; Clean up the argument of mini_fflush from the stack. The pop register can be any of: EBX, ECX, EDX, ESI, EDI, EBP.
 .21:		movzx eax, byte [esp+0x3]  ; Local variable uc.
 .14:		pop edx
 		pop ebx
