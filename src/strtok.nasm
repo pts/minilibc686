@@ -2,7 +2,7 @@
 ; Mostly based on the output of soptcc.pl for c_strtok.c.
 ; Compile to i386 ELF .o object: nasm -O999999999 -w+orphan-labels -f elf -o strtok.o strtok.nasm
 ;
-; Code size: 0x50 bytes.
+; Code size: 0x10a bytes.
 ;
 ; Uses: %ifdef CONFIG_PIC
 ;
