@@ -140,7 +140,7 @@ for OUTFN in $OUTFNS; do
    else echo "fatal: unknown output library: $OUTFN" >&2; exit 3; fi
     rm -f "$OUTDIR/$OUTFN"  # Some versions of ar(1) such as GNU ar(1) do something different if the .a file already exists.
     set -ex
-    (cd build_tmp && "$ARB" crs ../"$OUTDIR/$OUTFN" $LIB_OBJS)
+    (cd build_tmp && "$ARB" crs ../"$OUTDIR/$OUTFN" $LIB_OBJS) || exit 5
     set +ex
    ;;
   *) cp -a -- build_tmp/"$OUTFN" "$OUTDIR/" ;;
