@@ -1,4 +1,5 @@
 ;
+; written by pts@fazekas.hu in 2023-05
 ; Compile to i386 ELF .o object: nasm -O999999999 -w+orphan-labels -f elf -o printf_callvf.o printf_callvf.nasm
 ;
 ; Uses: %ifdef CONFIG_PIC
