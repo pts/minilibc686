@@ -26,10 +26,9 @@ section .bss align=4
 section .text
 
 mini___M_fputc_RP2:  ; int REGPARM2 mini___M_fputc_RP2(int c, FILE *filep);
-		push ebx
+		push ebx  ; Save EBX.
 		mov ebx, edx
-		push edx  ; Make room for local variable uc on the stack. The push register can be any.
-		mov [esp], al  ; Local variable uc.
+		push eax  ; Make room for local variable uc on the stack and set the lower 8 bits to c and the higher bits to junk.
 		mov eax, [edx+0x4]
 		cmp [edx], eax
 		jne .16
@@ -52,21 +51,23 @@ mini___M_fputc_RP2:  ; int REGPARM2 mini___M_fputc_RP2(int c, FILE *filep);
 		dec eax
 		jne .20
 		inc dword [ebx+0x20]
-.16:		mov eax, [ebx]
-		lea edx, [eax+0x1]
+.16:		mov edx, [ebx]
+		inc edx
 		mov [ebx], edx
-		mov dl, [esp]  ; Local variable uc.
-		mov [eax], dl
-		cmp byte dl, 0xa  ; Local variable uc.
-		jne .after_flush
+		dec edx
+		movzx eax, byte [esp]  ; Local variable uc.
+		mov [edx], al
+		cmp al, 0xa  ; Local variable uc.
+		jne .done
 		cmp byte [ebx+0x14], 0x6  ; FD_WRITE_LINEBUF.
-		jne .after_flush
+		jne .done
+		push eax  ; Save EAX (return value).
 		push ebx
 		call mini_fflush
 		pop edx  ; Clean up the argument of mini_fflush from the stack. The pop register can be any of: EBX, ECX, EDX, ESI, EDI, EBP.
-.after_flush:	movzx eax, byte [esp]  ; Local variable uc.
-.done:		pop edx
-		pop ebx
+		pop eax  ; Restore EAX (return value).
+.done:		pop edx  ; Remove local variable uc from the stack.
+		pop ebx  ; Restore EBX.
 		ret
 
 %ifdef CONFIG_PIC  ; Already position-independent code.
