@@ -98,7 +98,7 @@ for F in src/[a-zA-Z0-9_]*.nasm; do
     test "${F#src/start_}" != "$F" && CFLAGS_ARCH="$CFLAGS_ARCH -Dmini__start=_start"  # Makes both _start and mini__start defined.
     set -ex
     # We cd into src, otherwise NASM would insert `build_tmp/' to the "$BFA".o as filename.
-    (cd src && ../"$NASM" $CFLAGS_ARCH $CFLAGS -O999999999 -w+orphan-labels -f elf -o ../"$BFA".o "${F#src/}") || exit 4
+    "$NASM" $CFLAGS_ARCH $CFLAGS -O999999999 -w+orphan-labels -f elf -o "$BFA".o "$F" || exit 4  # Can %include "src/....nasm".
     # !! TODO(pts): Remove local symbols from the .o file, to make it smaller.
     tools/elfofix -v -w -- "$BFA".o  # `-w' fixes weak symbols. .nasm files containing WEAK.. are affected.
     "$NASM" $CFLAGS_ARCH $CFLAGS -O999999999 -w+orphan-labels -f bin -o "$BFA".bin "$F"

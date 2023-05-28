@@ -36,7 +36,7 @@ _nasm() {
   for FNASM in "$@"; do
     FBASE="${FNASM%.*}"
     test "${FNASM%.o}" = "$FNASM" || FNASM="$FBASE".nasm
-    "$NASM" $CFLAGS -O999999999 -w+orphan-labels -f elf -o "$FBASE".o "$SRC"/"$FBASE".nasm
+    "$NASM" -I"$MYDIRP" $CFLAGS -O999999999 -w+orphan-labels -f elf -o "$FBASE".o "$SRC"/"$FBASE".nasm
   done
 }
 _nasm_start() {
@@ -44,7 +44,7 @@ _nasm_start() {
   for FNASM in "$@"; do
     FBASE="${FNASM%.*}"
     test "${FNASM%.o}" = "$FNASM" || FNASM="$FBASE".nasm
-    "$NASM" $CFLAGS -Dmini__start=_start -O999999999 -w+orphan-labels -f elf -o "$FBASE".o "$SRC"/"$FBASE".nasm
+    "$NASM" -I"$MYDIRP" $CFLAGS -Dmini__start=_start -O999999999 -w+orphan-labels -f elf -o "$FBASE".o "$SRC"/"$FBASE".nasm
     "$TOOLS"/elfofix -w -- "$FBASE".o  # `-w' fixes weak symbols. .nasm files containing WEAK.. are affected.
   done
 }
@@ -53,9 +53,9 @@ _nasm2() {
   for FNASM in "$@"; do
     FBASE="${FNASM%.*}"
     test "${FNASM%.o}" = "$FNASM" || FNASM="$FBASE".nasm
-    "$NASM" $CFLAGS -O999999999 -w+orphan-labels -f elf -o "$FBASE".o "$SRC"/"$FBASE".nasm
-    "$NASM" $CFLAGS -O999999999 -w+orphan-labels -f bin -o "$FBASE".bin "$SRC"/"$FBASE".nasm
-    "$NASM" $CFLAGS -O0 -w+orphan-labels -f bin -o "$FBASE".o0.bin "$SRC"/"$FBASE".nasm
+    "$NASM" -I"$MYDIRP" $CFLAGS -O999999999 -w+orphan-labels -f elf -o "$FBASE".o "$SRC"/"$FBASE".nasm
+    "$NASM" -I"$MYDIRP" $CFLAGS -O999999999 -w+orphan-labels -f bin -o "$FBASE".bin "$SRC"/"$FBASE".nasm
+    "$NASM" -I"$MYDIRP" $CFLAGS -O0 -w+orphan-labels -f bin -o "$FBASE".o0.bin "$SRC"/"$FBASE".nasm
     "$NDISASM" -b 32 "$FBASE".bin | tail  # For the size.
     if ! cmp "$FBASE".bin "$FBASE".o0.bin; then
       "$NDISASM" -b 32 "$FBASE".bin >"$FBASE".ndisasm
