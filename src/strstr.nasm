@@ -2,7 +2,7 @@
 ; written by pts@fazekas.hu at Wed May 24 23:04:46 CEST 2023
 ; Compile to i386 ELF .o object: nasm -O999999999 -w+orphan-labels -f elf -o strchr.o strchr.nasm
 ;
-; Code size: 0x3f bytes.
+; Code size: 0x3e bytes.
 
 ; Uses: %ifdef CONFIG_PIC
 ;
@@ -35,14 +35,14 @@ mini_strstr:  ; char *strstr(const char *haystack, const char *needle);
 		xor eax, eax  ; AL := 0, for the scasb comparisons below.
 		mov esi, [esp+0xc]  ; Argument haystack.
 		mov edi, esi
-		or ecx, byte -1  ; ECX := -1.
+		or edx, byte -1  ; EDX := -1.
+		mov ecx, edx  ; ECX := 1.
 		repne scasb
 		not ecx
 		dec ecx  ; ECX := strlen(haystack).
-		mov edx, ecx
+		xchg edx, ecx  ; ECX := -1, EDX := strlen(haystack).
 		mov edi, [esp+0x10]  ; Argument needle.
 		push edi
-		or ecx, byte -1  ; ECX := -1.
 		repne scasb
 		not ecx
 		dec ecx  ; ECX := strlen(haystack).
