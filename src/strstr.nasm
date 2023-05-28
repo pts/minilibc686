@@ -2,7 +2,7 @@
 ; written by pts@fazekas.hu at Wed May 24 23:04:46 CEST 2023
 ; Compile to i386 ELF .o object: nasm -O999999999 -w+orphan-labels -f elf -o strchr.o strchr.nasm
 ;
-; Code size: 0x3e bytes.
+; Code size: 0x3a bytes.
 
 ; Uses: %ifdef CONFIG_PIC
 ;
@@ -38,22 +38,19 @@ mini_strstr:  ; char *strstr(const char *haystack, const char *needle);
 		or edx, byte -1  ; EDX := -1.
 		mov ecx, edx  ; ECX := 1.
 		repne scasb
-		not ecx
-		dec ecx  ; ECX := strlen(haystack).
-		xchg edx, ecx  ; ECX := -1, EDX := strlen(haystack).
+		not ecx  ; ECX := strlen(haystack) + 1.
+		xchg edx, ecx  ; ECX := -1, EDX := strlen(haystack) + 1.
 		mov edi, [esp+0x10]  ; Argument needle.
 		push edi
 		repne scasb
 		not ecx
-		dec ecx  ; ECX := strlen(haystack).
+		dec ecx  ; ECX := strlen(needle).
 		pop edi
 		; Now EDI, ESI, EDX and ECX are corredly set up (as above).
 		jecxz .found
-		cmp ecx, edx
-		ja .missing  ; needle too long.
-		; From this point EDX is a counter, not strlen(haystack) anymore.
 		sub edx, ecx
-		inc edx
+		jbe .missing  ; needle too long.
+		; From this point EDX is a counter, not strlen(haystack) anymore.
 .again:		push esi
 		push edi
 		push ecx

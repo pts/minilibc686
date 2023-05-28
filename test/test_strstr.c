@@ -18,10 +18,12 @@ int main(int argc, char **argv) {
   if (!expect("", "x")) exit_code |= 1;
   if (!expect("x", "")) exit_code |= 1;
   if (!expect("", "hello")) exit_code |= 1;
+  if (!expect("hell", "hello")) exit_code |= 1;
   if (!expect("hello", "")) exit_code |= 1;
   if (!expect("hello", "x")) exit_code |= 1;
   if (!expect("hello", "l")) exit_code |= 1;
   if (!expect("hello", "o")) exit_code |= 1;
+  if (!expect("hello", "hello")) exit_code |= 1;
   if (!expect("hel", "hello")) exit_code |= 1;
   if (!expect("hehello", "hel")) exit_code |= 1;
   if (!expect("hello", "hel")) exit_code |= 1;
