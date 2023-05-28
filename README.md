@@ -18,11 +18,11 @@ headers, program code and libc code):
   Linux syscalls only.
 
 * A hello-world program using printf (demo_hello_linux_printf.nasm):
-  **1236 bytes**. Only the very short main(...) function was written in C,
+  **1220 bytes**. Only the very short main(...) function was written in C,
   the rest of the code is part of the libc, written in NASM assembly.
   Comparison:
   * minilibc686 (`./minicc --gcc`) is
-    1236 bytes, already stripped
+    1220 bytes, already stripped
   * [diet libc](https://www.fefe.de/dietlibc/) 0.34 (`diet gcc`) is
     8196 bytes after stripping
   * [neatlibc](https://github.com/aligrudi/neatlibc) is

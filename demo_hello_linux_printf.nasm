@@ -2,7 +2,7 @@
 ; demo_hello_linux_printf.nasm: Linux i386 32-bit ELF executable program with printf(3)
 ; by pts@fazekas.hu at Wed May 24 01:08:00 CEST 2023
 ;
-; Total file size: 1236 bytes.
+; Total file size: 1220 bytes.
 ;
 ; This file matches the output of GCC 7.5.0:
 ;
