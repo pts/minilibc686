@@ -36,7 +36,7 @@ mini___M_discard_buf:
 		mov [eax], edx
 		mov [eax+0x8], edx
 		mov dl, [eax+0x14]
-		dec dl
+		dec edx  ; DL := 1; higher bits of EDX := junk.
 		cmp dl, 0x2
 		ja .1
 		mov edx, [eax+0x4]
