@@ -1,5 +1,4 @@
 ;
-; written by pts@fazekas.hu at Sun May 21 19:43:56 CEST 2023
 ; Compile to i386 ELF .o object: nasm -O999999999 -w+orphan-labels -f elf -o tcc_alloca.o tcc_alloca.nasm
 ;
 

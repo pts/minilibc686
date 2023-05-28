@@ -1,12 +1,11 @@
 ;
-; written by pts@fazekas.hu at Sun May 21 19:43:56 CEST 2023
-; Compile to i386 ELF .o object: nasm -O999999999 -w+orphan-labels -f elf -o tcc_clear_cache.o tcc_clear_cache.nasm
+; Compile to i386 ELF .o object: nasm -O999999999 -w+orphan-labels -f elf -o tcc_cvt_ftol.o tcc_cvt_ftol.nasm
 ;
 
 bits 32
 cpu 386
 
-global __clear_cache
+global __tcc_cvt_ftol
 %ifdef CONFIG_SECTIONS_DEFINED
 %elifidn __OUTPUT_FORMAT__, bin
 section .text align=1
@@ -22,7 +21,20 @@ section .bss align=1
 
 section .text
 ; Needed by the TCC (__TINYC__) compiler 0.9.26.
-__clear_cache:
+__tcc_cvt_ftol:
+		push ebp
+		mov ebp, esp
+		sub esp, byte 0x10
+		fnstcw [ebp-0x4]
+		mov eax, [ebp-0x4]
+		or eax, 0xc00
+		mov [ebp-0x8], eax
+		fldcw [ebp-0x8]
+		fistp qword [ebp-0x10]
+		fldcw [ebp-0x4]
+		mov eax, [ebp-0x10]
+		mov edx, [ebp-0xc]
+		leave
 		ret
 
 %ifdef CONFIG_PIC  ; Already position-independent code.
