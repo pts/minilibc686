@@ -211,7 +211,7 @@ fi
 INCLUDEDIR_ARG=
 DEF_ARG=
 if test "$DO_ADD_INCLUDEDIR"; then
-  INCLUDEDIR_ARG="-I$MYDIR/include"
+  INCLUDEDIR_ARG="-I$MYDIR/libc/minilibc/include"
   if test "$USE_UCLIBC"; then
     DEF_ARG="-D__asm__(x)=$NL-D__UCLIBC__"   # Make it ignore __asm__("mini_printf") in stdio.h, so that the linker will find the uClibc printf(...).
   else
