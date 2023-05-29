@@ -29,14 +29,14 @@ __U8LS:  ; unsigned long long __watcall_but_ruins_ecx __U8LS(unsigned long long 
 ; Input: EDX:EAX == a; EBX == b.
 ; Output: EDX:EAX == (a << b); EBX == b; ECX == junk.
 		mov ecx, ebx
-		and cl, 0x3f
+		;and cl, 0x3f  ; Not needed, CL&0x1f is used by shift instructions.
 		test cl, 0x20
 		jnz .3
 		shld edx, eax, cl
 		shl eax, cl
 		ret
 .3:		mov edx, eax
-		sub cl, 0x20
+		;sub cl, 0x20  ; Not needed, CL&0x1f is used by shift instructions.
 		xor eax, eax
 		shl edx, cl
 		ret

@@ -9,7 +9,7 @@
 bits 32
 cpu 386
 
-global ___ashrdi3
+global __ashrdi3
 %ifdef CONFIG_SECTIONS_DEFINED
 %elifidn __OUTPUT_FORMAT__, bin
 section .text align=1
@@ -29,7 +29,6 @@ section .data align=1
 section .bss align=1
 %endif
 
-
 section .text
 __ashrdi3:  ; long long __ashrdi3(long long a, int b) { return a >> b; }
 ; For TinyCC 0.9.26.
@@ -41,19 +40,17 @@ __ashrdi3:  ; long long __ashrdi3(long long a, int b) { return a >> b; }
 		call __I8RS
 		pop ebx
 %else
-		push esi
-		mov cl, [esp+0x10]  ; Argument b: shift amount.
-		mov eax, [esp+0x8]  ; Low dword of argument a.
-		mov esi, [esp+0xc]  ; High dword of argument a.
-		mov edx, esi
-		sar edx, cl
-		shrd dword eax, esi, cl
+		mov eax, [esp+8-4]  ; Low dword of argument a.
+		mov edx, [esp+0xc-4]  ; High dword of argument a.
+		mov cl, [esp+0x10-4]  ; Argument b: shift amount.
 		test cl, 0x20
-		jz .done
-		sar esi, 0x1f
-		mov eax, edx
-		mov edx, esi
-.done:		pop esi
+		jnz .2
+		shrd eax, edx, cl
+		sar edx, cl
+		ret
+.2:		mov eax, edx
+		sar edx, 0x1f
+		sar eax, cl
 %endif
 		ret
 

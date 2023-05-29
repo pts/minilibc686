@@ -9,7 +9,7 @@
 bits 32
 cpu 386
 
-global ___lshrdi3
+global __lshrdi3
 %ifdef CONFIG_SECTIONS_DEFINED
 %elifidn __OUTPUT_FORMAT__, bin
 section .text align=1
@@ -42,18 +42,17 @@ __lshrdi3:  ; unsigned long long __lshrdi3(unsigned long long a, int b) { return
 		call __U8RS
 		pop ebx
 %else
-		push esi
-		mov cl, [esp+0x10]  ; Argument b: shift amount.
-		mov eax, [esp+0x8]  ; Low dword of argument a.
-		mov esi, [esp+0xc]  ; High dword of argument a.
-		mov edx, esi
-		shr edx, cl
-		shrd dword eax, esi, cl
+		mov eax, [esp+8-4]  ; Low dword of argument a.
+		mov edx, [esp+0xc-4]  ; High dword of argument a.
+		mov cl, [esp+0x10-4]  ; Argument b: shift amount.
 		test cl, 0x20
-		jz .done
-		mov eax, edx
+		jnz .1
+		shrd eax, edx, cl
+		shr edx, cl
+		ret
+.1:		mov eax, edx
 		xor edx, edx
-.done:		pop esi
+		shr eax, cl
 %endif
 		ret
 

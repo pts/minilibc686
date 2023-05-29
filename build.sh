@@ -128,7 +128,8 @@ cp -a src/tcc_float.o build_tmp/
 #
 # TODO(pts): Does GNU ld(1) have the same behavior?
 LIB_OBJS_SPECIAL_ORDER="stdio_medium_flush_opened.o start_stdio_medium_linux.o"
-LIB_OBJS_TCC1="tcc_alloca.o tcc_clear_cache.o tcc_cvt_ftol.o tcc_float.o tcc_shift.o tcc_i64_ashldi3.o tcc_i64_ashrdi3.o tcc_i64_lshrdi3.o"
+LIB_OBJS_TCC1="tcc_alloca.o tcc_clear_cache.o tcc_cvt_ftol.o tcc_float.o tcc_i64_ashldi3.o tcc_i64_ashrdi3.o tcc_i64_lshrdi3.o"
+#LIB_OBJS_TCC1="tcc_alloca.o tcc_clear_cache.o tcc_cvt_ftol.o tcc_float.o tcc_shift.o"
 ARB="$AR"
 test "${ARB#/}" = "$ARB" && ARB=../"$ARB"
 for OUTFN in $OUTFNS; do

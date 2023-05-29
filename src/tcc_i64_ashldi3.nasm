@@ -9,7 +9,7 @@
 bits 32
 cpu 386
 
-global ___ashldi3
+global __ashldi3
 %ifdef CONFIG_SECTIONS_DEFINED
 %elifidn __OUTPUT_FORMAT__, bin
 section .text align=1
@@ -40,18 +40,17 @@ __ashldi3:  ; long long __ashldi3(long long a, int b) { return a << b; }
 		call __I8LS
 		pop ebx
 %else
-		push esi
-		mov cl, [esp+0x10]  ; Argument b: shift amount.
-		mov esi, [esp+0x8]  ; Low dword of argument a.
-		mov edx, [esp+0xc]  ; High dword of argument a.
-		mov eax, esi
-		shl eax, cl
-		shld dword edx, esi, cl
+		mov eax, [esp+8-4]  ; Low dword of argument a.
+		mov edx, [esp+0xc-4]  ; High dword of argument a.
+		mov cl, [esp+0x10-4]  ; Argument b: shift amount.
 		test cl, 0x20
-		jz .done
-		mov edx, eax
+		jnz .3
+		shld edx, eax, cl
+		shl eax, cl
+		ret
+.3:		mov edx, eax
 		xor eax, eax
-.done:		pop esi
+		shl edx, cl
 %endif
 		ret
 
