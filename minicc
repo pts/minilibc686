@@ -235,7 +235,7 @@ if test "$DO_ADD_LIB"; then
     test "$GCC" && LIBWL=-Wl,  # -Wl, is needed, otherwise GCC will complain that it is not able to find "$LIBFN" (which doesn't exist on the filesystem).
     LIBFN=///tmp///LIBTCC1.a  # Embedded in tools/pts-tcc.
   else
-    LIBFN="$MYDIR/minilibc686_lib/libmin$ARCH.a"
+    LIBFN="$MYDIR/libc/minilibc/libc.$ARCH.a"
     if ! test -f "$LIBFN"; then
       if "$MYDIR/build.sh" && test -f "$LIBFN"; then :; else
         echo "fatal: failed to build libc .a: $LIBFN" >&2
@@ -244,22 +244,22 @@ if test "$DO_ADD_LIB"; then
     fi
   fi
   if test "$TCC" || test "$TCCLD"; then  # TCC needs an explicit start*.o in the command line -- or does it?
-    OBJFN="$MYDIR/minilibc686_lib/need_start.o"
+    OBJFN="$MYDIR/helper_lib/need_start.o"
     if ! test -f "$OBJFN"; then
       # !! TODO(pts): Let build.sh take care of this.
-      test "$HAD_V" && echo "info: compiling: $MYDIR/minilibc686_lib/need_start.nasm" >&2
-      if "$MYDIR/tools/nasm-0.98.39" -O0 -w+orphan-labels -f elf -o "$OBJFN" "$MYDIR/minilibc686_lib/need_start.nasm" && test -f "$OBJFN"; then :; else
+      test "$HAD_V" && echo "info: compiling: $MYDIR/helper_lib/need_start.nasm" >&2
+      if "$MYDIR/tools/nasm-0.98.39" -O0 -w+orphan-labels -f elf -o "$OBJFN" "$MYDIR/helper_lib/need_start.nasm" && test -f "$OBJFN"; then :; else
         echo "fatal: failed to build need-start .o: $OBJFN" >&2
         exit 3
       fi
     fi
     ARGS="$ARGS$NL$OBJFN"
     if test "$USE_UCLIBC"; then
-      OBJFN="$MYDIR/minilibc686_lib/need_uclibc_main.o"
+      OBJFN="$MYDIR/helper_lib/need_uclibc_main.o"
       if ! test -f "$OBJFN"; then
         # !! TODO(pts): Let build.sh take care of this.
-        test "$HAD_V" && echo "info: compiling: $MYDIR/minilibc686_lib/need_uclibc_main.nasm" >&2
-        if "$MYDIR/tools/nasm-0.98.39" -O0 -w+orphan-labels -f elf -o "$OBJFN" "$MYDIR/minilibc686_lib/need_uclibc_main.nasm" && test -f "$OBJFN"; then :; else
+        test "$HAD_V" && echo "info: compiling: $MYDIR/helper_lib/need_uclibc_main.nasm" >&2
+        if "$MYDIR/tools/nasm-0.98.39" -O0 -w+orphan-labels -f elf -o "$OBJFN" "$MYDIR/helper_lib/need_uclibc_main.nasm" && test -f "$OBJFN"; then :; else
           echo "fatal: failed to build need-uclibc-main .o: $OBJFN" >&2
           exit 3
         fi
@@ -269,7 +269,7 @@ if test "$DO_ADD_LIB"; then
   fi
   ARGS="$ARGS$NL$LIBWL$LIBFN"
   if test "$TCC" && test -z "$USE_UCLIBC"; then
-    LIBFN="$MYDIR/minilibc686_lib/libminitcc1.a"
+    LIBFN="$MYDIR/helper_lib/libminitcc1.a"
     if ! test -f "$LIBFN"; then
       if "$MYDIR/build.sh" && test -f "$LIBFN"; then :; else
        echo "fatal: failed to build libtcc1 .a: $LIBFN" >&2
@@ -279,11 +279,11 @@ if test "$DO_ADD_LIB"; then
     ARGS="$ARGS$NL$LIBFN"
   fi
   if test "$USE_UCLIBC"; then
-    OBJFN="$MYDIR/minilibc686_lib/start_uclibc_linux.o"
+    OBJFN="$MYDIR/helper_lib/start_uclibc_linux.o"
     if ! test -f "$OBJFN"; then
       # !! TODO(pts): Let build.sh take care of this.
-      test "$HAD_V" && echo "info: compiling: $MYDIR/minilibc686_lib/start_uclibc_linux.nasm" >&2
-      if "$MYDIR/tools/nasm-0.98.39" -O0 -w+orphan-labels -f elf -o "$OBJFN" "$MYDIR/minilibc686_lib/start_uclibc_linux.nasm" && test -f "$OBJFN"; then :; else
+      test "$HAD_V" && echo "info: compiling: $MYDIR/helper_lib/start_uclibc_linux.nasm" >&2
+      if "$MYDIR/tools/nasm-0.98.39" -O0 -w+orphan-labels -f elf -o "$OBJFN" "$MYDIR/helper_lib/start_uclibc_linux.nasm" && test -f "$OBJFN"; then :; else
         echo "fatal: failed to build uclibc start .o: $OBJFN" >&2
         exit 3
       fi

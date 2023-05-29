@@ -4,7 +4,7 @@
 # by pts@fazekas.hu at Sun May 21 00:33:10 CEST 2023
 #
 # Input source files: src/*.nasm
-# Output files: minilibc686_lib/*.a minilibc686_lib/*.o
+# Output files: helper_lib/*.a helper_lib/*.o libc/minilibc/libc.i386.a libc/minilibc/libc.i686.a
 # Temporary output files: build_tmp/*.o build_tmp/*.a
 #
 
@@ -45,7 +45,7 @@ AR=tools/tiny_libmaker
 export LC_ALL=C  # For consistency. With Busybox we don't need it, because the environment is empty.
 
 OUTFNS='libmini386.a libmini686.a libminitcc1.a need_start.o need_uclibc_main.o start_uclibc_linux.o'
-OUTDIR=minilibc686_lib
+OUTDIR=helper_lib
 LIBI386_OBJS=
 LIBI686_OBJS=
 if ! test -f src/start_stdio_medium_linux.nasm; then
@@ -117,6 +117,7 @@ for F in src/[a-zA-Z0-9_]*.nasm; do
     elif test "$ARCH" = i386; then LIBI386_OBJS="$LIBI386_OBJS ${BFA#build_tmp/}.o"
     else LIBI686_OBJS="$LIBI686_OBJS ${BFA#build_tmp/}.o"
     fi
+    # !! TODO(pts): Strip the .o file (strip -S -x -R .comment start.o), and remove empty sections. Unfortunately we don't have strip(1) available here.
   done
 done
 
@@ -134,26 +135,26 @@ LIB_OBJS_TCC1="tcc_alloca.o tcc_clear_cache.o tcc_cvt_ftol.o tcc_float.o tcc_i64
 #LIB_OBJS_TCC1="tcc_alloca.o tcc_clear_cache.o tcc_cvt_ftol.o tcc_float.o tcc_shift.o"
 ARB="$AR"
 test "${ARB#/}" = "$ARB" && ARB=../"$ARB"
+OUTPNS=
 for OUTFN in $OUTFNS; do
- case "$OUTFN" in
-  *.a)
-   if test "$OUTFN" = libminitcc1.a; then LIB_OBJS="$LIB_OBJS_TCC1"
-   elif test "$OUTFN" = libmini386.a; then LIB_OBJS="$LIBI386_OBJS $LIB_OBJS_SPECIAL_ORDER"
-   elif test "$OUTFN" = libmini686.a; then LIB_OBJS="$LIBI686_OBJS $LIB_OBJS_SPECIAL_ORDER"
-   else echo "fatal: unknown output library: $OUTFN" >&2; exit 3; fi
+  OUTPN="$OUTDIR/$OUTFN"
+  case "$OUTFN" in
+   *.a)
+    if test "$OUTFN" = libminitcc1.a; then LIB_OBJS="$LIB_OBJS_TCC1"
+    elif test "$OUTFN" = libmini386.a; then LIB_OBJS="$LIBI386_OBJS $LIB_OBJS_SPECIAL_ORDER"; OUTPN=libc/minilibc/libc.i386.a
+    elif test "$OUTFN" = libmini686.a; then LIB_OBJS="$LIBI686_OBJS $LIB_OBJS_SPECIAL_ORDER"; OUTPN=libc/minilibc/libc.i686.a
+    else echo "fatal: unknown output library: $OUTFN" >&2; exit 3
+    fi
     rm -f "$OUTDIR/$OUTFN"  # Some versions of ar(1) such as GNU ar(1) do something different if the .a file already exists.
     set -ex
-    (cd build_tmp && "$ARB" crs ../"$OUTDIR/$OUTFN" $LIB_OBJS) || exit 5
+    (cd build_tmp && "$ARB" crs ../"$OUTPN" $LIB_OBJS) || exit 5
     set +ex
-   ;;
-  *) cp -a -- build_tmp/"$OUTFN" "$OUTDIR/" ;;
- esac
+    ;;
+   *) cp -a -- build_tmp/"$OUTFN" "$OUTPN" ;;
+  esac
+  OUTPNS="$OUTPNS $OUTPN"
 done
 
-OUTFNSB=
-for OUTFN in $OUTFNS; do
-  OUTFNSB="$OUTFNSB $OUTDIR/$OUTFN"
-done
-ls -l $OUTFNSB || exit "$?"
+ls -l $OUTPNS || exit "$?"
 
 echo : "$0" OK.
