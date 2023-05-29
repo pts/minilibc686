@@ -60,6 +60,8 @@ if ! test -d "$OUTDIR"; then
   mkdir "$OUTDIR"
   if ! test -d "$OUTDIR"; then echo "fatal: cannot create build output directory: $OUTDIR" >&2; exit 2; fi
 fi
+
+rm -f build_tmp/*.o
 for F in src/[a-zA-Z0-9_]*.nasm; do
   test "${F#c_}" = "$F" || continue  # Skip c_*.nasm.
   grep -q CONFIG_PIC <"$F" || continue  # Not a libc source file.
