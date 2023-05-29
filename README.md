@@ -30,8 +30,8 @@ headers, program code and libc code):
     [some functions in 386 assembly]((https://github.com/aligrudi/neatlibc/tree/master/x86)
   * OpenWatcom 2023-02 (`owcc -blinux -Os -fno-stack-check`) is
     12934 bytes after stripping
-  * uClibc 0.9.30.1 (`./minicc --utcc --gcc --tccld`) is
-    14526 bytes, already stripped
+  * uClibc 0.9.30.1 (`./minicc --uclibc`) is
+    14440 bytes, already stripped
   * musl (`zig cc -target i386-linux-musl -Os`) is
     15548 bytes after stripping
   * [lunixbochs/lib43](https://github.com/lunixbochs/lib43) is
@@ -111,6 +111,20 @@ The following components are included:
   most unnecessary stuff from the final executable. In addition to these
   compilers, it can use the bundled TinyCC compiler (`tools/pts-tcc`) (use the
   `--tcc` flag).
+
+* libc/dietlibc-0.34.sfx.7z: Self-extracting archive containing diet libc
+  0.34 (released on 2018-09-24) (.h and .a files) targeting Linux i386,
+  compiled for `-march=i386` and `-march=i686`. Use it with `./minicc
+  --diet`.
+  diet libc provides more functionality and compatibility than minilibc686,
+  but it has more overhead (i.e. the program becomes a few KiB larger).
+
+* libc/uclibc-0.9.30.1.sfx.7z: Self-extracting archive containing uClibc
+  0.9.30.1 (released on 2009-03-02) (.h and .a files) targeting Linux i386,
+  compiled for `-march=i686`. Use it with `./minicc --uclibc`.
+  uClibc provides more functionality and compatibility than minilibc686, but
+  it has more overhead (i.e. the program becomes a few KiB larger, even
+  larger than diet libc).
 
 * tools/nasm-0.98.39: NASM (Netwide Assembler) executables to build .o files
   from the .nasm files. It is invoked by build.sh.
@@ -278,16 +292,20 @@ Here is how to pick the libc:
   i686 (`-march=i686`).
 * To use the bundled minilibc686 built for i386, specify `-march=i386`.
   This will also make the specified C source files be compiled for i386.
-* To use the bundled uClibc 0.9.30.1 (built for `-march=i686`) with the
-  bundled TinyCC compiler, specify `--utcc`. uClibc provides more
-  functionality and compatibility than minilibc686, but it has more overhead
-  (i.e. the program becomes a few KiB larger). The full uClibc .h files are
+* To use the bundled uClibc built for i686, specify `--uclibc`.
+* To use the bundled diet libc built for i686, specify `--diet`.
+* To use the bundled diet libc built for i386, specify `--diet -march=i386`.
+  This will also make the specified C source files be compiled for i386.
+* (Most users want `--uclibc` instead of this.)
+  To use the bundled uClibc 0.9.30.1 (built for `-march=i686`) with the
+  bundled TinyCC compiler, specify `--utcc`.The full uClibc .h files are
   not provided, but the minilibc686 .h files work as a subset.
-* To use the bundled uClibc 0.9.30.1 (built for `-march=i686`) with the GCC
+* (Most users want `--uclibc` instead of this.)
+  To use the bundled uClibc 0.9.30.1 (built for `-march=i686`) with the GCC
   or Clang compiler and the linker of the bundled TinyCC compiler, specify
   `--utcc --gcc=... --tccld`.
 
-Here is how to disable default *minicc* functionality:
+Here is how to disable some default *minicc* functionality:
 
 * Disable code size optimization: specify any `-O...` flag, e.g. `-O0` for
   the GCC default. Please note that by specifying `-Os`, you will get worse

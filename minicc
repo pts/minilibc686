@@ -12,6 +12,7 @@ if test "$MYDIR"; then test "${MYDIR#/}" = "$MYDIR" && MYDIR="${0%/*}/$MYDIR"
 else MYDIR="$0"
 fi
 MYDIR="${MYDIR%/*}"
+test "${MYDIR#-}" = "$MYDIR" || MYDIR="./$MYDIR"
 # Use BusyBox (if available) for consistent shell and coreutils.
 test -z "$BUSYBOX_SH_SCRIPT" && test -f "$MYDIR/shbin/sh" &&
     export BUSYBOX_SH_SCRIPT=1 PATH="$MYDIR/shbin:$PATH" &&
@@ -137,16 +138,51 @@ for ARG in "$@"; do
   esac
 done
 
+NEED_LIBC=
+test "$DO_ADD_INCLUDEDIR" && NEED_LIBC=1
 if test "$USE_UTCC"; then
   if test "$LIBC"; then
     echo "fatal: conflicting combination of --utcc and --libc=$LIBC" >&2
     exit 1
   fi
+  LIBC=minilibc  # For -I... ($DO_ADD_INCLUDEDIR).
 else
   test "$LIBC" || LIBC=minilibc
-  if test "$LIBC" != minilibc; then
-    echo "fatal: unsupported libc in --libc=$LIBC" >&2
-    exit 1
+  test "$DO_ADD_LIB" && NEED_LIBC=1
+fi
+if test "$NEED_LIBC"; then
+  if test -f "$MYDIR/libc/$LIBC/libc.defs"; then
+    :
+  elif test -d "$MYDIR/libc/$LIBC"; then
+    echo "fatal: missing libc.defs file: $MYDIR/libc/$LIBC/libc.defs" >&2
+    exit 4
+  else
+    for D in "$MYDIR/libc/$LIBC"-*; do
+      if test -f "$D/libc.defs"; then
+        LIBC="${D##*/}"; break  # Use the first one found. TODO(pts): Does the list get sorted?
+      fi
+    done
+    if ! test -f "$MYDIR/libc/$LIBC/libc.defs"; then
+      SFX=
+      for D in "$MYDIR/libc/$LIBC"-*.sfx.7z; do
+        if test -f "$D"; then
+          SFX="$D"; LIBC="${D##*/}"; LIBC="${LIBC%.sfx.7z}"; break  # Use the first one found. TODO(pts): Does the list get sorted?
+        fi
+      done
+      if test "$SFX" && test -f "$SFX"; then
+        chmod +x "$SFX" 2>/dev/null
+        rm -rf "$MYDIR/libc/$LIBC"
+        echo "info: extracting libc sfx: $SFX" >&2
+        (cd "${SFX%/*}" && ./"${SFX##*/}" -y >/dev/null)
+        if ! test -f "$MYDIR/libc/$LIBC/libc.defs"; then
+          echo "fatal: libc sfx extraction failed: $SFX" >&2
+          exit 4
+        fi
+      else
+        echo "fatal: libc directory not found: $MYDIR/libc/$LIBC" >&2
+        exit 4
+      fi
+    fi
   fi
 fi
 
@@ -179,11 +215,8 @@ if test "$USE_UTCC" && test "$DO_ADD_LIB" && test -z "$TCCLD" && test "${TCC%/pt
   echo "fatal: currently uClibc with --utcc needs pts-tcc; try --uclibc instead" >&2
   exit 1
 fi
-if test "$USE_UBLIBC" && test "$ARCH" = i386; then
-  # In fact, it was compiled for -march=pentium3, which is newer than
-  # -march=i686.
-  # TODO(pts): Recompile at least parts of it for -march=i686.
-  echo "fatal: the bundled uClibc doesn't work on i386" >&2
+if test "$USE_UTCC" && test "$ARCH" = i386; then
+  echo "fatal: the --utcc bundled uClibc doesn't work on i386, it needs -march=i686" >&2
   exit 1
 fi
 
@@ -231,11 +264,14 @@ fi
 INCLUDEDIR_ARG=
 DEF_ARG=
 if test "$DO_ADD_INCLUDEDIR"; then
-  INCLUDEDIR_ARG="-I$MYDIR/libc/minilibc/include"
+  INCLUDEDIR_ARG="-I$MYDIR/libc/$LIBC/include"
   if test "$USE_UTCC"; then
     DEF_ARG="-D__asm__(x)=$NL-D__UCLIBC__"   # Make it ignore __asm__("mini_printf") in stdio.h, so that the linker will find the uClibc printf(...).
   else
-    DEF_ARG="-D__MINILIBC686__$NL-DCONFIG_INLINE_FILENO"
+    # TODO(pts): Ignore comments in lines starting with `#'.
+    for F in $(cat "$MYDIR/libc/$LIBC/libc.defs"); do  # Split on any whitespace, $IFS hasn't been set yet.
+      DEF_ARG="$DEF_ARG$NL$F"
+    done
   fi
 fi
 if test "$TCC"; then
@@ -255,11 +291,21 @@ if test "$DO_ADD_LIB"; then
     test "$GCC" && LIBWL=-Wl,  # -Wl, is needed, otherwise GCC will complain that it is not able to find "$LIBFN" (which doesn't exist on the filesystem).
     LIBFN=///tmp///LIBTCC1.a  # Embedded in tools/pts-tcc.
   else
-    LIBFN="$MYDIR/libc/minilibc/libc.$ARCH.a"
+    LIBFN="$MYDIR/libc/$LIBC/libc.$ARCH.a"
     if ! test -f "$LIBFN"; then
-      if "$MYDIR/build.sh" && test -f "$LIBFN"; then :; else
-        echo "fatal: failed to build libc .a: $LIBFN" >&2
-        exit 3
+      if test "$LIBC" = minilibc; then
+        if "$MYDIR/build.sh" && test -f "$LIBFN"; then :; else
+          echo "fatal: failed to build libc .a: $LIBFN" >&2
+          exit 3
+        fi
+      else
+        if test -f "$MYDIR/libc/$LIBC/libc.i686.a"; then
+          echo "fatal: the libc wasn't compiled for -march=$ARCH, use -march=i686" >&2
+          exit 3
+        else
+          echo "fatal: missing libc .a: $LIBFN" >&2
+          exit 3
+        fi
       fi
     fi
   fi
