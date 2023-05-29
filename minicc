@@ -55,8 +55,8 @@ TCCLD=
 DO_ADD_LIB=1
 DO_ADD_INCLUDEDIR=1
 DO_LINK=1
-SFLAG=-s
-DO_STRIP=
+SFLAG=
+DO_STRIP=1
 WFLAGS="-W$NL-Wall$NL-Werror=implicit-function-declaration"
 HAD_OFLAG=
 HAD_V=
@@ -110,11 +110,11 @@ for ARG in "$@"; do
    -[fm]*) ARGS="$ARGS$NL$ARG" ;;
    -[DUI]*?) ARGS="$ARGS$NL$ARG" ;;
    -O*) ARGS="$ARGS$NL$ARG"; HAD_OFLAG=1 ;;
-   -g*) ARGS="$ARGS$NL$ARG"; SFLAG= ;;
+   -g*) ARGS="$ARGS$NL$ARG"; DO_STRIP=0 ;;
    -nostdlib | -nodefaultlibs) DO_ADD_LIB= ;;
    -nostdinc) DO_ADD_INCLUDEDIR= ;;
    -[cSE]) ARGS="$ARGS$NL$ARG"; DO_ADD_LIB=; DO_LINK= ;;
-   -s) ARGS="$ARGS$NL$ARG"; DO_STRIP=1 ;;
+   -s) SFLAG="$ARG" ;;
    -v) HAD_V=1; ARGS="$ARGS$NL$ARG" ;;
    -o) APPENDARG="$ARG" ;;
    -L*) echo "fatal: unsupported minicc library path flag: $ARG" >&2; exit 1 ;;
@@ -129,7 +129,14 @@ for ARG in "$@"; do
    *) echo "fatal: unsupported input file extension: $ARG" >&2; exit 1 ;;
   esac
 done
-test "$SFLAG" && DO_STRIP=1
+
+if test "$DO_STRIP" = 0; then
+  DO_STRIP=
+else
+  DO_STRIP=1
+  SFLAG=-s
+  test "$GCC" && SFLAG="-s$NL-Wl,-sss"
+fi
 
 if test "$TCC" && test "$TCCLD"; then  # $TCCLD should work with $GCC
   if test "$TCCLD" != "$TCC"; then
@@ -200,7 +207,6 @@ if test -z "$HAD_OFLAG"; then  # Add some size-optimizing flags.
    *) OFLAG_ARGS="-Os$NL-falign-functions=1$NL-falign-jumps=1$NL-falign-loops=1$NL-mpreferred-stack-boundary=2" ;;
   esac
   test "$TCC" && OFLAG_ARGS="-Os"
-  OFLAG_ARGS="$OFLAG_ARGS$NL$SFLAG"  # Use -O0 to prevent.
 fi
 INCLUDEDIR_ARG=
 DEF_ARG=
@@ -214,14 +220,14 @@ if test "$DO_ADD_INCLUDEDIR"; then
 fi
 if test "$TCC"; then
   # TODO(pts): Does TCC really generate i386-only code?
-  ARGS="$TCC$NL-m32$NL-march=$ARCH$NL-static$NL-nostdlib$NL-nostdinc$NL$OFLAG_ARGS$NL$WFLAGS$NL$DEF_ARG$NL$ARGS$NL$INCLUDEDIR_ARG"
+  ARGS="$TCC$NL-m32$NL-march=$ARCH$NL-static$NL-nostdlib$NL-nostdinc$NL$SFLAG$NL$OFLAG_ARGS$NL$WFLAGS$NL$DEF_ARG$NL$ARGS$NL$INCLUDEDIR_ARG"
 else
   # This also works with TCC, but it's too much cruft.
   # The `-B$MYDIR/gcctooldir' argument makes our gcctooldir/collect2 or gcctooldir/ld run.
   # Add $INCLUDEDIR_ARG last, so that -I... specified by the user takes precedence.
   # Specifying -fcommon since -fno-common is the default since GCC 10 and Clang 11: https://maskray.me/blog/2022-02-06-all-about-common-symbols
   # DYI dietlibc 0.34 adds: gcc -Os -fomit-frame-pointer -falign-functions=1 -falign-jumps=1 -falign-loops=1 -mpreferred-stack-boundary=4
-  ARGS="$TCC$NL$GCC$NL$GCC_BARG$NL-B$MYDIR/gcctooldir$NL-m32$NL-march=$ARCH$NL-static$NL-fno-pic$NL-U_FORTIFY_SOURCE$NL-fcommon$NL-fno-stack-protector$NL-fno-unwind-tables$NL-fno-asynchronous-unwind-tables$NL-fno-builtin$NL-fno-ident$NL-fsigned-char$NL-ffreestanding$NL-fno-lto$NL-nostdlib$NL-nostdinc$NL$OFLAG_ARGS$NL$WFLAGS$NL$DEF_ARG$NL$ARGS$NL$INCLUDEDIR_ARG"
+  ARGS="$TCC$NL$GCC$NL$GCC_BARG$NL-B$MYDIR/gcctooldir$NL-m32$NL-march=$ARCH$NL-static$NL-fno-pic$NL-U_FORTIFY_SOURCE$NL-fcommon$NL-fno-stack-protector$NL-fno-unwind-tables$NL-fno-asynchronous-unwind-tables$NL-fno-builtin$NL-fno-ident$NL-fsigned-char$NL-ffreestanding$NL-fno-lto$NL-nostdlib$NL-nostdinc$NL$SFLAG$NL$OFLAG_ARGS$NL$WFLAGS$NL$DEF_ARG$NL$ARGS$NL$INCLUDEDIR_ARG"
 fi
 if test "$DO_ADD_LIB"; then
   LIBWL=

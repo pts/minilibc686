@@ -38,7 +38,8 @@ for ARG in "$@"; do
    --sysroot=*) ;;  # --sysroot=/
    --as-needed) ;;
    -static) ;;
-   -s) ARGS="$ARGS$NL$ARG"; DO_STRIP=1 ;;  # Strip all symbols.
+   -sss) DO_STRIP=1 ;;  # Strip all symbols and even more (tools/elfxfix). `-s' is already added to args.
+   -s) ARGS="$ARGS$NL$ARG" ;;  # Strip all symbols.
    -L*) ;;  # Many.
    -l*) echo "fatal: unsupported hooked ld library flag: $ARG" >&2; exit 1 ;;
    -z) SKIPARG=1 ;;  # -z relro. TODO(pts): Make `-z execstack' and `-z noexecstack' go through.
