@@ -82,6 +82,7 @@ typedef struct {
 
 #define CHR4(a, b, c, d) ((Elf32_Off)(a) | (Elf32_Off)(b) << 8 | (Elf32_Off)(c) << 16 | (Elf32_Off)(d) << 24)
 
+#if 0
 const unsigned bss_o_bss_size_idx = 0x20;
 static Elf32_Off bss_o[] = {  /* ELF-32 .o file containing a .bss of the specified size. */
     CHR4(0x7f, 'E', 'L', 'F'), 0x10101, 0, 0, 0x30001, 1, 0, 0, 0x44, 0,
@@ -89,6 +90,24 @@ static Elf32_Off bss_o[] = {  /* ELF-32 .o file containing a .bss of the specifi
     CHR4(0, '.', 's', 'h'), CHR4('s', 't', 'r', 't'), CHR4('a', 'b', 0, '.'),
     CHR4('b', 's', 's', 0), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xb, 8, 3, 0, 0x34,
     0 /* EXTRA_BSS_SIZE */, 0, 0, 1, 0, 1, 3, 0, 0, 0x34, 0x10, 0, 0, 1, 0};
+/* This doesn't work well with the `-r' flag, because the user of the `-r'
+ * flag assumes that the extra size was added to the end of .bss. But common
+ * symbols come even later, so to get really he end, add a common symbol
+ * instead, which we do below.
+ */
+#else
+const unsigned bss_o_bss_size_idx = 0x13;
+static Elf32_Off bss_o[] = {  /* ELF-32 .o file containing a common symbol named .linkpad of the specified size. */
+    CHR4(0x7f, 'E', 'L', 'F'), 0x010101, 0, 0, 0x030001, 1, 0, 0, 0x7c, 0,
+    0x34, 0x280000, 0x030004, 0, 0, 0, 0, 1,
+    1 /* EXTRA_COMMON_ALIGNMENT */, 0 /* EXTRA_COMMON_SIZE */,
+    0xfff20011, CHR4(0, '.', 'l', 'i'), CHR4('n', 'k', 'p', 'a'),
+    CHR4('d', 0, 0, '.'), CHR4('s', 'y', 'm', 't'), CHR4('a', 'b', 0, '.'),
+    CHR4('s', 't', 'r', 't'), CHR4('a', 'b', 0, '.'), CHR4('s', 'h', 's', 't'),
+    CHR4('r', 't', 'a', 'b'), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 0, 0,
+    0x34, 0x20, 2, 1, 4, 0x10, 9, 3, 0, 0, 0x54, 0xa, 0, 0, 1, 0, 0x11, 3, 0,
+    0, 0x5e, 0x1b, 0, 0, 1, 0};
+#endif
 
 int main(int argc, char **argv) {
   char new_char[1];
