@@ -61,15 +61,18 @@ WFLAGS="-W$NL-Wall$NL-Werror=implicit-function-declaration"
 HAD_OFLAG=
 HAD_V=
 ARCH=i686
-USE_UCLIBC=
+USE_UTCC=
 GCC_BARG=-pipe  # Harmless default.
+LIBC=
 
 case "$1" in
  "" | -* | *.[aocisS]) ;;  # A flag or a source file name is not a program name.
  *)
   BASENAME="${1##*/}"
   case "$BASENAME" in
-   utcc) GCC=; TCC="$MYDIR"/tools/pts-tcc; USE_UCLIBC=1 ;;  # Same as: --utcc
+   utcc) GCC=; TCC="$MYDIR"/tools/pts-tcc; USE_UTCC=1 ;;  # Same as: --utcc
+   diet) LIBC=dietlibc ;;  # Same as: --dietlibc
+   xstatic) LIBC=uclibc  ;;  # Same as: --uclibc. Please note that this is not perfect, some .a and .h files are missing from pts-xstatic.
    *tcc*) TCC="$1"; GCC= ;;
    *) GCC="$1"; TCC= ;;
   esac
@@ -98,10 +101,14 @@ for ARG in "$@"; do
    --gcc=*) TCC=; GCC="${ARG#*=}" ;;
    --tcc) GCC=; TCC="$MYDIR"/tools/pts-tcc ;;
    --tcc=*) GCC=; TCC="${ARG#*=}" ;;
-   --utcc) GCC=; TCC="$MYDIR"/tools/pts-tcc; USE_UCLIBC=1 ;;
-   --utcc=*) GCC=; TCC="${ARG#*=}"; USE_UCLIBC=1 ;;
+   --utcc) GCC=; TCC="$MYDIR"/tools/pts-tcc; USE_UTCC=1 ;;
+   --utcc=*) GCC=; TCC="${ARG#*=}"; USE_UTCC=1 ;;
    --tccld) TCCLD="$MYDIR"/tools/pts-tcc ;;
    --tccld=*) TCCLD="${ARG#*=}" ;;
+   --uclibc) LIBC=uclibc ;;
+   --dietlibc | --diet | --libc=diet) LIBC=dietlibc ;;
+   --minilibc) LIBC=minilibc ;;
+   --libc=?*) LIBC="${ARG#*=}" ;;
    -static | -m32 | -fno-pic | -fpic | -fno-pie | -pie | -no-pie | -flto | -fno-lto | -nostartfiles) ;;
    -march=i[36]86) ARCH="${ARG#*=}" ;;
    -march=*) echo "fatal: unsupported minicc arch flag: $ARG" >&2; exit 1 ;;
@@ -130,6 +137,19 @@ for ARG in "$@"; do
   esac
 done
 
+if test "$USE_UTCC"; then
+  if test "$LIBC"; then
+    echo "fatal: conflicting combination of --utcc and --libc=$LIBC" >&2
+    exit 1
+  fi
+else
+  test "$LIBC" || LIBC=minilibc
+  if test "$LIBC" != minilibc; then
+    echo "fatal: unsupported libc in --libc=$LIBC" >&2
+    exit 1
+  fi
+fi
+
 if test "$DO_STRIP" = 0; then
   DO_STRIP=
 else
@@ -153,10 +173,10 @@ if test -z "$TCC" && test -z "$GCC"; then
   echo "fatal: missing compiler, neither --tcc=... nor --gcc=..." >&2
   exit 1
 fi
-if test "$USE_UCLIBC" && test "$DO_ADD_LIB" && test -z "$TCCLD" && test "${TCC%/pts-tcc}" = "$TCC"; then
+if test "$USE_UTCC" && test "$DO_ADD_LIB" && test -z "$TCCLD" && test "${TCC%/pts-tcc}" = "$TCC"; then
   # That's because ///tmp///LIBTCC1.a is embedded in the tools/pts-tcc executable.
   # TODO(pts): Extract it.
-  echo "fatal: currently uClibc needs pts-tcc" >&2
+  echo "fatal: currently uClibc with --utcc needs pts-tcc; try --uclibc instead" >&2
   exit 1
 fi
 if test "$USE_UBLIBC" && test "$ARCH" = i386; then
@@ -212,7 +232,7 @@ INCLUDEDIR_ARG=
 DEF_ARG=
 if test "$DO_ADD_INCLUDEDIR"; then
   INCLUDEDIR_ARG="-I$MYDIR/libc/minilibc/include"
-  if test "$USE_UCLIBC"; then
+  if test "$USE_UTCC"; then
     DEF_ARG="-D__asm__(x)=$NL-D__UCLIBC__"   # Make it ignore __asm__("mini_printf") in stdio.h, so that the linker will find the uClibc printf(...).
   else
     DEF_ARG="-D__MINILIBC686__$NL-DCONFIG_INLINE_FILENO"
@@ -231,7 +251,7 @@ else
 fi
 if test "$DO_ADD_LIB"; then
   LIBWL=
-  if test "$USE_UCLIBC"; then
+  if test "$USE_UTCC"; then
     test "$GCC" && LIBWL=-Wl,  # -Wl, is needed, otherwise GCC will complain that it is not able to find "$LIBFN" (which doesn't exist on the filesystem).
     LIBFN=///tmp///LIBTCC1.a  # Embedded in tools/pts-tcc.
   else
@@ -254,7 +274,7 @@ if test "$DO_ADD_LIB"; then
       fi
     fi
     ARGS="$ARGS$NL$OBJFN"
-    if test "$USE_UCLIBC"; then
+    if test "$USE_UTCC"; then
       OBJFN="$MYDIR/helper_lib/need_uclibc_main.o"
       if ! test -f "$OBJFN"; then
         # !! TODO(pts): Let build.sh take care of this.
@@ -268,7 +288,7 @@ if test "$DO_ADD_LIB"; then
     fi
   fi
   ARGS="$ARGS$NL$LIBWL$LIBFN"
-  if test "$TCC" && test -z "$USE_UCLIBC"; then
+  if test "$TCC" && test -z "$USE_UTCC"; then
     LIBFN="$MYDIR/helper_lib/libminitcc1.a"
     if ! test -f "$LIBFN"; then
       if "$MYDIR/build.sh" && test -f "$LIBFN"; then :; else
@@ -278,16 +298,9 @@ if test "$DO_ADD_LIB"; then
     fi
     ARGS="$ARGS$NL$LIBFN"
   fi
-  if test "$USE_UCLIBC"; then
-    OBJFN="$MYDIR/helper_lib/start_uclibc_linux.o"
-    if ! test -f "$OBJFN"; then
-      # !! TODO(pts): Let build.sh take care of this.
-      test "$HAD_V" && echo "info: compiling: $MYDIR/helper_lib/start_uclibc_linux.nasm" >&2
-      if "$MYDIR/tools/nasm-0.98.39" -O0 -w+orphan-labels -f elf -o "$OBJFN" "$MYDIR/helper_lib/start_uclibc_linux.nasm" && test -f "$OBJFN"; then :; else
-        echo "fatal: failed to build uclibc start .o: $OBJFN" >&2
-        exit 3
-      fi
-    fi
+  if test "$USE_UTCC"; then
+    # OBJFN="$MYDIR/helper_lib/start_uclibc_linux.o"  # Not needed.
+    OBJFN="///tmp///crt1.o"  # Embedded in the tools/pts-tcc executable, same functionality as start_uclibc_linux.o.
     ARGS="$ARGS$NL$LIBWL$OBJFN"
   fi
 fi
