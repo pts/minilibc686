@@ -757,5 +757,17 @@
 #define __NR_membarrier         375
 #define  SYS_mlock2             __NR_mlock2
 #define __NR_mlock2             376
+#define  SYS_copy_file_range    __NR_copy_file_range
+#define __NR_copy_file_range    377
+#define  SYS_preadv2            __NR_preadv2
+#define __NR_preadv2            378
+#define  SYS_pwritev2           __NR_pwritev2
+#define __NR_pwritev2           379
+#define  SYS_pkey_mprotect      __NR_pkey_mprotect
+#define __NR_pkey_mprotect      380
+#define  SYS_pkey_alloc         __NR_pkey_alloc
+#define __NR_pkey_alloc         381
+#define  SYS_pkey_free          __NR_pkey_free
+#define __NR_pkey_free          382
 
 #endif  /* _SYS_SYSCALL_H */
