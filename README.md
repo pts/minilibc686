@@ -204,7 +204,7 @@ system GCC. To use the system Clang, specify `--gcc=clang`. Please note that
 *minicc* is work in progress.
 
 For convienience, `./minicc --utcc` links against a bundled uClibc 0.9.30.1
-(built for `-march=pentium3`, which is newer than `-march=i686`) rather than
+(built for `-march=i686`) rather than
 minilibc686. uClibc provides more functionality and compatibility than
 minilibc686, but it has more overhead (i.e. the program becomes a few KiB
 larger). The full uClibc .h files are not provided, but the minilibc686
@@ -383,8 +383,6 @@ This section is mostly an FYI, it doesn't affter minilibc686 users directly.
   smart linking or more weak symbols (e.g. mini___M_fputc_RP2 in
   stdio_medium_vfprintf.nasm).
 * Make sure that the binary output is bitwise identical with NASM 2.13.02: `NASM=nasm build.sh`.
-* Rebuild the uClibc 0.9.30.1 within pts-tcc for `-march=i686` (1995).
-  Currently it's built for the newer `-march=pentium3` (1999).
 * ELF patch: .o change section alignments
 
 __END__
