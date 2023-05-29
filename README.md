@@ -23,8 +23,8 @@ headers, program code and libc code):
   Comparison:
   * minilibc686 (`./minicc --gcc`) is
     1220 bytes, already stripped
-  * [diet libc](https://www.fefe.de/dietlibc/) 0.34 (`diet gcc`) is
-    8196 bytes after stripping
+  * [diet libc](https://www.fefe.de/dietlibc/) 0.34 (`./minicc --diet`) is
+    5820 bytes after stripping
   * [neatlibc](https://github.com/aligrudi/neatlibc) is
     12684 bytes after stripping;
     [some functions in 386 assembly]((https://github.com/aligrudi/neatlibc/tree/master/x86)
