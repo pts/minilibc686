@@ -23,11 +23,13 @@ section .bss align=1
 
 section .text
 ; For OpenWatcom.
-__U8RS:
+__U8RS:  ; unsigned long long __watcall_but_ruins_ecx __U8RS(unsigned long long a, int b) { return a >> b; }
+; Input: EDX:EAX == a; EBX == b.
+; Output: EDX:EAX == ((unsigned long long)a >> b); EBX == b; ECX == junk.
 		mov ecx, ebx
 		and cl, 0x3f
 		test cl, 0x20
-		jne .1
+		jnz .1
 		shrd eax, edx, cl
 		shr edx, cl
 		ret

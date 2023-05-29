@@ -24,12 +24,14 @@ section .bss align=1
 
 section .text
 ; For OpenWatcom.
-__I8LS:
-__U8LS:
+__I8LS:  ; long long __watcall_but_ruins_ecx __I8LS(long long a, int b) { return a << b; }
+__U8LS:  ; unsigned long long __watcall_but_ruins_ecx __U8LS(unsigned long long a, int b) { return a << b; }
+; Input: EDX:EAX == a; EBX == b.
+; Output: EDX:EAX == (a << b); EBX == b; ECX == junk.
 		mov ecx, ebx
 		and cl, 0x3f
 		test cl, 0x20
-		jne .3
+		jnz .3
 		shld edx, eax, cl
 		shl eax, cl
 		ret

@@ -118,8 +118,8 @@ for F in src/[a-zA-Z0-9_]*.nasm; do
   done
 done
 
-# We don't have .c source ready for these. Needed by TCC 0.9.26.
-cp -a src/tcc_float.o src/tcc_shift.o build_tmp/
+# !! We don't have .c source ready for this. Needed by TCC 0.9.26.
+cp -a src/tcc_float.o build_tmp/
 
 # Order of these .o files in libmini[34]86.a is importan when linking with
 # pts-tcc, because these .o files contain weak symbols, and if they were
@@ -128,7 +128,7 @@ cp -a src/tcc_float.o src/tcc_shift.o build_tmp/
 #
 # TODO(pts): Does GNU ld(1) have the same behavior?
 LIB_OBJS_SPECIAL_ORDER="stdio_medium_flush_opened.o start_stdio_medium_linux.o"
-LIB_OBJS_TCC1="tcc_alloca.o tcc_clear_cache.o tcc_cvt_ftol.o tcc_float.o tcc_shift.o"
+LIB_OBJS_TCC1="tcc_alloca.o tcc_clear_cache.o tcc_cvt_ftol.o tcc_float.o tcc_shift.o tcc_i64_ashldi3.o tcc_i64_ashrdi3.o tcc_i64_lshrdi3.o"
 ARB="$AR"
 test "${ARB#/}" = "$ARB" && ARB=../"$ARB"
 for OUTFN in $OUTFNS; do
