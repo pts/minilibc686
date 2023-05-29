@@ -109,7 +109,7 @@ The following components are included:
   GCC and Clang compilers installed onto the system, and it runs the
   compiler and the linker with many size-optimization flags, and it removes
   most unnecessary stuff from the final executable. In addition to these
-  compilers, it can use the bundled TinyCC compiler (tools/pts-tcc) (use the
+  compilers, it can use the bundled TinyCC compiler (`tools/pts-tcc`) (use the
   `--tcc` flag).
 
 * tools/nasm-0.98.39: NASM (Netwide Assembler) executables to build .o files
@@ -160,8 +160,6 @@ Other tiny libc projects targeting Windows:
 * [malxau/minicrt](https://github.com/malxau/minicrt) (2019)
 * [nidud/asmc libc](https://github.com/nidud/asmc/tree/master/source/libc) (2023--, implemented in assembly, for amd64)
 
----
-
 Features:
 
 * It targets the i386 (first implemented by the Intel 80386 CPU introduced
@@ -196,41 +194,6 @@ Features:
   `-mno-fp-ret-in-387` breaks the cdecl ABI, because with that doubles are
   returned in EDX:EAX rather than ST(0), the latter requiring an FPU.)
 
-The *minicc* compiler fronted is a drop-in replacement for `gcc`, `clang` or
-`tcc` for building ELF-32 executables for Linux i386, statically linked
-against minilibc686. If you specify the `--tcc` flag, it will use the
-bundled TinyCC compiler (`tools/pts-tcc`). Without that flag, it will use the
-system GCC. To use the system Clang, specify `--gcc=clang`. Please note that
-*minicc* is work in progress.
-
-For convienience, `./minicc --utcc` links against a bundled uClibc 0.9.30.1
-(built for `-march=i686`) rather than
-minilibc686. uClibc provides more functionality and compatibility than
-minilibc686, but it has more overhead (i.e. the program becomes a few KiB
-larger). The full uClibc .h files are not provided, but the minilibc686
-.h files work as a subset.
-
-An end-to-end demo for building a printf-hello-world program in NASM
-assembly with minilibc686, targeting Linux i386 32-bit ELF (actually i686
-processors), is provided in test_demo_hello_linux.sh. For the build you need
-a Linux host system and NASM. NASM also does the linking with `-f bin` and
-the provided elf0.inc.nasm.
-
-An end-to-end demo for building a printf-hello-world C program with
-minilibc686, targeting Linux i386 32-bit ELF (actually i686 processors), is
-provided in *test_demo_c_hello_linux.sh*. For the build you need a Linux i386
-or amd64 host system. The build script uses the bundled NASM 0.98.39
-assembler and the bundled TinyCC compiler, and it also autodetects GCC, and
-if available, builds with GCC as well. Please note that using the *minicc*
-compiler frontend is preferred (to the shell script
-*test_demo_c_hello_linux.sh*) is recommended, see the command line above.
-
-Please note that minilibc686 is currently not ready as a general libc
-replacement for Linux, mostly because most of the functions haven't been
-written yet, and there is no good linker provided yet. (The linkers of GCC,
-Clang and TinyCC work, but they are not particularly impressive, because
-they add some boilerplate which cannot be disabled.)
-
 Design limitations:
 
 * No 64-bit support, it's 32-bit Intel (IA-32) only.
@@ -261,6 +224,81 @@ Design limitations:
   the user has to use external C compilers, linkers and build
   configurations.
 * File offsets (off_t) are 32-bit. (This can be relaxed later.)
+
+An end-to-end demo for building a printf-hello-world program in NASM
+assembly with minilibc686, targeting Linux i386 32-bit ELF (actually i686
+processors), is provided in test_demo_hello_linux.sh. For the build you need
+a Linux host system and NASM. NASM also does the linking with `-f bin` and
+the provided elf0.inc.nasm.
+
+An end-to-end demo for building a printf-hello-world C program with
+minilibc686, targeting Linux i386 32-bit ELF (actually i686 processors), is
+provided in *test_demo_c_hello_linux.sh*. For the build you need a Linux i386
+or amd64 host system. The build script uses the bundled NASM 0.98.39
+assembler and the bundled TinyCC compiler, and it also autodetects GCC, and
+if available, builds with GCC as well. Please note that using the *minicc*
+compiler frontend is preferred (to the shell script
+*test_demo_c_hello_linux.sh*) is recommended, see the command line above.
+
+Please note that minilibc686 is currently not ready as a general libc
+replacement for Linux, mostly because most of the functions haven't been
+written yet, and there is no good linker provided yet. (The linkers of GCC,
+Clang and TinyCC work, but they are not particularly impressive, because
+they add some boilerplate which cannot be disabled.)
+
+## minicc
+
+The *minicc* compiler frontend is a drop-in replacement for `gcc`, `clang`
+or `tcc` to build small, statically linked ELF-32 executables for Linux
+i386. Running *minicc is* the recommended way to build your programs using
+minilibc686. By default, these executables link against minilibc686, but
+with command-line flags (e.g. the usual `-nostdlib` and `-nostdinc`), you
+can specify any libc. It runs the compiler and the linker with many
+size-optimization flags, and it removes most unnecessary stuff from the
+final executable.
+
+Here is how to pick the compiler:
+
+* By default, *minicc* uses the system GCC. Run it with `--gcc=...` to
+  specify a specific GCC command, e.g. `--gcc=gcc-4.8`.
+* To use the system Clang, run it with `--gcc=clang`. You can also specify
+  a specific Clang command, e.g. `--gcc=clang-6.0`.
+* To use the the bundled TinyCC 0.9.26 compiler (`tools/pts-tcc`), specify
+  `--tcc`.
+
+Here is how to pick the linker:
+
+* By default, *minicc* uses the linker coming with the compiler used.
+* To use the linker of the bundled TinyCC compiler (`tools/pts-tcc`),
+  specify `--tccld`.
+
+Here is how to pick the libc:
+
+* By default, *minicc* links against the bundled minilibc686 built for
+  i686 (`-march=i686`).
+* To use the bundled minilibc686 built for i386, specify `-march=i386`.
+  This will also make the specified C source files be compiled for i386.
+* To use the bundled uClibc 0.9.30.1 (built for `-march=i686`) with the
+  bundled TinyCC compiler, specify `--utcc`. uClibc provides more
+  functionality and compatibility than minilibc686, but it has more overhead
+  (i.e. the program becomes a few KiB larger). The full uClibc .h files are
+  not provided, but the minilibc686 .h files work as a subset.
+* To use the bundled uClibc 0.9.30.1 (built for `-march=i686`) with the GCC
+  or Clang compiler and the linker of the bundled TinyCC compiler, specify
+  `--utcc --gcc=... --tccld`.
+
+Here is how to disable default *minicc* functionality:
+
+* Disable code size optimization: specify any `-O...` flag, e.g. `-O0` for
+  the GCC default. Please note that by specifying `-Os`, you will get worse
+  size optimization than the default *minicc*.
+* Disable executable stripping: specify any `-g...` flag, e.g. `-g0` for the
+  GCC default.
+* Disable C compiler warnings enabled by *minicc*: specify any `-W...` flag,
+  e..g `-Wno-no` for the GCC default.
+* Disable linking against minilibc686: specify `-nostdlib -nostdinc`, and
+  specify any libc (with `-I...` for the #include directory and `....a` for
+  the static library).
 
 ## Testing
 
