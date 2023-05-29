@@ -238,8 +238,11 @@ int main(int argc, char **argv) {
       if (flag_a && is_first_pt_load && phdr->p_offset < phdr->p_align &&
           phdr->p_offset > 0 &&
           (phdr->p_offset & (phdr->p_align - 1)) == (phdr->p_vaddr & (phdr->p_align - 1))) {
-        phdr->p_vaddr -= phdr->p_offset;
-        phdr->p_paddr -= phdr->p_offset;
+        want = phdr->p_offset;
+        phdr->p_memsz += want;
+        phdr->p_filesz += want;
+        phdr->p_vaddr -= want;
+        phdr->p_paddr -= want;
         phdr->p_offset = 0;
         phdr_has_changed = 1;
       }
@@ -304,6 +307,7 @@ int main(int argc, char **argv) {
       fprintf(stderr, "fatal: error seeking to ELF phdr again: %s\n", filename);
       return 17;
     }
+    want = ehdr.e_phnum * sizeof(phdrs[0]);
     if ((size_t)write(fd, phdrs, want) != (size_t)want) {
       fprintf(stderr, "fatal: error changing ELF phdr: %s\n", filename);
       return 18;
