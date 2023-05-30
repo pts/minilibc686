@@ -118,11 +118,20 @@ _define_needs UNDEFSYMS  ; Must be called before _need and _alias.
 ;
 _alias mini_remove, mini_unlink
 %define __NEED_mini_exit
+; The dependencies below must be complete for each system call defined in
+; src/start_stdio_medium_linux.nasm (read(2), write(2), open(2), close(2),
+; lseek(2), ioctl(2)), otherwise there will be duplicate symbols.
+;
+; TODO(pts): Autogenerate these dependencies.
 _need mini_getchar, mini_stdin
+_need mini_getchar, mini_fgetc
 _need mini_gets, mini_stdin
 _need mini_scanf, mini_stdin
 _need mini_vscanf, mini_stdin
 _need mini_putchar, mini_stdout
+_need mini_putchar, mini_putchar_RP1
+_need mini_putchar_RP1, mini_stdout
+_need mini_putchar_RP1, mini___M_fputc_RP2
 _need mini_puts, mini_stdout
 _need mini_printf, mini_stdout
 _need mini_vprintf, mini_stdout
@@ -137,8 +146,24 @@ _need mini___M_start_isatty_stdout, mini_isatty
 _need mini_isatty, mini_ioctl
 _need mini___M_start_flush_stdout, mini_fflush
 _need mini___M_start_flush_opened, mini_fflush
+_need mini_fclose, mini_fflush
+_need mini_fwrite, mini_fflush
+_need mini_fseek, mini_fflush
+_need mini_fseek, mini_lseek
+_need mini_puts, mini_fputs
+_need mini_fputs, mini_fwrite
+_need mini_putc, mini___M_fputc_RP2
+_need mini_fputc, mini___M_fputc_RP2
+_need mini___M_fputc_RP2, mini_write
+_need mini___M_fputc_RP2, mini_fflush
 _need mini_fflush, mini_write
+_need mini_getc, mini_fread
+_need mini_fgetc, mini_fread
+_need mini___M_fgetc_fallback_RP1, mini_fread
+_need mini_fread, mini_read
 _need mini_exit, mini__exit
+_need mini_fopen, mini_open
+_need mini_fclose, mini_close
 ;
 _need_aliases ALIASES  ; Must be called after _alias.
 ;
