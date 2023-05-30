@@ -15,7 +15,9 @@ section .text align=1
 section .rodata align=4
 section .data align=4
 section .bss align=4
+mini___M_jmp_pop_ebx_syscall_return equ +0x12345678
 %else
+extern mini___M_jmp_pop_ebx_syscall_return
 section .text align=1
 section .rodata align=1
 section .data align=1
@@ -44,12 +46,8 @@ mini_lseek64_set_RP3:  ; int mini_lseek64_set_RP3(int fd, off64_t offset) __attr
 		pop ebx  ; High dword of result.
 		pop edi
 		pop esi
-		pop ebx
-		cmp eax, -0x100  ; Treat very large (e.g. <-0x100; with Linux 5.4.0, 0x85 seems to be the smallest) non-negative return values as success rather than errno. This is needed by time(2) when it returns a negative timestamp. uClibc has -0x1000 here.
-		jna .final_result
-		;or edx, byte -1  ; EDX := -1 (error).  No need to set EDX, EAX is good enough.
-		or eax, byte -1  ; EAX := -1 (error).
-.final_result:	ret
+		;pop ebx
+		jmp strict near mini___M_jmp_pop_ebx_syscall_return
 
 %ifdef CONFIG_PIC  ; Already position-independent code.
 %endif

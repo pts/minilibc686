@@ -61,7 +61,11 @@ bits 32
   %ifdef __NEED_mini_%1
     %define __NRM_mini_%1 %2  ; Save syscall number.
     %xdefine SYSCALLS SYSCALLS,mini_%1  ; Remember syscall name for _emit_syscalls.
-    %define __NEED_mini_syscall3_AL
+    %if %2>255
+      %define __NEED_mini_syscall3_RP1
+    %else
+      %define __NEED_mini_syscall3_AL
+    %endif
   %endif
 %endmacro
 
@@ -70,8 +74,13 @@ bits 32
     %ifnidn %1_, _  ; `%ifnidn $1,' doesn't work, so we append `_'.
       global %1
       %1:
-      mov al, __NRM_%1
-      jmp strict short syscall3  ; `short' to make sure that the jump is 2 bytes. This lets us define about 50 different syscalls in this file.
+      %if __NRM_%1>255
+        mov eax, __NRM_%1
+        jmp strict short syscall3_EAX  ; `short' to make sure that the jump is 2 bytes. This lets us define about 50 different syscalls in this file.
+      %else
+        mov al, __NRM_%1
+        jmp strict short syscall3_AL  ; `short' to make sure that the jump is 2 bytes. This lets us define about 50 different syscalls in this file.
+      %endif
     %endif
     %rotate 1
   %endrep
@@ -149,11 +158,21 @@ _syscall _llseek, 140  ; Use mini_lseek64(...) instead, it's more convenient fro
 _syscall mmap2, 192
 _syscall mremap, 163
 _syscall munmap, 91
-_syscall brk, 45
+;_syscall brk, 45  ; Conflicts with brk(3).
+_syscall sys_brk, 45
 _syscall time, 13
 _syscall gettimeofday, 78
+_syscall chmod, 15
+_syscall fchmod, 94
+_syscall mkdir, 39
+_syscall lstat64, 196
+_syscall symlink, 83
+_syscall umask, 60
+_syscall utimes, 271
 ;
 _need mini_syscall3_AL, mini_syscall3_RP1
+_need mini_syscall3_RP1, mini___M_jmp_pop_ebx_syscall_return
+_need mini___M_jmp_pop_ebx_syscall_return, mini___M_jmp_syscall_return
 
 section .text align=1
 %ifidn __OUTPUT_FORMAT__, bin  ; FAllback for size measurements.
@@ -221,7 +240,7 @@ mini__exit:  ; void mini__exit(int exit_code);
 %ifdef __NEED_mini_syscall3_RP1
 exit_AL:	mov al, 1  ; __NR_exit.
 		; Fall through to syscall3(...).
-syscall3:
+syscall3_AL:
 global mini_syscall3_AL
 mini_syscall3_AL:  ; Useful from assembly language.
 ; Calls syscall(number, arg1, arg2, arg3).
@@ -236,18 +255,33 @@ mini_syscall3_AL:  ; Useful from assembly language.
 		movzx eax, al  ; number.
 global mini_syscall3_RP1
 mini_syscall3_RP1:  ; long mini_syscall3_RP1(long nr, long arg1, long arg2, long arg3) __attribute__((__regparm__(1)));
+syscall3_EAX:
 		push ebx  ; Save it, it's not a scratch register.
 		mov ebx, [esp+8]  ; arg1.
 		mov ecx, [esp+0xc]  ; arg2.
 		mov edx, [esp+0x10]  ; arg3.
 		int 0x80  ; Linux i386 syscall.
+		; Fall through to mini___M_jmp_pop_ebx_syscall_return.
+%ifdef __NEED_mini___M_jmp_pop_ebx_syscall_return
+global mini___M_jmp_pop_ebx_syscall_return
+mini___M_jmp_pop_ebx_syscall_return:
+		pop ebx
+		; Fall through to mini___M_jmp_syscall_return.
+%endif  ; __NEED_mini___M_jmp_pop_ebx_syscall_return
+%ifdef __NEED_mini___M_jmp_syscall_return
+global mini___M_jmp_syscall_return
+mini___M_jmp_syscall_return:
 		; test eax, eax
 		; jns .final_result
 		cmp eax, -0x100  ; Treat very large (e.g. <-0x100; with Linux 5.4.0, 0x85 seems to be the smallest) non-negative return values as success rather than errno. This is needed by time(2) when it returns a negative timestamp. uClibc has -0x1000 here.
 		jna .final_result
+%ifdef __NEED_mini_errno  ; TODO(pts): More syscalls should set errno.
+		neg eax
+		mov dword [mini_errno], eax  ; TODO(pts): Add this to -mno-smart.
+%endif
 		or eax, byte -1  ; EAX := -1 (error).
-.final_result:	pop ebx
-		ret
+.final_result:	ret
+%endif  ; __NEED_mini___M_jmp_syscall_return
 %else  ; __NEED_mini_syscall3_RP1
 %if EXIT_IS_EMPTY
 		xchg eax, ebx  ; EBX := exit code; EAX := junk.
@@ -261,5 +295,11 @@ mini_syscall3_RP1:  ; long mini_syscall3_RP1(long nr, long arg1, long arg2, long
 
 _emit_syscalls SYSCALLS
 _define_alias_syms ALIASES  ; Must be called after alias targets have been defined.
+
+%ifdef __NEED_mini_errno
+section .bss
+global mini_errno  ; TODO(pts): Add this to -mno-smart.
+mini_errno:	resd 1
+%endif
 
 ; __END__

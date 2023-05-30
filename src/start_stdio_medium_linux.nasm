@@ -18,6 +18,8 @@ global mini__start
 global mini__exit
 global mini_syscall3_AL
 global mini_syscall3_RP1
+global mini___M_jmp_pop_ebx_syscall_return
+global mini___M_jmp_syscall_return
 global mini_exit
 global mini_open
 global mini_close
@@ -119,7 +121,9 @@ mini_syscall3_RP1:  ; long mini_syscall3_RP1(long nr, long arg1, long arg2, long
 		mov ecx, [esp+0xc]  ; arg2.
 		mov edx, [esp+0x10]  ; arg3.
 		int 0x80  ; Linux i386 syscall.
+mini___M_jmp_pop_ebx_syscall_return:
 		pop ebx
+mini___M_jmp_syscall_return:
 		; test eax, eax
 		; jns .final_result
 		cmp eax, -0x100  ; Treat very large (e.g. <-0x100; with Linux 5.4.0, 0x85 seems to be the smallest) non-negative return values as success rather than errno. This is needed by time(2) when it returns a negative timestamp. uClibc has -0x1000 here.
@@ -132,7 +136,7 @@ WEAK..mini___M_start_flush_stdout:   ; Fallback, tools/elfofix will convert it t
 WEAK..mini___M_start_flush_opened:   ; Fallback, tools/elfofix will convert it to a weak symbol.
 		ret
 
-; TODO(pts): Use smart linking to get rid of the unnecessary syscalls.
+; TODO(pts): Use smart linking to get rid of the unnecessary syscalls. Move everything from here, keep them in smart.nasm only.
 %ifndef CONFIG_START_STDOUT_ONLY
 mini_read:	mov al, 3  ; __NR_read.
 		jmp strict short syscall3
@@ -149,11 +153,6 @@ mini_lseek:	mov al, 19  ; __NR_lseek.
 %endif
 mini_ioctl:	mov al, 54  ; __NR_ioctl.
 		jmp strict short syscall3
-; TODO(pts): Automatically add creat(2), remove(2) etc.
-;mini_time:	mov al, 13  ; __NR_time.
-;		jmp strict short syscall3
-;mini_gettimeofday:  mov al, 78  ; __NR_gettimeofday.
-;		jmp strict short syscall3
 
 %ifdef CONFIG_PIC  ; Already position-independent code.
 %endif
