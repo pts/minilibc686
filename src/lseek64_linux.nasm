@@ -30,7 +30,7 @@ mini_lseek64:  ; off64_t mini_lseek64(int fd, off64_t offset, int whence);
 		push ebx  ; High dword of result.
 		push ebx  ; Low dword of result.
 		xor eax, eax
-		mov al, 140  ; __NR__lseek.
+		mov al, 140  ; __NR__llseek.
 		mov ebx, [esp+0x14+4]  ; Argument fd.
 		mov edx, [esp+0x14+8]  ; Argument offset (low dword).
 		mov ecx, [esp+0x14+0xc]  ; Argument offset (high dword).

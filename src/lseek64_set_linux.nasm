@@ -34,7 +34,7 @@ mini_lseek64_set_RP3:  ; int mini_lseek64_set_RP3(int fd, off64_t offset) __attr
 		push ebx  ; High dword of result (will be ignored).
 		push ebx  ; Low dword of result (will be ignored).
 		xchg ebx, eax  ; EBX := fd. EAX := scratch.
-		mov eax, 140  ; __NR__lseek.
+		mov eax, 140  ; __NR__llseek.
 		;mov ecx, arg_ecx  ; offset >> 32.
 		;mov edx, arg_edx  ; offset.
 		mov esi, esp  ; &result.
