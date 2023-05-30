@@ -6,6 +6,7 @@
 bits 32
 cpu 386
 
+global mini_getc
 global mini_fgetc
 %ifdef CONFIG_SECTIONS_DEFINED
 %elifidn __OUTPUT_FORMAT__, bin
@@ -24,6 +25,7 @@ section .bss align=1
 
 section .text
 
+mini_getc:
 mini_fgetc:
 		enter 4, 0  ; 3 bytes. Equivalent to: push ebp ++ mov ebp, esp ++ sub ebp, byte 4.
 		mov eax, [ebp+0x8]
