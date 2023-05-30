@@ -23,8 +23,9 @@ int unlink(const char *pathname) __asm__("mini_unlink");
 /* Limitation: it doesn't always set errno in minilibc686. */
 int isatty(int fd) __asm__("mini_isatty");
 int ftruncate(int fd, off_t length) __asm__("mini_ftruncate");  /* 32-bit length. */
+int symlink(const char *target, const char *linkpath) __asm__("mini_symlink");
 
-#ifndef __UCLIBC__
+#ifdef __MINILIBC686__
 long syscall0(long nr) __asm__("mini_syscall3_RP1") __attribute__((__regparm__(1)));
 long syscall1(long nr, long arg1) __asm__("mini_syscall3_RP1") __attribute__((__regparm__(1)));
 long syscall2(long nr, long arg1, long arg2) __asm__("mini_syscall3_RP1") __attribute__((__regparm__(1)));
