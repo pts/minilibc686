@@ -128,6 +128,13 @@ The following components are included:
   it has more overhead (i.e. the program becomes a few KiB larger, even
   larger than diet libc).
 
+* libc/[eglibc-2.19.sfx.7z](https://github.com/pts/minilibc686/releases/download/eglibc-2.91-v1/eglibc-2.19.sfx.7z):
+  Self-extracting archive containing EGLIBC
+  2.19 (released on 2014-09-29) (.h and .a files) targeting Linux i386,
+  compiled for `-march=i686`. Use it with `./minicc --eglibc`.
+  EGLIBC is glibc for embedded systems. It has full functionality, but
+  for a hello-world it's quite bloated (>550 KiB).
+
 * tools/nasm-0.98.39: NASM (Netwide Assembler) executables to build .o files
   from the .nasm files. It is invoked by build.sh.
 
@@ -298,6 +305,7 @@ Here is how to pick the libc:
 * To use the bundled diet libc built for i686, specify `--diet`.
 * To use the bundled diet libc built for i386, specify `--diet -march=i386`.
   This will also make the specified C source files be compiled for i386.
+* To use the bundled eglibc built for i686, specify `--eglibc`.
 * (Most users want `--uclibc` instead of this.)
   To use the bundled uClibc 0.9.30.1 (built for `-march=i686`) with the
   bundled TinyCC compiler, specify `--utcc`.The full uClibc .h files are
