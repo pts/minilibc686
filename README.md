@@ -40,8 +40,8 @@ headers, program code and libc code):
     [tinylinux-2.2](https://justine.lol/cosmopolitan/cosmopolitan-amalgamation-tinylinux-2.2.zip) is
     24576 bytes; it should be ~16000 bytes; please note that it targets
     amd64
-  * elibc 2.19 (`./minicc --eglibc`) is
-    582810 bytes after stripping
+  * eglibc 2.19 (`./minicc --eglibc`) is
+    582714 bytes after stripping
   * glibc 2.27 (`gcc -m32 -s -Os -static`) is
     594716 bytes after stripping
   * glibc 2.19 (`gcc -m32 -s -Os -static`) is

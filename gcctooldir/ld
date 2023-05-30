@@ -10,7 +10,7 @@ if test "$MINICC_TCCLD"; then
   # TCC accepts all these flags (and ignores -m elf_i386).
   ARGS="${MINICC_TCCLD:-ld}$NL-nostdlib$NL-m${NL}elf_i386$NL-static"
 else
-  ARGS="${MINICC_LD:-ld}$NL-nostdlib$NL-m${NL}elf_i386$NL-static"
+  ARGS="${MINICC_LD:-ld}$NL-nostdlib$NL-m${NL}elf_i386$NL-static$NL-z${NL}norelro"
 fi
 test "$MINICC_LDV" && ARGS="$ARGS$NL-v" && MINICC_LDV=-v
 
