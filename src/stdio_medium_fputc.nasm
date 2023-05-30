@@ -5,6 +5,7 @@
 bits 32
 cpu 386
 
+global mini_putc
 global mini_fputc
 %ifdef CONFIG_SECTIONS_DEFINED
 %elifidn __OUTPUT_FORMAT__, bin
@@ -23,6 +24,7 @@ section .bss align=1
 
 section .text
 
+mini_putc:
 mini_fputc:
 		mov eax, [esp+4]
 		mov edx, [esp+8]
