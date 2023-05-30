@@ -30,7 +30,7 @@ section .text
 mini_getchar:
 		push dword [mini_stdin]
 		call mini_fgetc
-		pop edx  ; Clean up mini_stdout from the stack.
+		pop edx  ; Clean up mini_stdin from the stack.
 		ret
 
 %ifdef CONFIG_PIC
