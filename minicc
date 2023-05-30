@@ -108,6 +108,7 @@ for ARG in "$@"; do
    --tccld=*) TCCLD="${ARG#*=}" ;;
    --uclibc) LIBC=uclibc ;;
    --dietlibc | --diet | --libc=diet) LIBC=dietlibc ;;
+   --eglibc) LIBC=eglibc ;;
    --minilibc) LIBC=minilibc ;;
    --libc=?*) LIBC="${ARG#*=}" ;;
    -static | -m32 | -fno-pic | -fpic | -fno-pie | -pie | -no-pie | -flto | -fno-lto | -nostartfiles) ;;
