@@ -455,5 +455,10 @@ This section is mostly an FYI, it doesn't affter minilibc686 users directly.
   stdio_medium_vfprintf.nasm).
 * Make sure that the binary output is bitwise identical with NASM 2.13.02: `NASM=nasm build.sh`.
 * ELF patch: .o change section alignments
+* !! fflush(stdout) before getchar() or any read on stdin.
+  https://man7.org/linux/man-pages/man3/stdio.3.html
+  Should it also flush if reading from stdin buffer? No, no flush after
+  ungetc(..., stdin) in eglibc. diet libc doesn't flush on fread(3),
+  uClibc does.
 
 __END__
