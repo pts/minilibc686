@@ -83,28 +83,24 @@ mini__start:  ; Entry point (_start) of the Linux i386 executable.
 		push ecx  ; Argument envp for main.
 		push edx  ; Argument argv for main.
 		push eax  ; Argument argc for main.
-%if 1  ; TODO(pts): Omit this with smart linking.
-		call mini___M_start_isatty_stdin
+%ifndef CONFIG_START_STDOUT_ONLY
+		call mini___M_start_isatty_stdin  ; Smart linking (smart.nasm) may omits this call.
 %endif
-%if 1  ; TODO(pts): Omit this with smart linking.
-		call mini___M_start_isatty_stdout
-%endif
+		call mini___M_start_isatty_stdout  ; Smart linking (smart.nasm) may omits this call.
 		call main  ; Return value (exit code) in EAX (AL).
 		push eax  ; Save exit code, for mini__exit.
 		push eax  ; Fake return address, for mini__exit.
 		; Fall through to mini_exit(...).
 mini_exit:  ; void mini_exit(int exit_code);
-%if 1  ; TODO(pts): Omit this with smart linking.
-		call mini___M_start_flush_stdout
-%endif
-%if 1  ; TODO(pts): Omit this with smart linking.
-		call mini___M_start_flush_opened
+		call mini___M_start_flush_stdout  ; Smart linking (smart.nasm) may omits this call.
+%ifndef CONFIG_START_STDOUT_ONLY
+		call mini___M_start_flush_opened  ; Smart linking (smart.nasm) may omits this call.
 %endif
 		; Fall through to mini__exit(...).
 mini__exit:  ; void mini__exit(int exit_code);
 _exit:
 		mov al, 1  ; __NR_exit.
-		; Fall through to progx_syscall3.
+		; Fall through to syscall3.
 syscall3:
 mini_syscall3_AL:  ; Useful from assembly language.
 ; Calls syscall(number, arg1, arg2, arg3).
@@ -136,16 +132,20 @@ WEAK..mini___M_start_flush_opened:   ; Fallback, tools/elfofix will convert it t
 		ret
 
 ; TODO(pts): Use smart linking to get rid of the unnecessary syscalls.
+%ifndef CONFIG_START_STDOUT_ONLY
 mini_read:	mov al, 3  ; __NR_read.
 		jmp strict short syscall3
+%endif
 mini_write:	mov al, 4  ; __NR_write.
 		jmp strict short syscall3
+%ifndef CONFIG_START_STDOUT_ONLY
 mini_open:	mov al, 5  ; __NR_open.
 		jmp strict short syscall3
 mini_close:	mov al, 6  ; __NR_close.
 		jmp strict short syscall3
 mini_lseek:	mov al, 19  ; __NR_lseek.
 		jmp strict short syscall3
+%endif
 mini_ioctl:	mov al, 54  ; __NR_ioctl.
 		jmp strict short syscall3
 ; TODO(pts): Automatically add creat(2), remove(2) etc.

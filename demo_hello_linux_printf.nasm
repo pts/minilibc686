@@ -58,13 +58,17 @@ section .rodata
 str_world	db 'World', 0
 str_hello	db 'Hello, %s!', 10, 0
 
+%define CONFIG_START_STDOUT_ONLY 1  ; A primitive form of smart linking affecting src/start_stdio_medium_linux.nasm.
+%define mini___M_start_isatty_stdout mini___M_start_isatty_stdout
+%define mini___M_start_flush_stdout mini___M_start_flush_stdout
+
 ; Include various libc functionality. mini_printf(...) is defined in
 ; printf_callvf.nasm, the others are dependencies.
+%include "src/start_stdio_medium_linux.nasm"
 %include "src/printf_callvf.nasm"
 %include "src/stdio_medium_stdout.nasm"
 %include "src/stdio_medium_vfprintf.nasm"
 %include "src/stdio_medium_writebuf_relax.nasm"
-%include "src/start_stdio_medium_linux.nasm"
 %include "src/isatty_linux.nasm"
 %include "src/stdio_medium_fflush.nasm"
 %include "src/stdio_medium_fputc_rp2.nasm"

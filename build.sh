@@ -87,6 +87,7 @@ for F in src/[a-zA-Z0-9_]*.nasm; do
      stdio_medium_flush_opened.nasm) ;;  # We want special order in the .a file, for pts-tcc.
      start_stdio_medium_linux.nasm) ;;  # We want special order in the .a file, for pts-tcc.
      start_*.nasm) ;;
+     smart.nasm) ;;  # Will be used in source form by smart linking, as libc/minilibc/smart.nasm.
      *.nasm) LA=1 ;;
     esac
     BF="${F#src/}"
@@ -154,6 +155,10 @@ for OUTFN in $OUTFNS; do
   esac
   OUTPNS="$OUTPNS $OUTPN"
 done
+set -ex
+<src/smart.nasm >libc/minilibc/smart.nasm awk '{sub(/;.*/,""); sub(/[ \t]+$/, ""); sub(/^[ \t]+/, ""); if (/[^ \t]/) {print}}'
+set +ex
+OUTPNS="$OUTPNS libc/minilibc/smart.nasm"
 
 ls -l $OUTPNS || exit "$?"
 
