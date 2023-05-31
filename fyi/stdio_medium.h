@@ -25,8 +25,9 @@
  * *  mini_ftell(...) returns garbage if the file size is larger than 4 GiB -
  *   4 KiB.
  * * Only full buffering (_IOFBF) is implemented for files opened with
- *   fopen(...). For stdin and stdout, it's linue buffering (_IOLBF) if it
- *   is a TTY (terminal), otherwise it's full buffering.
+ *   fopen(...), and they are assumed to be non-TTY. For stdin and stdout,
+ *   it's linue buffering (_IOLBF) if it is a TTY (terminal), otherwise it's
+ *   full buffering.
  * * TODO(pts) Implement gets.
  * * TODO(pts) Implement fgets.
  * * Only fopen modes "rb" (same as "r", for reading), "wb" (same as "w",
@@ -36,6 +37,7 @@
  *   be attempted even after an I/O error.
  * * Only up to a compile-time fixed number of files (default:
  *   FILE_CAPACITY == 2) can be open at the same time.
+ *   !! Add `minicc -mfiles=2' with smart linking.
  * * Buffer size is fixed at compile time (default: BUF_SIZE == 0x1000).
  *   stdin, stdout and stderr have a default, smaller buffer size.
  * * The behavior is undefined if `size * nmemb' is overflows (i.e. at
