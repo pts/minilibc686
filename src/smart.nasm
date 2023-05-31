@@ -10,6 +10,8 @@
 ; implementations of some of UNDEFSYMS symbols. It's OK if it doesn't define
 ; all of them: the regular libc.$ARCH.a will be consulted.
 ;
+; !! TODO(pts): Make strtod and strtol set errno if errno is used by the program.
+;
 
 ; --- NASM magic infrastructure.
 
