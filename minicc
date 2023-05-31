@@ -66,6 +66,7 @@ USE_UTCC=
 GCC_BARG=-pipe  # Harmless default.
 LIBC=
 DO_SMART=
+ANSIFLAG=
 
 case "$1" in
  "" | -* | *.[aocisS]) ;;  # A flag or a source file name is not a program name.
@@ -119,7 +120,8 @@ for ARG in "$@"; do
    -mno-smart) DO_SMART=0 ;;
    -Wno-no) WFLAGS= ;;  # Disable warnings. GCC and Clang accept and ignore it.
    -W*) ARGS="$ARGS$NL$ARG"; WFLAGS= ;;
-   -[fm]*) ARGS="$ARGS$NL$ARG" ;;
+   -[fm]* | -pedantic) ARGS="$ARGS$NL$ARG" ;;
+   -ansi | -std=*) ANSIFLAG="$ARG" ;;
    -[DUI]*?) ARGS="$ARGS$NL$ARG" ;;
    -O*) ARGS="$ARGS$NL$ARG"; HAD_OFLAG=1 ;;
    -g*) ARGS="$ARGS$NL$ARG"; DO_STRIP=0 ;;
@@ -283,6 +285,7 @@ if test "$DO_ADD_INCLUDEDIR"; then
 fi
 if test "$TCC"; then
   # TODO(pts): Does TCC really generate i386-only code?
+  # We don't pass $ANSIFLAG, because TCC 0.9.26 would fail for it.
   ARGS="$TCC$NL-m32$NL-march=$ARCH$NL-static$NL-nostdlib$NL-nostdinc$NL$SFLAG$NL$OFLAG_ARGS$NL$WFLAGS$NL$DEF_ARG$NL$ARGS$NL$INCLUDEDIR_ARG"
 else
   # This also works with TCC, but it's too much cruft.
@@ -290,7 +293,7 @@ else
   # Add $INCLUDEDIR_ARG last, so that -I... specified by the user takes precedence.
   # Specifying -fcommon since -fno-common is the default since GCC 10 and Clang 11: https://maskray.me/blog/2022-02-06-all-about-common-symbols
   # DYI dietlibc 0.34 adds: gcc -Os -fomit-frame-pointer -falign-functions=1 -falign-jumps=1 -falign-loops=1 -mpreferred-stack-boundary=4
-  ARGS="$TCC$NL$GCC$NL$GCC_BARG$NL-B$MYDIR/gcctooldir$NL-m32$NL-march=$ARCH$NL-static$NL-fno-pic$NL-U_FORTIFY_SOURCE$NL-fcommon$NL-fno-stack-protector$NL-fno-unwind-tables$NL-fno-asynchronous-unwind-tables$NL-fno-builtin$NL-fno-ident$NL-fsigned-char$NL-ffreestanding$NL-fno-lto$NL-nostdlib$NL-nostdinc$NL$SFLAG$NL$OFLAG_ARGS$NL$WFLAGS$NL$DEF_ARG$NL$ARGS$NL$INCLUDEDIR_ARG"
+  ARGS="$TCC$NL$GCC$NL$GCC_BARG$NL-B$MYDIR/gcctooldir$NL-m32$NL-march=$ARCH$NL-static$NL-fno-pic$NL-U_FORTIFY_SOURCE$NL-fcommon$NL-fno-stack-protector$NL-fno-unwind-tables$NL-fno-asynchronous-unwind-tables$NL-fno-builtin$NL-fno-ident$NL-fsigned-char$NL-ffreestanding$NL-fno-lto$NL-nostdlib$NL-nostdinc$NL$SFLAG$NL$OFLAG_ARGS$NL$ANSIFLAG$NL$WFLAGS$NL$DEF_ARG$NL$ARGS$NL$INCLUDEDIR_ARG"
 fi
 if test "$DO_ADD_LIB"; then
   LIBWL=
