@@ -46,19 +46,19 @@ off_t ftell(FILE *filep) __asm__("mini_ftell");  /* Only 32-bit off_t */
 int fputs(const char *s, FILE *filep) __asm__("mini_fputs");
 int puts(const char *s) __asm__("mini_puts");
 int fgetc(FILE *filep) __asm__("mini_fgetc");
-#if !defined(__MINILIBC686__) || defined(__UCLIBC__)
-  int fputc(int c, FILE *filep) __asm__("mini_fputc");  /* minilibc686 also defines it, but we use the other one. */
-#else
+#if defined(__MINILIBC686__)
   int fputc(int c, FILE *filep) __asm__("mini___M_fputc_RP2") __attribute__((__regparm__(2)));  /* Use `gcc -ffreestanding' or `gcc -fno-builtin' to avoid the compilation error here. */
+#else
+  int fputc(int c, FILE *filep) __asm__("mini_fputc");  /* minilibc686 also defines it, but we use mini___M_fputc_RP2(...), it generates shorter code in the caller. */
 #endif
-#if !(defined(__MINILIBC686__) && !defined(__UCLIBC__)) || defined(CONFIG_FUNC_GETC_PUTC) || !(defined(CONFIG_INLINE_GETC_PUTC) || defined(CONFIG_MACRO_GETC_PUTC))
+#if !defined(__MINILIBC686__) || defined(CONFIG_FUNC_GETC_PUTC) || !(defined(CONFIG_INLINE_GETC_PUTC) || defined(CONFIG_MACRO_GETC_PUTC))
   int getc(FILE *filep) __asm__("mini_fgetc");
   int putc(int c, FILE *filep) __asm__("mini_fputc");
   int getchar(void) __asm__("mini_getchar");
-#  if !defined(__MINILIBC686__) || defined(__UCLIBC__)
-  int putchar(int c) __asm__("mini_putchar");
+#  if defined(__MINILIBC686__)
+    int putchar(int c) __asm__("mini_putchar_RP1") __attribute__((__regparm__(1)));  /* Use `gcc -ffreestanding' or `gcc -fno-builtin' to avoid the compilation error here. */
 #  else
-  int putchar(int c) __asm__("mini_putchar_RP1") __attribute__((__regparm__(1)));  /* Use `gcc -ffreestanding' or `gcc -fno-builtin' to avoid the compilation error here. */
+    int putchar(int c) __asm__("mini_putchar");
 #  endif
 #else
   int mini___M_fgetc_fallback_RP1(FILE *filep) __attribute__((__regparm__(1)));
@@ -79,7 +79,7 @@ int fgetc(FILE *filep) __asm__("mini_fgetc");
     static __inline__ __attribute__((__always_inline__)) int putchar(int c) { FILE *filep = stdout; return (((char**)filep)[0]/*->buf_write_ptr*/ == ((char**)filep)[1]/*->buf_end*/) || (_STDIO_SUPPORTS_LINE_BUFFERING && (unsigned char)c == '\n') ? fputc(c, filep) : (unsigned char)(*((char**)filep)[0]/*->buf_write_ptr*/++ = c); }
 #  endif
 #endif
-#if !(defined(__MINILIBC686__) && !defined(__UCLIBC__)) || defined(CONFIG_FUNC_FILENO) || !(defined(CONFIG_INLINE_FILENO) || defined(CONFIG_MACRO_FILENO))
+#if !defined(__MINILIBC686__) || defined(CONFIG_FUNC_FILENO) || !(defined(CONFIG_INLINE_FILENO) || defined(CONFIG_MACRO_FILENO))
   int fileno(FILE *filep) __asm__("mini_fileno");
 #else
 #  if defined(CONFIG_MACRO_FILENO)  /* This only works with stdio_medium of minilibc686. */
@@ -91,8 +91,8 @@ int fgetc(FILE *filep) __asm__("mini_fgetc");
 
 int remove(const char *pathname) __asm__("mini_remove");
 
-#ifdef __UCLIBC__
-int ferror(FILE *stream) __asm__("mini_ferror");
-#endif  /* __UCLIBC__ */
+#if defined(__UCLIBC__) || defined(__GLIBC__) || defined(__dietlibc__)
+  int ferror(FILE *stream) __asm__("mini_ferror");
+#endif
 
 #endif  /* _STDIO_H */

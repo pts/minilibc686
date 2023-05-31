@@ -20,7 +20,7 @@ char *strstr(const char *haystack, const char *needle) __asm__("mini_strstr");
 #ifdef __MINILIBC686__
 /* It is like strstr(...), but scanning haystack for needle[0] is much faster. */
 char *strstr_faster(const char *haystack, const char *needle) __asm__("mini_strstr_faster");
-#endif
+#endif  /* __MINILIBC686__ */
 void *memcpy(void *dest, const void *src, size_t n) __asm__("mini_memcpy");
 void *memmove(void *dest, const void *src, size_t n) __asm__("mini_memmove");
 int memcmp(const void *s1, const void *s2, size_t n) __asm__("mini_memcmp");

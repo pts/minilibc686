@@ -24,6 +24,6 @@ void free(void *ptr) __asm__("mini_free");
    * many small allocations.
    */
   void *malloc_simple_unaligned(size_t size) __asm__("mini_malloc_simple_unaligned");
-#endif
+#endif  /* __MINiLIBC686__ */
 
 #endif  /* _STDLIB_H */
