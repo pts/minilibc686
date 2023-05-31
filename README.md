@@ -23,6 +23,8 @@ headers, program code and libc code):
   Comparison:
   * minilibc686 (`./minicc --gcc`) is
     1196 bytes, already stripped
+  * [klibc](https://en.wikipedia.org/wiki/Klibc) 1.5.25 is
+    2647 bytes after stripping, but it doesn't do output buffering
   * [diet libc](https://www.fefe.de/dietlibc/) 0.34 (`./minicc --diet`) is
     5820 bytes after stripping
   * [neatlibc](https://github.com/aligrudi/neatlibc) is
