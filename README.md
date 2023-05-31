@@ -180,6 +180,12 @@ Similar work:
 * [sebastiencs/asm_minilibc](https://github.com/sebastiencs/asm_minilibc/tree/master/x86)
   targets i386 and amd64. It implements a few mem* str* functions. The code
   doesn't look too much optimized for size.
+* [tinyprintf](http://www.sparetimelabs.com/tinyprintf/tinyprintf.php) by
+  Kustaa Nyholm contains a printf implementation in C, of size 0x25f bytes in
+  i386 machine code, compared to the 0x215 bytes of minilibc686, in assembly.
+* [vladcebo/TinyStdio](https://github.com/vladcebo/TinyStdio) floating point
+  support and scanf (with floating point support) to
+  [tinyprintf](http://www.sparetimelabs.com/tinyprintf/tinyprintf.php).
 
 Other tiny libc projects targeting Windows:
 
@@ -405,7 +411,7 @@ you can run `./test.sh` without having to install anything.
   (apart from `/bin/sh` in the very beginning of the build), because all
   build tools are included in the repository.
 
-## Linker problems:
+## Linker problems
 
 This section is mostly an FYI, it doesn't affter minilibc686 users directly.
 
