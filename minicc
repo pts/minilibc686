@@ -194,7 +194,7 @@ if test "$NEED_LIBC"; then
   fi
 fi
 
-if test "$DO_STRIP" = 0; then
+if test "$DO_STRIP" = 0 || test -z "$DO_LINK"; then
   DO_STRIP=
 else
   DO_STRIP=1
