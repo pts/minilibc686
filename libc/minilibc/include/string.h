@@ -25,6 +25,7 @@ void *memcpy(void *dest, const void *src, size_t n) __asm__("mini_memcpy");
 void *memmove(void *dest, const void *src, size_t n) __asm__("mini_memmove");
 int memcmp(const void *s1, const void *s2, size_t n) __asm__("mini_memcmp");
 void *memset(void *s, int c, size_t n) __asm__("mini_memset");
+char *memchr(const char *s, int c, size_t n) __asm__("mini_memchr");
 
 #ifdef __MINILIBC686__
   __attribute__((__regparm__(3))) void memswap(void *a, void *b, size_t size) __asm__("mini_memswap_RP3");  /* Not part of standard C. */

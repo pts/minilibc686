@@ -1,0 +1,2 @@
+_utcc_nasm2 memchr.nasm -o test_memchr.prog "$TESTDIR"/test_memchr.c
+./test_memchr.prog
