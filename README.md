@@ -35,7 +35,7 @@ headers, program code and libc code):
     5820 bytes after stripping
   * [neatlibc](https://github.com/aligrudi/neatlibc) is
     12684 bytes after stripping;
-    [some functions in 386 assembly]((https://github.com/aligrudi/neatlibc/tree/master/x86)
+    [some functions in 386 assembly](https://github.com/aligrudi/neatlibc/tree/master/x86)
   * OpenWatcom 2023-02 (`owcc -blinux -Os -fno-stack-check`) is
     12934 bytes after stripping
   * uClibc 0.9.30.1 (`./minicc --uclibc`) is
