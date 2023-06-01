@@ -2,7 +2,7 @@
 ; written by pts@fazekas.hu at Thu Jun  1 04:25:50 CEST 2023
 ; Compile to i386 ELF .o object: nasm -O999999999 -w+orphan-labels -f elf -o memswap_rp3.o memswap_rp3.nasm
 ;
-; Code size: 0xf bytes.
+; Code size: 0xe bytes.
 ;
 ; This is the fast implementation (using `repne scasb'), but the slow
 ; implementation isn't shorter either.
@@ -29,18 +29,18 @@ section .bss align=1
 
 section .text
 mini_memswap_RP3:  ; __attribute__((__regparm__(3))) void static_mini_memswap_RP3(void *a, void *b, size_t size);
-		push ebx
+		push edi
 		;mov eax, ... ; Argument a.
 		;mov edx, ...  ; Argument b.
 		;mov ecx, ...  ; Argument size.
+		xchg eax, edi  ; EDI := argument a; EAX := junk.
 		jecxz .done
-.again:		mov bl, [eax]
-		xchg bl, [edx]
-		mov [eax], bl
-		inc eax
+.again:		mov al, [edi]
+		xchg al, [edx]
+		stosb
 		inc edx
 		loop .again
-.done:		pop ebx
+.done:		pop edi
 		ret
 
 %ifdef CONFIG_PIC  ; Already position-independent code.
