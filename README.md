@@ -167,6 +167,10 @@ The following components are included:
   tests. Please note that there is no full test coverage, and the testing
   infrastructure (i.e. bunch of hacky shell scripts) is primitive (so far).
 
+* fyi/*.c: C reference implementations of some libc functions. Some of the
+  algorithmically interesting ones are `fyi/qsort_fast.nasm` and
+  `fyi/qsort.nasm`.
+
 Please note that minilibc686 is more like an experimental technological demo
 rather than a feature-complete and battle-tested libc, and it is not ready
 for production use, it's especially not ready for easy porting of random
