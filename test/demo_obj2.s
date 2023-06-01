@@ -23,7 +23,9 @@
 # Just ignore, wcc386 adds them if main(...) is present.
 # TODO(pts): Add main (__cdecl) which calls main_ (__watcall).
 .extern __argc
+.global __argc  # .global + .extern forces as(1) to include it, even if unused.
 .extern _cstart_
+.global _cstart_  # .global + .extern forces as(1) to include it, even if unused.
 
 .section .text
 		#.type _get_addressee, @function  # GCC emits this.

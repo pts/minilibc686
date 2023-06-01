@@ -19,7 +19,7 @@ cpu 386
   %define _DATA  .data
   %define _BSS   .bss
   section _TEXT  align=1
-  section CONST  align=1
+  section CONST  align=1  ; TODO(pts): For effective string deduplication by ld(1), section .rodata.str1.1 should be generated with the flags AMS (A == alloc), but NASM doesn't support M and S.
   section CONST2 align=4
   section _DATA  align=4
   section _BSS   align=4
