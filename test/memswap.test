@@ -1,0 +1,2 @@
+_utcc_nasm2 memswap.nasm -o test_memswap.prog "$TESTDIR"/test_memswap.c
+./test_memswap.prog

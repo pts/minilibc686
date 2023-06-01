@@ -1,0 +1,2 @@
+_utcc_nasm2 memswap_rp3.nasm -DTEST_RP3 -o test_memswap_rp3.prog "$TESTDIR"/test_memswap.c
+./test_memswap_rp3.prog
