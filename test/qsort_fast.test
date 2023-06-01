@@ -1,0 +1,2 @@
+_utcc_nasm2 qsort_fast.nasm -Dmini_qsort=mini_qsort_fast -o test_qsort_fast.prog "$TESTDIR"/test_qsort.c
+./test_qsort_fast.prog
