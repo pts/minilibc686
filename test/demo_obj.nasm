@@ -124,6 +124,7 @@ _rodata_global:	dd 7, 8
 		dd str.3
 
 section _DATA
+; NASM doesn't export _data_local (or other non-global symbols) to the .obj file at all, there is no way to ask it.
 _data_local:	dd 0xf, 0x10
 		dd _extern_answers+0x30
 		dd _bss_global2+4
