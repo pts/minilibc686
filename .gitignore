@@ -12,3 +12,4 @@
 /libc/dietlibc-0.34/
 /libc/uclibc-0.9.30.1/
 /libc/minilibc/libc.i?86.a
+/libc/minilibc/smart.nasm
