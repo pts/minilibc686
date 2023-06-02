@@ -76,6 +76,10 @@ typedef struct {
 #define SHT_SYMTAB	  2		/* Symbol table */
 #define SHT_STRTAB	  3		/* String table */
 
+#define SHF_ALLOC	     (1 << 1)	/* Occupies memory during execution */
+#define SHF_MERGE	     (1 << 4)	/* Might be merged */
+#define SHF_STRINGS	     (1 << 5)	/* Contains nul-terminated strings */
+
 /* Symbol table entry.  */
 
 typedef struct {
@@ -116,6 +120,7 @@ int main(int argc, char **argv) {
   char *strtab = NULL;
   off_t off;
   char syms_has_changed;
+  char shdrs_has_changed;
 #if 0
   char syms_size_has_changed;
 #endif
@@ -123,14 +128,16 @@ int main(int argc, char **argv) {
   const char *sym_name;
   const char *arg;
   char **argp;
-  char is_verbose = 0, flag_w = 0;
+  char is_verbose = 0, flag_w, flag_r = 0;
   static char str_extern_weak[] = "EXTERN.WEAK..";
   static char str_weak[] = "WEAK..";
+  char *shstrtab;
 
   (void)argc; (void)argv;
   if (!argv[0] || !argv[1] || strcmp(argv[1], "--help") == 0) {
     fprintf(stderr, "Usage: %s [<flag>...] <elfobj.o>\nFlags:\n"
             "-v: verbose operation, write info to stderr\n"
+            "-r: fix section flags of .rodata.str1.1\n"
             "-w: fix weak symbols for specially crafted .o file\n",
             argv[0]);
     return !argv[0] || !argv[1];  /* 0 (EXIT_SUCCESS) for--help. */
@@ -147,6 +154,8 @@ int main(int argc, char **argv) {
       is_verbose = 1;
     } else if (arg[1] == 'w') {
       flag_w = 1;
+    } else if (arg[1] == 'r') {
+      flag_r = 1;
     } else {
      unknown_flag:
       fprintf(stderr, "fatal: unknown command-line flag: %s\n", arg);
@@ -213,7 +222,7 @@ int main(int argc, char **argv) {
     fprintf(stderr, "fatal: bad ELF e_shstrndx: %s\n", filename);
     return 13;
   }
-  if (!flag_w) return 0;  /* Don't do anything beyond some ELF ehdr field checks. */
+  if (!flag_w && !flag_r) return 0;  /* Don't do anything beyond some ELF ehdr field checks. */
   want = ehdr.e_shnum * sizeof(Elf32_Shdr);
   if (ehdr.e_shnum + 0U >= (Elf32_Word)-1 / sizeof(Elf32_Shdr) || (shdrs = malloc(want)) == NULL) {
     fprintf(stderr, "fatal: out of memory for shdr: %s\n", filename);
@@ -230,6 +239,48 @@ int main(int argc, char **argv) {
   }
   shdrs_end = shdrs + ehdr.e_shnum;
 
+  if (flag_r) {
+    shdr = shdrs + ehdr.e_shstrndx;
+    off = shdr->sh_offset;
+    want = shdr->sh_size;
+    if (lseek(fd, off, SEEK_SET) != off) {  /* This succeeds even if the file is shorter. */
+      fprintf(stderr, "fatal: error seeking to .shstrtab: %s\n", filename);
+      return 50;
+    }
+    if ((shstrtab = malloc(want + 1)) == NULL) {
+      fprintf(stderr, "fatal: out of memory for .shstrtab: %s\n", filename);
+      return 51;
+    }
+    if ((size_t)read(fd, shstrtab, want) != (size_t)want) {
+      fprintf(stderr, "fatal: error reading ELF .shstrtab: %s\n", filename);
+      return 52;
+    }
+    shstrtab[want] = '\0';  /* Sentinel. */
+    shdrs_has_changed = 0;
+    for (shdr = shdrs; shdr != shdrs_end; ++shdr) {
+      if (shdr->sh_name < want && strcmp(shstrtab + shdr->sh_name, ".rodata.str1.1") == 0 &&
+          (~shdr->sh_flags & (SHF_ALLOC | SHF_MERGE | SHF_STRINGS)) != 0) {
+        if (is_verbose) fprintf(stderr, "info: fixed section flags for: %s: %s\n", shstrtab + shdr->sh_name, filename);
+        shdr->sh_flags |= SHF_ALLOC | SHF_MERGE | SHF_STRINGS;  /* NASM omits SHF_MERGE and SHF_STRINGS. We fix it here. */
+        shdrs_has_changed = 1;
+      }
+    }
+    if (shdrs_has_changed) {
+      off = ehdr.e_shoff;
+      if (lseek(fd, off, SEEK_SET) != off) {  /* This succeeds even if the file is shorter. */
+        fprintf(stderr, "fatal: error seeking to .symtab: %s\n", filename);
+        return 53;
+      }
+      want = ehdr.e_shnum * sizeof(Elf32_Shdr);
+      if ((size_t)write(fd, shdrs, want) != (size_t)want) {
+        fprintf(stderr, "fatal: error writing ELF shdr: %s\n", filename);
+        return 54;
+      }
+    }
+    /*free(shstrtab);*/  /* Not needed, we'll exit soon. */
+  }
+
+  if (!flag_w) return 0;
   shdr_symtab = NULL;
   for (shdr = shdrs; shdr != shdrs_end; ++shdr) {
     if (shdr->sh_type == SHT_SYMTAB) {
