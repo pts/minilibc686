@@ -269,6 +269,30 @@ struct Reloc {
 
 #define SYMBOL_SECTION_EXTERN 0xff
 
+static char is_openwatcom_libc_symbol(const char *name) {
+  if (name[0] != '_' || name[1] != '_') return 0;
+  name += 2;
+  /* The list below is incomplete. Here is the full OpenWatcom list: __8087
+   * __ASTACKPTR __ASTACKSIZ __CHK __COPY __FADD __FCMP __FCMPR __FD8 __FDA __FDC
+   * __FDD __FDFS __FDI4 __FDI8 __FDIV __FDIVR __FDM __FDN __FDS __FDU4 __FDU8
+   * __FDU87 __FMUL __FSA __FSC __FSD __FSFD __FSI __FSI1 __FSI2 __FSI4 __FSI8
+   * __FSM __FSN __FSS __FSU1 __FSU2 __FSU4 __FSU8 __FSU87 __FSUB __FSUBR __GETDS
+   * __GETMAXTHREADS __GRO __I4FD __I4FS __I8D __I8FD __I8FS __I8LS __I8M __I8RS
+   * __POFF __PON __RDI4 __RDU4 __STACKLOW __STACKTOP __STK __STOSB __STOSD
+   * __U4FD __U4FS __U8D __U8FD __U8FD7 __U8FS __U8FS7 __U8LS __U8M __U8RS
+   */
+  return strcmp(name, "CHP") == 0 ||
+         strcmp(name, "STK") == 0 ||
+         strcmp(name, "I8D") == 0 ||
+         strcmp(name, "U8D") == 0 ||
+         strcmp(name, "I8RS") == 0 ||
+         strcmp(name, "U8RS") == 0 ||
+         strcmp(name, "I8LS") == 0 ||
+         strcmp(name, "U8LS") == 0 ||
+         strcmp(name, "U8M") == 0 ||
+         strcmp(name, "I8M") == 0;
+}
+
 int main(int argc, char **argv) {
   const char *arg;
   char **argp;
@@ -699,9 +723,9 @@ int main(int argc, char **argv) {
           extsymbolp->name = allnamep;
           extsymbolp->section = SYMBOL_SECTION_EXTERN;
           memcpy(allnamep, up + 1, up[0]);
-          if (do_strip_one_leading_underscore && allnamep[0] == '_') ++extsymbolp->name;
-          allnamep += up[0];
-          *allnamep++ = '\0';
+          allnamep[up[0]] = '\0';
+          if (do_strip_one_leading_underscore && allnamep[0] == '_' && !is_openwatcom_libc_symbol(allnamep)) ++extsymbolp->name;
+          allnamep += up[0] + 1;
           ++extsymbolp;
         } else {
           if (extsymbol_count >= 0x3fffffff / sizeof(struct Symbol)) {  /* To avoid overflows. */
@@ -782,9 +806,9 @@ int main(int argc, char **argv) {
           pubsymbolp->name = allnamep;
           pubsymbolp->section = u;
           memcpy(allnamep, up + 1, up[0]);
-          if (do_strip_one_leading_underscore && allnamep[0] == '_') ++pubsymbolp->name;
-          allnamep += up[0];
-          *allnamep++ = '\0';
+          allnamep[up[0]] = '\0';
+          if (do_strip_one_leading_underscore && allnamep[0] == '_' && !is_openwatcom_libc_symbol(allnamep)) ++pubsymbolp->name;
+          allnamep += up[0] + 1;
         } else {
           if (pubsymbol_count >= 0x3fffffff / sizeof(struct Symbol)) {  /* To avoid overflows. */
             fprintf(stderr, "fatal: too many pub symbols in OMF: %s\n", omfname);
