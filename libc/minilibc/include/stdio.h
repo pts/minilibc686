@@ -27,14 +27,14 @@ extern FILE *stderr __asm__("mini_stderr");
 #define _STDIO_SUPPORTS_LINE_BUFFERING 1
 #endif
 
-int printf(const char *format, ...) __asm__("mini_printf");
-int vprintf(const char *format, __libc__va_list ap) __asm__("mini_vprintf");
-int fprintf(FILE *stream, const char *format, ...) __asm__("mini_fprintf");
-int vfprintf(FILE *f, const char *format, __libc__va_list ap) __asm__("mini_vfprintf");
-int sprintf(char *str, const char *format, ...) __asm__("mini_sprintf");
-int vsprintf(char *str, const char *format, __libc__va_list ap) __asm__("mini_vsprintf");
-int snprintf(char *str, size_t size, const char *format, ...) __asm__("mini_snprintf");
-int vsnprintf(char *str, size_t size, const char *format, __libc__va_list ap) __asm__("mini_vsnprintf");
+int printf(const char *format, ...) __asm__("mini_printf") __attribute__((__format__(__printf__, 1, 2)));
+int vprintf(const char *format, __libc__va_list ap) __asm__("mini_vprintf") __attribute__((__format__(__printf__, 1, 0)));
+int fprintf(FILE *stream, const char *format, ...) __asm__("mini_fprintf") __attribute__((__format__(__printf__, 2, 3)));
+int vfprintf(FILE *f, const char *format, __libc__va_list ap) __asm__("mini_vfprintf") __attribute__((__format__(__printf__, 2, 0)));
+int sprintf(char *str, const char *format, ...) __asm__("mini_sprintf") __attribute__((__format__(__printf__, 2, 3)));
+int vsprintf(char *str, const char *format, __libc__va_list ap) __asm__("mini_vsprintf") __attribute__((__format__(__printf__, 2, 0)));
+int snprintf(char *str, size_t size, const char *format, ...) __asm__("mini_snprintf") __attribute__((__format__(__printf__, 3, 4)));
+int vsnprintf(char *str, size_t size, const char *format, __libc__va_list ap) __asm__("mini_vsnprintf") __attribute__((__format__(__printf__, 3, 0)));
 
 FILE *fopen(const char *pathname, const char *mode) __asm__("mini_fopen");
 int fflush(FILE *filep) __asm__("mini_fflush");
