@@ -172,11 +172,13 @@ _need_aliases ALIASES  ; Must be called after _alias.
 ; We have to put _syscall definitions right here, just above `_need
 ; mini_syscall3_AL, ...', because syscalls need mini_syscall3_AL.
 ;_syscall _exit, 1  ; Defined explicitly above.
+; !! TODO(pts): What if it will not fit to `jmp strict short'? Automate via %assign.
 _syscall fork, 2
 _syscall read, 3
 _syscall write, 4
 _syscall open, 5
 _syscall close, 6
+_syscall creat, 8
 _syscall unlink, 10
 _syscall lseek, 19
 _syscall ioctl, 54
