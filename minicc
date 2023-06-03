@@ -102,6 +102,7 @@ for ARG in "$@"; do
    --gcc) TCC=; GCC=gcc ;;  # Doesn't work with --boxed. TODO(pts): Look it up on old $PATH.
    --gcc=*/*) TCC=; GCC="${ARG#*=}"; test "$IS_BOXED" && GCC_BARG="-B${GCC%/*}" ;;
    --gcc=*) TCC=; GCC="${ARG#*=}" ;;
+   --wcc | --wcc386 | --watcom) GCC="$MYDIR/tools/wcc386"; TCC= ;;  # Specify --gcc=.../wcc386 to use a specific OpenWatcom compiler.
    --tcc) GCC=; TCC="$MYDIR"/tools/pts-tcc ;;
    --tcc=*) GCC=; TCC="${ARG#*=}" ;;
    --utcc) GCC=; TCC="$MYDIR"/tools/pts-tcc; USE_UTCC=1 ;;
@@ -143,6 +144,8 @@ for ARG in "$@"; do
    *) echo "fatal: unsupported input file extension: $ARG" >&2; exit 1 ;;
   esac
 done
+
+GCCBASE="/${GCC##*/}"
 
 test "$DO_ADD_LIB" || DO_SMART=0
 
@@ -257,9 +260,9 @@ test "$GCC_BARG" = -pipe && GCC_BARG=
 
 OFLAG_ARGS=
 if test -z "$HAD_OFLAG"; then  # Add some size-optimizing flags.
-  case "$GCC" in
+  case "$GCCBASE" in
    "") ;;
-   *clang*)
+   *[-/._]clang*)
     OFLAG_ARGS="-Os$NL-mstack-alignment=2";
     # If we have multiple -B... flags, clang(1) will fail to find our
     # gcctooldir/ld. And clang(1) (unlike gcc) doesn't need $GCC_BARG to
@@ -389,58 +392,72 @@ export TMPDIR
 IFS="$NL"  # Argument splitting will happen over newlines only.
 export MINICC_TOOLS="$MYDIR/tools"
 test "$HAD_V" && echo "info: running compiler:" $ARGS >&2  # GCC also writes to stderr.
-if test "$TCC"; then
-  if test "$DO_SMART" != 0; then  # Smart linking with $TCC.
-    SMART_LIBCD="$MYDIR/libc/$LIBC"
-    SMART_TOOLS="$MYDIR/tools"
-    SMART_ARCH="$ARCH"
-    # This code contains duplication with the $SMART_LIBCD code in gcctooldir/ld.
-    test "${OUTFILE#-}" = "$OUTFILE" || MYDIR="./$OUTFILE"
-    $ARGS "$MYDIR/helper_lib/libminitcc1.a" 2>"$OUTFILE.err"; EC="$?"  # TODO(pts): Write a C program to extract undefined references and display errors in a streaming way. (Some errors like `In ...' need to be buffered.)
-    if test "$EC" = 0; then
-      cat "$OUTFILE.err"
-      rm -f "$OUTFILE.err"
-      exit
-    fi
-    # The regexps below work for $TCCLD, ld of $GCC, ld of $GCC (Binutils), gold of $GCC (Binutils). TODO(pts): Make it work with lld (Clang).
-    UNDEFSYMS="$(awk '{if((/: undefined reference to [`'\''].+'\''$/&&sub(/^.*?: undefined reference to [`'\'']/, "")||sub(/^tcc: error: undefined symbol '\''/,""))&&sub(/'\''$/,"")&&!h[$0]){h[$0]=1;printf"%s%s",c,$0;c=","}}' <"$OUTFILE.err")"
-    if test -z "$UNDEFSYMS"; then
-      cat "$OUTFILE.err"
-      rm -f "$OUTFILE.err"
-      exit "$EC"  # No undefined symbols found, this means there is another reason for the $TCC failure.
-    fi
-    rm -f "$OUTFILE.err" "$OUTFILE.smart.o"
-    NASMARCHARG=
-    test "$SMART_ARCH" = i686 || NASMARCHARG=-DCONFIG_I386
-    DEF_ARG=
-    for F in $(cat "$SMART_LIBCD/libc.defs"); do  # Split on any whitespace, $IFS hasn't been set yet.
-      DEF_ARG="$DEF_ARG$NL$F"
-    done
-    NASMCMD="$SMART_TOOLS/nasm-0.98.39$NL-O0$NL-w+orphan-labels$NL-f${NL}elf$NL$NASMARCHARG$NL-DUNDEFSYMS=$UNDEFSYMS$NL$DEF_ARG$NL-o$NL$OUTFILE.smart.o$NL$SMART_LIBCD/smart.nasm"; EC="$?"
-    test "$HAD_V" && echo "info: running smart nasm:" $NASMCMD >&2
-    $NASMCMD; EC="$?"
-    if test "$EC" = 0 && test -f "$OUTFILE.smart.o"; then :; else
-      rm -f "$OUTFILE.smart.o"
-      test "$EC" = 0 && EC=1
-      exit "$EC"
-    fi
-    # /usr/bin/nm "$OUTFILE.smart.o"
-    ARGS="$ARGS$NL$OUTFILE.smart.o$NL$SMART_LIBCD/libc.$SMART_ARCH.a$NL$MYDIR/helper_lib/libminitcc1.a"
-    test "$HAD_V" && echo "info: running compiler:" $ARGS >&2  # GCC also writes to stderr.
-    $ARGS; EC="$?"
+IS_WATCOM=
+test -z "$TCC" && test "${GCCBASE#*[-/._]wcc386}" != "$GCCBASE" && IS_WATCOM=1
+if test -z "$TCC" && test -z "$IS_WATCOM"; then
+  if test "$DO_SMART" != 0; then  # Smart linking with $GCC.
+    ARGS="$ARGS$NL-Wl,--smart-arch=$ARCH$NL-Wl,--smart-libcd=$MYDIR/libc/$LIBC"
+  fi
+  exec $ARGS  # Never returns.
+fi
+# Now we either have "$TCC" or "$IS_WATCOM".
+
+if test "$IS_WATCOM"; then
+  # TODO(pts): -march=...
+  echo "fatal: compiling with OpenWatcom not supported yet" >&2
+  exit 5
+fi
+
+if test "$DO_SMART" != 0; then  # Smart linking.
+  SMART_LIBCD="$MYDIR/libc/$LIBC"
+  SMART_TOOLS="$MYDIR/tools"
+  SMART_ARCH="$ARCH"
+  # This code contains duplication with the $SMART_LIBCD code in gcctooldir/ld.
+  test "${OUTFILE#-}" = "$OUTFILE" || MYDIR="./$OUTFILE"
+  LIBMINITCC1=
+  test "$TCC" && LIBMINITCC1="$MYDIR/helper_lib/libminitcc1.a"
+  $ARGS $LIBMINITCC1 2>"$OUTFILE.err"; EC="$?"  # TODO(pts): Write a C program to extract undefined references and display errors in a streaming way. (Some errors like `In ...' need to be buffered.)
+  if test "$EC" = 0; then
+    cat "$OUTFILE.err"
+    rm -f "$OUTFILE.err"
+    exit
+  fi
+  # The regexps below work for $TCCLD, ld of $GCC, ld of $GCC (Binutils), gold of $GCC (Binutils). TODO(pts): Make it work with lld (Clang).
+  UNDEFSYMS="$(awk '{if((/: undefined reference to [`'\''].+'\''$/&&sub(/^.*?: undefined reference to [`'\'']/, "")||sub(/^tcc: error: undefined symbol '\''/,""))&&sub(/'\''$/,"")&&!h[$0]){h[$0]=1;printf"%s%s",c,$0;c=","}}' <"$OUTFILE.err")"
+  if test -z "$UNDEFSYMS"; then
+    cat "$OUTFILE.err"
+    rm -f "$OUTFILE.err"
+    exit "$EC"  # No undefined symbols found, this means there is another reason for the $TCC failure.
+  fi
+  rm -f "$OUTFILE.err" "$OUTFILE.smart.o"
+  NASMARCHARG=
+  test "$SMART_ARCH" = i686 || NASMARCHARG=-DCONFIG_I386
+  DEF_ARG=
+  for F in $(cat "$SMART_LIBCD/libc.defs"); do  # Split on any whitespace, $IFS hasn't been set yet.
+    DEF_ARG="$DEF_ARG$NL$F"
+  done
+  NASMCMD="$SMART_TOOLS/nasm-0.98.39$NL-O0$NL-w+orphan-labels$NL-f${NL}elf$NL$NASMARCHARG$NL-DUNDEFSYMS=$UNDEFSYMS$NL$DEF_ARG$NL-o$NL$OUTFILE.smart.o$NL$SMART_LIBCD/smart.nasm"; EC="$?"
+  test "$HAD_V" && echo "info: running smart nasm:" $NASMCMD >&2
+  $NASMCMD; EC="$?"
+  if test "$EC" = 0 && test -f "$OUTFILE.smart.o"; then :; else
     rm -f "$OUTFILE.smart.o"
+    test "$EC" = 0 && EC=1
     exit "$EC"
   fi
-  if test "$DO_LINK" && test "$DO_STRIP"; then
-    $ARGS || exit "$?"
-    # Same functionality as in gcctooldir/ld.
-    MINICC_LDV=
-    test "$HAD_V" && MINICC_LDV=-v
-    EFARGS="$MINICC_TOOLS/elfxfix$NL-l$NL-a$NL-s$NL$MINICC_LDV$NL--$NL$OUTFILE"
-    test "$MINICC_LDV" && echo "info: running extra strip:" $EFARGS >&2
-    ARGS="$EFARGS"
-  fi
-elif test "$DO_SMART" != 0; then  # Smart linking with $GCC.
-  ARGS="$ARGS$NL-Wl,--smart-arch=$ARCH$NL-Wl,--smart-libcd=$MYDIR/libc/$LIBC"
+  # /usr/bin/nm "$OUTFILE.smart.o"
+  ARGS="$ARGS$NL$OUTFILE.smart.o$NL$SMART_LIBCD/libc.$SMART_ARCH.a$NL$LIBMINITCC1"
+  test "$HAD_V" && echo "info: running compiler:" $ARGS >&2  # GCC also writes to stderr.
+  $ARGS; EC="$?"
+  rm -f "$OUTFILE.smart.o"
+  exit "$EC"
 fi
-exec $ARGS
+if test "$DO_LINK" && test "$DO_STRIP"; then
+  $ARGS || exit "$?"
+  # Same functionality as in gcctooldir/ld.
+  MINICC_LDV=
+  test "$HAD_V" && MINICC_LDV=-v
+  EFARGS="$MINICC_TOOLS/elfxfix$NL-l$NL-a$NL-s$NL$MINICC_LDV$NL--$NL$OUTFILE"
+  test "$MINICC_LDV" && echo "info: running extra strip:" $EFARGS >&2
+  ARGS="$EFARGS"
+fi
+exec $ARGS  # Never returns.
