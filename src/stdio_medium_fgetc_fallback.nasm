@@ -6,7 +6,7 @@
 bits 32
 cpu 386
 
-global mini___M_fgetc_fallback_RP1
+global mini___M_fgetc_fallback_RP3
 %ifdef CONFIG_SECTIONS_DEFINED
 %elifidn __OUTPUT_FORMAT__, bin
 section .text align=1
@@ -24,7 +24,7 @@ section .bss align=1
 
 section .text
 
-mini___M_fgetc_fallback_RP1:
+mini___M_fgetc_fallback_RP3:
 		push ecx
 		push eax
 		push byte 1

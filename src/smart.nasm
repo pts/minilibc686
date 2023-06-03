@@ -131,9 +131,9 @@ _need mini_gets, mini_stdin
 _need mini_scanf, mini_stdin
 _need mini_vscanf, mini_stdin
 _need mini_putchar, mini_stdout
-_need mini_putchar, mini_putchar_RP1
-_need mini_putchar_RP1, mini_stdout
-_need mini_putchar_RP1, mini___M_fputc_RP2
+_need mini_putchar, mini_putchar_RP3
+_need mini_putchar_RP3, mini_stdout
+_need mini_putchar_RP3, mini_fputc_RP3
 _need mini_puts, mini_stdout
 _need mini_printf, mini_stdout
 _need mini_vprintf, mini_stdout
@@ -154,14 +154,14 @@ _need mini_fseek, mini_fflush
 _need mini_fseek, mini_lseek
 _need mini_puts, mini_fputs
 _need mini_fputs, mini_fwrite
-_need mini_putc, mini___M_fputc_RP2
-_need mini_fputc, mini___M_fputc_RP2
-_need mini___M_fputc_RP2, mini_write
-_need mini___M_fputc_RP2, mini_fflush
+_need mini_putc, mini_fputc_RP3
+_need mini_fputc, mini_fputc_RP3
+_need mini_fputc_RP3, mini_write
+_need mini_fputc_RP3, mini_fflush
 _need mini_fflush, mini_write
 _need mini_getc, mini_fread
 _need mini_fgetc, mini_fread
-_need mini___M_fgetc_fallback_RP1, mini_fread
+_need mini___M_fgetc_fallback_RP3, mini_fread
 _need mini_fread, mini_read
 _need mini_exit, mini__exit
 _need mini_fopen, mini_open
@@ -329,6 +329,36 @@ _define_alias_syms ALIASES  ; Must be called after alias targets have been defin
 section .bss
 global mini_errno  ; TODO(pts): Add this to -mno-smart.
 mini_errno:	resd 1
+%endif
+
+%ifdef __NEED_mini_stdout
+%ifidn __OUTPUT_FORMAT__, bin  ; FAllback for size measurements.
+mini_stdout equ +0x12345679
+%else
+extern mini_stdout
+%endif
+%endif
+
+%ifdef __NEED_mini_fputc_RP3
+%ifidn __OUTPUT_FORMAT__, bin  ; FAllback for size measurements.
+mini_fputc_RP3 equ +0x1234567a
+%else
+extern mini_fputc_RP3
+%endif
+%endif
+
+%ifdef __NEED_mini_putchar
+global mini_putchar
+mini_putchar:  ; int mini_putchar(int c);
+		mov eax, [esp+4]  ; TODO(pts): Get rid of this with smart linking if unused.
+		; Fall through to mini_putchar_RP3.
+%endif
+%ifdef __NEED_mini_putchar_RP3
+global mini_putchar_RP3
+mini_putchar_RP3:  ; int REGPARM3 mini_putchar_RP3(int c);
+		mov edx, [mini_stdout]
+		call mini_fputc_RP3
+		ret
 %endif
 
 ; __END__

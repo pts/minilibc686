@@ -71,7 +71,7 @@ str_hello	db 'Hello, %s!', 10, 0
 %include "src/stdio_medium_writebuf_relax.nasm"
 %include "src/isatty_linux.nasm"
 %include "src/stdio_medium_fflush.nasm"
-%include "src/stdio_medium_fputc_rp2.nasm"
+%include "src/stdio_medium_fputc_rp3.nasm"
 %include "src/stdio_medium_discard_buf.nasm"
 
 _end  ; __END__

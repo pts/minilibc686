@@ -1,5 +1,6 @@
 #ifndef _FCNTL_H
 #define _FCNTL_H
+#include <_preincl.h>
 
 #include <sys/types.h>
 
@@ -10,9 +11,8 @@
 #define O_EXCL  0200
 #define O_TRUNC 01000
 
-int open(const char *pathname, int flags, ...) __asm__("mini_open");  /* Optional 3rd argument: mode_t mode */
-static __inline__ int creat(const char *pathname, mode_t mode) {  /* TODO(pts): Add with __NR_creat == 8. */
-  return open(pathname, O_CREAT | O_WRONLY | O_TRUNC, mode);
-}
+__LIBC_FUNC(int, open, (const char *pathname, int flags, ...),);  /* Optional 3rd argument: mode_t mode */
+__LIBC_FUNC(int, creat, (const char *pathname, mode_t mode),);  /* Optional 3rd argument: mode_t mode */
+/*static __inline__ int creat(const char *pathname, mode_t mode) { return open(pathname, O_CREAT | O_WRONLY | O_TRUNC, mode); }*/  /* This would also work. */
 
 #endif  /* _FCNTL_H */

@@ -1,5 +1,6 @@
 #ifndef _STDIO_H
 #define _STDIO_H
+#include <_preincl.h>
 
 #include <stdarg_internal.h>  /* Defines __libc__va_list. */
 #include <sys/types.h>
@@ -19,68 +20,79 @@
 
 typedef struct _SFS_FILE FILE;  /* Different from _FILE. */
 
-extern FILE *stdin __asm__("mini_stdin");
-extern FILE *stdout __asm__("mini_stdout");
-extern FILE *stderr __asm__("mini_stderr");
+__LIBC_VAR(extern FILE *, stdin);
+__LIBC_VAR(extern FILE *, stdout);
+__LIBC_VAR(extern FILE *, stderr);
+#ifdef __WATCOMC__  /* There is no other way with `wcc386 -za'. */
+#  pragma aux stdin "_mini_*"
+#  pragma aux stdout "_mini_*"
+#  pragma aux stderr "_mini_*"
+#endif
 
 #ifndef _STDIO_SUPPORTS_LINE_BUFFERING
 #define _STDIO_SUPPORTS_LINE_BUFFERING 1
 #endif
 
-int printf(const char *format, ...) __asm__("mini_printf") __attribute__((__format__(__printf__, 1, 2)));
-int vprintf(const char *format, __libc__va_list ap) __asm__("mini_vprintf") __attribute__((__format__(__printf__, 1, 0)));
-int fprintf(FILE *stream, const char *format, ...) __asm__("mini_fprintf") __attribute__((__format__(__printf__, 2, 3)));
-int vfprintf(FILE *f, const char *format, __libc__va_list ap) __asm__("mini_vfprintf") __attribute__((__format__(__printf__, 2, 0)));
-int sprintf(char *str, const char *format, ...) __asm__("mini_sprintf") __attribute__((__format__(__printf__, 2, 3)));
-int vsprintf(char *str, const char *format, __libc__va_list ap) __asm__("mini_vsprintf") __attribute__((__format__(__printf__, 2, 0)));
-int snprintf(char *str, size_t size, const char *format, ...) __asm__("mini_snprintf") __attribute__((__format__(__printf__, 3, 4)));
-int vsnprintf(char *str, size_t size, const char *format, __libc__va_list ap) __asm__("mini_vsnprintf") __attribute__((__format__(__printf__, 3, 0)));
+__LIBC_FUNC(int, printf, (const char *format, ...), __attribute__((__format__(__printf__, 1, 2))));
+__LIBC_FUNC(int, vprintf, (const char *format, __libc__va_list ap), __attribute__((__format__(__printf__, 1, 0))));
+__LIBC_FUNC(int, fprintf, (FILE *stream, const char *format, ...), __attribute__((__format__(__printf__, 2, 3))));
+__LIBC_FUNC(int, vfprintf, (FILE *f, const char *format, __libc__va_list ap), __attribute__((__format__(__printf__, 2, 0))));
+__LIBC_FUNC(int, sprintf, (char *str, const char *format, ...), __attribute__((__format__(__printf__, 2, 3))));
+__LIBC_FUNC(int, vsprintf, (char *str, const char *format, __libc__va_list ap), __attribute__((__format__(__printf__, 2, 0))));
+__LIBC_FUNC(int, snprintf, (char *str, size_t size, const char *format, ...), __attribute__((__format__(__printf__, 3, 4))));
+__LIBC_FUNC(int, vsnprintf, (char *str, size_t size, const char *format, __libc__va_list ap), __attribute__((__format__(__printf__, 3, 0))));
 
-FILE *fopen(const char *pathname, const char *mode) __asm__("mini_fopen");
-int fflush(FILE *filep) __asm__("mini_fflush");
-int fclose(FILE *filep) __asm__("mini_fclose");
-size_t fread(void *ptr, size_t size, size_t nmemb, FILE *filep) __asm__("mini_fread");
-size_t fwrite(const void *ptr, size_t size, size_t nmemb, FILE *filep) __asm__("mini_fwrite");
-int fseek(FILE *filep, off_t offset, int whence) __asm__("mini_fseek");  /* Only 32-bit off_t. */
-off_t ftell(FILE *filep) __asm__("mini_ftell");  /* Only 32-bit off_t */
-int fputs(const char *s, FILE *filep) __asm__("mini_fputs");
-int puts(const char *s) __asm__("mini_puts");
-int fgetc(FILE *filep) __asm__("mini_fgetc");
-#if defined(__MINILIBC686__)
-  int fputc(int c, FILE *filep) __asm__("mini___M_fputc_RP2") __attribute__((__regparm__(2)));  /* Use `gcc -ffreestanding' or `gcc -fno-builtin' to avoid the compilation error here. */
-#else
-  int fputc(int c, FILE *filep) __asm__("mini_fputc");  /* minilibc686 also defines it, but we use mini___M_fputc_RP2(...), it generates shorter code in the caller. */
-#endif
+__LIBC_FUNC(FILE *, fopen, (const char *pathname, const char *mode),);
+__LIBC_FUNC(int, fflush, (FILE *filep),);
+__LIBC_FUNC(int, fclose, (FILE *filep),);
+__LIBC_FUNC(size_t, fread, (void *ptr, size_t size, size_t nmemb, FILE *filep),);
+__LIBC_FUNC(size_t, fwrite, (const void *ptr, size_t size, size_t nmemb, FILE *filep),);
+__LIBC_FUNC(int, fseek, (FILE *filep, off_t offset, int whence),);  /* Only 32-bit off_t. */
+__LIBC_FUNC(off_t, ftell, (FILE *filep),);  /* Only 32-bit off_t */
+__LIBC_FUNC(int, fputs, (const char *s, FILE *filep),);
+__LIBC_FUNC(int, puts, (const char *s),);
+__LIBC_FUNC(int, fgetc, (FILE *filep),);
+__LIBC_FUNC_MINIRP3(int, fputc, (int c, FILE *filep),);  /* Use `gcc -ffreestanding' or `gcc -fno-builtin' to avoid the compilation error here. */
 #if !defined(__MINILIBC686__) || defined(CONFIG_FUNC_GETC_PUTC) || !(defined(CONFIG_INLINE_GETC_PUTC) || defined(CONFIG_MACRO_GETC_PUTC))
-  int getc(FILE *filep) __asm__("mini_fgetc");
-  int putc(int c, FILE *filep) __asm__("mini_fputc");
-  int getchar(void) __asm__("mini_getchar");
-#  if defined(__MINILIBC686__)
-    int putchar(int c) __asm__("mini_putchar_RP1") __attribute__((__regparm__(1)));  /* Use `gcc -ffreestanding' or `gcc -fno-builtin' to avoid the compilation error here. */
-#  else
-    int putchar(int c) __asm__("mini_putchar");
-#  endif
-#else
-  int mini___M_fgetc_fallback_RP1(FILE *filep) __attribute__((__regparm__(1)));
-#  if defined(CONFIG_MACRO_GETC_PUTC)  /* This only works with stdio_medium of minilibc686. */
+#  ifdef __WATCOMC__
+#    ifdef __MINILIBC686__
+      int getc(FILE *filep);
+      int putc(int c, FILE *filep);
+#      pragma aux getc "_mini_fgetc"
+#      pragma aux putc "_mini_fputc"
+#    else  /* __MINILIBC686__ */
+      int getc(FILE *filep);
+      int putc(int c, FILE *filep);
+#      pragma aux getc "_fgetc"
+#      pragma aux putc "_fputc"
+#    endif  /* else __MINILIBC686__ */
+#  else  /* __WATCOMC__ */
+    int getc(FILE *filep) __asm__(__LIBC_MINI "fgetc");
+    int putc(int c, FILE *filep) __asm__(__LIBC_MINI "fputc");
+#  endif  /* else __WATCOMC__ */
+  __LIBC_FUNC(int, getchar, (void),);
+  __LIBC_FUNC_MINIRP3(int, putchar, (int c),);  /* Use `gcc -ffreestanding' or `gcc -fno-builtin' to avoid the compilation error here. */
+#else  /* !!! */
+  __LIBC_FUNC_MINIRP3(int, __M_fgetc_fallback, (FILE *filep),);
+#  if defined(CONFIG_MACRO_GETC_PUTC) && !defined(__WATCOMC__)  /* This only works with stdio_medium of minilibc686. It is disabled for __WATCOMC__, because it doesn't support ({...}). For __WATCOMC__, we fall back to CONFIG_INLINE_GETC_PUTC below. */
     /* These macros work in GCC, Clang and TinyCC. TODO(pts): Why should we use a macro rather than an inline function? The inline code is a few bytes shorter than the macro code. */
-    /* If the there are bytes to read from the buffer (filep->buf_read_ptr != filep->buf_last), get and return a byte, otherwise call mini___M_fgetc_fallback_RP1(...). */
-#    define getc(_filep) (__extension__ ({ FILE *filep = (_filep); (((char**)filep)[2]/*->buf_read_ptr*/ == ((char**)filep)[3]/*->buf_last*/) ? mini___M_fgetc_fallback_RP1(filep) : (unsigned char)*((char**)filep)[2]/*->buf_read_ptr*/++; }))
+    /* If the there are bytes to read from the buffer (filep->buf_read_ptr != filep->buf_last), get and return a byte, otherwise call __M_fgetc_fallback(...). */
+#    define getc(_filep) (__extension__ ({ FILE *filep = (_filep); (((char**)filep)[2]/*->buf_read_ptr*/ == ((char**)filep)[3]/*->buf_last*/) ? __M_fgetc_fallback(filep) : (unsigned char)*((char**)filep)[2]/*->buf_read_ptr*/++; }))
     /* If the buffer is not full (filep->buf_write_ptr != filep->buf_end), append single byte, otherwise call fputc(...). */
 #    define putc(_c, _filep) (__extension__ ({ FILE *filep = (_filep); const unsigned char uc = (_c); (((char**)filep)[0]/*->buf_write_ptr*/ == ((char**)filep)[1]/*->buf_end*/) || (_STDIO_SUPPORTS_LINE_BUFFERING && uc == '\n') ? fputc(uc, filep) : (unsigned char)(((char**)filep)[0]/*->buf_write_ptr*/++[0] = uc); }))
 #    define getchar() getc(stdin)
 #    define putchar(_c) putc(_c, stdout)
-#  else  /* defined(CONFIG_INLINE_GETC_PUTC) */  /* This only works with stdio_medium of minilibc686. */
-    /* If the there are bytes to read from the buffer (filep->buf_read_ptr != filep->buf_last), get and return a byte, otherwise call mini___M_fgetc_fallback_RP1(...). */
-    static __inline__ __attribute__((__always_inline__)) int getc(FILE *filep) { return (((char**)filep)[2]/*->buf_read_ptr*/ == ((char**)filep)[3]/*->buf_last*/) ? mini___M_fgetc_fallback_RP1(filep) : (unsigned char)*((char**)filep)[2]/*->buf_read_ptr*/++; }
-    static __inline__ __attribute__((__always_inline__)) int getchar(void) { FILE *filep = stdin; return (((char**)filep)[2]/*->buf_read_ptr*/ == ((char**)filep)[3]/*->buf_last*/) ? mini___M_fgetc_fallback_RP1(filep) : (unsigned char)*((char**)filep)[2]/*->buf_read_ptr*/++; }
+#  else  /* defined(CONFIG_INLINE_GETC_PUTC) */  /* This only works with stdio_medium of minilibc686. It works with __GNUC__, __TINYC__ and __WATCOM__. */
+    /* If the there are bytes to read from the buffer (filep->buf_read_ptr != filep->buf_last), get and return a byte, otherwise call __M_fgetc_fallback(...). */
+    static __inline__ __attribute__((__always_inline__)) int getc(FILE *filep) { return (((char**)filep)[2]/*->buf_read_ptr*/ == ((char**)filep)[3]/*->buf_last*/) ? __M_fgetc_fallback(filep) : (unsigned char)*((char**)filep)[2]/*->buf_read_ptr*/++; }
+    static __inline__ __attribute__((__always_inline__)) int getchar(void) { FILE *filep = stdin; return (((char**)filep)[2]/*->buf_read_ptr*/ == ((char**)filep)[3]/*->buf_last*/) ? __M_fgetc_fallback(filep) : (unsigned char)*((char**)filep)[2]/*->buf_read_ptr*/++; }
     /* If the buffer is not full (filep->buf_write_ptr != filep->buf_end), append single byte, otherwise call fputc(...). */
     static __inline__ __attribute__((__always_inline__)) int putc(int c, FILE *filep) { return (((char**)filep)[0]/*->buf_write_ptr*/ == ((char**)filep)[1]/*->buf_end*/) || (_STDIO_SUPPORTS_LINE_BUFFERING && (unsigned char)c == '\n') ? fputc(c, filep) : (unsigned char)(*((char**)filep)[0]/*->buf_write_ptr*/++ = c); }
     static __inline__ __attribute__((__always_inline__)) int putchar(int c) { FILE *filep = stdout; return (((char**)filep)[0]/*->buf_write_ptr*/ == ((char**)filep)[1]/*->buf_end*/) || (_STDIO_SUPPORTS_LINE_BUFFERING && (unsigned char)c == '\n') ? fputc(c, filep) : (unsigned char)(*((char**)filep)[0]/*->buf_write_ptr*/++ = c); }
 #  endif
 #endif
 #if !defined(__MINILIBC686__) || defined(CONFIG_FUNC_FILENO) || !(defined(CONFIG_INLINE_FILENO) || defined(CONFIG_MACRO_FILENO))
-  int fileno(FILE *filep) __asm__("mini_fileno");
+  __LIBC_FUNC(int, fileno, (FILE *filep),);
 #else
 #  if defined(CONFIG_MACRO_FILENO)  /* This only works with stdio_medium of minilibc686. */
 #    define fileno(_filep) (*(int*)(void*)(((char**)(_filep))+4))
@@ -89,10 +101,10 @@ int fgetc(FILE *filep) __asm__("mini_fgetc");
 #  endif
 #endif
 
-int remove(const char *pathname) __asm__("mini_remove");
+__LIBC_FUNC(int, remove, (const char *pathname),);
 
 #if defined(__UCLIBC__) || defined(__GLIBC__) || defined(__dietlibc__)
-  int ferror(FILE *stream) __asm__("mini_ferror");
+  __LIBC_FUNC(int, ferror, (FILE *stream),);
 #endif
 
 #endif  /* _STDIO_H */

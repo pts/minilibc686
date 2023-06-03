@@ -1,6 +1,6 @@
 ;
 ; written by pts@fazekas.hu at Sun May 21 16:39:01 CEST 2023
-; Compile to i386 ELF .o object: nasm -O999999999 -w+orphan-labels -f elf -o isalpha_rp1.o isalpha_rp1.nasm
+; Compile to i386 ELF .o object: nasm -O999999999 -w+orphan-labels -f elf -o isdigit_rp1.o isdigit_rp1.nasm
 ;
 ; Uses: %ifdef CONFIG_PIC
 ;
@@ -8,7 +8,7 @@
 bits 32
 cpu 386
 
-global mini_isalpha_RP1
+global mini_isdigit_RP3
 %ifdef CONFIG_SECTIONS_DEFINED
 %elifidn __OUTPUT_FORMAT__, bin
 section .text align=1
@@ -23,10 +23,9 @@ section .bss align=1
 %endif
 
 section .text
-mini_isalpha_RP1:  ; int mini_isalpha_RP1(int c) __attribute__((__regparm__(1)));
-		or al, 0x20
-		sub al, 'a'
-		cmp al, 'z'-'a'+1
+mini_isdigit_RP3:  ; int mini_isdigit_RP3(int c) __attribute__((__regparm__(1)));
+		sub al, '0'
+		cmp al, 10
 		sbb eax, eax
 		neg eax
 		ret

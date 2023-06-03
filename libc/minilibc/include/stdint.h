@@ -1,5 +1,6 @@
 #ifndef _STDINT_H
 #define _STDINT_H
+#include <_preincl.h>
 
 #define __int8_t_defined
 typedef signed char int8_t;

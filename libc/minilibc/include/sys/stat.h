@@ -1,5 +1,6 @@
 #ifndef _SYS_STAT_H
 #define _SYS_STAT_H
+#include <_preincl.h>
 
 #include <sys/types.h>
 
@@ -23,6 +24,9 @@
 #define S_ISFIFO(m)	(((m) & S_IFMT) == S_IFIFO)
 #define S_ISSOCK(m)	(((m) & S_IFMT) == S_IFSOCK)
 
+#ifdef __WATCOMC__  /* Must come before the `struct'. */
+_Packed
+#endif
 struct stat64 {
   __extension__  unsigned long long st_dev;
   unsigned char  __pad0[4];
@@ -44,12 +48,13 @@ struct stat64 {
   unsigned long  st_ctime;
   unsigned long  st_ctime_nsec;
   __extension__  unsigned long long st_ino;
-}  __attribute__((packed));
+} __attribute__((packed));  /* Must come after the struct. */
+__LIBC_STATIC_ASSERT(sizeof_struct_stat64, sizeof(struct stat64) == 96);
 
-int mkdir(const char *pathname, mode_t mode) __asm__("mini_mkdir");
-mode_t umask(mode_t mask) __asm__("mini_umask");
-int chmod(const char *pathname, mode_t mode) __asm__("mini_chmod");
-int fchmod(int fd, mode_t mode) __asm__("mini_fchmod");
-int lstat64(const char *path, struct stat64 *buf) __asm__("mini_lstat64");
+__LIBC_FUNC(int, mkdir, (const char *pathname, mode_t mode),);
+__LIBC_FUNC(mode_t, umask, (mode_t mask),);
+__LIBC_FUNC(int, chmod, (const char *pathname, mode_t mode),);
+__LIBC_FUNC(int, fchmod, (int fd, mode_t mode),);
+__LIBC_FUNC(int, lstat64, (const char *path, struct stat64 *buf),);
 
 #endif  /* _SYS_STAT_H */

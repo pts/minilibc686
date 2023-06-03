@@ -1,35 +1,32 @@
 #ifndef _STRING_H
 #define _STRING_H
+#include <_preincl.h>
 
 #include <sys/types.h>
 
-int strcasecmp(const char *l, const char *r) __asm__("mini_strcasecmp");
-int strncasecmp(const char *l, const char *r, size_t n) __asm__("mini_strncasecmp");
-char *strchr(const char *s, int c) __asm__("mini_strchr");
-char *index(const char *s, int c) __asm__("mini_index");
-size_t strlen(const char *s) __asm__("mini_strlen");
-/* Limitation: it doesn't set errno on overflow in minilibc686. */
-double strtod(const char *str, char **endptr) __asm__("mini_strtod");
-char *strtok(char *__restrict__ s, const char *__restrict__ sep) __asm__("mini_strtok");
-/* Limitation: it doesn't set errno on overflow in minilibc686. */
-long strtol(const char *nptr, char **endptr, int base) __asm__("mini_strtol");
-char *strcpy(char *dest, const char *src) __asm__("mini_strcpy");
-char *strcat(char *dest, const char *src) __asm__("mini_strcat");
-int strcmp(const char *s1, const char *s2) __asm__("mini_strcmp");
-char *strstr(const char *haystack, const char *needle) __asm__("mini_strstr");
+__LIBC_FUNC(int, strcasecmp, (const char *l, const char *r),);
+__LIBC_FUNC(int, strncasecmp, (const char *l, const char *r, size_t n),);
+__LIBC_FUNC(char *, strchr, (const char *s, int c),);
+__LIBC_FUNC(char *, index, (const char *s, int c),);
+__LIBC_FUNC(size_t, strlen, (const char *s),);
+__LIBC_FUNC(char *, strtok, (char *__restrict__ s, const char *__restrict__ sep),);
+__LIBC_FUNC(char *, strcpy, (char *dest, const char *src),);
+__LIBC_FUNC(char *, strcat, (char *dest, const char *src),);
+__LIBC_FUNC(int, strcmp, (const char *s1, const char *s2),);
+__LIBC_FUNC(char *, strstr, (const char *haystack, const char *needle),);
 #ifdef __MINILIBC686__
 /* It is like strstr(...), but scanning haystack for needle[0] is much faster. */
-char *strstr_faster(const char *haystack, const char *needle) __asm__("mini_strstr_faster");
+__LIBC_FUNC(char *, strstr_faster, (const char *haystack, const char *needle),);
 #endif  /* __MINILIBC686__ */
-void *memcpy(void *dest, const void *src, size_t n) __asm__("mini_memcpy");
-void *memmove(void *dest, const void *src, size_t n) __asm__("mini_memmove");
-int memcmp(const void *s1, const void *s2, size_t n) __asm__("mini_memcmp");
-void *memset(void *s, int c, size_t n) __asm__("mini_memset");
-char *memchr(const char *s, int c, size_t n) __asm__("mini_memchr");
+__LIBC_FUNC(void *, memcpy, (void *dest, const void *src, size_t n),);
+__LIBC_FUNC(void *, memmove, (void *dest, const void *src, size_t n),);
+__LIBC_FUNC(int, memcmp, (const void *s1, const void *s2, size_t n),);
+__LIBC_FUNC(void *, memset, (void *s, int c, size_t n),);
+__LIBC_FUNC(char *, memchr, (const char *s, int c, size_t n),);
 
-#ifdef __MINILIBC686__
-  __attribute__((__regparm__(3))) void memswap(void *a, void *b, size_t size) __asm__("mini_memswap_RP3");  /* Not part of standard C. */
-  /*void memswap(void *a, void *b, size_t size);*/  /* Also present in the .a library, but the other one is recommended. It's also used by mini_qsort_fast(...). */
+#if defined(__MINILIBC686__)
+  __LIBC_FUNC_RP3(void, memswap, (void *a, void *b, size_t size),);  /* Not part of standard C. */
+  /*__LIBC_FUNC(void, memswap, (void *a, void *b, size_t size),);*/  /* Also present in the .a library, but the other one is recommended. It's also used by mini_qsort_fast(...). */
 #endif  /* __MINILIBC686__ */
 
 #endif  /* _STRING_H */

@@ -1,7 +1,11 @@
 #ifndef _ERRNO_H
 #define _ERRNO_H
+#include <_preincl.h>
 
-extern int errno __asm__("mini_errno");
+__LIBC_VAR(extern int, errno);
+#ifdef __WATCOMC__  /* There is no other way with `wcc386 -za'. */
+#  pragma aux errno "_mini_*"
+#endif
 
 /* Constants from asm-generic/errno-base.h and asm-generic/errno.h */
 #define	EPERM		 1	/* Operation not permitted */

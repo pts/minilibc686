@@ -1,6 +1,6 @@
 ;
 ; written by pts@fazkeas.hu at Mon May 22 20:04:02 CEST 2023
-; Compile to i386 ELF .o object: nasm -O999999999 -w+orphan-labels -f elf -o stdio_medium_putchar.o stdio_medium_putchar.nasm
+; Compile to i386 ELF .o object: nasm -O999999999 -w+orphan-labels -f elf -o stdio_medium_putchar_rp3.o stdio_medium_putchar_rp3.nasm
 ;
 ; Uses: %ifdef CONFIG_PIC
 ;
@@ -8,7 +8,7 @@
 bits 32
 cpu 386
 
-global mini_putchar
+global mini_putchar_RP3
 %ifdef CONFIG_SECTIONS_DEFINED
 %elifidn __OUTPUT_FORMAT__, bin
 section .text align=1
@@ -27,9 +27,8 @@ section .bss align=4
 %endif
 
 section .text
-mini_putchar:  ; int mini_putchar(int c);
+mini_putchar_RP3:  ; int REGPARM3 mini_putchar_RP3(int c);
 ; src/smart.nasm is used instead of this if smart linking is active.
-		mov eax, [esp+4]
 		mov edx, [mini_stdout]
 		call mini_fputc_RP3
 		ret

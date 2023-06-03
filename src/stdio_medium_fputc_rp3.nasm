@@ -5,7 +5,7 @@
 bits 32
 cpu 386
 
-global mini___M_fputc_RP2
+global mini_fputc_RP3
 %ifdef CONFIG_SECTIONS_DEFINED
 %elifidn __OUTPUT_FORMAT__, bin
 section .text align=1
@@ -25,7 +25,7 @@ section .bss align=4
 
 section .text
 
-mini___M_fputc_RP2:  ; int REGPARM2 mini___M_fputc_RP2(int c, FILE *filep);
+mini_fputc_RP3:  ; int REGPARM3 mini_fputc_RP3(int c, FILE *filep);
 		push ebx  ; Save EBX.
 		mov ebx, edx
 		movzx eax, al  ; Local variable uc will become argument c.

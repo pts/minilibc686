@@ -274,7 +274,7 @@ DEF_ARG=
 if test "$DO_ADD_INCLUDEDIR"; then
   INCLUDEDIR_ARG="-I$MYDIR/libc/$LIBC/include"
   if test "$USE_UTCC"; then
-    DEF_ARG="-D__asm__(x)=$NL-D__UCLIBC__"   # Make it ignore __asm__("mini_printf") in stdio.h, so that the linker will find the uClibc printf(...).
+    DEF_ARG="-D__UCLIBC__"
   else
     # TODO(pts): Ignore comments in lines starting with `#'.
     # This DEF_ARG must be valid for for nasm (for -msmart), do it should be contain only `-D...' and `-U...'.

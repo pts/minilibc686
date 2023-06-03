@@ -1,5 +1,6 @@
 #ifndef _SYS_TYPES_H
 #define _SYS_TYPES_H
+#include <_preincl.h>
 
 typedef unsigned size_t;
 typedef int ssize_t;

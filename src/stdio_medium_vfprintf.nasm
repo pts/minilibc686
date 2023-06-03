@@ -18,11 +18,11 @@ section .text align=1
 section .rodata align=1
 section .data align=1
 section .bss align=1
-mini___M_fputc_RP2 equ $+0x12345678
+mini_fputc_RP3 equ $+0x12345678
 mini___M_writebuf_relax_RP1 equ $+0x12345679
 mini___M_writebuf_unrelax_RP1 equ $+0x1234567a
 %else
-extern mini___M_fputc_RP2
+extern mini_fputc_RP3
 extern mini___M_writebuf_relax_RP1
 extern mini___M_writebuf_unrelax_RP1
 section .text align=1
@@ -268,7 +268,7 @@ mini_vfprintf:  ; int mini_vfprintf(FILE *filep, const char *format, va_list ap)
 .call_mini_putc:  ; Input: AL contains the byte to be printed. Can use EAX, EDX and ECX as scratch. Output: byte is written to the buffer, EBP is incremented on success only.
 		mov edx, [esp+0x38]  ; filep. AL contains the byte to be printed, the high 24 bits of EAX is garbage here.
 		; Now we do inlined putc(c, filep). Memory layout must match <stdio.h> and c_stdio_medium.c.
-		; int putc(int c, FILE *filep) { return (((char**)filep)[0]/*->buf_write_ptr*/ == ((char**)filep)[1]/*->buf_end*/) || (_STDIO_SUPPORTS_LINE_BUFFERING && (unsigned char)c == '\n') ? mini___M_fputc_RP2(c, filep) : (unsigned char)(*((char**)filep)[0]/*->buf_write_ptr*/++ = c); }
+		; int putc(int c, FILE *filep) { return (((char**)filep)[0]/*->buf_write_ptr*/ == ((char**)filep)[1]/*->buf_end*/) || (_STDIO_SUPPORTS_LINE_BUFFERING && (unsigned char)c == '\n') ? mini_fputc_RP3(c, filep) : (unsigned char)(*((char**)filep)[0]/*->buf_write_ptr*/++ = c); }
 		mov ecx, [edx]  ; ECX := buf_write_ptr.
 		cmp ecx, [edx+4]  ; buf_end.
 		je .call_mini_fputc
@@ -283,12 +283,12 @@ mini_vfprintf:  ; int mini_vfprintf(FILE *filep, const char *format, va_list ap)
 .after_putc:	inc ebp  ; Increment EBP on success (as per .call_mini_putc contract).
 		ret
 .call_mini_fputc:
-%if 1  ; With smart linking, exclude this if mini_snprintf(...) and mini_vsnprintf(...) are not used.
+%if 1  ; TODO(pts): With smart linking, exclude this if mini_snprintf(...) and mini_vsnprintf(...) are not used.
 		cmp byte [edx+0x14], 7  ; dire == FD_WRITE_SATURATE?
 		je .after_putc
 %endif
 		; movsx eax, al : Not needed, mini_fputc ignores the high 24 bits anyway.
-		call mini___M_fputc_RP2  ; With extra smart linking, we could hardcore an EOF (-1) return if only mini_snprintf(...) etc., bur no mini_fprintf(...) etc. is used.
+		call mini_fputc_RP3  ; With extra smart linking, we could hardcore an EOF (-1) return if only mini_snprintf(...) etc., bur no mini_fprintf(...) etc. is used.
 		add eax, byte 1  ; CF := (EAX != 1).
 		sbb ebp, byte -1  ; If EAX wasn't -1 (EOF), then EBP += 1.
 		ret

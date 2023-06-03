@@ -1,5 +1,6 @@
 #ifndef _STDARG_INTERNAL_H
 #define _STDARG_INTERNAL_H
+#include <_preincl.h>
 
 /* This is a size optimization. It only works on i386 and if the function
  * taking the `...' arguments is __attribute__((noinline)).

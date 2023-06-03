@@ -1,5 +1,6 @@
 #ifndef _SYS_SYSCALL_H
 #define _SYS_SYSCALL_H
+#include <_preincl.h>
 
 #if !(defined(__linux__) && defined(__i386__))
 #error These syscall numbers are valid for Linux i386 only.
