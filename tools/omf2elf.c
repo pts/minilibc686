@@ -186,6 +186,18 @@ static uint32_t g32(const unsigned char *p) {  /* get_u32_le(...). */
 #endif
 }
 
+static void add32(unsigned char *p, uint32_t v) {
+#if IS_X86  /* Unaligned write. */
+  *(uint32_t*)p += v;
+#else
+  v += g32(p);
+  *p++ = v; v >>= 8;
+  *p++ = v; v >>= 8;
+  *p++ = v; v >>= 8;
+  *p++ = v;
+#endif
+}
+
 /* --- */
 
 typedef char static_assert_sizeof_int[sizeof(int) >= 4];  /* It doesn't work with smaller int sizes, some `int' and `unsigned' variables are too small. */
@@ -293,6 +305,26 @@ static char is_openwatcom_libc_symbol(const char *name) {
          strcmp(name, "I8M") == 0;
 }
 
+static unsigned char unflushed_ledata_data[0x10000], *unflushed_ledata_up;  /* OMF record data for ledata* records. */
+static unsigned char unflushed_ledata_section_idx;
+static uint32_t unflushed_ledata_ofs, unflushed_ledata_size, unflushed_ledata_section_file_ofs;
+
+static int flush_ledata(int fdo, const char *elfoname) {
+  if (unflushed_ledata_size > 0) {
+    unflushed_ledata_ofs += unflushed_ledata_section_file_ofs;
+    if ((uint32_t)lseek(fdo, unflushed_ledata_ofs, SEEK_SET) != unflushed_ledata_ofs) {  /* Usually this succeeds, and then the write fails. */
+      fprintf(stderr, "fatal: error seeking in ELF .o: %s\n", elfoname);
+      return 38;
+    }
+    if ((size_t)write(fdo, unflushed_ledata_up, unflushed_ledata_size) != unflushed_ledata_size) {
+      fprintf(stderr, "fatal: error writing to ELF .o: %s\n", elfoname);
+      return 39;
+    }
+    unflushed_ledata_size = unflushed_ledata_ofs = 0;
+  }
+  return 0;
+}
+
 int main(int argc, char **argv) {
   const char *arg;
   char **argp;
@@ -324,7 +356,7 @@ int main(int argc, char **argv) {
   unsigned char rhd[4];  /* OMF record header. */
   unsigned rec_size, u;
   static unsigned char data[0x10000];  /* OMF record data. Buffer is large enough, because record size is 16 bits. Even the checksum byte fits. */
-  unsigned char *up, *data_end;
+  unsigned char *up, *rdata, *rdata_end;
   char *lnames[0x20], *lname;
   unsigned lname_count;
   unsigned char seg_a, seg_combine, seg_big, seg_use32, seg_align, seg_idx, seg_count;
@@ -333,8 +365,6 @@ int main(int argc, char **argv) {
   unsigned grp_name_idx, grp_count, grp_dgroup, grp_flat, grp_idx;
   unsigned char fix_low, fix_location, fix_is_segrel, fix_f, fix_frame, fix_t, fix_p, fix_target;
   uint32_t fix_ofs, fix_disp, fix_fd, fix_td;
-  unsigned char fix_data_section_idx;  /* Set in ledata* record. */
-  uint32_t fix_data_ofs;  /* Set in ledata* record. */
   uint32_t data_ofs;
   uint32_t elf_file_ofs;
   unsigned rel_count;
@@ -425,8 +455,8 @@ int main(int argc, char **argv) {
   syms = syms_end = symp = NULL;
 
  next_pass:
-  fix_data_ofs = (uint32_t)-1;
-  fix_data_section_idx = (unsigned char)-1;
+  unflushed_ledata_ofs = (uint32_t)-1;
+  unflushed_ledata_section_idx = (unsigned char)-1;
   if (fread(rhd, 1, 4, f) != 4) {
     fprintf(stderr, "fatal: file too short for OMF: %s\n", omfname);
     return 4;
@@ -465,23 +495,27 @@ int main(int argc, char **argv) {
       fprintf(stderr, "fatal: found OMF record of size 0: %s\n", omfname);
       return 10;
     }
-    if (fread(data, 1, rec_size, f) != rec_size) {
+    rdata = data;
+    if (rhd[0] == LEDATA || rhd[0] == LEDATA386) {
+      if (is_pass2 && (argc = flush_ledata(fdo, elfoname)) != 0) return argc;
+      rdata = unflushed_ledata_data;
+    }
+    up = rdata;
+    if (fread(rdata, 1, rec_size, f) != rec_size) {
       fprintf(stderr, "fatal: EOF in OMF record: %s\n", omfname);
       return 11;
     }
-    if (data[rec_size - 1] != 0) {  /* Check the checksum. */
+    rdata_end = rdata + --rec_size;
+    if (rdata[rec_size] != 0) {  /* Check the checksum. */
       rhd[3] = rhd[0] + rhd[1] + rhd[2];
-      for (u = 0; u < rec_size; ++u) {
-        rhd[3] += data[u];
+      for (u = 0; u <= rec_size; ++u) {
+        rhd[3] += rdata[u];
       }
       if (rhd[3] != 0) {
         fprintf(stderr, "fatal: bad OMF record checksum: %s\n", omfname);
         return 12;
       }
     }
-    --rec_size;
-    up = data;
-    data_end = data + rec_size;
     if (rhd[0] == MODEND || rhd[0] == MODEND386) {
       if (rec_size != 1 || data[0] != 0) {
         fprintf(stderr, "fatal: expected non-main module in OMF: %s\n", omfname);
@@ -490,8 +524,8 @@ int main(int argc, char **argv) {
       break;  /* Explicit EOF indicator. */
     } else if (rhd[0] == LNAMES) {
       if (is_pass2) continue;
-      while (up != data_end) {
-        if (up + up[0] + 1 > data_end) {
+      while (up != rdata_end) {
+        if (up + up[0] + 1 > rdata_end) {
           fprintf(stderr, "fatal: lname too long in OMF: %s\n", omfname);
           return 17;
         }
@@ -508,7 +542,7 @@ int main(int argc, char **argv) {
         fprintf(stderr, "fatal: too many segments in OMF: %s\n", omfname);
         return 19;
       }
-      if (up == data_end) {
+      if (up == rdata_end) {
        segdef_too_short:
         fprintf(stderr, "fatal: segdef too short in OMF: %s\n", omfname);
         return 20;
@@ -520,7 +554,7 @@ int main(int argc, char **argv) {
       seg_a >>= 5;
       seg_align = (seg_a == 1 ? 1 : seg_a == 2 ? 2 : seg_a == 3 ? 16 : seg_a == 5 ? 4 : 0);
       if (rhd[0] == SEGDEF) {
-        if (up + 2 > data_end) goto segdef_too_short;
+        if (up + 2 > rdata_end) goto segdef_too_short;
         seg_size = g16(up);
         up += 2;
         if (seg_big) {
@@ -531,7 +565,7 @@ int main(int argc, char **argv) {
           seg_size = 0x10000;
         }
       } else {  /* SEGDEF386 */
-        if (up + 4 > data_end) goto segdef_too_short;
+        if (up + 4 > rdata_end) goto segdef_too_short;
         seg_size = g32(up);
         up += 4;
         if (seg_big) {
@@ -548,23 +582,23 @@ int main(int argc, char **argv) {
         fprintf(stderr, "fatal: bad segment combine in OMF: %d: %s\n", seg_combine, omfname);
         return 24;
       }
-      if (up == data_end) goto segdef_too_short;
+      if (up == rdata_end) goto segdef_too_short;
       seg_name_idx = *up++;
       if (seg_name_idx >= 0x80) {
-        if (up == data_end) goto segdef_too_short;
+        if (up == rdata_end) goto segdef_too_short;
         seg_name_idx = (seg_name_idx & 0x7f) << 8 | *up++;
       }
       seg_class_idx = *up++;
       if (seg_class_idx >= 0x80) {
-        if (up == data_end) goto segdef_too_short;
+        if (up == rdata_end) goto segdef_too_short;
         seg_class_idx = (seg_class_idx & 0x7f) << 8 | *up++;
       }
       seg_overlay_idx = *up++;
       if (seg_overlay_idx >= 0x80) {
-        if (up == data_end) goto segdef_too_short;
+        if (up == rdata_end) goto segdef_too_short;
         seg_overlay_idx = (seg_overlay_idx & 0x7f) << 8 | *up++;
       }
-      if (up != data_end) {
+      if (up != rdata_end) {
         fprintf(stderr, "fatal: segdef too long in OMF: %s\n", omfname);
         return 25;
       }
@@ -626,14 +660,14 @@ int main(int argc, char **argv) {
         fprintf(stderr, "fatal: too many groups in OMF: %s\n", omfname);
         return 40;
       }
-      if (up == data_end) {
+      if (up == rdata_end) {
        grpdef_too_short:
         fprintf(stderr, "fatal: grpdef too short in OMF: %s\n", omfname);
         return 41;
       }
       grp_name_idx = *up++;
       if (grp_name_idx >= 0x80) {
-        if (up == data_end) goto grpdef_too_short;
+        if (up == rdata_end) goto grpdef_too_short;
         grp_name_idx = (grp_name_idx & 0x7f) << 8 | *up++;
       }
       if (grp_name_idx-- == 0 || grp_name_idx >= lname_count) {
@@ -656,7 +690,7 @@ int main(int argc, char **argv) {
     } else if (rhd[0] == LINNUM386) {
       /* Created by `owcc -gwatcom'. Ignore. */
     } else if (rhd[0] == LEDATA || rhd[0] == LEDATA386) {
-      if (up == data_end) {
+      if (up == rdata_end) {
        ledata_too_short:
         fprintf(stderr, "fatal: ledata too short in OMF: %s\n", omfname);
         return 35;
@@ -670,37 +704,29 @@ int main(int argc, char **argv) {
       if (u == SECTION_COUNT) {  /* This happens for debug segments etc. */
       } else {
         if (rhd[0] == LEDATA) {
-          if (up + 2 > data_end) goto ledata_too_short;
+          if (up + 2 > rdata_end) goto ledata_too_short;
           data_ofs = g16(up);
           up += 2;
         } else {  /* LEDATA386 */
-          if (up + 4 > data_end) goto ledata_too_short;
+          if (up + 4 > rdata_end) goto ledata_too_short;
           data_ofs = g32(up);
           up += 4;
         }
-        seg_size = data_end - up;
+        seg_size = rdata_end - up;
         if (is_verbose) fprintf(stderr, "info: ledata segment=%s data_ofs=0x%x data_size=0x%x\n", section->info->seg_name, data_ofs, seg_size);
         if (u == SECTION_BSS && seg_size != 0) {
           fprintf(stderr, "fatal: trying to write data to _BSS segment in OMF: %s\n", omfname);
           return 37;
         }
-        fix_data_ofs = data_ofs;  /* Affects the next fixupp* record. */
-        fix_data_section_idx = u;
-        if (is_pass2) {
-          data_ofs += section->file_ofs;
-          if ((uint32_t)lseek(fdo, data_ofs, SEEK_SET) != data_ofs) {  /* Usually this succeeds, and then the write fails. */
-            fprintf(stderr, "fatal: error seeking in ELF .o: %s\n", elfoname);
-            return 38;
-          }
-          if ((size_t)write(fdo, up, seg_size) != seg_size) {
-            fprintf(stderr, "fatal: error writing to ELF .o: %s\n", elfoname);
-            return 39;
-          }
-        }
+        unflushed_ledata_size = seg_size;
+        unflushed_ledata_section_file_ofs = section->file_ofs;
+        unflushed_ledata_ofs = data_ofs;  /* Affects the next fixupp* record. */
+        unflushed_ledata_section_idx = u;
+        unflushed_ledata_up = up;
       }
     } else if (rhd[0] == EXTDEF || rhd[0] == LEXTDEF) {
-      while (up != data_end) {
-        if (up + up[0] + 2 > data_end) {
+      while (up != rdata_end) {
+        if (up + up[0] + 2 > rdata_end) {
           fprintf(stderr, "fatal: name too long in OMF: %s\n", omfname);
           return 44;
         }
@@ -743,24 +769,24 @@ int main(int argc, char **argv) {
         ++up;
       }
     } else if (rhd[0] == PUBDEF || rhd[0] == LPUBDEF || rhd[0] == PUBDEF386 || rhd[0] == LPUBDEF386) {
-      if (up == data_end) {
+      if (up == rdata_end) {
        pubdef_too_short:
         fprintf(stderr, "fatal: pubdef too short in OMF: %s\n", omfname);
         return 49;
       }
       grp_idx = *up++;
       if (grp_idx >= 0x80) {
-        if (up == data_end) goto pubdef_too_short;
+        if (up == rdata_end) goto pubdef_too_short;
         grp_idx = (grp_idx & 0x7f) << 8 | *up++;
       }
       if (grp_idx > grp_count || (grp_idx != grp_flat && grp_idx != grp_dgroup)) {
         fprintf(stderr, "fatal: unknown group in pubdef in OMF: %s\n", omfname);
         return 50;
       }
-      if (up == data_end) goto pubdef_too_short;
+      if (up == rdata_end) goto pubdef_too_short;
       seg_idx = *up++;
       if (seg_idx >= 0x80) {
-        if (up == data_end) goto pubdef_too_short;
+        if (up == rdata_end) goto pubdef_too_short;
         seg_idx = (seg_idx & 0x7f) << 8 | *up++;
       }
       if (seg_idx > seg_count) {
@@ -783,8 +809,8 @@ int main(int argc, char **argv) {
       }
       if (0 - 0 && is_verbose) fprintf(stderr, "info: pubdef seg=%s\n", section->info->seg_name);
       seg_use32 = (rhd[0] == PUBDEF386 || rhd[0] == LPUBDEF386);
-      while (up != data_end) {
-        if (up + up[0] + 2 + (seg_use32 ? 4 : 2) > data_end) {
+      while (up != rdata_end) {
+        if (up + up[0] + 2 + (seg_use32 ? 4 : 2) > rdata_end) {
           fprintf(stderr, "fatal: name too long in pubdef in OMF: %s\n", omfname);
           return 55;
         }
@@ -833,27 +859,27 @@ int main(int argc, char **argv) {
       }
     } else if (rhd[0] == FIXUPP || rhd[0] == FIXUPP386) {
       seg_use32 = (rhd[0] == FIXUPP386);
-      if (fix_data_section_idx + 1 == 0 || fix_data_ofs + 1 == 0) {
+      if (unflushed_ledata_section_idx + 1 == 0 || unflushed_ledata_ofs + 1 == 0) {
         fprintf(stderr, "fatal: assert: unknown segment in fixupp in OMF: %s\n", omfname);
         return 61;
       }
-      while (up != data_end) {
+      while (up != rdata_end) {
         fix_low = *up++;
         if ((fix_low & 0x80) == 0) {
           fprintf(stderr, "fatal: found thread subrecord in fixupp in OMF: %s\n", omfname);
           return 62;
         }
-        if (up + 3 > data_end) {
+        if (up + 3 > rdata_end) {
          fixupp_subrecord_too_long:
           fprintf(stderr, "fatal: subrecord too long in fixupp in OMF: %s\n", omfname);
           return 63;
         }
         fix_ofs = *up++ | (fix_low & 3) << 8;
-        if (fix_ofs + (seg_use32 ? 4 : 2) > sections[fix_data_section_idx].size) {
-          fprintf(stderr, "fatal: offset beyond end of segment in fixupp in OMF: %s\n", omfname);
+        if (fix_ofs + (seg_use32 ? 4 : 2) > unflushed_ledata_size) {
+          fprintf(stderr, "fatal: fixupp offset beyond end of segment in OMF: limit=0x%x: %s\n", unflushed_ledata_size, omfname);
           return 64;
         }
-        fix_ofs += fix_data_ofs;
+        fix_ofs += unflushed_ledata_ofs;
         fix_is_segrel = (fix_low >> 6) & 1;
         fix_location = (fix_low >> 2) & 0xf;
         if (0 - 0 && is_verbose) fprintf(stderr, "info: fixupp is_segrel=%d ofs=0x%x loc=%d\n", fix_is_segrel, fix_ofs, fix_location);
@@ -884,22 +910,22 @@ int main(int argc, char **argv) {
           fprintf(stderr, "info: bad fixupp target in OMF: %d: %s\n", fix_target, omfname);
           return 69;
         }
-        if (up == data_end) goto fixupp_subrecord_too_long;
+        if (up == rdata_end) goto fixupp_subrecord_too_long;
         fix_fd = *up++;
         if (fix_fd >= 0x80) {
-          if (up == data_end) goto fixupp_subrecord_too_long;
+          if (up == rdata_end) goto fixupp_subrecord_too_long;
           fix_fd = (fix_fd & 0x7f) << 8 | *up++;
         }
-        if (up == data_end) goto fixupp_subrecord_too_long;
+        if (up == rdata_end) goto fixupp_subrecord_too_long;
         fix_td = *up++;
         if (fix_td >= 0x80) {
-          if (up == data_end) goto fixupp_subrecord_too_long;
+          if (up == rdata_end) goto fixupp_subrecord_too_long;
           fix_td = (fix_td & 0x7f) << 8 | *up++;
         }
         if (fix_p) {
           fix_disp = 0;
         } else {
-          if (up + (seg_use32 ? 4 : 2) > data_end) goto fixupp_subrecord_too_long;
+          if (up + (seg_use32 ? 4 : 2) > rdata_end) goto fixupp_subrecord_too_long;
           fix_disp = (seg_use32 ? g32(up) : g16(up));
           up += (seg_use32 ? 4 : 2);
         }
@@ -936,16 +962,19 @@ int main(int argc, char **argv) {
           }
           section->relocp->ofs = fix_ofs;
           section->relocp->idx = u;
-          /*section->relocp->section_idx = fix_data_section_idx;*/
+          /*section->relocp->section_idx = unflushed_ledata_section_idx;*/
           section->relocp->is_segrel = fix_is_segrel;
           section->relocp->is_extdef = fix_target != 0;
+          if (!fix_is_segrel) {  /* OMF and ELF have a different idea about PC-based relocation. We fix it for R_386_PC32 relocations by subtracting 4 from each value. */
+            add32(unflushed_ledata_up + fix_ofs - unflushed_ledata_ofs, -4);
+          }
           ++section->relocp;
         } else {
           ++rel_count;
           ++section->rel_count;
         }
         /* OpenWatcom emits fix_fd == grp_flat; NASM emits fix_fd == grp_dgroup. It doesn't matter. */
-        if (is_verbose) fprintf(stderr, "info: fixupp is_segrel=%d ofs=0x%x seg=%s frame_group=%s target=%s td=%d disp=%d\n", fix_is_segrel, fix_ofs, sections[fix_data_section_idx].info->seg_name, fix_fd == grp_flat ? "FLAT" : "DGROUP", fix_target == 0 ? "SEGDEF" : "EXTDEF", fix_td, fix_disp);
+        if (is_verbose) fprintf(stderr, "info: fixupp is_segrel=%d ofs=0x%x seg=%s frame_group=%s target=%s td=%d disp=%d\n", fix_is_segrel, fix_ofs, sections[unflushed_ledata_section_idx].info->seg_name, fix_fd == grp_flat ? "FLAT" : "DGROUP", fix_target == 0 ? "SEGDEF" : "EXTDEF", fix_td, fix_disp);
       }
     } else {
       fprintf(stderr, "fatal: unsupported OMF record type 0x%02x: %s\n", rhd[0], omfname);
@@ -960,6 +989,7 @@ int main(int argc, char **argv) {
       }
     }
     if (is_verbose) fprintf(stderr, "info: entering pass 2\n");
+    unflushed_ledata_size = 0;
     is_pass2 = 1;
     elf_file_ofs = sizeof(Elf32_Ehdr);
     allnamep = allnames = my_xmalloc(allnames_size);
@@ -1029,6 +1059,7 @@ int main(int argc, char **argv) {
   }
 
   /* Here we are after pass 2. */
+  if ((argc = flush_ledata(fdo, elfoname)) != 0) return argc;
   if (allnamep != allnames + allnames_size) {
     fprintf(stderr, "fatal: assert: bad total name size in OMF: %s\n", omfname);
     return 94;
@@ -1132,28 +1163,6 @@ int main(int argc, char **argv) {
           } else {
             fprintf(stderr, "info: reloc in section=%s ofs=0x%x is_segrel=%d add_section=%s\n", section->info->rel_section_name + 4, (unsigned)relocp->ofs, relocp->is_segrel, sections[relocp->idx].info->rel_section_name + 4);
           }
-        }
-      }
-      /* OMF and ELF have a different idea about PC-based relocation. We fix it for R_386_PC32 relocations by subtracting 4 from each value. */
-      for (relocp = section->relocs; relocp != relocp_end; ++relocp) {
-        if (relocp->is_segrel) continue;  /* Not R_386_PC32. */
-        fix_ofs = section->file_ofs + relocp->ofs;
-        if ((uint32_t)lseek(fdo, fix_ofs, SEEK_SET) != fix_ofs) {  /* Usually this succeeds, and then the write fails. */
-          fprintf(stderr, "fatal: error seeking in ELF .o to relocation: %s\n", elfoname);
-          return 100;
-        }
-        if ((size_t)read(fdo, &rel_sym, 4) != 4) {  /* !! Buffer more reads and writes. */
-          fprintf(stderr, "fatal: error reading relocation from ELF .o: %s\n", elfoname);
-          return 101;
-        }
-        rel_sym -= 4;
-        if ((uint32_t)lseek(fdo, fix_ofs, SEEK_SET) != fix_ofs) {  /* Usually this succeeds, and then the write fails. */
-          fprintf(stderr, "fatal: error seeking in ELF .o to relocation: %s\n", elfoname);
-          return 102;
-        }
-        if ((size_t)write(fdo, &rel_sym, 4) != 4) {
-          fprintf(stderr, "fatal: error writing relocation to ELF .o: %s\n", elfoname);
-          return 103;
         }
       }
     } else {
