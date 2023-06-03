@@ -18,17 +18,21 @@ test -z "$BUSYBOX_SH_SCRIPT" && test -f "$MYDIR/shbin/sh" &&
     export BUSYBOX_SH_SCRIPT=1 PATH="$MYDIR/shbin:$PATH" &&
     exec sh -- "$0" "$@"
 
-# For very hardcore users and reproducible builds: unset all environment
-# variables, and use a hardcoded --boxed $PATH.
-test "$1" = --noenv && shift && exec env -i PATH="$MYDIR/shbin" BUSYBOX_SH_SCRIPT=1 sh -- "$0" --boxed "$@"
+# --noenv is for reproducible builds and testing: unset all environment
+# variables, and use a short hardcoded $PATH (`$MYDIR/shbin'). Toolchain
+# tools (e.g. pts-tcc and ld) are always run from `$MYDIR/tools', no matter
+# the $PATH. System tools (such as with `--gcc=...') will be excplicitly
+# looked up on the old $PATH.
+test "$1" = --noenv && shift && exec env -i PATH="$MYDIR/shbin" BUSYBOX_SH_SCRIPT=1 sh -- "$0" --boxed-path "$PATH" "$@"
 
-# For hardcore users and testing: --boxed will use only the included shell
-# and coreutils programs. Toolchain tools (e.g. pts-tcc and ld) are not
-# affected by $PATH, they will be run explictly from "$MYDIR/tools". --gcc
-# is affected, --boxed effectively breaks --gcc, so the user has to specify
-# --gcc=/usr/bin/gcc instead.
+# --boxed is a weaker version of --noenv for reproducible builds and
+# testing: keep most environment variables, but use a short hardcoded
+# $PATH (`$MYDIR/shbin').
+OLD_PATH="$PATH"
 IS_BOXED=
+while test "$1" = --boxed-path && test "$2"; do OLD_PATH="$2"; shift; shift; export PATH="$MYDIR/shbin"; IS_BOXED=1; done
 while test "$1" = --boxed; do export PATH="$MYDIR/shbin"; IS_BOXED=1; shift; done
+# Now $OLD_PATH contains the initial $PATH, with system tools like `gcc'.
 
 NL="
 "
@@ -145,6 +149,61 @@ for ARG in "$@"; do
   esac
 done
 
+if test "$TCC" && test "$TCCLD"; then  # $TCCLD should work with $GCC
+  if test "$TCCLD" != "$TCC"; then
+    echo "fatal: conflicting combination of --tcc=... and --tccld=..." >&2
+    exit 1
+  fi
+  TCCLD=
+fi
+if test "$TCC" && test "$GCC"; then
+  echo "fatal: conflicting compilers, both --tcc=... and --gcc=..." >&2
+  exit 1
+fi
+if test -z "$TCC" && test -z "$GCC"; then
+  echo "fatal: missing compiler, neither --tcc=... nor --gcc=..." >&2
+  exit 1
+fi
+if test "$USE_UTCC" && test "$DO_ADD_LIB" && test -z "$TCCLD" && test "${TCC%/pts-tcc}" = "$TCC"; then
+  # That's because ///tmp///LIBTCC1.a is embedded in the tools/pts-tcc executable.
+  # TODO(pts): Extract it.
+  echo "fatal: currently uClibc with --utcc needs pts-tcc; try --uclibc instead" >&2
+  exit 1
+fi
+if test "$USE_UTCC" && test "$ARCH" = i386; then
+  echo "fatal: the --utcc bundled uClibc doesn't work on i386, it needs -march=i686" >&2
+  exit 1
+fi
+
+case "$GCC" in "") ;; */*) ;; *)  # Resolve $GCC on $OLD_PATH. Useful for --noenv and --boxed.
+  LOOKUP="$(PATH="$OLD_PATH"; type "$GCC" 2>/dev/null)"
+  case "$LOOKUP" in
+   *\ is\ /*)  LOOKUP="/${LOOKUP#*\ is\ /}"  ;;
+   *\ for\ /*) LOOKUP="/${LOOKUP#*\ for\ /}" ;;  # ksh(1).
+   *) echo "fatal: gcc command not found: $GCC" >&2; exit 6 ;;
+  esac
+  test "$IS_BOXED" && GCC="$LOOKUP" && GCC_BARG="-B${GCC%/*}"  # Don't mess with $GCC paths unless --noenv or --boxed is specified.
+esac
+case "$TCC" in "") ;; */*) ;; *)  # Resolve $TCCLD on $OLD_PATH. Useful for --noenv and --boxed.
+  LOOKUP="$(PATH="$OLD_PATH"; type "$TCC" 2>/dev/null)"
+  case "$LOOKUP" in
+   *\ is\ /*)  LOOKUP="/${LOOKUP#*\ is\ /}"  ;;
+   *\ for\ /*) LOOKUP="/${LOOKUP#*\ for\ /}" ;;  # ksh(1).
+   *) echo "fatal: tcc command not found: $GCC" >&2; exit 6 ;;
+  esac
+  TCC="$LOOKUP"
+esac
+case "$TCCLD" in "") ;; */*) ;; *)  # Resolve $TCCLD on $OLD_PATH. Useful for --noenv and --boxed.
+  LOOKUP="$(PATH="$OLD_PATH"; type "$TCCLD" 2>/dev/null)"
+  case "$LOOKUP" in
+   *\ is\ /*)  LOOKUP="/${LOOKUP#*\ is\ /}"  ;;
+   *\ for\ /*) LOOKUP="/${LOOKUP#*\ for\ /}" ;;  # ksh(1).
+   *) echo "fatal: --tccld command not found: $GCC" >&2; exit 6 ;;
+  esac
+  TCCLD="$LOOKUP"
+esac
+unset OLD_PATH
+
 GCCBASE="/${GCC##*/}"
 
 test "$DO_ADD_LIB" || DO_SMART=0
@@ -203,32 +262,6 @@ else
   DO_STRIP=1
   SFLAG=-s
   test "$GCC" && SFLAG="-s$NL-Wl,-sss"
-fi
-
-if test "$TCC" && test "$TCCLD"; then  # $TCCLD should work with $GCC
-  if test "$TCCLD" != "$TCC"; then
-    echo "fatal: conflicting combination of --tcc=... and --tccld=..." >&2
-    exit 1
-  fi
-  TCCLD=
-fi
-if test "$TCC" && test "$GCC"; then
-  echo "fatal: conflicting compilers, both --tcc=... and --gcc=..." >&2
-  exit 1
-fi
-if test -z "$TCC" && test -z "$GCC"; then
-  echo "fatal: missing compiler, neither --tcc=... nor --gcc=..." >&2
-  exit 1
-fi
-if test "$USE_UTCC" && test "$DO_ADD_LIB" && test -z "$TCCLD" && test "${TCC%/pts-tcc}" = "$TCC"; then
-  # That's because ///tmp///LIBTCC1.a is embedded in the tools/pts-tcc executable.
-  # TODO(pts): Extract it.
-  echo "fatal: currently uClibc with --utcc needs pts-tcc; try --uclibc instead" >&2
-  exit 1
-fi
-if test "$USE_UTCC" && test "$ARCH" = i386; then
-  echo "fatal: the --utcc bundled uClibc doesn't work on i386, it needs -march=i686" >&2
-  exit 1
 fi
 
 if test "$GCC"; then
