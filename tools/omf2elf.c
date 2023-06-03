@@ -200,7 +200,8 @@ static void add32(unsigned char *p, uint32_t v) {
 
 /* --- */
 
-typedef char static_assert_sizeof_int[sizeof(int) >= 4];  /* It doesn't work with smaller int sizes, some `int' and `unsigned' variables are too small. */
+/* It doesn't work with smaller int sizes, some `int' and `unsigned' variables are too small. */
+typedef char static_assert_sizeof_int[sizeof(int) >= 4 ? 1 : -1];
 
 #if IS_X86 && defined(__MINILIBC686__)  /* minilibc686 has the malloc_simple_unaligned(...) function in <stdlib.h>. */
 #  define my_malloc(size) malloc_simple_unaligned(size)  /* It may return NULL for 0. */
