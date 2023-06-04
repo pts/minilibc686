@@ -87,7 +87,7 @@ if test "$SMART_ARCH" && test "$SMART_LIBCD"; then
   SMART_TOOLS="$MINICC_TOOLS"
   DO_SMART=1
   # This code contains duplication with the $TCC $DO_SMART code in minicc.
-  test "${OUTFILE#-}" = "$OUTFILE" || MYDIR="./$OUTFILE"
+  test "${OUTFILE#-}" = "$OUTFILE" || OUTFILE="./$OUTFILE"
   $ARGS 2>"$OUTFILE.err" >&2; EC="$?"
   if test "$EC" = 0; then
     cat "$OUTFILE.err"
