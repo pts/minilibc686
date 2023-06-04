@@ -44,11 +44,11 @@ if test $# = 0 || test "$1" == --help; then
   exit 0
 fi
 
-if ! test -f "$MYDIR/gcctooldir/collect2"; then
+if ! test -f "$MYDIR/gcctooldir/dummy"; then
   echo "fatal: missing tool: $MYDIR/gcctooldir/collect2" >&2
   exit 1
 fi
-if ! test -x "$MYDIR/gcctooldir/collect2"; then
+if ! test -x "$MYDIR/gcctooldir/dummy"; then
   echo "fatal: tool not executable: $MYDIR/gcctooldir/collect2" >&2
   exit 1
 fi
@@ -60,6 +60,7 @@ TCCLD=
 DO_ADD_LIB=1
 DO_ADD_INCLUDEDIR=1
 DO_LINK=1
+DO_COMPILE_OR_LINK=1
 SFLAG=
 DO_STRIP=1
 WFLAGS="-W$NL-Wall$NL-Werror=implicit-function-declaration"
@@ -71,7 +72,7 @@ GCC_BARG=-pipe  # Harmless default.
 LIBC=
 DO_SMART=
 ANSIFLAG=
-OUTFILE=a.out
+OUTFILE=
 
 case "$1" in
  "" | -* | *.[aocisS]) ;;  # A flag or a source file name is not a program name.
@@ -89,16 +90,11 @@ case "$1" in
 esac
 
 SKIPARG=
-APPENDARG=
 ARGS=
 for ARG in "$@"; do
   if test "$SKIPARG"; then
+    test "$SKIPARG" = -o && OUTFILE="$ARG"
     SKIPARG=
-    continue
-  elif test "$APPENDARG"; then
-    test "$APPENDARG" = -o && OUTFILE="$ARG"
-    ARGS="$ARGS$NL$APPENDARG$NL$ARG"
-    APPENDARG=
     continue
   fi
   case "$ARG" in
@@ -126,22 +122,22 @@ for ARG in "$@"; do
    -mno-smart) DO_SMART=0 ;;
    -Wno-no) WFLAGS= ;;  # Disable warnings. GCC and Clang accept and ignore it.
    -W*) ARGS="$ARGS$NL$ARG"; WFLAGS= ;;
-   -[fm]* | -pedantic) ARGS="$ARGS$NL$ARG" ;;
+   -[fm]?* | -pedantic) ARGS="$ARGS$NL$ARG" ;;
    -ansi | -std=*) ANSIFLAG="$ARG" ;;
    -[DUI]*?) ARGS="$ARGS$NL$ARG" ;;
    -O*) ARGS="$ARGS$NL$ARG"; HAD_OFLAG=1 ;;
    -g*) ARGS="$ARGS$NL$ARG"; DO_STRIP=0 ;;
    -nostdlib | -nodefaultlibs) DO_ADD_LIB= ;;
    -nostdinc) DO_ADD_INCLUDEDIR= ;;
-   -[cSE]) ARGS="$ARGS$NL$ARG"; DO_ADD_LIB=; DO_LINK= ;;
+   -c) ARGS="$ARGS$NL$ARG"; DO_ADD_LIB=; DO_LINK= ;;
+   -[SE]) ARGS="$ARGS$NL$ARG"; DO_ADD_LIB=; DO_LINK=; DO_COMPILE_OR_LINK= ;;
    -s) SFLAG="$ARG" ;;
-   -v) HAD_V=1; ARGS="$ARGS$NL$ARG" ;;
-   -o) APPENDARG="$ARG" ;;
+   -v) HAD_V=-v; ARGS="$ARGS$NL$ARG" ;;
+   -o?*) echo "fatal: unsupported minicc -o flag: $ARG" >&2; exit 1 ;;
+   -o) SKIPARG="$ARG" ;;
    -L*) echo "fatal: unsupported minicc library path flag: $ARG" >&2; exit 1 ;;
    -l*) echo "fatal: unsupported minicc library flag: $ARG" >&2; exit 1 ;;
    -*) echo "fatal: unsupported minicc flag: $ARG" >&2; exit 1 ;;
-   *//////*)
-    echo "fatal: too many slashes in input file name: $ARG" >&2; exit 1 ;;  # We use this to detect TMPDIR.
    *.[aocisS])
     if ! test -f "$ARG"; then echo "fatal: missing source file: $ARG" >&2; exit 1; fi
     ARGS="$ARGS$NL$ARG"
@@ -149,8 +145,8 @@ for ARG in "$@"; do
    *) echo "fatal: unsupported input file extension: $ARG" >&2; exit 1 ;;
   esac
 done
-if test "$SKIPARG" || test "$APPENDARG"; then
-  echo "fatal: missing last flag argument: $SKIPARG$APPENDARG" >&2
+if test "$SKIPARG"; then
+  echo "fatal: missing last flag argument: $SKIPARG" >&2
   exit 1
 fi
 
@@ -266,25 +262,23 @@ if test "$DO_STRIP" = 0 || test -z "$DO_LINK"; then
 else
   DO_STRIP=1
   SFLAG=-s
-  test "$GCC" && SFLAG="-s$NL-Wl,-sss"
+  test "$GCC" && SFLAG="-s"
 fi
 
-export MINICC_TCCLD=
+MINICC_TCCLD=
 if test -z "$DO_LINK"; then
-  export MINICC_LD=
+  MINICC_LD=
 elif test "$GCC"; then
   if test "$TCCLD"; then
-    export MINICC_LD="$TCCLD"
-    export MINICC_TCCLD=1
-    export MINICC_LDV="$HAD_V"
+    MINICC_LD="$TCCLD"
+    MINICC_TCCLD=1
     if ! "$GCC" "$GCC_BARG" -print-search-dirs >/dev/null 2>&1; then  # Also works with Clang.
       echo "fatal: gcc not working: $GCC" >&2
       exit 2
     fi
   else
-    export MINICC_TCCLD=
-    # gcctooldir/collect2 (== gcctooldir/ld) uses it.
-    export MINICC_LD="$(exec "$GCC" "$GCC_BARG" -print-prog-name=ld 2>/dev/null)"  # Also works with Clang.
+    MINICC_TCCLD=
+    MINICC_LD="$(exec "$GCC" "$GCC_BARG" -print-prog-name=ld 2>/dev/null)"  # Also works with Clang.
     if test -z "$MINICC_LD"; then
       if ! "$GCC" "$GCC_BARG" -print-search-dirs >/dev/null 2>&1; then
         echo "fatal: gcc not working: $GCC" >&2; exit 2
@@ -296,24 +290,24 @@ elif test "$GCC"; then
       echo "fatal: linker reported by gcc not found: $GCC" >&2; exit 2
     fi
     # Sometimes it's not found, but still returned nonempty.
-    export MINICC_LDV="$HAD_V"
   fi
 else
-  export MINICC_LD="$TCC"
-  export MINICC_TCCLD=1
+  MINICC_LD="$TCC"
+  MINICC_TCCLD=1
 fi
+
 test "$GCC_BARG" = -pipe && GCC_BARG=
+case "$GCCBASE" in
+ "") GCC_BARG= ;;
+ *[-/._]clang* | *[-/._]wcc386*) GCC_BARG= ;;  # clang(1) and wcc386(1) (unlike gcc) don't need $GCC_BARG to find as(1).
+ *) test "$DO_COMPILE_OR_LINK" || GCC_BARG= ;;  # For gcc to find as(1).
+esac
 
 OFLAG_ARGS=
 if test -z "$HAD_OFLAG"; then  # Add some size-optimizing flags.
   case "$GCCBASE" in
    "") ;;
-   *[-/._]clang*)
-    OFLAG_ARGS="-Os$NL-mstack-alignment=2";
-    # If we have multiple -B... flags, clang(1) will fail to find our
-    # gcctooldir/ld. And clang(1) (unlike gcc) doesn't need $GCC_BARG to
-    # find as(1).
-    GCC_BARG= ;;
+   *[-/._]clang*) OFLAG_ARGS="-Os$NL-mstack-alignment=2" ;;
    *) OFLAG_ARGS="-Os$NL-falign-functions=1$NL-falign-jumps=1$NL-falign-loops=1$NL-mpreferred-stack-boundary=2" ;;
   esac
   test "$TCC" && OFLAG_ARGS="-Os"
@@ -332,10 +326,12 @@ if test "$DO_ADD_INCLUDEDIR"; then
     done
   fi
 fi
+OUTFILE_ARG=
+test "$OUTFILE" && OUTFILE_ARG="-o$NL$OUTFILE"
 if test "$TCC"; then
   # TODO(pts): Does TCC really generate i386-only code?
   # We don't pass $ANSIFLAG, because TCC 0.9.26 would fail for it.
-  ARGS="$TCC$NL-m32$NL-march=$ARCH$NL-static$NL-nostdlib$NL-nostdinc$NL$SFLAG$NL$OFLAG_ARGS$NL$WFLAGS$NL$DEF_ARG$NL$ARGS$NL$INCLUDEDIR_ARG"
+  ARGS="$TCC$NL-m32$NL-march=$ARCH$NL-static$NL-nostdlib$NL-nostdinc$NL$SFLAG$NL$OFLAG_ARGS$NL$WFLAGS$NL$DEF_ARG$NL$ARGS$NL$INCLUDEDIR_ARG$NL$OUTFILE_ARG"
 else
   # This also works with TCC, but it's too much cruft.
   # The `-B$MYDIR/gcctooldir' argument makes our gcctooldir/collect2 or gcctooldir/ld run.
@@ -344,7 +340,7 @@ else
   # DYI dietlibc 0.34 adds: gcc -Os -fomit-frame-pointer -falign-functions=1 -falign-jumps=1 -falign-loops=1 -mpreferred-stack-boundary=4
   # !! TODO(pts): Try -mno-align-stringops. What happens with old GCC not supporting it, or Clang?
   # !! TODO(pts): Try -fno-unroll-loops -fmerge-all-constants -fno-math-errno. What happens with old GCC not supporting it, or Clang?
-  ARGS="$TCC$NL$GCC$NL$GCC_BARG$NL-B$MYDIR/gcctooldir$NL-m32$NL-march=$ARCH$NL-static$NL-fno-pic$NL-U_FORTIFY_SOURCE$NL-fcommon$NL-fno-stack-protector$NL-fno-unwind-tables$NL-fno-asynchronous-unwind-tables$NL-fno-builtin$NL-fno-ident$NL-fsigned-char$NL-ffreestanding$NL-fno-lto$NL-nostdlib$NL-nostdinc$NL$SFLAG$NL$OFLAG_ARGS$NL$ANSIFLAG$NL$WFLAGS$NL$DEF_ARG$NL$ARGS$NL$INCLUDEDIR_ARG"
+  ARGS="$TCC$NL$GCC$NL$GCC_BARG$NL-m32$NL-march=$ARCH$NL-static$NL-fno-pic$NL-U_FORTIFY_SOURCE$NL-fcommon$NL-fno-stack-protector$NL-fno-unwind-tables$NL-fno-asynchronous-unwind-tables$NL-fno-builtin$NL-fno-ident$NL-fsigned-char$NL-ffreestanding$NL-fno-lto$NL-nostdlib$NL-nostdinc$NL$SFLAG$NL$OFLAG_ARGS$NL$ANSIFLAG$NL$WFLAGS$NL$DEF_ARG$NL$ARGS$NL$INCLUDEDIR_ARG$NL$OUTFILE_ARG"
 fi
 if test "$DO_ADD_LIB"; then
   LIBWL=
@@ -428,27 +424,18 @@ fi
 test "$DO_SMART" || DO_SMART=0  # Fallback.
 
 test "$TMPDIR" || TMPDIR=/tmp
-if test "${TMPDIR#/}" = "$TMPDIR"; then TMPDIR=".//////$TMPDIR"
-else TMPDIR="/////$TMPDIR"
-fi
+test "${TMPDIR#/}" = "$TMPDIR" && TMPDIR="./$TMPDIR"  # Make it not a command-line flag (-...).
 export TMPDIR
-# Now $TMPDIR contains ////// (at least 6 consecutive slashes), this is how
-# we are going to detect temporary .o files in the linker.
 
 IFS="$NL"  # Argument splitting will happen over newlines only.
-export MINICC_TOOLS="$MYDIR/tools"
 IS_WATCOM=
-test -z "$TCC" && test "${GCCBASE#*[-/._]wcc386}" != "$GCCBASE" && IS_WATCOM=1
-if test -z "$TCC" && test -z "$IS_WATCOM"; then
-  test "$HAD_V" && echo "info: running compiler:" $ARGS >&2  # GCC also writes to stderr.
-  if test "$DO_SMART" != 0; then  # Smart linking with $GCC.
-    ARGS="$ARGS$NL-Wl,--smart-arch=$ARCH$NL-Wl,--smart-libcd=$MYDIR/libc/$LIBC"
-  fi
-  exec $ARGS  # Never returns.
+test "$GCC" && test "${GCCBASE#*[-/._]wcc386}" != "$GCCBASE" && IS_WATCOM=1
+if test "$DO_LINK"; then
+  test "$OUTFILE" || OUTFILE=a.out
+  test "${OUTFILE#-?}" = "$OUTFILE" || OUTFILE="./$OUTFILE"  # Make it not a command-line flag (-...).
 fi
-# Now we either have "$TCC" or "$IS_WATCOM".
 
-if test "$IS_WATCOM"; then
+if test "$IS_WATCOM"; then  # !!! Merge with below.
   if test "$DO_LINK"; then
     echo "fatal: linking is not yet supported with wcc386; specify -c" >&2
     exit 5
@@ -467,7 +454,7 @@ if test "$IS_WATCOM"; then
   WGSRC=
   test "$HAD_V" || WARGS="$WARGS$NL-q"
   WARGS="$WARGS$NL-bt=linux$NL-fr"
-  SKIPARG=; APPENDARG=
+  SKIPARG=
   unset INCLUDE  # Don't let wcc386 find any system #include etc. file.
   unset WATCOM  # Don't let wcc386 find any system #include etc. file.
   for ARG in --skiparg $ARGS; do
@@ -475,16 +462,12 @@ if test "$IS_WATCOM"; then
       test "$SKIPARG" = -o && OUTFILE="$ARG"
       SKIPARG=
       continue
-    elif test "$APPENDARG"; then
-      WARGS="$WARGS$NL$APPENDARG$NL$WARG"
-      APPENDARG=
-      continue
     fi
     case "$ARG" in
      *"$NL"*) echo "fatal: unexpected newline in minicc wcc386 argument" >&2; exit 5 ;;
      "") echo "fatal: empty minicc wcc386 argument" >&2; exit 5 ;;
      --skiparg) SKIPARG=1 ;;
-     -B?*) ;;  # minicc has just added it.
+     -B?*) ;;  # Just to be sure. minicc doesn't add it for wcc386.
      -v) ;;  # Already processed as $HAD_V.
      -ansi | -std=c89) WARGS="$WARGS$NL-za" ;;
      -std=c99) WARGS="$WARGS$NL-za99" ;;
@@ -525,7 +508,7 @@ if test "$IS_WATCOM"; then
      -g) echo "fatal: debug generation not supported by minicc wcc386" >&2; exit 5 ;;  # !! TODO(pts): Add flags like owcc.c.
      -o) SKIPARG="$ARG" ;;
      -*) echo "fatal: unsupported minicc wcc386 flag: $ARG" >&2; exit 5 ;;
-     *.c)
+     *.c)  # !! TODO(pts): Does wcc386 support *.i?
       if test "$WGSRC"; then
         echo "fatal: multiple source file.c arguments found for minicc wcc386" >&2  # !! Handle them.
         exit 5
@@ -535,8 +518,8 @@ if test "$IS_WATCOM"; then
      *) echo "fatal: unsupported input file extension: $ARG" >&2; exit 5 ;;
     esac
   done
-  if test "$SKIPARG" || test "$APPENDARG"; then
-    echo "fatal: missing last flag argument for minicc wcc386: $SKIPARG$APPENDARG" >&2
+  if test "$SKIPARG"; then
+    echo "fatal: missing last flag argument for minicc wcc386: $SKIPARG" >&2
     exit 5
   fi
   if test -z "$WGCFLAG"; then
@@ -575,61 +558,234 @@ if test "$IS_WATCOM"; then
   # !! Continue with linking: ./minicc --libc="$LIBC" -g -Wl,-Map=dw.map -o "$BASE".wcc "$BASE".wcc.o
 fi
 
-test "$HAD_V" && echo "info: running compiler:" $ARGS >&2  # GCC also writes to stderr.
-if test "$DO_SMART" = 0 && test -z "$DO_STRIP"; then
-  exec $ARGS  # Never returns.
+if test "$GCC"; then
+  # TCC accepts all these flags (and ignores `-m elf_i386' if passed).
+  LDARGS="${MINICC_LD:-ld}$NL-nostdlib$NL-static"
+  if test -z "$MINICC_TCCLD"; then
+    # `-e _start' is needed, because without it GNU gold(1) wouldn't fail to link if _start is not defined.
+    # `--fatal-warnings' is needed, because without it GNU ld(1) would happily create an executable without _start.
+    LDARGS="$LDARGS$NL-m${NL}elf_i386$NL-z${NL}norelro$NL-e${NL}_start$NL--fatal-warnings"
+  fi
+  CCARGS="$GCC"
+  test "$DO_LINK" && CCARGS="$CCARGS$NL-c"
+  FILEARGS=
+  SKIPARG=
+  OUTFILE=
+  CCMODE=
+  for ARG in --skiparg $ARGS; do
+    if test "$SKIPARG"; then
+      test "$SKIPARG" = -o && OUTFILE="$ARG"
+      SKIPARG=
+      continue
+    fi
+    case "$ARG" in
+     *"$NL"*) echo "fatal: unexpected newline in minicc generated argument" >&2; exit 7 ;;
+     "") echo "fatal: empty minicc generated argument" >&2; exit 7 ;;
+     --skiparg) SKIPARG=1 ;;
+     -o) SKIPARG="$ARG" ;;
+     -Wl,) ;;
+     -Wl,-*) LDARGS="$LDARGS$NL${ARG#-Wl,}" ;;  # TODO(pts): Replace comma with $NL.
+     -Wl,*) FILEARGS="$FILEARGS$NL--ldfile=$ARG" ;;
+     -s) LDARGS="$LDARGS$NL$ARG" ;;
+     -[cSE])
+       if test "$DO_LINK"; then echo "fatal: output mode not supported when linking: $ARG" >&2; exit 7; fi
+       CCMODE="$ARG"
+       CCARGS="$CCARGS$NL$ARG"
+       ;;
+     -*) CCARGS="$CCARGS$NL$ARG" ;;
+     *.[ao]) FILEARGS="$FILEARGS$NL--ldfile=$ARG" ;;
+     *.[cisS]) FILEARGS="$FILEARGS$NL--srcfile=$ARG" ;;
+     *) echo "fatal: unsupported input file extension: $ARG" >&2; exit 7 ;;
+    esac
+  done
+  if test "$SKIPARG"; then
+    echo "fatal: missing last flag argument for minicc wcc386: $SKIPARG" >&2
+    exit 7
+  fi
+  if test -z "$FILEARGS"; then
+    echo "fatal: no source files specified" >&2
+    exit 7
+  fi
+  LDARGS="$LDARGS$NL$OUTFILE_ARG"
+  # echo "CCARGS: $CCARGS" >&2; echo "LDARGS: $LDARGS" >&2; echo "FILEARGS: $FILEARGS" >&2
+
+  # Now create all the temporary .o files which will be written to $GCC.
+  TMPOFILES=
+  CCFILEARGS=
+  for ARG in $FILEARGS; do
+    case "$ARG" in
+     --srcfile=?*)
+      if test "$DO_LINK"; then
+        TMPOFILE="$("$MYDIR"/tools/mktmpf "$TMPDIR"/minicc.@@@@@@.o)"  # Already creates the file.
+        if test -z "$TMPOFILE"; then
+          echo "fatal: error creating temporary .o file" >&2
+          rm -f $TMPOFILES
+          exit 7
+        fi
+        TMPOFILES="$TMPOFILES$NL$TMPOFILE"
+        LDARGS="$LDARGS$NL$TMPOFILE"
+      else
+        TMPOFILE="${ARG#--*=}"
+        if test "$CCMODE" = -c; then TMPOFILE="${TMPOFILE%.*}".o
+        elif test "$CCMODE" = -S; then TMPOFILE="${TMPOFILE%.*}".S
+        else TMPOFILE=-  # For -E.
+        fi
+      fi
+      CCFILEARGS="$CCFILEARGS$NL--tmpofile=$TMPOFILE$NL--srcfile=${ARG#--*=}"
+      ;;
+     --ldfile=?*) LDARGS="$LDARGS$NL${ARG#--*=}" ;;
+     *) echo "fatal: assert: bad filearg: $ARG" >&2; exit 7 ;;
+    esac
+  done
+  # echo "CCARGS: $CCARGS" >&2; echo "LDARGS: $LDARGS" >&2; echo "FILEARGS: $FILEARGS" >&2; echo "CCFILEARGS:$CCFILEARGS" >&2; rm -f $TMPOFILES; exit 7
+
+  # Now run `$GCC -c -o ... ...' for each file in $CCFILEARGS.
+  TMPOFILE=
+  FOFLAG="-o$NL"
+  test "$IS_WATCOM" && FOFLAG=-fo=
+  for ARG in $CCFILEARGS; do
+    if test "$SKIPARG"; then
+      test "$SKIPARG" = -o && OUTFILE="$ARG"
+      SKIPARG=
+      continue
+    fi
+    case "$ARG" in
+     --tmpofile=?*)
+      if test "$TMPOFILE"; then
+        echo "fatal: assert: duplicate --tmpofile=..." >&2; rm -f $TMPOFILES; exit 7;
+      fi
+      TMPOFILE="${ARG#--*=}"
+      ;;
+     --srcfile=?*)
+      if test -z "$TMPOFILE"; then
+        echo "fatal: assert: missing --tmpofile=..." >&2; rm -f $TMPOFILES; exit 7;
+      fi
+      OFLAG=
+      if test "$TMPOFILE" = -; then
+        test "$HAD_V" && echo "info: running compiler:" $CCARGS "${ARG#--*=}" >&2  # GCC also writes to stderr.
+        $CCARGS "${ARG#--*=}"; EC="$?"
+      else
+        test "$HAD_V" && echo "info: running compiler:" $CCARGS $FOFLAG"$TMPOFILE" "${ARG#--*=}" >&2  # GCC also writes to stderr.
+        $CCARGS $FOFLAG"$TMPOFILE" "${ARG#--*=}"; EC="$?"
+      fi
+      if test "$EC" != 0; then rm -f $TMPOFILES; exit "$EC"; fi
+      if test "$DO_LINK" && test -z "$IS_WATCOM"; then
+        # GCC adds the .note.GNU-stack ELF section header to the .o file, adding
+        # 0x20 bytes unnecessary. We remove it, so ld(1) won't generate the
+        # PT_GNU_STACK program header in the executable. To get it, specify
+        # -Wl,-z,execstack or -Wl,-z,noexecstack.
+        #
+        # !! TODO(pts): Also remove from .o files explicitly specified, they
+        #    may have been created by a previous `minicc -c'.
+        test "$HAD_V" && echo "info: removing .note.GNU-stack from: $TMPOFILE" >&2
+        "$MYDIR/tools/elfnostack" "$TMPOFILE"; EC="$?"
+        if test "$EC" != 0; then rm -f $TMPOFILES; exit "$EC"; fi
+      fi
+      TMPOFILE=
+      ;;
+     *) echo "fatal: assert: bad ccfilearg: $ARG" >&2; rm -f $TMPOFILES; exit 7 ;;
+    esac
+  done
+  if test "$TMPOFILE"; then
+    echo "fatal: assert: unused --tmpofile=..." >&2; rm -f $TMPOFILES; exit 7;
+  fi
+  if test -z "$DO_LINK"; then
+    rm -f $TMPOFILES; exit "$EC"
+  fi
+  ARGS="$LDARGS"
+  WHAT=linker
+  unset LDARGS CCARGS CCFILEARGS FILEARGS TMPOFILE FOFLAG CCMODE
+  # Don't forget: rm -f $TMPOFILES
+else
+  TMPOFILES=
+  WHAT=compiler
 fi
+
 if test "$DO_SMART" != 0; then  # Smart linking.
-  SMART_LIBCD="$MYDIR/libc/$LIBC"
-  SMART_TOOLS="$MYDIR/tools"
-  SMART_ARCH="$ARCH"
-  # This code contains duplication with the $SMART_LIBCD code in gcctooldir/ld.
-  test "${OUTFILE#-}" = "$OUTFILE" || MYDIR="./$OUTFILE"
   LIBMINITCC1=
   test "$TCC" && LIBMINITCC1="$MYDIR/helper_lib/libminitcc1.a"
+  test "$HAD_V" && echo "info: running $WHAT:" $ARGS >&2  # GCC also writes to stderr.
   $ARGS $LIBMINITCC1 2>"$OUTFILE.err"; EC="$?"  # TODO(pts): Write a C program to extract undefined references and display errors in a streaming way. (Some errors like `In ...' need to be buffered.)
   if test "$EC" = 0; then
     cat "$OUTFILE.err"
-    rm -f "$OUTFILE.err"
+    rm -f "$OUTFILE.err" $TMPOFILES
   else
     # The regexps below work for $TCCLD, ld of $GCC, ld of $GCC (Binutils), gold of $GCC (Binutils). TODO(pts): Make it work with lld (Clang).
-    UNDEFSYMS="$(awk '{if((/: undefined reference to [`'\''].+'\''$/&&sub(/^.*?: undefined reference to [`'\'']/, "")||sub(/^tcc: error: undefined symbol '\''/,""))&&sub(/'\''$/,"")&&!h[$0]){h[$0]=1;printf"%s%s",c,$0;c=","}}' <"$OUTFILE.err")"
+    # Examples for GNU ld(1) and GNU gold(1):
+    # : warning: cannot find entry symbol '_start'
+    # : warning: cannot find entry symbol _start; defaulting to 0000000008048074
+    # : warning: entry symbol '_start' exists but is not defined
+    UNDEFSYMS="$(awk '{if((((/: undefined reference to [`'\''].+'\''$/&&sub(/^.*?: undefined reference to [`'\'']/, "")||sub(/^tcc: error: undefined symbol '\''/,""))&&sub(/'\''$/,""))||(/: warning: /&&sub(/^.*: warning: (cannot find )?entry symbol '\''?/,"")&&sub(/['\'';].*/,"")&&!/ /))&&!h[$0]){h[$0]=1;printf"%s%s",c,$0;c=","}}' <"$OUTFILE.err")"
     if test -z "$UNDEFSYMS"; then
       cat "$OUTFILE.err"
-      rm -f "$OUTFILE.err"
+      rm -f "$OUTFILE.err" $TMPOFILES
       exit "$EC"  # No undefined symbols found, this means there is another reason for the $TCC failure.
     fi
     rm -f "$OUTFILE.err" "$OUTFILE.smart.o"
     NASMARCHARG=
-    test "$SMART_ARCH" = i686 || NASMARCHARG=-DCONFIG_I386
+    test "$ARCH" = i686 || NASMARCHARG=-DCONFIG_I386
     DEF_ARG=
-    for F in $(cat "$SMART_LIBCD/libc.defs"); do  # Split on any whitespace, $IFS hasn't been set yet.
+    for F in $(cat "$MYDIR/libc/$LIBC/libc.defs"); do  # Split on any whitespace, $IFS hasn't been set yet.
       DEF_ARG="$DEF_ARG$NL$F"
     done
-    NASMCMD="$SMART_TOOLS/nasm-0.98.39$NL-O0$NL-w+orphan-labels$NL-f${NL}elf$NL$NASMARCHARG$NL-DUNDEFSYMS=$UNDEFSYMS$NL$DEF_ARG$NL-o$NL$OUTFILE.smart.o$NL$SMART_LIBCD/smart.nasm"; EC="$?"
+    NASMCMD="$MYDIR/tools/nasm-0.98.39$NL-O0$NL-w+orphan-labels$NL-f${NL}elf$NL$NASMARCHARG$NL-DUNDEFSYMS=$UNDEFSYMS$NL$DEF_ARG$NL-o$NL$OUTFILE.smart.o$NL$MYDIR/libc/$LIBC/smart.nasm"; EC="$?"
     test "$HAD_V" && echo "info: running smart nasm:" $NASMCMD >&2
     $NASMCMD; EC="$?"
     if test "$EC" = 0 && test -f "$OUTFILE.smart.o"; then :; else
-      rm -f "$OUTFILE.smart.o"
+      rm -f "$OUTFILE.smart.o" $TMPOFILES
       test "$EC" = 0 && EC=1
       exit "$EC"
     fi
+    # /usr/bin/objdump -d "$OUTFILE.smart.o"
     # /usr/bin/nm "$OUTFILE.smart.o"
-    ARGS="$ARGS$NL$OUTFILE.smart.o$NL$SMART_LIBCD/libc.$SMART_ARCH.a$NL$LIBMINITCC1"
-    test "$HAD_V" && echo "info: running compiler:" $ARGS >&2  # GCC also writes to stderr.
-    $ARGS; EC="$?"
-    rm -f "$OUTFILE.smart.o"
+    # ---
+    ARGS="$ARGS$NL$OUTFILE.smart.o$NL$MYDIR/libc/$LIBC/libc.$ARCH.a$NL$LIBMINITCC1"
+    test "$HAD_V" && echo "info: running $WHAT again:" $ARGS >&2  # GCC also writes to stderr.
+    $ARGS >&2; EC="$?"  # Redirect linker stdout to stderr.
+    rm -f "$OUTFILE.smart.o" $TMPOFILES
     test "$EC" = 0 || exit "$EC"
   fi
 else
-  $ARGS || exit "$?"
+  test "$HAD_V" && echo "info: running $WHAT:" $ARGS >&2  # GCC also writes to stderr.
+  $ARGS >&2; EC="$?"  # Redirect linker stdout to stderr.
+  rm -f $TMPOFILES
+  test "$EC" = 0 || exit "$EC"
 fi
+
 if test "$DO_STRIP"; then
-  # Same functionality as in gcctooldir/ld.
-  MINICC_LDV=
-  test "$HAD_V" && MINICC_LDV=-v
-  EFARGS="$MINICC_TOOLS/elfxfix$NL-l$NL-a$NL-s$NL$MINICC_LDV$NL--$NL$OUTFILE"
-  test "$MINICC_LDV" && echo "info: running extra strip:" $EFARGS >&2
-  ARGS="$EFARGS"
-  $ARGS || exit "$?"
+  FIX_O_FN=
+  if ! test "$MINICC_TCCLD"; then
+    FIX_O_FN="$("$MYDIR"/tools/mktmpf "$TMPDIR"/elfxfix.@@@@@@.o)"  # Already creates the file.
+    if test -z "$FIX_O_FN"; then
+      echo "fatal: error creating temporary .o file" >&2; exit 7
+    fi
+  fi
+  PARGS=
+  test "$FIX_O_FN" && PARGS="-p$NL$FIX_O_FN"
+  EFARGS="$MYDIR/tools/elfxfix$NL-l$NL-a$NL-s$NL$PARGS$NL$HAD_V$NL--$NL$OUTFILE"
+  test "$HAD_V" && echo "info: running extra strip:" $EFARGS >&2
+  if test "$FIX_O_FN"; then
+    $EFARGS >&2; EC="$?"
+    if test "$EC" != 0; then
+      rm -f -- "$FIX_O_FN"
+      test "$DO_SMART" && rm -f "$OUTFILE.smart.o"
+      exit "$EC"
+    fi
+    if test -s "$FIX_O_FN"; then  # elfxfix has written to it.
+      ARGS="$ARGS$NL$FIX_O_FN"  # Make .bss larger by the size recommended by tools/elfxfix.
+      test "$HAD_V" && echo "info: running linker after elfxfix:" $ARGS >&2
+      $ARGS >&2; EC="$?"
+      if test "$EC" = 0; then
+        PARGS="-r$NL$FIX_O_FN"
+        EFARGS="$MYDIR/tools/elfxfix$NL-l$NL-a$NL-s$NL$PARGS$NL$HAD_V$NL--$NL$OUTFILE"
+        test "$HAD_V" && echo "info: running extra strip again:" $EFARGS >&2
+        $EFARGS >&2; EC="$?"
+      fi
+    fi
+    rm -f -- "$FIX_O_FN"
+    test "$DO_SMART" && rm -f "$OUTFILE.smart.o"
+    test "$EC" = 0 || exit "$EC"
+  else
+    $EFARGS || exit "$?"
+  fi
 fi
