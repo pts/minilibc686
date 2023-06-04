@@ -18,7 +18,7 @@ __LIBC_VAR(extern char **, environ);
 #  pragma aux environ "_mini_*"
 #endif
 
-__LIBC_FUNC(void, _exit, (int exit_code), __LIBC_NOATTR /* !! __LIBC_NORETURN */);  /* Doesn't flush stdio streams first. See exit(...) for that. */
+__LIBC_FUNC(__LIBC_NORETURN void, _exit, (int exit_code), __LIBC_NOATTR);  /* Doesn't flush stdio streams first. See exit(...) for that. */
 __LIBC_FUNC(int, close, (int fd), __LIBC_NOATTR);
 __LIBC_FUNC(ssize_t, read, (int fd, void *buf, size_t count), __LIBC_NOATTR);
 __LIBC_FUNC(ssize_t, write, (int fd, const void *buf, size_t count), __LIBC_NOATTR);
