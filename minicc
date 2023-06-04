@@ -639,7 +639,7 @@ if test "$GCC"; then
           EFARGS="$MYDIR/tools/omf2elf$NL-h$NL$HAD_$V$NL-o$NL$TMPOFILE2$NL$TMPOFILE"
           test "$HAD_V" && echo "info: running OMF converter:" $EFARGS >&2
           $EFARGS; EC="$?"
-          if test "$EC" != 0; then rm -f $TMPOFILES; exit "$EC"; fi
+          if test "$EC" != 0; then rm -f $TMPOFILES $TMPOFILE2; exit "$EC"; fi
         fi
       elif test "$DO_LINK"; then
         # GCC adds the .note.GNU-stack ELF section header to the .o file, adding
