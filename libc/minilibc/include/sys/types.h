@@ -9,5 +9,6 @@ __extension__ typedef long long off64_t;  /* __extension__ is to make it work wi
 typedef unsigned mode_t;
 typedef int ptrdiff_t;
 typedef unsigned uid_t;
+typedef int pid_t;
 
 #endif  /* _SYS_TYPES_H */

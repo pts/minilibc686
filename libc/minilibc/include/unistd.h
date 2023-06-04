@@ -26,6 +26,7 @@ __LIBC_FUNC(int, isatty, (int fd),);
 __LIBC_FUNC(int, ftruncate, (int fd, off_t length),);  /* 32-bit length. */
 __LIBC_FUNC(int, symlink, (const char *target, const char *linkpath),);
 __LIBC_FUNC(uid_t, geteuid, (void),);
+__LIBC_FUNC(pid_t, getpid, (void),);
 
 #ifdef __MINILIBC686__
 #  ifdef __WATCOMC__
