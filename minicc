@@ -568,6 +568,9 @@ if test "$IS_WATCOM"; then
 fi
 
 test "$HAD_V" && echo "info: running compiler:" $ARGS >&2  # GCC also writes to stderr.
+if test "$DO_SMART" = 0 && test -z "$DO_STRIP"; then
+  exec $ARGS  # Never returns.
+fi
 if test "$DO_SMART" != 0; then  # Smart linking.
   SMART_LIBCD="$MYDIR/libc/$LIBC"
   SMART_TOOLS="$MYDIR/tools"
@@ -580,44 +583,45 @@ if test "$DO_SMART" != 0; then  # Smart linking.
   if test "$EC" = 0; then
     cat "$OUTFILE.err"
     rm -f "$OUTFILE.err"
-    exit
-  fi
-  # The regexps below work for $TCCLD, ld of $GCC, ld of $GCC (Binutils), gold of $GCC (Binutils). TODO(pts): Make it work with lld (Clang).
-  UNDEFSYMS="$(awk '{if((/: undefined reference to [`'\''].+'\''$/&&sub(/^.*?: undefined reference to [`'\'']/, "")||sub(/^tcc: error: undefined symbol '\''/,""))&&sub(/'\''$/,"")&&!h[$0]){h[$0]=1;printf"%s%s",c,$0;c=","}}' <"$OUTFILE.err")"
-  if test -z "$UNDEFSYMS"; then
-    cat "$OUTFILE.err"
-    rm -f "$OUTFILE.err"
-    exit "$EC"  # No undefined symbols found, this means there is another reason for the $TCC failure.
-  fi
-  rm -f "$OUTFILE.err" "$OUTFILE.smart.o"
-  NASMARCHARG=
-  test "$SMART_ARCH" = i686 || NASMARCHARG=-DCONFIG_I386
-  DEF_ARG=
-  for F in $(cat "$SMART_LIBCD/libc.defs"); do  # Split on any whitespace, $IFS hasn't been set yet.
-    DEF_ARG="$DEF_ARG$NL$F"
-  done
-  NASMCMD="$SMART_TOOLS/nasm-0.98.39$NL-O0$NL-w+orphan-labels$NL-f${NL}elf$NL$NASMARCHARG$NL-DUNDEFSYMS=$UNDEFSYMS$NL$DEF_ARG$NL-o$NL$OUTFILE.smart.o$NL$SMART_LIBCD/smart.nasm"; EC="$?"
-  test "$HAD_V" && echo "info: running smart nasm:" $NASMCMD >&2
-  $NASMCMD; EC="$?"
-  if test "$EC" = 0 && test -f "$OUTFILE.smart.o"; then :; else
+  else
+    # The regexps below work for $TCCLD, ld of $GCC, ld of $GCC (Binutils), gold of $GCC (Binutils). TODO(pts): Make it work with lld (Clang).
+    UNDEFSYMS="$(awk '{if((/: undefined reference to [`'\''].+'\''$/&&sub(/^.*?: undefined reference to [`'\'']/, "")||sub(/^tcc: error: undefined symbol '\''/,""))&&sub(/'\''$/,"")&&!h[$0]){h[$0]=1;printf"%s%s",c,$0;c=","}}' <"$OUTFILE.err")"
+    if test -z "$UNDEFSYMS"; then
+      cat "$OUTFILE.err"
+      rm -f "$OUTFILE.err"
+      exit "$EC"  # No undefined symbols found, this means there is another reason for the $TCC failure.
+    fi
+    rm -f "$OUTFILE.err" "$OUTFILE.smart.o"
+    NASMARCHARG=
+    test "$SMART_ARCH" = i686 || NASMARCHARG=-DCONFIG_I386
+    DEF_ARG=
+    for F in $(cat "$SMART_LIBCD/libc.defs"); do  # Split on any whitespace, $IFS hasn't been set yet.
+      DEF_ARG="$DEF_ARG$NL$F"
+    done
+    NASMCMD="$SMART_TOOLS/nasm-0.98.39$NL-O0$NL-w+orphan-labels$NL-f${NL}elf$NL$NASMARCHARG$NL-DUNDEFSYMS=$UNDEFSYMS$NL$DEF_ARG$NL-o$NL$OUTFILE.smart.o$NL$SMART_LIBCD/smart.nasm"; EC="$?"
+    test "$HAD_V" && echo "info: running smart nasm:" $NASMCMD >&2
+    $NASMCMD; EC="$?"
+    if test "$EC" = 0 && test -f "$OUTFILE.smart.o"; then :; else
+      rm -f "$OUTFILE.smart.o"
+      test "$EC" = 0 && EC=1
+      exit "$EC"
+    fi
+    # /usr/bin/nm "$OUTFILE.smart.o"
+    ARGS="$ARGS$NL$OUTFILE.smart.o$NL$SMART_LIBCD/libc.$SMART_ARCH.a$NL$LIBMINITCC1"
+    test "$HAD_V" && echo "info: running compiler:" $ARGS >&2  # GCC also writes to stderr.
+    $ARGS; EC="$?"
     rm -f "$OUTFILE.smart.o"
-    test "$EC" = 0 && EC=1
-    exit "$EC"
+    test "$EC" = 0 || exit "$EC"
   fi
-  # /usr/bin/nm "$OUTFILE.smart.o"
-  ARGS="$ARGS$NL$OUTFILE.smart.o$NL$SMART_LIBCD/libc.$SMART_ARCH.a$NL$LIBMINITCC1"
-  test "$HAD_V" && echo "info: running compiler:" $ARGS >&2  # GCC also writes to stderr.
-  $ARGS; EC="$?"
-  rm -f "$OUTFILE.smart.o"
-  exit "$EC"
-fi
-if test "$DO_LINK" && test "$DO_STRIP"; then
+else
   $ARGS || exit "$?"
+fi
+if test "$DO_STRIP"; then
   # Same functionality as in gcctooldir/ld.
   MINICC_LDV=
   test "$HAD_V" && MINICC_LDV=-v
   EFARGS="$MINICC_TOOLS/elfxfix$NL-l$NL-a$NL-s$NL$MINICC_LDV$NL--$NL$OUTFILE"
   test "$MINICC_LDV" && echo "info: running extra strip:" $EFARGS >&2
   ARGS="$EFARGS"
+  $ARGS || exit "$?"
 fi
-exec $ARGS  # Never returns.
