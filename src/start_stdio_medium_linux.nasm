@@ -16,6 +16,7 @@ cpu 386
 %endif
 global mini__start
 global mini__exit
+global mini_environ
 global mini_syscall3_AL
 global mini_syscall3_RP1
 global mini___M_jmp_pop_ebx_syscall_return
@@ -55,7 +56,11 @@ extern main
 section .text align=1
 section .rodata align=1
 section .data align=1
+%ifndef CONFIG_START_STDOUT_ONLY
+section .bss align=4
+%else
 section .bss align=1
+%endif
 %endif
 
 section .text
@@ -82,6 +87,9 @@ mini__start:  ; Entry point (_start) of the Linux i386 executable.
 		pop eax  ; argc.
 		mov edx, esp  ; argv.
 		lea ecx, [edx+eax*4+4]  ; envp.
+%ifndef CONFIG_START_STDOUT_ONLY
+		mov [mini_environ], ecx
+%endif
 		push ecx  ; Argument envp for main.
 		push edx  ; Argument argv for main.
 		push eax  ; Argument argc for main.
@@ -153,6 +161,11 @@ mini_lseek:	mov al, 19  ; __NR_lseek.
 %endif
 mini_ioctl:	mov al, 54  ; __NR_ioctl.
 		jmp strict short syscall3
+
+%ifndef CONFIG_START_STDOUT_ONLY
+section .bss
+mini_environ:	resd 1  ; char **mini_environ;
+%endif
 
 %ifdef CONFIG_PIC  ; Already position-independent code.
 %endif

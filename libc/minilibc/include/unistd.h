@@ -13,6 +13,11 @@
 #define STDOUT_FILENO 1
 #define STDERR_FILENO 2
 
+__LIBC_VAR(extern char **, environ);
+#ifdef __WATCOMC__  /* There is no other way with `wcc386 -za'. */
+#  pragma aux environ "_mini_*"
+#endif
+
 __LIBC_FUNC(void, _exit, (int exit_code),/* !! __LIBC_NORETURN */);  /* Doesn't flush stdio streams first. See exit(...) for that. */
 __LIBC_FUNC(int, close, (int fd),);
 __LIBC_FUNC(ssize_t, read, (int fd, void *buf, size_t count),);

@@ -166,6 +166,8 @@ _need mini_fread, mini_read
 _need mini_exit, mini__exit
 _need mini_fopen, mini_open
 _need mini_fclose, mini_close
+_need mini_errno, .bss
+_need mini_environ, .bss
 ;
 _need_aliases ALIASES  ; Must be called after _alias.
 ;
@@ -229,10 +231,18 @@ mini__start:  ; Entry point (_start) of the Linux i386 executable.
 		;   NULL		
 		pop eax  ; argc.
 		mov edx, esp  ; argv.
-%define CONFIG_USE_MAIN_ENVP  ; TODO(pts): Make it configurable that the program doesn't use envp, and omit it here.
+%define CONFIG_USE_MAIN_ENVP  ; TODO(pts): Make it configurable (`minicc -mno-main-envp') that the program doesn't use envp, and omit it here.
 %ifdef CONFIG_USE_MAIN_ENVP
 		lea ecx, [edx+eax*4+4]  ; envp.
 		push ecx  ; Argument envp for main.
+  %ifdef __NEED_mini_environ
+		mov [mini_environ], ecx
+  %endif
+%else
+  %ifdef __NEED_mini_environ
+		lea ecx, [edx+eax*4+4]  ; envp.
+		mov [mini_environ], ecx
+  %endif
 %endif
 		push edx  ; Argument argv for main.
 		push eax  ; Argument argc for main.
@@ -327,14 +337,23 @@ mini___M_jmp_syscall_return:
 _emit_syscalls SYSCALLS
 _define_alias_syms ALIASES  ; Must be called after alias targets have been defined.
 
+%ifdef __NEED_.bss
+section .bss align=4
+%endif
 %ifdef __NEED_mini_errno
+global mini_errno  ; TODO(pts): Add this (including populating it in syscalls) to -mno-smart.
+mini_errno:	resd 1  ; int mini_errno;
+section .text
+%endif
+%ifdef __NEED_mini_environ
 section .bss
-global mini_errno  ; TODO(pts): Add this to -mno-smart.
-mini_errno:	resd 1
+global mini_environ
+mini_environ:	resd 1  ; char **mini_environ;
+section .text
 %endif
 
 %ifdef __NEED_mini_stdout
-%ifidn __OUTPUT_FORMAT__, bin  ; FAllback for size measurements.
+%ifidn __OUTPUT_FORMAT__, bin  ; Fallback for size measurements.
 mini_stdout equ +0x12345679
 %else
 extern mini_stdout
@@ -342,7 +361,7 @@ extern mini_stdout
 %endif
 
 %ifdef __NEED_mini_fputc_RP3
-%ifidn __OUTPUT_FORMAT__, bin  ; FAllback for size measurements.
+%ifidn __OUTPUT_FORMAT__, bin  ; Fallback for size measurements.
 mini_fputc_RP3 equ +0x1234567a
 %else
 extern mini_fputc_RP3
@@ -362,5 +381,7 @@ mini_putchar_RP3:  ; int REGPARM3 mini_putchar_RP3(int c);
 		call mini_fputc_RP3
 		ret
 %endif
+
+section .
 
 ; __END__
