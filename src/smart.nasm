@@ -181,6 +181,7 @@ _syscall close, 6
 _syscall creat, 8
 _syscall unlink, 10
 _syscall lseek, 19
+_syscall geteuid, 49
 _syscall ioctl, 54
 _syscall ftruncate, 93
 _syscall _llseek, 140  ; Use mini_lseek64(...) instead, it's more convenient from C code.
