@@ -11,8 +11,8 @@
 #define O_EXCL  0200
 #define O_TRUNC 01000
 
-__LIBC_FUNC(int, open, (const char *pathname, int flags, ...),);  /* Optional 3rd argument: mode_t mode */
-__LIBC_FUNC(int, creat, (const char *pathname, mode_t mode),);  /* Optional 3rd argument: mode_t mode */
+__LIBC_FUNC(int, open, (const char *pathname, int flags, ...), __LIBC_NOATTR);  /* Optional 3rd argument: mode_t mode */
+__LIBC_FUNC(int, creat, (const char *pathname, mode_t mode), __LIBC_NOATTR);  /* Optional 3rd argument: mode_t mode */
 /*static __inline__ int creat(const char *pathname, mode_t mode) { return open(pathname, O_CREAT | O_WRONLY | O_TRUNC, mode); }*/  /* This would also work. */
 
 #endif  /* _FCNTL_H */

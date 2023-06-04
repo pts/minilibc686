@@ -12,7 +12,7 @@ struct timeval {
 
 struct timezone;
 
-__LIBC_FUNC(int, utimes, (const char *filename, const struct timeval *times),);
-__LIBC_FUNC(int, gettimeofday, (struct timeval *tv, struct timezone *tz),);
+__LIBC_FUNC(int, utimes, (const char *filename, const struct timeval *times), __LIBC_NOATTR);
+__LIBC_FUNC(int, gettimeofday, (struct timeval *tv, struct timezone *tz), __LIBC_NOATTR);
 
 #endif  /* _SYS_TIME_H */
