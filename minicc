@@ -504,6 +504,7 @@ if test "$GCC"; then
     WARGS=
     test "$HAD_V" || WARGS="$WARGS$NL-q"
     WARGS="$WARGS$NL-bt=linux$NL-fr"
+    WISOBJ=1
     unset INCLUDE  # Don't let wcc386 find any system #include etc. file.
     unset WATCOM  # Don't let wcc386 find any system #include etc. file.
     SKIPARG=
@@ -550,7 +551,7 @@ if test "$GCC"; then
        # !! TODO(pts): Copy more flag translations from owcc.c.
        -c) ;;
        -S) echo "fatal: assembly generation not supported by minicc wcc386" >&2; exit 5 ;;
-       -E) echo "fatal: preprocessing not supported by minicc wcc386" >&2; exit 5 ;;  # !! TODO(pts): There is `wcc386 -pl' for this.
+       -E) WARGS="$WARGS$NL-pl"; WISOBJ= ;;
        -[DUI]?*) WARGS="$WARGS$NL$ARG" ;;
        -g) echo "fatal: debug generation not supported by minicc wcc386" >&2; exit 5 ;;  # !! TODO(pts): Add flags like owcc.c.
        -*) echo "fatal: unsupported minicc wcc386 flag: $ARG" >&2; exit 5 ;;
@@ -624,10 +625,12 @@ if test "$GCC"; then
       fi
       if test "$EC" != 0; then rm -f $TMPOFILES; exit "$EC"; fi
       if test "$IS_WATCOM"; then
-        EFARGS="$MYDIR/tools/omf2elf$NL-h$NL$HAD_$V$NL-o$NL${TMPOFILE%.*}.o$NL$TMPOFILE"
-        test "$HAD_V" && echo "info: running OMF converter:" $EFARGS >&2
-        $EFARGS; EC="$?"
-        if test "$EC" != 0; then rm -f $TMPOFILES; exit "$EC"; fi
+        if test "$WISOBJ"; then
+          EFARGS="$MYDIR/tools/omf2elf$NL-h$NL$HAD_$V$NL-o$NL${TMPOFILE%.*}.o$NL$TMPOFILE"
+          test "$HAD_V" && echo "info: running OMF converter:" $EFARGS >&2
+          $EFARGS; EC="$?"
+          if test "$EC" != 0; then rm -f $TMPOFILES; exit "$EC"; fi
+        fi
       elif test "$DO_LINK"; then
         # GCC adds the .note.GNU-stack ELF section header to the .o file, adding
         # 0x20 bytes unnecessary. We remove it, so ld(1) won't generate the
