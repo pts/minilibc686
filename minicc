@@ -269,10 +269,13 @@ else
   test "$GCC" && SFLAG="-s$NL-Wl,-sss"
 fi
 
-if test "$GCC"; then
+export MINICC_TCCLD=
+if test -z "$DO_LINK"; then
+  export MINICC_LD=
+elif test "$GCC"; then
   if test "$TCCLD"; then
-    export MINICC_LD=
-    export MINICC_TCCLD="$TCCLD"
+    export MINICC_LD="$TCCLD"
+    export MINICC_TCCLD=1
     export MINICC_LDV="$HAD_V"
     if ! "$GCC" "$GCC_BARG" -print-search-dirs >/dev/null 2>&1; then  # Also works with Clang.
       echo "fatal: gcc not working: $GCC" >&2
@@ -281,18 +284,23 @@ if test "$GCC"; then
   else
     export MINICC_TCCLD=
     # gcctooldir/collect2 (== gcctooldir/ld) uses it.
-    export MINICC_LD="$("$GCC" "$GCC_BARG" -print-prog-name=ld 2>/dev/null)"  # Also works with Clang.
+    export MINICC_LD="$(exec "$GCC" "$GCC_BARG" -print-prog-name=ld 2>/dev/null)"  # Also works with Clang.
     if test -z "$MINICC_LD"; then
       if ! "$GCC" "$GCC_BARG" -print-search-dirs >/dev/null 2>&1; then
-        echo "fatal: gcc not working: $GCC" >&2
-        exit 2
+        echo "fatal: gcc not working: $GCC" >&2; exit 2
       fi
-      echo "fatal: linker not found by gcc: $GCC" >&2
-      exit 2
+      echo "fatal: linker not found by gcc: $GCC" >&2; exit 2
+    elif test "${MINICC_LD#*$NL}" != "$MINICC_LD"; then  # Multiline report, e.g. from wcc386.
+      echo "fatal: gcc failed to report linker: $GCC" >&2; exit 2
+    elif test ! -f "$MINICC_LD"; then #test "${MINICC_LD#*/}" != "$MINICC_LD" && test ! -f "$MINICC_LD"
+      echo "fatal: linker reported by gcc not found: $GCC" >&2; exit 2
     fi
     # Sometimes it's not found, but still returned nonempty.
     export MINICC_LDV="$HAD_V"
   fi
+else
+  export MINICC_LD="$TCC"
+  export MINICC_TCCLD=1
 fi
 test "$GCC_BARG" = -pipe && GCC_BARG=
 

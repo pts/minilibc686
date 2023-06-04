@@ -8,7 +8,7 @@ NL="
 "
 if test "$MINICC_TCCLD"; then
   # TCC accepts all these flags (and ignores -m elf_i386).
-  ARGS="${MINICC_TCCLD:-ld}$NL-nostdlib$NL-m${NL}elf_i386$NL-static"
+  ARGS="${MINICC_LD:-ld}$NL-nostdlib$NL-m${NL}elf_i386$NL-static"
 else
   # `-e _start' is needed, because without it GNU gold(1) wouldn't fail to link if _start is not defined.
   # `--fatal-warnings' is needed, because without it GNU ld(1) would happily create an executable without _start.
@@ -56,8 +56,8 @@ for ARG in "$@"; do
    -[Nv]) ARGS="$ARGS$NL$ARG" ;;
    -*) echo "fatal: unsupported hooked ld flag: $ARG" >&2; exit 1 ;;
    *.a | *.o)
-    if ! test -f "$ARG"; then
-      if test "$MINICC_TCCLD" && test "$ARG" = ///tmp///LIBTCC1.a; then :; else
+    if test "$MINICC_TCCLD" && test "$ARG" = ///tmp///LIBTCC1.a; then :; else
+      if ! test -f "$ARG"; then
         echo "fatal: missing hooked ld source file: $ARG" >&2; exit 1
       fi
     fi
