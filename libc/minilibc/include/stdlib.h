@@ -6,6 +6,11 @@
 
 #define NULL ((void*)0)
 
+__LIBC_VAR(extern char **, environ);
+#ifdef __WATCOMC__  /* There is no other way with `wcc386 -za'. */
+#  pragma aux environ "_mini_*"
+#endif
+
 __LIBC_FUNC(__LIBC_NORETURN void, exit, (int exit_code),);   /* Flushes stdio streams first. To prevent flushing, _exit(...) instead. */
 
 __LIBC_FUNC(int, rand, (void),);
