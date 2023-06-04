@@ -18,20 +18,20 @@ __LIBC_VAR(extern char **, environ);
 #  pragma aux environ "_mini_*"
 #endif
 
-__LIBC_FUNC(void, _exit, (int exit_code),/* !! __LIBC_NORETURN */);  /* Doesn't flush stdio streams first. See exit(...) for that. */
-__LIBC_FUNC(int, close, (int fd),);
-__LIBC_FUNC(ssize_t, read, (int fd, void *buf, size_t count),);
-__LIBC_FUNC(ssize_t, write, (int fd, const void *buf, size_t count),);
-__LIBC_FUNC(off_t, lseek, (int fd, off_t offset, int whence),);  /* 32-bit offset. See lseek64(...) for 64-bit offset. */
-__LIBC_FUNC(off64_t, lseek64, (int fd, off64_t offset, int whence),);
-__LIBC_FUNC(long, syscall, (long nr, ...),);
-__LIBC_FUNC(int, unlink, (const char *pathname),);
+__LIBC_FUNC(void, _exit, (int exit_code), __LIBC_NOATTR /* !! __LIBC_NORETURN */);  /* Doesn't flush stdio streams first. See exit(...) for that. */
+__LIBC_FUNC(int, close, (int fd), __LIBC_NOATTR);
+__LIBC_FUNC(ssize_t, read, (int fd, void *buf, size_t count), __LIBC_NOATTR);
+__LIBC_FUNC(ssize_t, write, (int fd, const void *buf, size_t count), __LIBC_NOATTR);
+__LIBC_FUNC(off_t, lseek, (int fd, off_t offset, int whence), __LIBC_NOATTR);  /* 32-bit offset. See lseek64(...) for 64-bit offset. */
+__LIBC_FUNC(off64_t, lseek64, (int fd, off64_t offset, int whence), __LIBC_NOATTR);
+__LIBC_FUNC(long, syscall, (long nr, ...), __LIBC_NOATTR);
+__LIBC_FUNC(int, unlink, (const char *pathname), __LIBC_NOATTR);
 /* Limitation: it doesn't always set errno in minilibc686. */
-__LIBC_FUNC(int, isatty, (int fd),);
-__LIBC_FUNC(int, ftruncate, (int fd, off_t length),);  /* 32-bit length. */
-__LIBC_FUNC(int, symlink, (const char *target, const char *linkpath),);
-__LIBC_FUNC(uid_t, geteuid, (void),);
-__LIBC_FUNC(pid_t, getpid, (void),);
+__LIBC_FUNC(int, isatty, (int fd), __LIBC_NOATTR);
+__LIBC_FUNC(int, ftruncate, (int fd, off_t length), __LIBC_NOATTR);  /* 32-bit length. */
+__LIBC_FUNC(int, symlink, (const char *target, const char *linkpath), __LIBC_NOATTR);
+__LIBC_FUNC(uid_t, geteuid, (void), __LIBC_NOATTR);
+__LIBC_FUNC(pid_t, getpid, (void), __LIBC_NOATTR);
 
 #ifdef __MINILIBC686__
 #  ifdef __WATCOMC__
@@ -56,8 +56,8 @@ __LIBC_FUNC(pid_t, getpid, (void),);
   /* Returns 0 on success, anything else (and sets errno) on error. The
    * implementation quite shorter than lseek64(...).
    */
-  __LIBC_FUNC_RP3(int, lseek64_set, (int fd, off64_t offset),);
-  __LIBC_FUNC(void *, sys_brk, (void *addr),);
+  __LIBC_FUNC_RP3(int, lseek64_set, (int fd, off64_t offset), __LIBC_NOATTR);
+  __LIBC_FUNC(void *, sys_brk, (void *addr), __LIBC_NOATTR);
 #endif  /* __MINILIBC686__ */
 
 #endif  /* _UNISTD_H */

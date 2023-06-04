@@ -42,17 +42,17 @@ __LIBC_FUNC(int, vsprintf, (char *str, const char *format, __libc__va_list ap), 
 __LIBC_FUNC(int, snprintf, (char *str, size_t size, const char *format, ...), __attribute__((__format__(__printf__, 3, 4))));
 __LIBC_FUNC(int, vsnprintf, (char *str, size_t size, const char *format, __libc__va_list ap), __attribute__((__format__(__printf__, 3, 0))));
 
-__LIBC_FUNC(FILE *, fopen, (const char *pathname, const char *mode),);
-__LIBC_FUNC(int, fflush, (FILE *filep),);
-__LIBC_FUNC(int, fclose, (FILE *filep),);
-__LIBC_FUNC(size_t, fread, (void *ptr, size_t size, size_t nmemb, FILE *filep),);
-__LIBC_FUNC(size_t, fwrite, (const void *ptr, size_t size, size_t nmemb, FILE *filep),);
-__LIBC_FUNC(int, fseek, (FILE *filep, off_t offset, int whence),);  /* Only 32-bit off_t. */
-__LIBC_FUNC(off_t, ftell, (FILE *filep),);  /* Only 32-bit off_t */
-__LIBC_FUNC(int, fputs, (const char *s, FILE *filep),);
-__LIBC_FUNC(int, puts, (const char *s),);
-__LIBC_FUNC(int, fgetc, (FILE *filep),);
-__LIBC_FUNC_MINIRP3(int, fputc, (int c, FILE *filep),);  /* Use `gcc -ffreestanding' or `gcc -fno-builtin' to avoid the compilation error here. */
+__LIBC_FUNC(FILE *, fopen, (const char *pathname, const char *mode), __LIBC_NOATTR);
+__LIBC_FUNC(int, fflush, (FILE *filep), __LIBC_NOATTR);
+__LIBC_FUNC(int, fclose, (FILE *filep), __LIBC_NOATTR);
+__LIBC_FUNC(size_t, fread, (void *ptr, size_t size, size_t nmemb, FILE *filep), __LIBC_NOATTR);
+__LIBC_FUNC(size_t, fwrite, (const void *ptr, size_t size, size_t nmemb, FILE *filep), __LIBC_NOATTR);
+__LIBC_FUNC(int, fseek, (FILE *filep, off_t offset, int whence), __LIBC_NOATTR);  /* Only 32-bit off_t. */
+__LIBC_FUNC(off_t, ftell, (FILE *filep), __LIBC_NOATTR);  /* Only 32-bit off_t */
+__LIBC_FUNC(int, fputs, (const char *s, FILE *filep), __LIBC_NOATTR);
+__LIBC_FUNC(int, puts, (const char *s), __LIBC_NOATTR);
+__LIBC_FUNC(int, fgetc, (FILE *filep), __LIBC_NOATTR);
+__LIBC_FUNC_MINIRP3(int, fputc, (int c, FILE *filep), __LIBC_NOATTR);  /* Use `gcc -ffreestanding' or `gcc -fno-builtin' to avoid the compilation error here. */
 #if !defined(__MINILIBC686__) || defined(CONFIG_FUNC_GETC_PUTC) || !(defined(CONFIG_INLINE_GETC_PUTC) || defined(CONFIG_MACRO_GETC_PUTC))
 #  ifdef __WATCOMC__
 #    ifdef __MINILIBC686__
@@ -70,10 +70,10 @@ __LIBC_FUNC_MINIRP3(int, fputc, (int c, FILE *filep),);  /* Use `gcc -ffreestand
     int getc(FILE *filep) __asm__(__LIBC_MINI "fgetc");
     int putc(int c, FILE *filep) __asm__(__LIBC_MINI "fputc");
 #  endif  /* else __WATCOMC__ */
-  __LIBC_FUNC(int, getchar, (void),);
-  __LIBC_FUNC_MINIRP3(int, putchar, (int c),);  /* Use `gcc -ffreestanding' or `gcc -fno-builtin' to avoid the compilation error here. */
+  __LIBC_FUNC(int, getchar, (void), __LIBC_NOATTR);
+  __LIBC_FUNC_MINIRP3(int, putchar, (int c), __LIBC_NOATTR);  /* Use `gcc -ffreestanding' or `gcc -fno-builtin' to avoid the compilation error here. */
 #else  /* !!! */
-  __LIBC_FUNC_MINIRP3(int, __M_fgetc_fallback, (FILE *filep),);
+  __LIBC_FUNC_MINIRP3(int, __M_fgetc_fallback, (FILE *filep), __LIBC_NOATTR);
 #  if defined(CONFIG_MACRO_GETC_PUTC) && !defined(__WATCOMC__)  /* This only works with stdio_medium of minilibc686. It is disabled for __WATCOMC__, because it doesn't support ({...}). For __WATCOMC__, we fall back to CONFIG_INLINE_GETC_PUTC below. */
     /* These macros work in GCC, Clang and TinyCC. TODO(pts): Why should we use a macro rather than an inline function? The inline code is a few bytes shorter than the macro code. */
     /* If the there are bytes to read from the buffer (filep->buf_read_ptr != filep->buf_last), get and return a byte, otherwise call __M_fgetc_fallback(...). */
@@ -92,7 +92,7 @@ __LIBC_FUNC_MINIRP3(int, fputc, (int c, FILE *filep),);  /* Use `gcc -ffreestand
 #  endif
 #endif
 #if !defined(__MINILIBC686__) || defined(CONFIG_FUNC_FILENO) || !(defined(CONFIG_INLINE_FILENO) || defined(CONFIG_MACRO_FILENO))
-  __LIBC_FUNC(int, fileno, (FILE *filep),);
+  __LIBC_FUNC(int, fileno, (FILE *filep), __LIBC_NOATTR);
 #else
 #  if defined(CONFIG_MACRO_FILENO)  /* This only works with stdio_medium of minilibc686. */
 #    define fileno(_filep) (*(int*)(void*)(((char**)(_filep))+4))
@@ -101,10 +101,10 @@ __LIBC_FUNC_MINIRP3(int, fputc, (int c, FILE *filep),);  /* Use `gcc -ffreestand
 #  endif
 #endif
 
-__LIBC_FUNC(int, remove, (const char *pathname),);
+__LIBC_FUNC(int, remove, (const char *pathname), __LIBC_NOATTR);
 
 #if defined(__UCLIBC__) || defined(__GLIBC__) || defined(__dietlibc__)
-  __LIBC_FUNC(int, ferror, (FILE *stream),);
+  __LIBC_FUNC(int, ferror, (FILE *stream), __LIBC_NOATTR);
 #endif
 
 #endif  /* _STDIO_H */

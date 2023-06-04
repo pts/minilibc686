@@ -68,6 +68,7 @@
 #    endif
 #    define __LIBC_VAR(type, name) type name
 #    define __LIBC_NORETURN __declspec(aborts)
+#    define __LIBC_NOATTR
 #  else  /* GCC, Clang, TinyCC. */
 #    ifdef __MINILIBC686__
 #      define __LIBC_FUNC(type, name, args, gcc_attrs) type name args __asm__("mini_" #name) gcc_attrs
@@ -80,6 +81,7 @@
 #      define __LIBC_MINI ""
 #    endif
 #    define __LIBC_NORETURN __attribute__((noreturn, nothrow))
+#    define __LIBC_NOATTR __attribute__(())  /* To prevent an empty `gcc_attrs' argument for `gcc -ansi'. */
 #  endif  /* C compiler */
 #  ifdef __MINILIBC686__
 #    define __LIBC_FUNC_MINIRP3(type, name, args, gcc_attrs) __LIBC_FUNC_RP3(type, name, args, gcc_attrs)
