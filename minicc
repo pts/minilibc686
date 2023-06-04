@@ -470,10 +470,10 @@ if test "$GCC"; then
        ;;
      -*) CCARGS="$CCARGS$NL$ARG" ;;
      *.[ao]) FILEARGS="$FILEARGS$NL--ldfile=$ARG" ;;
-     *.c) FILEARGS="$FILEARGS$NL--srcfile=$ARG" ;;
-     *.[cisS])
+     *.[ci]) FILEARGS="$FILEARGS$NL--srcfile=$ARG" ;;  # owcc386 treats .i files just like .c, but gcc doesn't allow `#' in .i files, because they are apready preprocesed.
+     *.[sS])
        if test "$IS_WATCOM"; then
-         echo "fatal: unsupported minicc wcc386 source file type: $ARG" >&2; exit 5;  # !! TODO(pts): Does wcc386 support *.i?
+         echo "fatal: unsupported minicc wcc386 assembly source file type: $ARG" >&2; exit 5;
        fi
        FILEARGS="$FILEARGS$NL--srcfile=$ARG"
        ;;
