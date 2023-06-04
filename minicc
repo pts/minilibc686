@@ -553,7 +553,7 @@ if test "$GCC"; then
        -S) echo "fatal: assembly generation not supported by minicc wcc386" >&2; exit 5 ;;
        -E) WARGS="$WARGS$NL-pl"; WISOBJ= ;;
        -[DUI]?*) WARGS="$WARGS$NL$ARG" ;;
-       -g) echo "fatal: debug generation not supported by minicc wcc386" >&2; exit 5 ;;  # !! TODO(pts): Add flags like owcc.c.
+       -g*) echo "fatal: debug generation not supported by minicc wcc386" >&2; exit 5 ;;
        -*) echo "fatal: unsupported minicc wcc386 flag: $ARG" >&2; exit 5 ;;
        *) echo "fatal: assert: input file not allowed: $ARG" >&2; exit 5 ;;
       esac
@@ -573,17 +573,24 @@ if test "$GCC"; then
       if test "$DO_LINK"; then
         TMPOFILE="$("$MYDIR"/tools/mktmpf "$TMPDIR"/minicc.@@@@@@."$OEXT")"  # Already creates the file.
         if test -z "$TMPOFILE"; then
-          echo "fatal: error creating temporary .o file" >&2
-          rm -f $TMPOFILES
-          exit 7
+          echo "fatal: error creating temporary .o file" >&2; rm -f $TMPOFILES; exit 7
         fi
         TMPOFILES="$TMPOFILES$NL$TMPOFILE"
         test "$IS_WATCOM" && TMPOFILES="$TMPOFILES$NL${TMPOFILE%.*}.o"
         LDARGS="$LDARGS$NL${TMPOFILE%.*}.o"
       else
         TMPOFILE="${ARG#--*=}"
-        if test "$CCMODE" = -c; then TMPOFILE="${TMPOFILE%.*}"."$OEXT"  # !! TODO(pts): Create it in $TMPDIR for $IS_WATCOM.
-        elif test "$CCMODE" = -S; then TMPOFILE="${TMPOFILE%.*}".S
+        if test "$CCMODE" = -c; then
+          if test "$IS_WATCOM"; then
+            TMPOFILE="$("$MYDIR"/tools/mktmpf "$TMPDIR"/minicc.@@@@@@."$OEXT")"  # Already creates the file.
+            if test -z "$TMPOFILE"; then
+              echo "fatal: error creating temporary .o file" >&2; rm -f $TMPOFILES; exit 7
+            fi
+            TMPOFILES="$TMPOFILES$NL$TMPOFILE"
+          else
+            TMPOFILE="${TMPOFILE%.*}"."$OEXT"
+          fi
+        elif test "$CCMODE" = -S; then TMPOFILE="${TMPOFILE%.*}".s  # !! TODO(pts): Does gcc drop the dirname?
         else TMPOFILE=-  # For -E.
         fi
       fi
@@ -626,7 +633,10 @@ if test "$GCC"; then
       if test "$EC" != 0; then rm -f $TMPOFILES; exit "$EC"; fi
       if test "$IS_WATCOM"; then
         if test "$WISOBJ"; then
-          EFARGS="$MYDIR/tools/omf2elf$NL-h$NL$HAD_$V$NL-o$NL${TMPOFILE%.*}.o$NL$TMPOFILE"
+          if test "$CCMODE" = -c; then TMPOFILE2="${ARG#--*=}"; TMPOFILE2="${TMPOFILE2%.*}.o"
+          else TMPOFILE2="${TMPOFILE%.*}.o"
+          fi
+          EFARGS="$MYDIR/tools/omf2elf$NL-h$NL$HAD_$V$NL-o$NL$TMPOFILE2$NL$TMPOFILE"
           test "$HAD_V" && echo "info: running OMF converter:" $EFARGS >&2
           $EFARGS; EC="$?"
           if test "$EC" != 0; then rm -f $TMPOFILES; exit "$EC"; fi
@@ -656,7 +666,7 @@ if test "$GCC"; then
   fi
   ARGS="$LDARGS"
   WHAT=linker
-  unset LDARGS CCARGS CCFILEARGS FILEARGS TMPOFILE FOFLAG CCMODE OEXT
+  unset LDARGS CCARGS CCFILEARGS FILEARGS TMPOFILE TMPOFILE2 FOFLAG CCMODE OEXT
   # Don't forget: rm -f $TMPOFILES
 else
   TMPOFILES=
