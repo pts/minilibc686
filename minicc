@@ -23,7 +23,7 @@ test -z "$BUSYBOX_SH_SCRIPT" && test -f "$MYDIR/shbin/sh" &&
 # tools (e.g. pts-tcc and ld) are always run from `$MYDIR/tools', no matter
 # the $PATH. System tools (such as with `--gcc=...') will be excplicitly
 # looked up on the old $PATH.
-test "$1" = --noenv && shift && exec env -i PATH="$MYDIR/shbin" BUSYBOX_SH_SCRIPT=1 sh -- "$0" --boxed-path "$PATH" "$@"
+test "$1" = --noenv && shift && exec env -i PATH="$MYDIR/shbin" BUSYBOX_SH_SCRIPT=1 TMPDIR="$TMPDIR" sh -- "$0" --boxed-path "$PATH" "$@"
 
 # --boxed is a weaker version of --noenv for reproducible builds and
 # testing: keep most environment variables, but use a short hardcoded
