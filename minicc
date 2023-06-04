@@ -42,7 +42,7 @@ if test $# = 0 || test "$1" == --help; then
   echo "minicc: C compiler fronted for building small Linux i386 executables$NL""Usage: $0 [<gcc-flag>...] <file.c>$NL""There are minicc flags, e.g. --gcc, --tcc, --utcc"
   test $# = 0 && exit 1
   exit 0
-fi 
+fi
 
 if ! test -f "$MYDIR/gcctooldir/collect2"; then
   echo "fatal: missing tool: $MYDIR/gcctooldir/collect2" >&2
@@ -71,6 +71,7 @@ GCC_BARG=-pipe  # Harmless default.
 LIBC=
 DO_SMART=
 ANSIFLAG=
+OUTFILE=a.out
 
 case "$1" in
  "" | -* | *.[aocisS]) ;;  # A flag or a source file name is not a program name.
@@ -89,8 +90,7 @@ esac
 
 SKIPARG=
 APPENDARG=
-ARGS=""
-OUTFILE=a.out
+ARGS=
 for ARG in "$@"; do
   if test "$SKIPARG"; then
     SKIPARG=
@@ -102,7 +102,8 @@ for ARG in "$@"; do
     continue
   fi
   case "$ARG" in
-   *"$NL"*) echo "fatal: unexpected newline in arg" >&2; exit 1 ;;
+   *"$NL"*) echo "fatal: unexpected newline in minicc argument" >&2; exit 1 ;;
+   "") echo "fatal: empty minicc argument" >&2; exit 1 ;;
    --gcc) TCC=; GCC=gcc ;;  # Doesn't work with --boxed. TODO(pts): Look it up on old $PATH.
    --gcc=*/*) TCC=; GCC="${ARG#*=}"; test "$IS_BOXED" && GCC_BARG="-B${GCC%/*}" ;;
    --gcc=*) TCC=; GCC="${ARG#*=}" ;;
@@ -148,6 +149,10 @@ for ARG in "$@"; do
    *) echo "fatal: unsupported input file extension: $ARG" >&2; exit 1 ;;
   esac
 done
+if test "$SKIPARG" || test "$APPENDARG"; then
+  echo "fatal: missing last flag argument: $SKIPARG$APPENDARG" >&2
+  exit 1
+fi
 
 if test "$TCC" && test "$TCCLD"; then  # $TCCLD should work with $GCC
   if test "$TCCLD" != "$TCC"; then
@@ -326,7 +331,7 @@ if test "$TCC"; then
 else
   # This also works with TCC, but it's too much cruft.
   # The `-B$MYDIR/gcctooldir' argument makes our gcctooldir/collect2 or gcctooldir/ld run.
-  # Add $INCLUDEDIR_ARG last, so that -I... specified by the user takes precedence.
+  # Add $INCLUDEDIR_ARG last, so that -I... specified by the user takes precedence. !! TODO(pts): Does GCC do this or the opposite?
   # Specifying -fcommon since -fno-common is the default since GCC 10 and Clang 11: https://maskray.me/blog/2022-02-06-all-about-common-symbols
   # DYI dietlibc 0.34 adds: gcc -Os -fomit-frame-pointer -falign-functions=1 -falign-jumps=1 -falign-loops=1 -mpreferred-stack-boundary=4
   # !! TODO(pts): Try -mno-align-stringops. What happens with old GCC not supporting it, or Clang?
@@ -424,10 +429,10 @@ export TMPDIR
 
 IFS="$NL"  # Argument splitting will happen over newlines only.
 export MINICC_TOOLS="$MYDIR/tools"
-test "$HAD_V" && echo "info: running compiler:" $ARGS >&2  # GCC also writes to stderr.
 IS_WATCOM=
 test -z "$TCC" && test "${GCCBASE#*[-/._]wcc386}" != "$GCCBASE" && IS_WATCOM=1
 if test -z "$TCC" && test -z "$IS_WATCOM"; then
+  test "$HAD_V" && echo "info: running compiler:" $ARGS >&2  # GCC also writes to stderr.
   if test "$DO_SMART" != 0; then  # Smart linking with $GCC.
     ARGS="$ARGS$NL-Wl,--smart-arch=$ARCH$NL-Wl,--smart-libcd=$MYDIR/libc/$LIBC"
   fi
@@ -436,11 +441,133 @@ fi
 # Now we either have "$TCC" or "$IS_WATCOM".
 
 if test "$IS_WATCOM"; then
-  # TODO(pts): -march=...
-  echo "fatal: compiling with OpenWatcom not supported yet" >&2
-  exit 5
+  if test "$DO_LINK"; then
+    echo "fatal: linking is not yet supported with wcc386; specify -c" >&2
+    exit 5
+  fi
+  if test "$DO_ADD_INCLUDEDIR"; then
+    if ! test -f "$MYDIR/libc/$LIBC/include/_preincl.h"; then
+      echo "fatal: libc not prepared for wcc386, file missing: $MYDIR/libc/$LIBC/include/_preincl.h" >&2
+      exit 5
+    fi
+  fi
+  OUTFILE=
+  WSFLAG=
+  WJFLAG=-j  # `signed char' is GCC default.
+  WARGS=
+  WGCFLAG=
+  WGSRC=
+  test "$HAD_V" || WARGS="$WARGS$NL-q"
+  WARGS="$WARGS$NL-bt=linux$NL-fr"
+  SKIPARG=; APPENDARG=
+  unset INCLUDE  # Don't let wcc386 find any system #include etc. file.
+  unset WATCOM  # Don't let wcc386 find any system #include etc. file.
+  for ARG in --skiparg $ARGS; do
+    if test "$SKIPARG"; then
+      test "$SKIPARG" = -o && OUTFILE="$ARG"
+      SKIPARG=
+      continue
+    elif test "$APPENDARG"; then
+      WARGS="$WARGS$NL$APPENDARG$NL$WARG"
+      APPENDARG=
+      continue
+    fi
+    case "$ARG" in
+     *"$NL"*) echo "fatal: unexpected newline in minicc wcc386 argument" >&2; exit 5 ;;
+     "") echo "fatal: empty minicc wcc386 argument" >&2; exit 5 ;;
+     --skiparg) SKIPARG=1 ;;
+     -B?*) ;;  # minicc has just added it.
+     -v) ;;  # Already processed as $HAD_V.
+     -ansi | -std=c89) WARGS="$WARGS$NL-za" ;;
+     -std=c99) WARGS="$WARGS$NL-za99" ;;
+     -std=ow) WARGS="$WARGS$NL-ze" ;;
+     -pedantic) ;;
+     -m32 | -static | -fno-pic | -fcommon | -fno-unwind-tables | -fno-asynchronous-unwind-tables | -fno-builtin | -fno-ident | -ffreestanding | -fno-lto | -nostdinc | -falign-functions=* | -falign-jumps=* | -falign-loops=* | -mpreferred-stack-boundary=*) ;;
+     -U_FORTIFY_SOURCE) ;;
+     -fno-stack-protector) WSFLAG=-s ;;
+     -fsigned-char | -fno-unsigned-char) WJFLAG=-j ;;
+     -fno-signed-char | -funsigned-char) WJFLAG= ;;
+     -finline-fp-rounding) WARGS="$WARGS$NL-zri" ;;  # To prevent the call to __CHP.
+     -fstack-protector) WSFLAG= ;;
+     -march=i386) WARGS="$WARGS$NL-3r" ;;
+     -march=i686) WARGS="$WARGS$NL-6r" ;;  # !! TODO(pts): Does it generate larger code? Then change the default with -Os.
+     -mno-80387 | -msoft-float) WARGS="$WARGS$NL-fpc" ;;  # Useful for string merging in .rodata.str1.1.
+     -m80387 | -mhard-float | -mhard-emu-float) WARGS="$WARGS$NL-fpi" ;;  # Default.  # -mhard-float would be `-fpi87'.
+     -nostdlib) WARGS="$WARGS$NL-zl$NL-zld$NL-zls" ;;  # minicc always has it.
+     -W | -Wextra) WARGS="$WARGS$NL-wx" ;;
+     -Wall) WARGS="$WARGS$NL-w4" ;;
+     -Werror) WARGS="$WARGS$NL-we" ;;
+     -Werror=*) ;;  # No per-warning control, just ignore for simplicity.
+     -w) WARGS="$WARGS$NL-w0" ;;
+     -Wlevel[0-9]*) WARGS="$WARGS$NL-w${ARG#-Wlevel}" ;;
+     -Wno-n[0-9]*) WARGS="$WARGS$NL-wcd=${ARG#-Wno-n}" ;;
+     -Wn[0-9]*) WARGS="$WARGS$NL-wce=${ARG#-Wn}" ;;
+     -H) WARGS="$WARGS$NL-fti" ;;
+     -O0) WARGS="$WARGS$NL-od" ;;
+     -O1) WARGS="$WARGS$NL-oil" ;;
+     -O2) WARGS="$WARGS$NL-onatx" ;;
+     -O3) WARGS="$WARGS$NL-onatxl+" ;;
+     -Os) WARGS="$WARGS$NL-os" ;;
+     -Ot) WARGS="$WARGS$NL-ot" ;;
+     -O)  WARGS="$WARGS$NL-oil" ;;
+     -c) WGCFLAG="$ARG" ;;
+     -S) echo "fatal: assembly generation not supported by minicc wcc386" >&2; exit 5 ;;
+     -E) echo "fatal: preprocessing not supported by minicc wcc386" >&2; exit 5 ;;  # !! TODO(pts): There is `wcc386 -pl' for this.
+     -[DUI]?*) WARGS="$WARGS$NL$ARG" ;;
+     -g) echo "fatal: debug generation not supported by minicc wcc386" >&2; exit 5 ;;  # !! TODO(pts): Add flags like owcc.c.
+     -o) SKIPARG="$ARG" ;;
+     -*) echo "fatal: unsupported minicc wcc386 flag: $ARG" >&2; exit 5 ;;
+     *.c)
+      if test "$WGSRC"; then
+        echo "fatal: multiple source file.c arguments found for minicc wcc386" >&2  # !! Handle them.
+        exit 5
+      fi
+      WGSRC="$ARG" ;;
+     *.[aoisS]) echo "fatal: unsupported minicc wcc386 source file type: $ARG" >&2; exit 5 ;;
+     *) echo "fatal: unsupported input file extension: $ARG" >&2; exit 5 ;;
+    esac
+  done
+  if test "$SKIPARG" || test "$APPENDARG"; then
+    echo "fatal: missing last flag argument for minicc wcc386: $SKIPARG$APPENDARG" >&2
+    exit 5
+  fi
+  if test -z "$WGCFLAG"; then
+    echo "fatal: missing mandatory -c flag (to create .o file) for minicc wcc386" >&2  # !! relax it, do linking.
+    exit 5
+  fi
+  if test -z "$OUTFILE"; then  # Recommended extension: .o.
+    echo "fatal: missing mandatory \`-o file.o' argument for minicc wcc386" >&2
+    exit 5
+  fi
+  if test "${OUTFILE#.}" != "$OUTFILE"; then
+    # Otherwise wcc386 would prepend a basename from $WGSRC.
+    echo "fatal: output \`-o file.o' filename for minicc wcc386 must not start with a dot" >&2
+    exit 5
+  fi
+  if test -z "$WGSRC"; then
+    echo "fatal: missing mandatory source file.c argument for minicc wcc386" >&2
+    exit 5
+  fi
+  test "${OUTFILE#-}" = "$OUTFILE" || OUTFILE="./$OUTFILE"  # Safer argument processing for tools.
+  # !! TODO(pts): Copy more flag translations from owcc.c.
+  # TODO(pts): Genrate filename in /tmp ($TMPDIR) instead.
+  WARGS="$GCC$NL$WSFLAG$NL$WJFLAG$NL$WARGS$NL-fo=$OUTFILE.tmp.obj$NL$WGSRC"
+  test "$HAD_V" && echo "info: running wcc386 compiler:" $WARGS >&2
+  $WARGS; EC="$?"
+  if test "$EC" != 0; then
+    rm -f "$OUTFILE.tmp.obj"
+    exit "$EC"
+  fi
+  # !! TODO(pts): Support -m... flag for string optimizations (like in minilibc32).
+  EFARGS="$MYDIR/tools/omf2elf$NL-h$NL$HAD_$V$NL-o$NL$OUTFILE$NL$OUTFILE.tmp.obj"
+  test "$HAD_V" && echo "info: running OMF converter:" $EFARGS >&2
+  $EFARGS; EC="$?"
+  rm -f "$OUTFILE.tmp.obj"
+  exit "$EC"
+  # !! Continue with linking: ./minicc --libc="$LIBC" -g -Wl,-Map=dw.map -o "$BASE".wcc "$BASE".wcc.o
 fi
 
+test "$HAD_V" && echo "info: running compiler:" $ARGS >&2  # GCC also writes to stderr.
 if test "$DO_SMART" != 0; then  # Smart linking.
   SMART_LIBCD="$MYDIR/libc/$LIBC"
   SMART_TOOLS="$MYDIR/tools"
