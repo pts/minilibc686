@@ -186,11 +186,16 @@ if test -z "$TCC" && test -z "$GCC"; then
   echo "fatal: missing compiler, neither --tcc=... nor --gcc=..." >&2
   exit 1
 fi
-if test "$USE_UTCC" && test "$DO_ADD_LIB" && test -z "$IS_TCCLD" && test "${TCC%/pts-tcc}" = "$TCC"; then
-  # That's because ///tmp///LIBTCC1.a is embedded in the tools/pts-tcc executable.
-  # TODO(pts): Extract it.
-  echo "fatal: currently uClibc with --utcc needs pts-tcc; try --uclibc instead" >&2
-  exit 1
+if test "$USE_UTCC" && test "$DO_ADD_LIB"; then
+  if test -z "$IS_TCCLD" && test -z "$MINICC_LD"; then
+    MINICC_LD="$TCC"
+    IS_TCCLD=1
+  fi
+  if test "${MINICC_LD%/pts-tcc}" = "$MINICC_LD"; then
+    # That's because ///tmp///LIBTCC1.a is embedded in the tools/pts-tcc executable.
+    echo "fatal: currently uClibc with --utcc needs --tccld; try --uclibc instead" >&2
+    exit 1
+  fi
 fi
 if test "$USE_UTCC" && test "$ARCH" = i386; then
   echo "fatal: the --utcc bundled uClibc doesn't work on i386, it needs -march=i686" >&2
@@ -227,6 +232,14 @@ esac
 unset OLD_PATH
 
 test "$DO_ADD_LIB" || DO_SMART=0
+
+if test -z "$DO_LINK"; then
+  MINICC_LD=
+  IS_TCCLD=
+elif test "$TCC" && test -z "$MINICC_LD"; then  # !! Move earlier.
+  MINICC_LD="$TCC"
+  IS_TCCLD=1
+fi
 
 NEED_LIBC=
 test "$DO_ADD_INCLUDEDIR" && NEED_LIBC=1
@@ -291,13 +304,7 @@ fi
 #if ! "$GCC" "$GCC_BARG" -print-search-dirs >/dev/null 2>&1; then  # Also works with Clang.
 #  echo "fatal: gcc not working: $GCC" >&2; exit 2
 #fi
-if test -z "$DO_LINK"; then
-  MINICC_LD=
-  IS_TCCLD=
-elif test "$TCC" && test -z "$MINICC_LD"; then
-  MINICC_LD="$TCC"
-  IS_TCCLD=1
-elif test "$MINICC_LD" = ///gcc; then
+if test "$MINICC_LD" = ///gcc; then
   MINICC_LD="$(exec "$GCC" "$GCC_BARG" -print-prog-name=ld 2>/dev/null)"  # Also works with Clang.
   if test -z "$MINICC_LD"; then
     if ! "$GCC" "$GCC_BARG" -print-search-dirs >/dev/null 2>&1; then
@@ -308,7 +315,7 @@ elif test "$MINICC_LD" = ///gcc; then
     echo "fatal: gcc failed to report linker: $GCC" >&2; exit 2
   fi
   # Sometimes it's not found, but still returned nonempty.
-elif test -z "$MINICC_LD"; then
+elif test "$DO_LINK" && test -z "$MINICC_LD"; then
   MINICC_LD="$MYDIR"/tools/ld  # Used by default (like --minild), unless --gccld, --tccld etc. is specified.
 fi
 if test "$DO_LINK"; then
@@ -370,7 +377,6 @@ fi
 if test "$DO_ADD_LIB"; then
   LIBWL=
   if test "$USE_UTCC"; then
-    test "$GCC" && LIBWL=-Wl,  # -Wl, is needed, otherwise GCC will complain that it is not able to find "$LIBFN" (which doesn't exist on the filesystem).
     LIBFN=///tmp///LIBTCC1.a  # Embedded in tools/pts-tcc.
     if test "$DO_SMART" && test "$DO_SMART" != 0; then
       echo "fatal: --utcc doesn't support -msmart" >&2
@@ -481,8 +487,8 @@ if test "$GCC" || test -z "$IS_TCCLD"; then
      --skiparg) SKIPARG=1 ;;
      -o) SKIPARG="$ARG" ;;
      -Wl,) ;;
-     -Wl,-*) LDARGS="$LDARGS$NL${ARG#-Wl,}" ;;  # TODO(pts): Replace comma with $NL.
-     -Wl,*) FILEARGS="$FILEARGS$NL--ldfile=$ARG" ;;
+     -Wl,-*) LDARGS="$LDARGS$NL${ARG#-Wl,}" ;;  # !!! TODO(pts): Replace comma with $NL.
+     -Wl,?*) FILEARGS="$FILEARGS$NL--ldfile=$ARG" ;;
      -s) LDARGS="$LDARGS$NL$ARG" ;;
      -[cSE])
        if test "$DO_LINK"; then echo "fatal: output mode not supported when linking: $ARG" >&2; exit 7; fi
