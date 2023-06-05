@@ -554,6 +554,7 @@ if test "$GCC"; then
        -Wlevel[0-9]*) WARGS="$WARGS$NL-w${ARG#-Wlevel}" ;;
        -Wno-n[0-9]*) WARGS="$WARGS$NL-wcd=${ARG#-Wno-n}" ;;
        -Wn[0-9]*) WARGS="$WARGS$NL-wce=${ARG#-Wn}" ;;
+       -Wstop-after-errors=[0-9]*) WARGS="$WARGS$NL-e${ARG#*=}" ;;  # owcc(1)-specific.
        -H) WARGS="$WARGS$NL-fti" ;;
        -O0) WARGS="$WARGS$NL-od" ;;
        -O1) WARGS="$WARGS$NL-oil" ;;
