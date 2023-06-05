@@ -41,5 +41,9 @@
 #include <sys/syscall.h>
 #include <sys/time.h>
 #include <sys/types.h>
+#include <time.h>
 #include <unistd.h>
 #include <utime.h>
+
+#include <_preincl.h>
+__LIBC_STATIC_ASSERT(stat64_size, sizeof(struct stat64) == 96);

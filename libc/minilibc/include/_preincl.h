@@ -6,6 +6,25 @@
  *
  * `gcc -include _preincl.h' is useful, but pts-tcc doesn't have it. owcc386
  * does it by default for _preincl.h.
+ *
+ * This is the correct way to define a packed struct:
+ *
+ *   #ifdef __WATCOMC__
+ *   _Packed  / * OpenWatcom requires _Packed in front of the struct to take effect. * /
+ *   #endif
+ *   typedef struct S {
+ *     char a;
+ *     __attribute__((__packed__) int b;  / * TinyCC requires it here, GCC and Clang also respect it. * /
+ *     char c;
+ *   } / *__attribute__((__packed__))* / SS;  / * TinyCC ignores this, GCC and Clang respect it. * /
+ *
+ * With the __LIBC_... below:
+ *
+ *   __LIBC_PACKED_STRUCT typedef struct S {
+ *     char a;
+ *     __LIBC_PACKED int b;
+ *     char c;
+ *   } SS;
  */
 #ifndef _PREINCL_H
 #  define _PREINCL_H
@@ -69,7 +88,15 @@
 #    define __LIBC_VAR(type, name) type name
 #    define __LIBC_NORETURN __declspec(aborts)
 #    define __LIBC_NOATTR
+#    define __LIBC_PACKED_STRUCT _Packed
+#    define __LIBC_PACKED
+#    define __GNUC_PREREQ(maj, min) 0
 #  else  /* GCC, Clang, TinyCC. */
+#    if defined(__GNUC__) && defined(__GNUC_MINOR__)
+#      define __GNUC_PREREQ(maj, min) ((__GNUC__ << 16) + __GNUC_MINOR__ >= ((maj) << 16) + (min))
+#    else
+#      define __GNUC_PREREQ(maj, min) 0
+#    endif
 #    ifdef __MINILIBC686__
 #      define __LIBC_FUNC(type, name, args, gcc_attrs) type name args __asm__("mini_" #name) gcc_attrs
 #      define __LIBC_FUNC_RP3(type, name, args, gcc_attrs) type name args __asm__("mini_" #name "_RP3") __attribute__((__regparm__(3))) gcc_attrs
@@ -82,6 +109,8 @@
 #    endif
 #    define __LIBC_NORETURN __attribute__((noreturn, nothrow))
 #    define __LIBC_NOATTR __attribute__(())  /* To prevent an empty `gcc_attrs' argument for `gcc -ansi'. */
+#    define __LIBC_PACKED_STRUCT
+#    define __LIBC_PACKED __attribute__((__packed__))
 #  endif  /* C compiler */
 #  ifdef __MINILIBC686__
 #    define __LIBC_FUNC_MINIRP3(type, name, args, gcc_attrs) __LIBC_FUNC_RP3(type, name, args, gcc_attrs)

@@ -24,31 +24,28 @@
 #define S_ISFIFO(m)	(((m) & S_IFMT) == S_IFIFO)
 #define S_ISSOCK(m)	(((m) & S_IFMT) == S_IFSOCK)
 
-#ifdef __WATCOMC__  /* Must come before the `struct'. */
-_Packed
-#endif
-struct stat64 {
-  __extension__  unsigned long long st_dev;
-  unsigned char  __pad0[4];
-  unsigned long  __st_ino;
-  unsigned int   st_mode;
-  unsigned int   st_nlink;
-  unsigned long  st_uid;
-  unsigned long  st_gid;
-  __extension__  unsigned long long st_rdev;
-  unsigned char  __pad3[4];
-  __extension__  unsigned long long st_size;
-  unsigned long  st_blksize;
+__LIBC_PACKED_STRUCT struct stat64 {
+  __extension__ __LIBC_PACKED unsigned long long st_dev;
+  unsigned char __pad0[4];
+  unsigned long __st_ino;
+  unsigned int  st_mode;
+  unsigned int  st_nlink;
+  unsigned long st_uid;
+  unsigned long st_gid;
+  __extension__ __LIBC_PACKED unsigned long long st_rdev;
+  unsigned char __pad3[4];
+  __extension__ __LIBC_PACKED unsigned long long st_size;
+  unsigned long st_blksize;
   /* Number 512-byte blocks allocated. */
-  __extension__  unsigned long long st_blocks;
-  unsigned long  st_atime;
-  unsigned long  st_atime_nsec;
-  unsigned long  st_mtime;
-  unsigned int   st_mtime_nsec;
-  unsigned long  st_ctime;
-  unsigned long  st_ctime_nsec;
-  __extension__  unsigned long long st_ino;
-} __attribute__((packed));  /* Must come after the struct. */
+  __extension__ __LIBC_PACKED unsigned long long st_blocks;
+  unsigned long st_atime;
+  unsigned long st_atime_nsec;
+  unsigned long st_mtime;
+  unsigned int  st_mtime_nsec;
+  unsigned long st_ctime;
+  unsigned long st_ctime_nsec;
+  __extension__ __LIBC_PACKED unsigned long long st_ino;
+};
 __LIBC_STATIC_ASSERT(sizeof_struct_stat64, sizeof(struct stat64) == 96);
 
 __LIBC_FUNC(int, mkdir, (const char *pathname, mode_t mode), __LIBC_NOATTR);
