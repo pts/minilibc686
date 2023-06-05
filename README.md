@@ -542,5 +542,6 @@ This section is mostly an FYI, it doesn't affter minilibc686 users directly.
   Should it also flush if reading from stdin buffer? No, no flush after
   ungetc(..., stdin) in eglibc. diet libc doesn't flush on fread(3),
   uClibc does.
+* Allow C++ with `g++ -fno-rtii -fno-exceptions', also clang++ like this.
 
 __END__
