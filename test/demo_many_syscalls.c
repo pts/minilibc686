@@ -14,19 +14,57 @@
 #  define MINI_NAME(name) name
 #endif
 
+static __inline__ int sys__llseek_syscall(int fd, int offset_high, int offset_low, loff_t *result, int whence) {
+  return syscall(SYS__llseek, fd, offset_high, offset_low, /*(int)*/result, whence);
+}
+static __inline__ void *sys_mmap2_syscall(void *addr, size_t length, int prot, int flags, int fd, off_t offset) {
+  return (void*)syscall(SYS_mmap2, /*(int)*/addr, length, prot, flags, fd, offset);
+}
+static __inline__ void *sys_brk_syscall(void *addr) {
+  return (void*)syscall(SYS_brk, /*(int)*/addr);
+}
+
+#ifdef __MINILIBC686__
+static __inline__ int sys__llseek_syscalln(int fd, int offset_high, int offset_low, loff_t *result, int whence) {
+  return syscall5(SYS__llseek, fd, offset_high, offset_low, (int)result, whence);
+}
+static __inline__ void *sys_mmap2_syscalln(void *addr, size_t length, int prot, int flags, int fd, off_t offset) {
+  return (void*)syscall6(SYS_mmap2, (int)addr, length, prot, flags, fd, offset);
+}
+static __inline__ void *sys_brk_syscalln(void *addr) {
+  return (void*)syscall1(SYS_brk, (int)addr);
+}
+#else
+#  define sys__llseek_syscalln sys__llseek_syscall
+#  define sys_mmap2_syscalln sys_mmap2_syscall
+#  define sys_brk_syscalln sys_brk_syscall
+#endif
+
+#if 0
 int MINI_NAME(sys__llseek)(int fd, int offset_high, int offset_low, loff_t *result, int whence);
 void *MINI_NAME(sys_mmap2)(void *addr, size_t length, int prot, int flags, int fd, off_t offset);
 void *MINI_NAME(sys_brk)(void *addr);
+#endif
 
-#if !defined(__MINILIBC686__)
-__inline__ int MINI_NAME(sys__llseek)(int fd, int offset_high, int offset_low, loff_t *result, int whence) {
-  return syscall(SYS__llseek, fd, offset_high, offset_low, result, whence);
+#ifdef __MINILIBC686__
+static __inline__ int MINI_NAME(sys__llseek)(int fd, int offset_high, int offset_low, loff_t *result, int whence) {
+  return syscall5(SYS__llseek, fd, offset_high, offset_low, (int)result, whence);
 }
-__inline__ void *MINI_NAME(sys_mmap2)(void *addr, size_t length, int prot, int flags, int fd, off_t offset) {
-  return (void*)syscall(SYS_mmap2, addr, length, prot, flags, fd, offset);
+static __inline__ void *MINI_NAME(sys_mmap2)(void *addr, size_t length, int prot, int flags, int fd, off_t offset) {
+  return (void*)syscall6(SYS_mmap2, (int)addr, length, prot, flags, fd, offset);
 }
-__inline__ void *MINI_NAME(sys_brk)(void *addr) {
-  return (void*)syscall(SYS_brk, addr);
+static __inline__ void *MINI_NAME(sys_brk)(void *addr) {
+  return (void*)syscall1(SYS_brk, (int)addr);
+}
+#else
+static __inline__ int MINI_NAME(sys__llseek)(int fd, int offset_high, int offset_low, loff_t *result, int whence) {
+  return syscall(SYS__llseek, fd, offset_high, offset_low, /*(int)*/result, whence);
+}
+static __inline__ void *MINI_NAME(sys_mmap2)(void *addr, size_t length, int prot, int flags, int fd, off_t offset) {
+  return (void*)syscall(SYS_mmap2, /*(int)*/addr, length, prot, flags, fd, offset);
+}
+static __inline__ void *MINI_NAME(sys_brk)(void *addr) {
+  return (void*)syscall(SYS_brk, /*(int)*/addr);
 }
 #endif
 
@@ -49,11 +87,17 @@ int main(int argc, char **argv) {
     ioctl(0, TCGETS, 0);
     ftruncate(0, 0);
     MINI_NAME(sys__llseek)(0, 0, 0, 0, 0);
+    sys__llseek_syscall(0, 0, 0, 0, 0);
+    sys__llseek_syscalln(0, 0, 0, 0, 0);
     MINI_NAME(sys_mmap2)(0, 0, 0, 0, 0, 0);
+    sys_mmap2_syscalln(0, 0, 0, 0, 0, 0);
+    sys_mmap2_syscall(0, 0, 0, 0, 0, 0);
     mmap(0, 0, 0, 0, 0, 0);
     mremap(0, 0, 0, 0, 0);
     munmap(0, 0);
     MINI_NAME(sys_brk)(0);
+    sys_brk_syscall(0);
+    sys_brk_syscalln(0);
     time(0);
     gettimeofday(&tv, 0);
     chmod("", 0);
