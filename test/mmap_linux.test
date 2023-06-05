@@ -1,0 +1,8 @@
+_nasm_start start_stdio_file_linux.nasm
+_nasm m_flushall_dummy.nasm
+_nasm memcmp.nasm
+_nasm munmap_linux.nasm
+_nasm mremap_linux.nasm
+_nasm2 mmap_linux.nasm
+_mtcc -D__MINILIBC686__ -o test_mmap_linux.prog "$TESTDIR"/test_mmap.c start_stdio_file_linux.o m_flushall_dummy.o memcmp.o mmap_linux.o mremap_linux.o munmap_linux.o
+./test_mmap_linux.prog
