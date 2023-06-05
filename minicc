@@ -602,11 +602,17 @@ if test "$GCC"; then
               echo "fatal: error creating temporary .o file" >&2; rm -f $TMPOFILES; exit 7
             fi
             TMPOFILES="$TMPOFILES$NL$TMPOFILE"
+          elif test "$OUTFILE"; then
+            TMPOFILE="$OUTFILE"
           else
-            TMPOFILE="${TMPOFILE%.*}"."$OEXT"
+            TMPOFILE="${TMPOFILE%.*}"."$OEXT"; TMPOFILE="${TMPOFILE##*/}"  # GCC also strips the dirname.
           fi
-        elif test "$CCMODE" = -S; then TMPOFILE="${TMPOFILE%.*}".s  # !! TODO(pts): Does gcc drop the dirname?
-        else TMPOFILE=-  # For -E.
+        elif test "$CCMODE" = -S; then
+          if test "$OUTFILE"; then TMPOFILE="$OUTFILE"
+          else TMPOFILE="${TMPOFILE%.*}".s; TMPOFILE="${TMPOFILE##*/}"  # GCC also strips the dirname.
+          fi
+        else
+          TMPOFILE=-  # For -E.
         fi
       fi
       CCFILEARGS="$CCFILEARGS$NL--tmpofile=$TMPOFILE$NL--srcfile=${ARG#--*=}"
@@ -639,7 +645,7 @@ if test "$GCC"; then
         $CCARGS "${ARG#--*=}"; EC="$?"
       else
         if test "$IS_WATCOM" && test "${TMPOFILE#.}" != "$TMPOFILE"; then
-          # Otherwise wcc386 would prepend a basename from $WGSRC.
+          # Otherwise wcc386 would prepend a basename of the source file.
           echo "fatal: object filename for minicc wcc386 must not start with a dot: $TMPOFILE" >&2; rm -f $TMPOFILES; exit 7;
         fi
         test "$HAD_V" && echo "info: running compiler:" $CCARGS $FOFLAG"$TMPOFILE" "${ARG#--*=}" >&2  # GCC also writes to stderr.
@@ -653,7 +659,10 @@ if test "$GCC"; then
       fi
       if test "$IS_WATCOM"; then
         if test "$WISOBJ"; then
-          if test "$CCMODE" = -c; then TMPOFILE2="${ARG#--*=}"; TMPOFILE2="${TMPOFILE2%.*}.o"
+          if test "$CCMODE" = -c; then
+            if test "$OUTFILE"; then TMPOFILE2="$OUTFILE" 
+            else TMPOFILE2="${ARG#--*=}"; TMPOFILE2="${TMPOFILE2%.*}.o"; TMPOFILE2="${TMPOFILE2##*/}"
+            fi
           else TMPOFILE2="${TMPOFILE%.*}.o"
           fi
           EFARGS="$MYDIR/tools/omf2elf$NL-h$NL$HAD_$V$NL-o$NL$TMPOFILE2$NL$TMPOFILE"
