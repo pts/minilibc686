@@ -487,8 +487,15 @@ if test "$GCC" || test -z "$IS_TCCLD"; then
      --skiparg) SKIPARG=1 ;;
      -o) SKIPARG="$ARG" ;;
      -Wl,) ;;
-     -Wl,-*) LDARGS="$LDARGS$NL${ARG#-Wl,}" ;;  # !!! TODO(pts): Replace comma with $NL.
-     -Wl,?*) FILEARGS="$FILEARGS$NL--ldfile=$ARG" ;;
+     -Wl,-*)
+       ARG="${ARG#-Wl,}"
+       IFS=,  # Split on comma.
+       for ARG in $ARG; do
+         LDARGS="$LDARGS$NL$ARG"
+       done
+       IFS="$NL"
+       ;;
+     -Wl,?*) FILEARGS="$FILEARGS$NL--ldfile=$ARG" ;;  # This shouldn't happen.
      -s) LDARGS="$LDARGS$NL$ARG" ;;
      -[cSE])
        if test "$DO_LINK"; then echo "fatal: output mode not supported when linking: $ARG" >&2; exit 7; fi
