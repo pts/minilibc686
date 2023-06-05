@@ -18,11 +18,8 @@
 
 bits 32
 cpu 386
-B.code equ 0
 
 global mini_malloc
-global mini_realloc
-global mini_free
 %ifidn __OUTPUT_FORMAT__, bin
 section .text align=1
 section .rodata align=1
@@ -44,9 +41,6 @@ PROT:  ; Symbolic constants.
 MAP:  ; Symbolic constants.
 .PRIVATE: equ 2
 .ANONYMOUS: equ 0x20
-
-MREMAP:  ; Symbolic constants.
-.MAYMOVE: equ 1
 
 ; TODO(pts): If just malloc is needed, provide alternative.
 mini_malloc:  ; void *mini_malloc(size_t size);
@@ -78,50 +72,6 @@ mini_malloc:  ; void *mini_malloc(size_t size);
 		ret
 .error:		xor eax, eax  ; EAX := 0 (== NULL, error).
 		jmp short .done
-
-; TODO(pts): Split to separate .o file, to avoid unnecessary linking.
-mini_realloc:  ; void *mini_realloc(void *ptr, size_t size);
-		mov eax, [esp+4]
-		test eax, eax
-		jnz .existing
-		push dword [esp+8]  ; size.
-		call mini_malloc  ; mini_realloc(NULL, size) is equivalent to It's a no-op to mini_free(NULL).
-		pop edx  ; Value doesn't matter.
-		ret
-.existing:	push ebx
-		push esi
-		lea ebx, [eax-0x10]  ; old_address argument of mremap(2).
-		mov ecx, [ebx]  ; old_size argument of mremap(2).
-		mov edx, [esp+8+8]  ; new_size argument of mremap(2).
-		add edx, byte 0x10
-		push byte MREMAP.MAYMOVE  ; flags argument of mremap(2).
-		pop esi
-		xor eax, eax
-		mov al, 163  ; __NR_mremap.
-		int 0x80  ; Linux i386 syscall.
-		cmp eax, -0x100  ; Error? uClibc has -0x1000 here.
-		ja .error
-		mov [eax], edx  ; Save the new size of the mapping.
-		add eax, byte 0x10
-.done:		pop esi
-		pop ebx
-		ret
-.error:		xor eax, eax  ; EAX := 0 (== NULL, error).
-		jmp short .done
-		
-mini_free:  ; void mini_free(void *ptr);
-		mov eax, [esp+4]
-		test eax, eax
-		jz .done  ; It's a no-op to mini_free(NULL).
-		push ebx
-		lea ebx, [eax-0x10]  ; addr argument of munmap(2).
-		xor eax, eax
-		push byte 91  ; __NR_munmap.
-		pop eax
-		mov ecx, [ebx]  ; length argument of munmap(2).
-		int 0x80  ; TODO(pts): abort() on failure.
-		pop ebx
-.done:		ret
 
 %ifdef CONFIG_PIC  ; Already position-independent code.
 %endif
