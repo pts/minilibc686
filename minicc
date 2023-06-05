@@ -72,7 +72,7 @@ LIBC=
 DO_SMART=
 ANSIFLAG=
 OUTFILE=
-MINICC_LD=  # The default will be "$MYDIR"/tools/ld .
+MINICC_LD=  # The default will be "$MYDIR"/tools/ld, using --minild.
 
 case "$1" in
  "" | -* | *.[aocisS]) ;;  # A flag or a source file name is not a program name.
@@ -111,6 +111,7 @@ for ARG in "$@"; do
    --utcc=*) GCC=; TCC="${ARG#*=}"; USE_UTCC=1 ;;
    --tccld) MINICC_LD="$MYDIR"/tools/pts-tcc ;;
    --ld=* | --tccld=*) MINICC_LD="${ARG#*=}" ;;
+   --minild) MINICC_LD="$MYDIR"/tools/ld ;;
    --gccld) MINICC_LD=///gcc ;;
    --uclibc) LIBC=uclibc ;;
    --dietlibc | --diet | --libc=diet) LIBC=dietlibc ;;
@@ -293,7 +294,7 @@ fi
 if test -z "$DO_LINK"; then
   MINICC_LD=
   IS_TCCLD=
-elif test "$TCC"; then
+elif test "$TCC" && test -z "$MINICC_LD"; then
   MINICC_LD="$TCC"
   IS_TCCLD=1
 elif test "$MINICC_LD" = ///gcc; then
@@ -308,7 +309,7 @@ elif test "$MINICC_LD" = ///gcc; then
   fi
   # Sometimes it's not found, but still returned nonempty.
 elif test -z "$MINICC_LD"; then
-  MINICC_LD="$MYDIR"/tools/ld  # Used by default, unless --gccld, --tccld etc. is specified.
+  MINICC_LD="$MYDIR"/tools/ld  # Used by default (like --minild), unless --gccld, --tccld etc. is specified.
 fi
 if test "$DO_LINK"; then
   if test -z "$MINICC_LD"; then
@@ -457,7 +458,8 @@ if test "$DO_LINK"; then
   test "${OUTFILE#-?}" = "$OUTFILE" || OUTFILE="./$OUTFILE"  # Make it not a command-line flag (-...).
 fi
 
-if test "$GCC"; then
+TMPOFILES=
+if test "$GCC" || test -z "$IS_TCCLD"; then
   # TCC accepts all these flags (and ignores `-m elf_i386' if passed).
   LDARGS="$MINICC_LD$NL-nostdlib$NL-static"
   if test -z "$IS_TCCLD"; then
@@ -466,6 +468,7 @@ if test "$GCC"; then
     LDARGS="$LDARGS$NL-m${NL}elf_i386$NL-z${NL}norelro$NL-e${NL}_start$NL--fatal-warnings"
   fi
   CCARGS="$GCC"
+  test "$TCC" && CCARGS="$TCC"
   test "$DO_LINK" && CCARGS="$CCARGS$NL-c"
   FILEARGS=
   SKIPARG=
@@ -581,7 +584,7 @@ if test "$GCC"; then
     # TODO(pts): Add -m... flag for string optimizations (like in minilibc32).
   fi
 
-  # Now create all the temporary .o files which will be written to $GCC.
+  # Now create all the temporary .o files which will be written to $GCC or $TCC.
   TMPOFILES=
   CCFILEARGS=
   OEXT=o
@@ -627,7 +630,7 @@ if test "$GCC"; then
   done
   # echo "CCARGS: $CCARGS" >&2; echo "LDARGS: $LDARGS" >&2; echo "FILEARGS: $FILEARGS" >&2; echo "CCFILEARGS:$CCFILEARGS" >&2; rm -f $TMPOFILES; exit 7
 
-  # Now run `$GCC -c -o ... ...' for each file in $CCFILEARGS.
+  # Now run `CC -c -o ... ...' for each file in $CCFILEARGS.
   TMPOFILE=
   FOFLAG="-o$NL"
   test "$IS_WATCOM" && FOFLAG=-fo=
@@ -674,7 +677,7 @@ if test "$GCC"; then
           $EFARGS; EC="$?"
           if test "$EC" != 0; then rm -f $TMPOFILES $TMPOFILE2; exit "$EC"; fi
         fi
-      elif test "$DO_LINK"; then
+      elif test "$DO_LINK" && test -z "$TCC"; then
         # GCC adds the .note.GNU-stack ELF section header to the .o file, adding
         # 0x20 bytes unnecessary. We remove it, so ld(1) won't generate the
         # PT_GNU_STACK program header in the executable. To get it, specify
@@ -712,8 +715,10 @@ if test "$DO_SMART" != 0; then  # Smart linking.
   test "$HAD_V" && echo "info: running $WHAT:" $ARGS >&2  # GCC also writes to stderr.
   $ARGS $LIBMINITCC1 2>"$OUTFILE.err"; EC="$?"  # TODO(pts): Write a C program to extract undefined references and display errors in a streaming way. (Some errors like `In ...' need to be buffered.)
   if test "$EC" = 0; then
-    cat "$OUTFILE.err"
-    rm -f "$OUTFILE.err" $TMPOFILES
+    cat "$OUTFILE.err" >&2
+    if test "$DO_STRIP"; then rm -f "$OUTFILE.err"
+    else rm -f "$OUTFILE.err" $TMPOFILES
+    fi
   else
     # The regexps below work for built-in ld of $TCC, ld of $GCC, ld of $GCC (Binutils), gold of $GCC (Binutils). TODO(pts): Make it work with lld (Clang).
     # Examples for GNU ld(1) and GNU gold(1):
@@ -721,12 +726,12 @@ if test "$DO_SMART" != 0; then  # Smart linking.
     # : warning: cannot find entry symbol _start; defaulting to 0000000008048074
     # : warning: entry symbol '_start' exists but is not defined
     UNDEFSYMS="$(awk '{if((((/: undefined reference to [`'\''].+'\''$/&&sub(/^.*?: undefined reference to [`'\'']/, "")||sub(/^tcc: error: undefined symbol '\''/,""))&&sub(/'\''$/,""))||(/: warning: /&&sub(/^.*: warning: (cannot find )?entry symbol '\''?/,"")&&sub(/['\'';].*/,"")&&!/ /))&&!h[$0]){h[$0]=1;printf"%s%s",c,$0;c=","}}' <"$OUTFILE.err")"
-    if test -z "$UNDEFSYMS"; then
-      cat "$OUTFILE.err"
+    if test -z "$UNDEFSYMS"; then  # We can read this only if $EC != 0 (i.e. linker failure).
+      cat "$OUTFILE.err" >&2
       rm -f "$OUTFILE.err" $TMPOFILES
       exit "$EC"  # No undefined symbols found, this means there is another reason for the $TCC failure.
     fi
-    rm -f "$OUTFILE.err" "$OUTFILE.smart.o"
+    rm -f "$OUTFILE.err" "$OUTFILE.smart.o"  # !! Generate temporary filename.
     NASMARCHARG=
     test "$ARCH" = i686 || NASMARCHARG=-DCONFIG_I386
     DEF_ARG=
@@ -746,13 +751,17 @@ if test "$DO_SMART" != 0; then  # Smart linking.
     ARGS="$ARGS$NL$OUTFILE.smart.o$NL$MYDIR/libc/$LIBC/libc.$ARCH.a$NL$LIBMINITCC1"
     test "$HAD_V" && echo "info: running $WHAT again:" $ARGS >&2  # GCC also writes to stderr.
     $ARGS >&2; EC="$?"  # Redirect linker stdout to stderr.
-    rm -f "$OUTFILE.smart.o" $TMPOFILES
+    if test "$DO_STRIP" && test "$EC" = 0; then rm -f "$OUTFILE.smart.o"
+    else rm -f "$OUTFILE.smart.o" $TMPOFILES
+    fi
     test "$EC" = 0 || exit "$EC"
   fi
 else
   test "$HAD_V" && echo "info: running $WHAT:" $ARGS >&2  # GCC also writes to stderr.
   $ARGS >&2; EC="$?"  # Redirect linker stdout to stderr.
-  rm -f $TMPOFILES
+  if test -z "$DO_STRIP" || test "$EC" != 0; then
+    rm -f $TMPOFILES
+  fi
   test "$EC" = 0 || exit "$EC"
 fi
 
@@ -786,7 +795,7 @@ if test "$DO_STRIP"; then
         $EFARGS >&2; EC="$?"
       fi
     fi
-    rm -f -- "$FIX_O_FN"
+    rm -f -- "$FIX_O_FN" $TMPOFILES
     test "$DO_SMART" && rm -f "$OUTFILE.smart.o"
     test "$EC" = 0 || exit "$EC"
   else

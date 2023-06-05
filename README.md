@@ -351,6 +351,7 @@ Here is how to pick the linker:
 * These linkers are supported: GNU ld(1), GNU gold(1), TinyCC linker.
 * By default, *minicc* uses the bundled GNU ld(1) 2.22 linker (`tools/ld`)
   for non-TinyCC compiles, and TinyCC itself for TinyCC compiles.
+* To used the bundled GNU ld(1) linker, specify `--minild`.
 * To use the linker coming with the GCC (or Clang) used, specify `--gccld`.
   This will likely be GNU ld(1) or GNU gold(1) within GNU Binutils installed
   along with GCC.
