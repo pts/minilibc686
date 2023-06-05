@@ -56,7 +56,6 @@ fi
 ARCH=i686
 GCC=gcc
 TCC=
-TCCLD=
 DO_ADD_LIB=1
 DO_ADD_INCLUDEDIR=1
 DO_LINK=1
@@ -73,6 +72,7 @@ LIBC=
 DO_SMART=
 ANSIFLAG=
 OUTFILE=
+MINICC_LD=  # The default will be "$MYDIR"/tools/ld .
 
 case "$1" in
  "" | -* | *.[aocisS]) ;;  # A flag or a source file name is not a program name.
@@ -108,8 +108,9 @@ for ARG in "$@"; do
    --tcc=*) GCC=; TCC="${ARG#*=}" ;;
    --utcc) GCC=; TCC="$MYDIR"/tools/pts-tcc; USE_UTCC=1 ;;
    --utcc=*) GCC=; TCC="${ARG#*=}"; USE_UTCC=1 ;;
-   --tccld) TCCLD="$MYDIR"/tools/pts-tcc ;;
-   --tccld=*) TCCLD="${ARG#*=}" ;;
+   --tccld) MINICC_LD="$MYDIR"/tools/pts-tcc ;;
+   --ld=* | --tccld=*) MINICC_LD="${ARG#*=}" ;;
+   --gccld) MINICC_LD=///gcc ;;
    --uclibc) LIBC=uclibc ;;
    --dietlibc | --diet | --libc=diet) LIBC=dietlibc ;;
    --eglibc) LIBC=eglibc ;;
@@ -151,12 +152,29 @@ if test "$SKIPARG"; then
   exit 1
 fi
 
-if test "$TCC" && test "$TCCLD"; then  # $TCCLD should work with $GCC
-  if test "$TCCLD" != "$TCC"; then
+GCCBASE="/${GCC##*/}"
+IS_WATCOM=
+test "$GCC" && test "${GCCBASE#*[-/._]wcc386*}" != "$GCCBASE" && IS_WATCOM=1
+if test "$MINICC_LD" = ///gcc; then
+  if test "$TCC"; then  # TODO(pts): Allow this.
+    echo "fatal: conflicting combination of --tcc=... and --gccld" >&2
+    exit 1
+  elif test "$IS_WATCOM"; then
+    echo "fatal: conflicting combination of --watcom and --gccld" >&2
+    exit 1
+  elif test -z "$GCC"; then
+    echo "fatal: -gcc=... needed by --gccld" >&2
+    exit 1
+  fi
+fi
+LDBASE="/${MINICC_LD##*/}"
+case "$LDBASE" in *[-/._]tcc*) IS_TCCLD=1 ;; *) IS_TCCLD= ;; esac
+if test "$TCC" && test "$IS_TCCLD"; then  # $TCCLD should work with $GCC
+  if test "$MINICC_LD" != "$TCC"; then
     echo "fatal: conflicting combination of --tcc=... and --tccld=..." >&2
     exit 1
   fi
-  TCCLD=
+  MINICC_LD=  # Don't do $PATH lookup below.
 fi
 if test "$TCC" && test "$GCC"; then
   echo "fatal: conflicting compilers, both --tcc=... and --gcc=..." >&2
@@ -166,7 +184,7 @@ if test -z "$TCC" && test -z "$GCC"; then
   echo "fatal: missing compiler, neither --tcc=... nor --gcc=..." >&2
   exit 1
 fi
-if test "$USE_UTCC" && test "$DO_ADD_LIB" && test -z "$TCCLD" && test "${TCC%/pts-tcc}" = "$TCC"; then
+if test "$USE_UTCC" && test "$DO_ADD_LIB" && test -z "$IS_TCCLD" && test "${TCC%/pts-tcc}" = "$TCC"; then
   # That's because ///tmp///LIBTCC1.a is embedded in the tools/pts-tcc executable.
   # TODO(pts): Extract it.
   echo "fatal: currently uClibc with --utcc needs pts-tcc; try --uclibc instead" >&2
@@ -186,7 +204,7 @@ case "$GCC" in "") ;; */*) ;; *)  # Resolve $GCC on $OLD_PATH. Useful for --noen
   esac
   test "$IS_BOXED" && GCC="$LOOKUP" && GCC_BARG="-B${GCC%/*}"  # Don't mess with $GCC paths unless --noenv or --boxed is specified.
 esac
-case "$TCC" in "") ;; */*) ;; *)  # Resolve $TCCLD on $OLD_PATH. Useful for --noenv and --boxed.
+case "$TCC" in "") ;; */*) ;; *)  # Resolve $TCC on $OLD_PATH. Useful for --noenv and --boxed.
   LOOKUP="$(PATH="$OLD_PATH"; type "$TCC" 2>/dev/null)"
   case "$LOOKUP" in
    *\ is\ /*)  LOOKUP="/${LOOKUP#*\ is\ /}"  ;;
@@ -195,18 +213,16 @@ case "$TCC" in "") ;; */*) ;; *)  # Resolve $TCCLD on $OLD_PATH. Useful for --no
   esac
   TCC="$LOOKUP"
 esac
-case "$TCCLD" in "") ;; */*) ;; *)  # Resolve $TCCLD on $OLD_PATH. Useful for --noenv and --boxed.
-  LOOKUP="$(PATH="$OLD_PATH"; type "$TCCLD" 2>/dev/null)"
+case "$MINICC_LD" in "") ;; */*) ;; *)  # Resolve $MINICC_LD on $OLD_PATH. Useful for --noenv and --boxed.
+  LOOKUP="$(PATH="$OLD_PATH"; type "$MINICC_LD" 2>/dev/null)"
   case "$LOOKUP" in
    *\ is\ /*)  LOOKUP="/${LOOKUP#*\ is\ /}"  ;;
    *\ for\ /*) LOOKUP="/${LOOKUP#*\ for\ /}" ;;  # ksh(1).
    *) echo "fatal: --tccld command not found: $GCC" >&2; exit 6 ;;
   esac
-  TCCLD="$LOOKUP"
+  MINICC_LD="$LOOKUP"
 esac
 unset OLD_PATH
-
-GCCBASE="/${GCC##*/}"
 
 test "$DO_ADD_LIB" || DO_SMART=0
 
@@ -266,39 +282,36 @@ else
   test "$GCC" && SFLAG="-s"
 fi
 
-IS_WATCOM=
-test "$GCC" && test "${GCCBASE#*[-/._]wcc386*}" != "$GCCBASE" && IS_WATCOM=1
-
-MINICC_TCCLD=
+#if ! "$GCC" "$GCC_BARG" -print-search-dirs >/dev/null 2>&1; then  # Also works with Clang.
+#  echo "fatal: gcc not working: $GCC" >&2; exit 2
+#fi
 if test -z "$DO_LINK"; then
   MINICC_LD=
-elif test "$GCC"; then
-  if test "$TCCLD"; then
-    MINICC_LD="$TCCLD"
-    MINICC_TCCLD=1
-    if ! "$GCC" "$GCC_BARG" -print-search-dirs >/dev/null 2>&1; then  # Also works with Clang.
-      echo "fatal: gcc not working: $GCC" >&2
-      exit 2
-    fi
-  elif test "$IS_WATCOM"; then
-    MINICC_LD=/usr/bin/ld  # !!! TODO(pts): Use bundled linker.
-  else
-    MINICC_LD="$(exec "$GCC" "$GCC_BARG" -print-prog-name=ld 2>/dev/null)"  # Also works with Clang.
-    if test -z "$MINICC_LD"; then
-      if ! "$GCC" "$GCC_BARG" -print-search-dirs >/dev/null 2>&1; then
-        echo "fatal: gcc not working: $GCC" >&2; exit 2
-      fi
-      echo "fatal: linker not found by gcc: $GCC" >&2; exit 2
-    elif test "${MINICC_LD#*$NL}" != "$MINICC_LD"; then  # Multiline report, e.g. from wcc386.
-      echo "fatal: gcc failed to report linker: $GCC" >&2; exit 2
-    elif test ! -f "$MINICC_LD"; then #test "${MINICC_LD#*/}" != "$MINICC_LD" && test ! -f "$MINICC_LD"
-      echo "fatal: linker reported by gcc not found: $GCC" >&2; exit 2
-    fi
-    # Sometimes it's not found, but still returned nonempty.
-  fi
-else
+  IS_TCCLD=
+elif test "$TCC"; then
   MINICC_LD="$TCC"
-  MINICC_TCCLD=1
+  IS_TCCLD=1
+elif test "$MINICC_LD" = ///gcc; then
+  MINICC_LD="$(exec "$GCC" "$GCC_BARG" -print-prog-name=ld 2>/dev/null)"  # Also works with Clang.
+  if test -z "$MINICC_LD"; then
+    if ! "$GCC" "$GCC_BARG" -print-search-dirs >/dev/null 2>&1; then
+      echo "fatal: gcc not working: $GCC" >&2; exit 2
+    fi
+    echo "fatal: linker not found by gcc: $GCC" >&2; exit 2
+  elif test "${MINICC_LD#*$NL}" != "$MINICC_LD"; then  # Multiline report, e.g. from wcc386.
+    echo "fatal: gcc failed to report linker: $GCC" >&2; exit 2
+  fi
+  # Sometimes it's not found, but still returned nonempty.
+elif test -z "$MINICC_LD"; then
+  MINICC_LD="$MYDIR"/tools/ld  # Used by default, unless --gccld, --tccld etc. is specified.
+fi
+if test "$DO_LINK"; then
+  if test -z "$MINICC_LD"; then
+    echo "fatal: linker not found" >&2; exit 2
+  fi
+  if test "${MINICC_LD#*/}" != "$MINICC_LD" && test ! -f "$MINICC_LD"; then
+    echo "fatal: linker program file not found: $MINICC_LD" >&2; exit 2
+  fi
 fi
 
 test "$GCC_BARG" = -pipe && GCC_BARG=
@@ -386,7 +399,7 @@ if test "$DO_ADD_LIB"; then
     fi
   fi
   test "$DO_SMART" || DO_SMART=0  # Fallback.
-  if test "$TCC" || test "$TCCLD"; then  # TCC needs an explicit start*.o in the command line -- or does it?
+  if test "$TCC" || test "$IS_TCCLD"; then  # TCC needs an explicit start*.o in the command line -- or does it?
     OBJFN="$MYDIR/helper_lib/need_start.o"
     if ! test -f "$OBJFN"; then
       # !! TODO(pts): Let build.sh take care of this.
@@ -441,8 +454,8 @@ fi
 
 if test "$GCC"; then
   # TCC accepts all these flags (and ignores `-m elf_i386' if passed).
-  LDARGS="${MINICC_LD:-ld}$NL-nostdlib$NL-static"
-  if test -z "$MINICC_TCCLD"; then
+  LDARGS="$MINICC_LD$NL-nostdlib$NL-static"
+  if test -z "$IS_TCCLD"; then
     # `-e _start' is needed, because without it GNU gold(1) wouldn't fail to link if _start is not defined.
     # `--fatal-warnings' is needed, because without it GNU ld(1) would happily create an executable without _start.
     LDARGS="$LDARGS$NL-m${NL}elf_i386$NL-z${NL}norelro$NL-e${NL}_start$NL--fatal-warnings"
@@ -682,7 +695,7 @@ if test "$DO_SMART" != 0; then  # Smart linking.
     cat "$OUTFILE.err"
     rm -f "$OUTFILE.err" $TMPOFILES
   else
-    # The regexps below work for $TCCLD, ld of $GCC, ld of $GCC (Binutils), gold of $GCC (Binutils). TODO(pts): Make it work with lld (Clang).
+    # The regexps below work for built-in ld of $TCC, ld of $GCC, ld of $GCC (Binutils), gold of $GCC (Binutils). TODO(pts): Make it work with lld (Clang).
     # Examples for GNU ld(1) and GNU gold(1):
     # : warning: cannot find entry symbol '_start'
     # : warning: cannot find entry symbol _start; defaulting to 0000000008048074
@@ -710,7 +723,6 @@ if test "$DO_SMART" != 0; then  # Smart linking.
     fi
     # /usr/bin/objdump -d "$OUTFILE.smart.o"
     # /usr/bin/nm "$OUTFILE.smart.o"
-    # ---
     ARGS="$ARGS$NL$OUTFILE.smart.o$NL$MYDIR/libc/$LIBC/libc.$ARCH.a$NL$LIBMINITCC1"
     test "$HAD_V" && echo "info: running $WHAT again:" $ARGS >&2  # GCC also writes to stderr.
     $ARGS >&2; EC="$?"  # Redirect linker stdout to stderr.
@@ -726,7 +738,7 @@ fi
 
 if test "$DO_STRIP"; then
   FIX_O_FN=
-  if ! test "$MINICC_TCCLD"; then
+  if ! test "$IS_TCCLD"; then
     FIX_O_FN="$("$MYDIR"/tools/mktmpf "$TMPDIR"/elfxfix.@@@@@@.o)"  # Already creates the file.
     if test -z "$FIX_O_FN"; then
       echo "fatal: error creating temporary .o file" >&2; exit 7
