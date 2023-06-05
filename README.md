@@ -121,6 +121,13 @@ The following components are included:
   convenient to use it with *minicc* (see below). It is also the default C
   compiler for *minicc*: to build a program, run `./minicc -o prog prog.c`.
 
+* tools/omf2elf (with C source included): A tool to convert an i386 OMF
+  .obj object file to an i386 ELF relocatable .o object file. This is
+  useful, because the OpenWatcom C compiler creates the former, and the
+  linkers (TinyCC, GNU ld(1) and GNU gold(1)) understand the latter, not the
+  former. The *minicc* compiler frontend automatically runs this tool when
+  using the OpenWatcom C compiler.
+
 * minicc: A C compiler frontend to build small, statically linked ELF-32
   executables. Running minicc is the recommended way to build your programs
   using minilibc686. By default, these executables link against minilibc686,
