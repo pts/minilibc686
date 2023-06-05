@@ -272,6 +272,10 @@ if test "$NEED_LIBC"; then
         exit 4
       fi
     fi
+    if test "$DO_ADD_LIB" && test "$IS_TCCLD" && test -f "$MYDIR/libc/$LIBC/libc.notccld"; then  # Example: EGLIBC.
+      echo "fatal: $(cat "$MYDIR/libc/$LIBC/libc.notccld")" >&2
+      exit 4
+    fi
   fi
 fi
 

@@ -517,6 +517,17 @@ This section is mostly an FYI, it doesn't affter minilibc686 users directly.
   * See `tcc_common_lib_bug.sh` for TCC failing to link in symbol
     mini___M_init_isatty even though it's referenced as extern and common.
   * It displayes `... defined twice` error, but it doesn't fail.
+  * It requires some undefined symbols even if unused. For example,
+    helper_lib/need_uclibc_main.o has `extern __uClibc_main', but
+    __uClibc_main is not used in any relocation. GNU ld(1) and GNU gold(1)
+    do work without it, but pts-tcc fails with an undefined symbol.
+    GNU ld(1) still includes the .o file, but in the end it ignores
+    undefined references which are not used in any relocations. This is the
+    behavior pts-tcc should copy.
+  * When linking against libc/eglibc-2.19/libc.i686.a, the generated
+    executable segfaults at startup, even when symbol __gcc_personality_v0
+    is defined. Is this bug because of buggy weak symbol handling?
+    minilibc686, uClibc and diet libc don't segfault.
 
 # TODOs
 
