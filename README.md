@@ -363,6 +363,10 @@ Here is how to pick the libc:
 * To use the bundled diet libc built for i386, specify `--diet -march=i386`.
   This will also make the specified C source files be compiled for i386.
 * To use the bundled eglibc built for i686, specify `--eglibc`.
+  Please note that you have to download
+  libc/[eglibc-2.19.sfx.7z](https://github.com/pts/minilibc686/releases/download/eglibc-2.91-v1/eglibc-2.19.sfx.7z)
+  separately first, and move the file to the `libc/` directory next to
+  `minicc`. (*minicc* will extract it automatically.)
 * (Most users want `--uclibc` instead of this.)
   To use the bundled uClibc 0.9.30.1 (built for `-march=i686`) with the
   bundled TinyCC compiler, specify `--utcc`. Instead of the full uClibc .h
