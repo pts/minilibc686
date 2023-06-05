@@ -117,6 +117,10 @@ The following components are included:
   minilibc686 #include files can be used (they have the proper #ifdef()s).
   To build a program, run `./minicc --utcc -o prog prog.c'.
 
+* tools/wcc386: OpenWatcom C compiler (released on 2023-03-04). It's
+  convenient to use it with *minicc* (see below). It is also the default C
+  compiler for *minicc*: to build a program, run `./minicc -o prog prog.c`.
+
 * minicc: A C compiler frontend to build small, statically linked ELF-32
   executables. Running minicc is the recommended way to build your programs
   using minilibc686. By default, these executables link against minilibc686,
@@ -294,29 +298,46 @@ they add some boilerplate which cannot be disabled.)
 
 ## minicc
 
-The *minicc* compiler frontend is a drop-in replacement for `gcc`, `clang`
-or `tcc` to build small, statically linked ELF-32 executables for Linux
-i386. Running *minicc is* the recommended way to build your programs using
-minilibc686. By default, these executables link against minilibc686, but
-with command-line flags (e.g. the usual `-nostdlib` and `-nostdinc`), you
-can specify any libc. It runs the compiler and the linker with many
-size-optimization flags, and it removes most unnecessary stuff from the
-final executable.
+The *minicc* compiler frontend is a drop-in replacement for `gcc`, `clang`,
+`owcc` (OpenWatcom C compiler) or `tcc` to build small, statically linked
+ELF-32 executables for Linux i386. Running *minicc* is the recommended way
+to build your programs using minilibc686. By default, these executables link
+against minilibc686, but with command-line flags (e.g. the usual `-nostdlib`
+and `-nostdinc`), you can specify any libc. It runs the compiler and the
+linker with many size-optimization flags, and it removes most unnecessary
+stuff from the final executable. *minicc* accepts the command-line flags in
+GCC syntax (and from that it generates OpenWatcom *wcc386* syntax and others
+as needed).
 
 Here is how to pick the compiler:
 
+* These compilers are supported: GCC, Clang, OpenWatcom C compiler,
+  TinyCC (TCC).
+* To use the bundled OpenWatcom C compiler (released on 2023-03-04),
+  specify `--watcom`.
+* To use the bundled TinyCC 0.9.26 compiler (`tools/pts-tcc`), specify
+  `--tcc`.
 * By default, *minicc* uses the system GCC. Run it with `--gcc=...` to
   specify a specific GCC command, e.g. `--gcc=gcc-4.8`.
 * To use the system Clang, run it with `--gcc=clang`. You can also specify
   a specific Clang command, e.g. `--gcc=clang-6.0`.
-* To use the the bundled TinyCC 0.9.26 compiler (`tools/pts-tcc`), specify
-  `--tcc`.
+* To use a specific version of the OpenWatcom C compiler, run it with
+  `--gcc=wcc386`. You can also specify a pathname to the compiler. Only
+  the *wcc386* executable file will be used from the OpenWatcom
+  distribution.
 
 Here is how to pick the linker:
 
-* By default, *minicc* uses the linker coming with the compiler used.
+* These linkers are supported: GNU ld(1), GNU gold(1), TinyCC linker.
+* By default, *minicc* uses the bundled GNU ld(1) 2.22 linker (`tools/ld`)
+  for non-TinyCC compiles, and TinyCC itself for TinyCC compiles.
+* To use the linker coming with the GCC (or Clang) used, specify `--gccld`.
+  This will likely be GNU ld(1) or GNU gold(1) within GNU Binutils installed
+  along with GCC.
 * To use the linker of the bundled TinyCC compiler (`tools/pts-tcc`),
   specify `--tccld`.
+* To use the linker of another TinyCC compiler, run it with `--tccld=...`,
+  specifying the TinyCC command.
 
 Here is how to pick the libc:
 
@@ -331,8 +352,9 @@ Here is how to pick the libc:
 * To use the bundled eglibc built for i686, specify `--eglibc`.
 * (Most users want `--uclibc` instead of this.)
   To use the bundled uClibc 0.9.30.1 (built for `-march=i686`) with the
-  bundled TinyCC compiler, specify `--utcc`.The full uClibc .h files are
-  not provided, but the minilibc686 .h files work as a subset.
+  bundled TinyCC compiler, specify `--utcc`. Instead of the full uClibc .h
+  files, the minilibc686 .h files will be used. By doing so, a subset of
+  uClibc will be avaialble.
 * (Most users want `--uclibc` instead of this.)
   To use the bundled uClibc 0.9.30.1 (built for `-march=i686`) with the GCC
   or Clang compiler and the linker of the bundled TinyCC compiler, specify
@@ -344,9 +366,10 @@ Here is how to disable some default *minicc* functionality:
   the GCC default. Please note that by specifying `-Os`, you will get worse
   size optimization than the default *minicc*.
 * Disable executable stripping: specify any `-g...` flag, e.g. `-g0` for the
-  GCC default.
+  GCC default. If you specify `-g0 -s`, the executable will be stripped just
+  like `gcc -s`, rather than full stripping done by *minicc*.
 * Disable C compiler warnings enabled by *minicc*: specify any `-W...` flag,
-  e..g `-Wno-no` for the GCC default.
+  e.g. `-Wno-no` for the GCC default.
 * Disable linking against minilibc686: specify `-nostdlib -nostdinc`, and
   specify any libc (with `-I...` for the #include directory and `....a` for
   the static library).
@@ -424,7 +447,7 @@ This section is mostly an FYI, it doesn't affter minilibc686 users directly.
 * GNU gold(1) 2.22 is mostly correct.
 
   * It adds empty PT_LOAD phdr (for .rodata).
-  * It creates PT_GNU_STACK only if `-z execstack' or `-z noexecstack' was
+  * It creates PT_GNU_STACK only if `-z execstack` or `-z noexecstack` was
     specified, or if any of the .o files contain a declaration -- but .o
     files generated by GNU as(1) compiled from .s generated by GCC do
     contain it.
