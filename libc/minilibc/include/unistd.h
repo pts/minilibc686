@@ -32,6 +32,7 @@ __LIBC_FUNC(int, ftruncate, (int fd, off_t length), __LIBC_NOATTR);  /* 32-bit l
 __LIBC_FUNC(int, symlink, (const char *target, const char *linkpath), __LIBC_NOATTR);
 __LIBC_FUNC(uid_t, geteuid, (void), __LIBC_NOATTR);
 __LIBC_FUNC(pid_t, getpid, (void), __LIBC_NOATTR);
+__LIBC_FUNC(pid_t, fork, (void), __LIBC_NOATTR);
 
 #ifdef __MINILIBC686__
 #  ifdef __WATCOMC__
@@ -39,15 +40,24 @@ __LIBC_FUNC(pid_t, getpid, (void), __LIBC_NOATTR);
     long syscall1(long nr, long arg1);
     long syscall2(long nr, long arg1, long arg2);
     long syscall3(long nr, long arg1, long arg2, long arg3);
-#    pragma aux (__minirp1) syscall0
-#    pragma aux (__minirp1) syscall1
-#    pragma aux (__minirp1) syscall2
-#    pragma aux (__minirp1) syscall3
+    long syscall4(long nr, long arg1, long arg2, long arg3, long arg4);
+    long syscall5(long nr, long arg1, long arg2, long arg3, long arg4, long arg5);
+    long syscall6(long nr, long arg1, long arg2, long arg3, long arg4, long arg5, long arg6);
+#    pragma aux (__minirp1) syscall0 "_mini_syscall3_RP1"
+#    pragma aux (__minirp1) syscall1 "_mini_syscall3_RP1"
+#    pragma aux (__minirp1) syscall2 "_mini_syscall3_RP1"
+#    pragma aux (__minirp1) syscall3 "_mini_syscall3_RP1"  /* mini_syscall3_RP1 works for 0..3 arguments. */
+#    pragma aux (__minirp1) syscall4 "_mini_syscall6_RP1"
+#    pragma aux (__minirp1) syscall5 "_mini_syscall6_RP1"
+#    pragma aux (__minirp1) syscall6 "_mini_syscall6_RP1"  /* mini_syscall6_RP1 works for 0..6 arguments. */
 #  else  /* __WATCOMC__ */
     long syscall0(long nr) __asm__("mini_syscall3_RP1") __attribute__((__regparm__(1)));
     long syscall1(long nr, long arg1) __asm__("mini_syscall3_RP1") __attribute__((__regparm__(1)));
     long syscall2(long nr, long arg1, long arg2) __asm__("mini_syscall3_RP1") __attribute__((__regparm__(1)));
     long syscall3(long nr, long arg1, long arg2, long arg3) __asm__("mini_syscall3_RP1") __attribute__((__regparm__(1)));
+    long syscall4(long nr, long arg1, long arg2, long arg3, long arg4) __asm__("mini_syscall6_RP1") __attribute__((__regparm__(1)));
+    long syscall5(long nr, long arg1, long arg2, long arg3, long arg4, long arg5) __asm__("mini_syscall6_RP1") __attribute__((__regparm__(1)));
+    long syscall6(long nr, long arg1, long arg2, long arg3, long arg4, long arg5, long arg6) __asm__("mini_syscall6_RP1") __attribute__((__regparm__(1)));
     /*long syscall_upto_3(long nr, ...) __asm__("mini_syscall3_RP1") __attribute__((__regparm__(1)));*/  /* Unfortunately this doesn't work, __regparm__(1) is ignored. */
 #  endif  /* else __WATCOMC__ */
 #endif  /* __MINILIBC686__ */

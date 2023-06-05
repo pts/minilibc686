@@ -78,10 +78,14 @@ bits 32
       %1:
       %if __NRM_%1>255
         mov eax, __NRM_%1
+        %if 1  ; !!! $+2-syscall3_EAX>128
         jmp strict short syscall3_EAX  ; `short' to make sure that the jump is 2 bytes. This lets us define about 50 different syscalls in this file.
+        %endif
       %else
         mov al, __NRM_%1
+        %if 1  ; !!! $+2-syscall3_AL>128
         jmp strict short syscall3_AL  ; `short' to make sure that the jump is 2 bytes. This lets us define about 50 different syscalls in this file.
+        %endif
       %endif
     %endif
     %rotate 1
@@ -187,9 +191,9 @@ _syscall getpid, 20
 _syscall geteuid, 49
 _syscall ioctl, 54
 _syscall ftruncate, 93
-_syscall _llseek, 140  ; Use mini_lseek64(...) instead, it's more convenient from C code.
-_syscall mmap2, 192
-_syscall mremap, 163
+_syscall sys__llseek, 140  ; Use mini_lseek64(...) instead, it's more convenient from C code.
+;_syscall sys_mmap2, 192  ; Cannot define here, it has more than 3 arguments.
+;_syscall mremap, 163  ; Cannot define here, it has more than 3 arguments.
 _syscall munmap, 91
 ;_syscall brk, 45  ; Conflicts with brk(3).
 _syscall sys_brk, 45
@@ -293,7 +297,7 @@ mini_syscall3_AL:  ; Useful from assembly language.
 ; It can EAX, EDX and ECX as scratch.
 ;
 ; It returns result (or -1 as error) in EAX.
-		movzx eax, al  ; number.
+		movzx eax, al  ; Syscall number.
 global mini_syscall3_RP1
 mini_syscall3_RP1:  ; long mini_syscall3_RP1(long nr, long arg1, long arg2, long arg3) __attribute__((__regparm__(1)));
 syscall3_EAX:
