@@ -83,6 +83,7 @@ case "$1" in
    diet) LIBC=dietlibc ;;  # Same as: --dietlibc
    xstatic) LIBC=uclibc  ;;  # Same as: --uclibc. Please note that this is not perfect, some .a and .h files are missing from pts-xstatic.
    *tcc*) TCC="$1"; GCC= ;;
+   owcc) GCC="$MYDIR/tools/wcc386"; TCC= ;;
    *) GCC="$1"; TCC= ;;
   esac
   shift
