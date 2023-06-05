@@ -1,2 +1,4 @@
-_utcc_nasm2 malloc_mmap_linux.nasm -o test_malloc_mmap_linux.prog "$TESTDIR"/test_malloc.c
+_nasm2 realloc_mmap_linux.nasm
+_nasm2 free_mmap_linux.nasm
+_utcc_nasm2 malloc_mmap_linux.nasm -o test_malloc_mmap_linux.prog "$TESTDIR"/test_malloc.c realloc_mmap_linux.o free_mmap_linux.o
 ./test_malloc_mmap_linux.prog
