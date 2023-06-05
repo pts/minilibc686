@@ -29,6 +29,38 @@
 #define M_SQRT2l 1.4142135623730950488016887242096981L
 #define M_SQRT1_2l 0.7071067811865475244008443621048490L
 
+#if __GNUC_PREREQ(3, 3)
+#  define HUGE_VAL  (__builtin_huge_val())
+#  define HUGE_VALF (__builtin_huge_valf())
+#  define HUGE_VALL (__builtin_huge_vall())
+#  define INFINITY  (__builtin_huge_valf())
+#elif __GNUC_PREREQ(2, 96)
+#  define HUGE_VAL  (__extension__ (double)0x1.0p2047L)  /* L to avoid -Woverflow warning. */
+#  define HUGE_VALF (__extension__ (float)0x1.0p255)
+#  define HUGE_VALL ((long double) HUGE_VAL)
+#  define INFINITY  (__extension__ (float)0x1.0p255)
+#elif defined(__GNUC__) || defined(__TINYC__)
+#  define HUGE_VAL  (__extension__ ((union { unsigned long long __ll; double __d; }) { 0x7ff0000000000000ULL }).__d)
+#  define HUGE_VALF (__extension__ ((union { unsigned __i;            float __f; })  { 0x7f800000U }).__f)
+#  define HUGE_VALL ((long double) HUGE_VAL)
+#  define INFINITY  (__extension__ ((union { unsigned __i;            float __f; })  { 0x7f800000U }).__f)  /* Same as HUFE_VALF. */
+#else  /* E.g. __WATCOMC__ */
+  extern float __float_huge_val, __float_infinity;
+  extern double __double_huge_val;
+#  define HUGE_VAL  __double_huge_val
+#  define HUGE_VALF __float_huge_val
+#  define HUGE_VALL ((long double) HUGE_VAL)
+#  define INFINITY  __float_infinity
+#endif
+#if 0 && defined(__i386__)  /* Works in __GNUC__, __TINYC__ and __WATCOMC__, but it is a bit inefficient. */
+static __inline__ double __get_huge_val(void) { static union { unsigned long long __ll; double __d; } __u = { 0x7ff0000000000000ULL }; return __u.__d; }
+static __inline__ float __get_huge_valf(void) { static union { unsigned __i; float __f; } __u = { 0x7f800000U }; return __u.__f; }
+#  define HUGE_VAL  (__get_huge_val())
+#  define HUGE_VALF (__get_huge_valf))
+#  define HUGE_VALL ((long double) HUGE_VAL)
+#  define INFINITY  (__get_huge_valf())
+#endif
+
 __LIBC_FUNC(double, log, (double x), __LIBC_NOATTR);
 #if defined(__UCLIBC__) || defined(__GLIBC__)
   __LIBC_FUNC(int, __isnanf, (float x), __LIBC_NOATTR);
