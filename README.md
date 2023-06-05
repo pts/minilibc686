@@ -464,6 +464,11 @@ you can run `./test.sh` without having to install anything.
   (apart from `/bin/sh` in the very beginning of the build), because all
   build tools are included in the repository.
 
+## License
+
+Assembly source files `src/*.nasm` are under the MIT license. Everything
+else is under GPL v2 (GNU General Public License, Version 2).
+
 ## Linker problems
 
 This section is mostly an FYI, it doesn't affter minilibc686 users directly.
