@@ -46,10 +46,11 @@ int main(int argc, char **argv) {
     lseek(0, 0, 0);
     (void)!getpid();
     geteuid();
-    ioctl(0, 0, 0);
+    ioctl(0, TCGETS, 0);
     ftruncate(0, 0);
     MINI_NAME(sys__llseek)(0, 0, 0, 0, 0);
     MINI_NAME(sys_mmap2)(0, 0, 0, 0, 0, 0);
+    mmap(0, 0, 0, 0, 0, 0);
     mremap(0, 0, 0, 0, 0);
     munmap(0, 0);
     MINI_NAME(sys_brk)(0);
