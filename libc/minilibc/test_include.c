@@ -28,6 +28,7 @@
 #include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <features.h>
 #include <inttypes.h>
 #include <math.h>
 #include <stdarg.h>
