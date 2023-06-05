@@ -645,7 +645,12 @@ if test "$GCC"; then
         test "$HAD_V" && echo "info: running compiler:" $CCARGS $FOFLAG"$TMPOFILE" "${ARG#--*=}" >&2  # GCC also writes to stderr.
         $CCARGS $FOFLAG"$TMPOFILE" "${ARG#--*=}"; EC="$?"
       fi
-      if test "$EC" != 0; then rm -f $TMPOFILES; exit "$EC"; fi
+      if test "$EC" != 0; then
+        if test "$WISOBJ" && test "$CCMODE"; then
+          TMPOFILE2="${ARG#--*=}"; TMPOFILE2="${TMPOFILE2%.*}.o"; rm -f "$TMPOFILE2"
+        fi
+        rm -f $TMPOFILES "$TMPOFILE"; exit "$EC"
+      fi
       if test "$IS_WATCOM"; then
         if test "$WISOBJ"; then
           if test "$CCMODE" = -c; then TMPOFILE2="${ARG#--*=}"; TMPOFILE2="${TMPOFILE2%.*}.o"
