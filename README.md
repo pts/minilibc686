@@ -79,7 +79,7 @@ How is this possible?
 Try it on Linux i386 or Linux amd64 (without the leading `$`):
 
 ```
-$ ./minicc --tcc -W -Wall -o demo demo_c_hello.c
+$ ./minicc -o demo demo_c_hello.c
 $ ./demo
 Hello, World!
 ```
@@ -298,27 +298,40 @@ they add some boilerplate which cannot be disabled.)
 
 ## minicc
 
-The *minicc* compiler frontend is a drop-in replacement for `gcc`, `clang`,
-`owcc` (OpenWatcom C compiler) or `tcc` to build small, statically linked
-ELF-32 executables for Linux i386. Running *minicc* is the recommended way
-to build your programs using minilibc686. By default, these executables link
-against minilibc686, but with command-line flags (e.g. the usual `-nostdlib`
-and `-nostdinc`), you can specify any libc. It runs the compiler and the
-linker with many size-optimization flags, and it removes most unnecessary
-stuff from the final executable. *minicc* accepts the command-line flags in
-GCC syntax (and from that it generates OpenWatcom *wcc386* syntax and others
-as needed).
+The *minicc* compiler frontend is a batteries-included Linux command-line
+tool to build small, statically linked Linux i386 programs from C source. It
+is part of the minilibc686 distribution (just run it as `./minicc` from the
+minilib686 directory). It is bundled with several C compilers, linkers and
+libcs. Use it like this: `./minlibc -o prog prog.c`. Try it:
+
+Try *minicc* on Linux i386 or Linux amd64 (without the leading `$`):
+
+```
+$ ./minicc -o demo demo_c_hello.c
+$ ./demo
+Hello, World!
+```
+
+*minicc* drop-in replacement for `gcc`, `clang`, `owcc` (OpenWatcom C
+compiler) or `tcc` to build small, statically linked ELF-32 executables for
+Linux i386. Running *minicc* is the recommended way to build your programs
+using minilibc686. By default, these executables link against minilibc686,
+but with command-line flags (e.g. the usual `-nostdlib` and `-nostdinc`),
+you can specify any libc. It runs the compiler and the linker with many
+size-optimization flags, and it removes most unnecessary stuff from the
+final executable. *minicc* accepts the command-line flags in GCC syntax (and
+from that it generates OpenWatcom *wcc386* syntax and others as needed).
 
 Here is how to pick the compiler:
 
 * These compilers are supported: GCC, Clang, OpenWatcom C compiler,
   TinyCC (TCC).
-* To use the bundled OpenWatcom C compiler (released on 2023-03-04),
-  specify `--watcom`.
+* By default, *minicc* uses the the bundled OpenWatcom C compiler (released
+  on 2023-03-04). You can specify it explicitly as `--watcom`.
 * To use the bundled TinyCC 0.9.26 compiler (`tools/pts-tcc`), specify
   `--tcc`.
-* By default, *minicc* uses the system GCC. Run it with `--gcc=...` to
-  specify a specific GCC command, e.g. `--gcc=gcc-4.8`.
+* To use the system GCC, specify `--gcc` for *minicc*. Use `--gcc=...` to
+  run it with a specific GCC command, e.g. `--gcc=gcc-4.8`.
 * To use the system Clang, run it with `--gcc=clang`. You can also specify
   a specific Clang command, e.g. `--gcc=clang-6.0`.
 * To use a specific version of the OpenWatcom C compiler, run it with

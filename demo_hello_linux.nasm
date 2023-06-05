@@ -14,6 +14,11 @@
 ;
 ;     ./demo_hello_linux.prog
 ;
+; To build a bit-by-bit identical executable program with GCC 7.5.0 from C
+; source, run this:
+;
+;   ./minicc --noenv --gcc=gcc-7.5.0 demo_c_hello.c
+;
 
 ;%define CONFIG_NO_RW_SECTIONS
 ;%define ALIGN_RODATA 4
