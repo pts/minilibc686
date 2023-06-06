@@ -25,6 +25,16 @@
  *     __LIBC_PACKED int b;
  *     char c;
  *   } SS;
+ *
+ * FYI GCC has these predefined macros:
+ *
+ *  * The default is -std=gnu89.
+ *  * Specifying -pedantic doesn't change the predefined macros.
+ *  * -D__STDC__=1 unless -traditional is specified.
+ *  * -D__STRICT_ANSI__=1 if -ansi (same as -std=c89) or -std=c.. is specified.
+ *  * -D__STDC_VERSION__=199901L if -std=c99 or -std=gnu99 is specified (please note that inlining behavior has also changed).
+ *  * -D__STDC_VERSION__=201112L if -std=c11 or -std=gnu11 is specified.
+ *  * -D__STDC_VERSION__=201710L if -std=c17 or -std=gnu17 is specified.
  */
 #ifndef _PREINCL_H
 #  define _PREINCL_H
