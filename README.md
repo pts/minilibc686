@@ -543,5 +543,6 @@ This section is mostly an FYI, it doesn't affter minilibc686 users directly.
   ungetc(..., stdin) in eglibc. diet libc doesn't flush on fread(3),
   uClibc does.
 * Allow C++ with `g++ -fno-rtii -fno-exceptions', also clang++ like this.
+* Make strtod and strtol set errno if errno is used by the program.
 
 __END__
