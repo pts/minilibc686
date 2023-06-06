@@ -30,8 +30,12 @@ __LIBC_FUNC(int, unlink, (const char *pathname), __LIBC_NOATTR);
 __LIBC_FUNC(int, isatty, (int fd), __LIBC_NOATTR);
 __LIBC_FUNC(int, ftruncate, (int fd, off_t length), __LIBC_NOATTR);  /* 32-bit length. */
 __LIBC_FUNC(int, symlink, (const char *target, const char *linkpath), __LIBC_NOATTR);
+__LIBC_FUNC(uid_t, getuid, (void), __LIBC_NOATTR);
 __LIBC_FUNC(uid_t, geteuid, (void), __LIBC_NOATTR);
+__LIBC_FUNC(gid_t, getgid, (void), __LIBC_NOATTR);
+__LIBC_FUNC(gid_t, getegid, (void), __LIBC_NOATTR);
 __LIBC_FUNC(pid_t, getpid, (void), __LIBC_NOATTR);
+__LIBC_FUNC(pid_t, getppid, (void), __LIBC_NOATTR);
 __LIBC_FUNC(pid_t, fork, (void), __LIBC_NOATTR);
 __LIBC_FUNC(void *, sys_brk, (void *addr), __LIBC_NOATTR);
 #ifdef __MINILIBC686__

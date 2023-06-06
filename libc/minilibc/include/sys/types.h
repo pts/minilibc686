@@ -11,5 +11,6 @@ typedef unsigned mode_t;
 typedef int ptrdiff_t;
 typedef unsigned uid_t;
 typedef int pid_t;
+typedef int gid_t;
 
 #endif  /* _SYS_TYPES_H */
