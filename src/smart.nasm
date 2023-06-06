@@ -78,13 +78,17 @@ bits 32
       %1:
       %if __NRM_%1>255
         mov eax, __NRM_%1
-        %if 1  ; !!! $+2-syscall3_EAX>128
-        jmp strict short syscall3_EAX  ; `short' to make sure that the jump is 2 bytes. This lets us define about 50 different syscalls in this file.
+        %if $+2-syscall3_EAX>128  ; This check doesn't work in Yasm.
+          jmp strict near syscall3_EAX ; !! TODO(pts): Optimize this further.
+        %else
+          jmp strict short syscall3_EAX  ; `short' to make sure that the jump is 2 bytes. This lets us define about 50 different syscalls in this file.
         %endif
       %else
         mov al, __NRM_%1
-        %if 1  ; !!! $+2-syscall3_AL>128
-        jmp strict short syscall3_AL  ; `short' to make sure that the jump is 2 bytes. This lets us define about 50 different syscalls in this file.
+        %if $+2-syscall3_AL>128  ; This check doesn't work in Yasm.
+          jmp strict near syscall3_AL ; !! TODO(pts): Optimize this further.
+        %else
+          jmp strict short syscall3_AL  ; `short' to make sure that the jump is 2 bytes. This lets us define about 50 different syscalls in this file.
         %endif
       %endif
     %endif
@@ -187,8 +191,12 @@ _syscall close, 6
 _syscall creat, 8
 _syscall unlink, 10
 _syscall lseek, 19
-_syscall getpid, 20
+_syscall getuid, 24
 _syscall geteuid, 49
+_syscall getgid, 47
+_syscall getegid, 50
+_syscall getpid, 20
+_syscall getppid, 64
 _syscall ioctl, 54
 _syscall ftruncate, 93
 _syscall sys__llseek, 140  ; Use mini_lseek64(...) instead, it's more convenient from C code.

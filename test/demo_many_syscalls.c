@@ -67,7 +67,11 @@ int main(int argc, char **argv) {
     unlink("");
     lseek(0, 0, 0);
     (void)!getpid();
+    (void)!getppid();
+    getuid();
     geteuid();
+    getgid();
+    getegid();
     ioctl(0, TCGETS, 0);
     ftruncate(0, 0);
     sys__llseek(0, 0, 0, 0, 0);
