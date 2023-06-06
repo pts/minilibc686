@@ -205,7 +205,7 @@ _need_aliases ALIASES  ; Must be called after _alias.
 _syscall fork, 2
 _syscall read, 3
 _syscall write, 4
-_syscall open, 5
+_syscall open, open2, open3, 5
 _syscall close, 6
 _syscall creat, 8
 _syscall remove, unlink, 10
