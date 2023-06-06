@@ -65,9 +65,29 @@ __LIBC_FUNC(void *, sys_brk, (void *addr), __LIBC_NOATTR);
     long syscall3(long nr, long arg1, long arg2, long arg3) __asm__("mini_syscall3_RP1") __attribute__((__regparm__(1)));
     long syscall4(long nr, long arg1, long arg2, long arg3, long arg4) __asm__("mini_syscall6_RP1") __attribute__((__regparm__(1)));
     long syscall5(long nr, long arg1, long arg2, long arg3, long arg4, long arg5) __asm__("mini_syscall6_RP1") __attribute__((__regparm__(1)));
-    long syscall6(long nr, long arg1, long arg2, long arg3, long arg4, long arg5, long arg6) __asm__("mini_syscall6_RP1") __attribute__((__regparm__(1)));
+    long syscall6(long nr, long arg1, long arg2, long arg3, long arg4, long arg5, long arg6) __asm__("mini_syscall6_RP1") __attribute__((__regparm__(1)));  /* It's imposible for a Linux i386 syscall to receive more than 6 arguments. */
     /*long syscall_upto_3(long nr, ...) __asm__("mini_syscall3_RP1") __attribute__((__regparm__(1)));*/  /* Unfortunately this doesn't work, __regparm__(1) is ignored. */
 #  endif  /* else __WATCOMC__ */
+#  if defined(CONFIG_MACRO_SYSCALL) && !defined(__cplusplus) && (defined(__WATCOMC__) || defined(__TINYC__) || (defined(__GNUC__) && (!defined(__STRICT_ANSI__) || __STDC_VERSION__ >= 199901L)))
+     /* Using this (-DCONFIG_MACRO_SYSCALL) sometimes make the code longer,
+      * sometimes shorter. The call site is 3 bytes longer for
+      * small-numbered syscalls (because `mov eax, ...' is 5 bytes, and
+      * `push byte ...' is 2 bytes), but if all syscalls have 0..3
+      * arguments, then doesn't depend on mini_syscall(...),, but only
+      * mini_syscall3_RP1(...), saving 0x27 bytes.
+      *
+      * Calling it with more than 6 arguments after `nr' is undefined.
+      */
+#    define __LIBC_SYSCALL0_CAST(nr) syscall0((nr))
+#    define __LIBC_SYSCALL1_CAST(nr, a1) syscall1((nr), (int)(a1))  /* Limitation: it can't pass `double' (never needed) or `long long' arguments, but `...' can. */
+#    define __LIBC_SYSCALL2_CAST(nr, a1, a2) syscall2((nr), (int)(a1), (int)(a2))
+#    define __LIBC_SYSCALL3_CAST(nr, a1, a2, a3) syscall3((nr), (int)(a1), (int)(a2), (int)(a3))
+#    define __LIBC_SYSCALL4_CAST(nr, a1, a2, a3, a4) syscall4((nr), (int)(a1), (int)(a2), (int)(a3), (int)(a4))
+#    define __LIBC_SYSCALL5_CAST(nr, a1, a2, a3, a4, a5) syscall5((nr), (int)(a1), (int)(a2), (int)(a3), (int)(a4), (int)(a5))
+#    define __LIBC_SYSCALL6_CAST(nr, a1, a2, a3, a4, a5, a6) syscall6((nr), (int)(a1), (int)(a2), (int)(a3), (int)(a4), (int)(a5), (int)(a6))
+#    define __LIBC_SYSCALL_ARG12(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, ...) a12
+#    define syscall(...) __LIBC_SYSCALL_ARG12(dummy, ## __VA_ARGS__, syscall9, syscall8, syscall7, __LIBC_SYSCALL6_CAST, __LIBC_SYSCALL5_CAST, __LIBC_SYSCALL4_CAST, __LIBC_SYSCALL3_CAST, __LIBC_SYSCALL2_CAST, __LIBC_SYSCALL1_CAST, __LIBC_SYSCALL0_CAST, __syscall_bad_noarg)(__VA_ARGS__)
+#  endif  /* CONFIG_MACRO_SYSCALL */
 #endif  /* __MINILIBC686__ */
 
 #endif  /* _UNISTD_H */

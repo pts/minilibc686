@@ -1,0 +1,6 @@
+_nasm_start start_stdio_file_linux.nasm
+_nasm m_flushall_dummy.nasm
+_nasm memcmp.nasm
+_nasm syscall6_linux.nasm
+_mtcc -DCONFIG_MACRO_SYSCALL -o test_mmap_syscall_linux.prog "$TESTDIR"/test_mmap_syscall_linux.c start_stdio_file_linux.o m_flushall_dummy.o memcmp.o syscall6_linux.o
+./test_mmap_syscall_linux.prog
