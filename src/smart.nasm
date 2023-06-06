@@ -57,8 +57,25 @@ bits 32
 %endmacro
 
 %define SYSCALLS
-%macro _syscall 2
-  %ifdef __NEED_mini_%1
+
+; _syscall <name>[, <name2>...], <number>
+%macro _syscall 2-*
+  %rep %0-2
+    %ifdef __NEED_mini_%1
+      %define __NEED_mini_%2
+    %endif
+    %rotate 1
+  %endrep
+  %define LASTSYSNAME mini_%1  ; The last syscall name.
+  ;
+  %ifdef __NEED_mini_%1  ; Since we've just defined the other __NEED_()s, this will be true if any of them is needed.
+    %rotate 2
+    %rep %0-2
+      %xdefine __ALIAS_mini_%1 LASTSYSNAME
+      %xdefine ALIASES ALIASES,mini_%1
+      %rotate 1
+    %endrep
+    ;
     %define __NRM_mini_%1 %2  ; Save syscall number.
     %xdefine SYSCALLS SYSCALLS,mini_%1  ; Remember syscall name for _emit_syscalls.
     %if %2>255
@@ -129,7 +146,7 @@ bits 32
 
 _define_needs UNDEFSYMS  ; Must be called before _need and _alias.
 ;
-_alias mini_remove, mini_unlink
+;_alias mini_remove, mini_unlink  ; `remove' defined below.
 %define __NEED_mini_exit
 ; The dependencies below must be complete for each system call defined in
 ; src/start_stdio_medium_linux.nasm (read(2), write(2), open(2), close(2),
@@ -191,7 +208,7 @@ _syscall write, 4
 _syscall open, 5
 _syscall close, 6
 _syscall creat, 8
-_syscall unlink, 10
+_syscall remove, unlink, 10
 _syscall lseek, 19
 _syscall getuid,  199  ; Actually, it's __NR_getuid32, for 32-bit UIDs.
 _syscall geteuid, 201  ; Actually, it's __NR_geteuid32, for 32-bit UIDs.
