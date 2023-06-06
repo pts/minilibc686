@@ -191,10 +191,10 @@ _syscall close, 6
 _syscall creat, 8
 _syscall unlink, 10
 _syscall lseek, 19
-_syscall getuid, 24
-_syscall geteuid, 49
-_syscall getgid, 47
-_syscall getegid, 50
+_syscall getuid,  199  ; Actually, it's __NR_getuid32, for 32-bit UIDs.
+_syscall geteuid, 201  ; Actually, it's __NR_geteuid32, for 32-bit UIDs.
+_syscall getgid,  200  ; Actually, it's __NR_getgid32, for 32-bit GIDs.
+_syscall getegid, 202  ; Actually, it's __NR_getegid32, for 32-bit GIDs.
 _syscall getpid, 20
 _syscall getppid, 64
 _syscall ioctl, 54
