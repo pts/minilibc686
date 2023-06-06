@@ -122,6 +122,7 @@ for ARG in "$@"; do
    -march=i[36]86) ARCH="${ARG#*=}" ;;
    -march=*) echo "fatal: unsupported minicc arch flag: $ARG" >&2; exit 1 ;;
    -msmart) DO_SMART=1 ;;  # Enable smart linking.
+   -mforce-smart) DO_SMART=2 ;;  # Force smart linking even for self-contained programs without undefined symbols. Most users need -msmart instead, that's faster.
    -mno-smart) DO_SMART=0 ;;
    -Wno-no) WFLAGS= ;;  # Disable warnings. GCC and Clang accept and ignore it.
    -W*) ARGS="$ARGS$NL$ARG"; WFLAGS= ;;
@@ -729,7 +730,7 @@ if test "$DO_SMART" != 0; then  # Smart linking.
   test "$TCC" && LIBMINITCC1="$MYDIR/helper_lib/libminitcc1.a"
   test "$HAD_V" && echo "info: running $WHAT:" $ARGS >&2  # GCC also writes to stderr.
   $ARGS $LIBMINITCC1 2>"$OUTFILE.err"; EC="$?"  # TODO(pts): Write a C program to extract undefined references and display errors in a streaming way. (Some errors like `In ...' need to be buffered.)
-  if test "$EC" = 0; then
+  if test "$EC" = 0 && test "$DO_SMART" != 2; then
     cat "$OUTFILE.err" >&2
     if test "$DO_STRIP"; then rm -f "$OUTFILE.err"
     else rm -f "$OUTFILE.err" $TMPOFILES
@@ -741,7 +742,7 @@ if test "$DO_SMART" != 0; then  # Smart linking.
     # : warning: cannot find entry symbol _start; defaulting to 0000000008048074
     # : warning: entry symbol '_start' exists but is not defined
     UNDEFSYMS="$(awk '{if((((/: undefined reference to [`'\''].+'\''$/&&sub(/^.*?: undefined reference to [`'\'']/, "")||sub(/^tcc: error: undefined symbol '\''/,""))&&sub(/'\''$/,""))||(/: warning: /&&sub(/^.*: warning: (cannot find )?entry symbol '\''?/,"")&&sub(/['\'';].*/,"")&&!/ /))&&!h[$0]){h[$0]=1;printf"%s%s",c,$0;c=","}}' <"$OUTFILE.err")"
-    if test -z "$UNDEFSYMS"; then  # We can read this only if $EC != 0 (i.e. linker failure).
+    if test -z "$UNDEFSYMS" && test "$EC" != 0; then  # We can read this only if $EC != 0 (i.e. linker failure).
       cat "$OUTFILE.err" >&2
       rm -f "$OUTFILE.err" $TMPOFILES
       exit "$EC"  # No undefined symbols found, this means there is another reason for the $TCC failure.
@@ -796,7 +797,7 @@ if test "$DO_STRIP"; then
     $EFARGS >&2; EC="$?"
     if test "$EC" != 0; then
       rm -f -- "$FIX_O_FN"
-      test "$DO_SMART" && rm -f "$OUTFILE.smart.o"
+      test "$DO_SMART" != 0 && rm -f "$OUTFILE.smart.o"
       exit "$EC"
     fi
     if test -s "$FIX_O_FN"; then  # elfxfix has written to it.
@@ -815,6 +816,6 @@ if test "$DO_STRIP"; then
     $EFARGS >&2; EC="$?"
     rm -f -- $TMPOFILES
   fi
-  test "$DO_SMART" && rm -f "$OUTFILE.smart.o"
+  test "$DO_SMART" != 0 && rm -f "$OUTFILE.smart.o"
   test "$EC" = 0 || exit "$EC"
 fi
