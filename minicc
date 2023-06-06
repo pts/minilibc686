@@ -765,7 +765,7 @@ if test "$DO_SMART" != 0; then  # Smart linking.
     ARGS="$ARGS$NL$OUTFILE.smart.o$NL$MYDIR/libc/$LIBC/libc.$ARCH.a$NL$LIBMINITCC1"
     test "$HAD_V" && echo "info: running $WHAT again:" $ARGS >&2  # GCC also writes to stderr.
     $ARGS >&2; EC="$?"  # Redirect linker stdout to stderr.
-    if test "$DO_STRIP" && test "$EC" = 0; then rm -f "$OUTFILE.smart.o"
+    if test "$DO_STRIP" && test "$EC" = 0; then :
     else rm -f "$OUTFILE.smart.o" $TMPOFILES
     fi
     test "$EC" = 0 || exit "$EC"
@@ -810,9 +810,10 @@ if test "$DO_STRIP"; then
       fi
     fi
     rm -f -- "$FIX_O_FN" $TMPOFILES
-    test "$DO_SMART" && rm -f "$OUTFILE.smart.o"
-    test "$EC" = 0 || exit "$EC"
   else
-    $EFARGS || exit "$?"
+    $EFARGS >&2; EC="$?"
+    rm -f -- $TMPOFILES
   fi
+  test "$DO_SMART" && rm -f "$OUTFILE.smart.o"
+  test "$EC" = 0 || exit "$EC"
 fi
