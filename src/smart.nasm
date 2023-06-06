@@ -10,8 +10,6 @@
 ; implementations of some of UNDEFSYMS symbols. It's OK if it doesn't define
 ; all of them: the regular libc.$ARCH.a will be consulted.
 ;
-; !! TODO(pts): Make strtod and strtol set errno if errno is used by the program.
-;
 
 ; --- NASM magic infrastructure.
 
@@ -71,24 +69,29 @@ bits 32
   %endif
 %endmacro
 
+;%define LAST_SC3EAX ...  ; Will be defined by syscall3_EAX.
+;%define LAST_SC3AL  ...  ; Will be defined by syscall3_AL.
 %macro _emit_syscalls 0-*
+  ; TODO(pts): Put some extra syscalls in front of syscall3_EAX, to save 3 bytes on the first `jmp strict near'. This is complicated.
   %rep %0
     %ifnidn %1_, _  ; `%ifnidn $1,' doesn't work, so we append `_'.
       global %1
       %1:
       %if __NRM_%1>255
         mov eax, __NRM_%1
-        %if $+2-syscall3_EAX>128  ; This check doesn't work in Yasm.
-          jmp strict near syscall3_EAX ; !! TODO(pts): Optimize this further.
+        %if $+2-($$+LAST_SC3EAX)>0x80  ; This check doesn't work in Yasm.
+          %assign LAST_SC3EAX $-$$  ; Subsequent jumps can jump here, and be 2 bytes only, rather than 5 bytes.
+          jmp strict near syscall3_EAX
         %else
-          jmp strict short syscall3_EAX  ; `short' to make sure that the jump is 2 bytes. This lets us define about 50 different syscalls in this file.
+          jmp strict short $$+LAST_SC3EAX
         %endif
       %else
         mov al, __NRM_%1
-        %if $+2-syscall3_AL>128  ; This check doesn't work in Yasm.
-          jmp strict near syscall3_AL ; !! TODO(pts): Optimize this further.
+        %if $+2-($$+LAST_SC3AL)>0x80  ; This check doesn't work in Yasm.
+          %assign LAST_SC3AL $-$$  ; Subsequent jumps can jump here, and be 2 bytes only, rather than 5 bytes.
+          jmp strict near syscall3_AL
         %else
-          jmp strict short syscall3_AL  ; `short' to make sure that the jump is 2 bytes. This lets us define about 50 different syscalls in this file.
+          jmp strict short $$+LAST_SC3AL  ; `short' to make sure that the jump is 2 bytes. This lets us define about 50 different syscalls in this file.
         %endif
       %endif
     %endif
@@ -182,7 +185,6 @@ _need_aliases ALIASES  ; Must be called after _alias.
 ; We have to put _syscall definitions right here, just above `_need
 ; mini_syscall3_AL, ...', because syscalls need mini_syscall3_AL.
 ;_syscall _exit, 1  ; Defined explicitly above.
-; !! TODO(pts): What if it will not fit to `jmp strict short'? Automate via %assign.
 _syscall fork, 2
 _syscall read, 3
 _syscall write, 4
@@ -296,6 +298,7 @@ exit_AL:	mov al, 1  ; __NR_exit.
 syscall3_AL:
 global mini_syscall3_AL
 mini_syscall3_AL:  ; Useful from assembly language.
+%assign LAST_SC3AL $-$$
 ; Calls syscall(number, arg1, arg2, arg3).
 ;
 ; It takes the syscall number from AL (8 bits only!), arg1 (optional) from
@@ -309,6 +312,7 @@ mini_syscall3_AL:  ; Useful from assembly language.
 global mini_syscall3_RP1
 mini_syscall3_RP1:  ; long mini_syscall3_RP1(long nr, long arg1, long arg2, long arg3) __attribute__((__regparm__(1)));
 syscall3_EAX:
+%assign LAST_SC3EAX $-$$
 		push ebx  ; Save it, it's not a scratch register.
 		mov ebx, [esp+8]  ; arg1.
 		mov ecx, [esp+0xc]  ; arg2.
