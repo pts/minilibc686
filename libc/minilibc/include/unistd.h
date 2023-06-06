@@ -33,6 +33,14 @@ __LIBC_FUNC(int, symlink, (const char *target, const char *linkpath), __LIBC_NOA
 __LIBC_FUNC(uid_t, geteuid, (void), __LIBC_NOATTR);
 __LIBC_FUNC(pid_t, getpid, (void), __LIBC_NOATTR);
 __LIBC_FUNC(pid_t, fork, (void), __LIBC_NOATTR);
+__LIBC_FUNC(void *, sys_brk, (void *addr), __LIBC_NOATTR);
+#ifdef __MINILIBC686__
+  /* Returns 0 on success, anything else (and sets errno) on error. The
+   * implementation quite shorter than lseek64(...).
+   */
+  __LIBC_FUNC_RP3(int, lseek64_set, (int fd, off64_t offset), __LIBC_NOATTR);
+  __LIBC_FUNC(int, sys__llseek, (int fd, int offset_high, int offset_low, loff_t *result, int whence), __LIBC_NOATTR);  /* System call. Use lseek(...) or lseek64(...) above instead. */
+#endif  /* __MINILIBC686__ */
 
 #ifdef __MINILIBC686__
 #  ifdef __WATCOMC__
@@ -60,14 +68,6 @@ __LIBC_FUNC(pid_t, fork, (void), __LIBC_NOATTR);
     long syscall6(long nr, long arg1, long arg2, long arg3, long arg4, long arg5, long arg6) __asm__("mini_syscall6_RP1") __attribute__((__regparm__(1)));
     /*long syscall_upto_3(long nr, ...) __asm__("mini_syscall3_RP1") __attribute__((__regparm__(1)));*/  /* Unfortunately this doesn't work, __regparm__(1) is ignored. */
 #  endif  /* else __WATCOMC__ */
-#endif  /* __MINILIBC686__ */
-
-#ifdef __MINILIBC686__
-  /* Returns 0 on success, anything else (and sets errno) on error. The
-   * implementation quite shorter than lseek64(...).
-   */
-  __LIBC_FUNC_RP3(int, lseek64_set, (int fd, off64_t offset), __LIBC_NOATTR);
-  __LIBC_FUNC(void *, sys_brk, (void *addr), __LIBC_NOATTR);
 #endif  /* __MINILIBC686__ */
 
 #endif  /* _UNISTD_H */
