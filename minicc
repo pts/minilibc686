@@ -555,7 +555,8 @@ if test "$GCC" || test -z "$IS_TCCLD"; then
        -std=c99) WARGS="$WARGS$NL-za99" ;;
        -std=ow) WARGS="$WARGS$NL-ze" ;;
        -pedantic) ;;
-       -m32 | -static | -fno-pic | -fcommon | -fno-unwind-tables | -fno-asynchronous-unwind-tables | -fno-builtin | -fno-ident | -ffreestanding | -fno-lto | -nostdinc | -falign-functions=* | -falign-jumps=* | -falign-loops=* | -mpreferred-stack-boundary=* | -g0 | -Wno-no) ;;
+       -m32 | -static | -fno-pic | -fcommon | -fno-unwind-tables | -fno-asynchronous-unwind-tables | -fno-builtin | -fno-ident | -ffreestanding | -fno-lto | -nostdinc | -falign-functions=* | -falign-jumps=* | -falign-loops=* | -mpreferred-stack-boundary=*) ;;
+       -fno-unroll-loops | -fmerge-all-constants | -fno-math-errno | -g0 | -Wno-no) ;;
        -U_FORTIFY_SOURCE) ;;
        -fno-stack-protector) WSFLAG=-s ;;
        -fsigned-char | -fno-unsigned-char) WJFLAG=-j ;;
