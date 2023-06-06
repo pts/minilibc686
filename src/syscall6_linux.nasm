@@ -1,7 +1,9 @@
 ;
 ; written by pts@fazekas.hu at Mon Jun  5 23:50:24 CEST 2023
 ; Compile to i386 ELF .o object: nasm -O999999999 -w+orphan-labels -f elf -o syscall6_linux.o syscall6_linux.nasm
-
+;
+; Code size: 0x25 bytes.
+;
 ; Uses: %ifdef CONFIG_PIC
 ;
 
