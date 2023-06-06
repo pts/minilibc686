@@ -544,5 +544,6 @@ This section is mostly an FYI, it doesn't affter minilibc686 users directly.
   uClibc does.
 * Allow C++ with `g++ -fno-rtii -fno-exceptions', also clang++ like this.
 * Make strtod and strtol set errno if errno is used by the program.
+* Allow *.nasm source files in minicc; also make it work with --tcc.
 
 __END__
