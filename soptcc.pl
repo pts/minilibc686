@@ -973,6 +973,7 @@ sub as2nasm($$$$$$$$$$) {
     } elsif (!length($_)) {
     } elsif ($_ eq "#APP" or $_ eq "#NO_APP") {  # Ignore, preprocessor enable/disabled.
       # https://stackoverflow.com/a/73317832
+    } elsif (m@^# (\d+) @) {  # Ignore, line number information.
     } else {
       ++$errc;
       print STDERR "error: instruction or directive expected ($lc): $_\n";
