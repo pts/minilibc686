@@ -37,22 +37,22 @@ section .bss align=1
 %endif
 
 section .text
-
 mini_fopen:
 		push edi
 		push esi
 		push ebx
 		mov eax, [esp+0x14]
 		mov dl, [eax]
-		cmp dl, 0x77
+		cmp dl, 'w'
 		sete bl
-		cmp dl, 0x61
+		cmp dl, 'a'
 		sete cl
 		or bl, cl
 		je .14
-		cmp dl, 0x61
-		mov eax, 0x641
-		mov edx, 0x241
+		cmp dl, 'a'
+		; We may add O_LARGEFILE for opening files >= 2 GiB, but in a different stdio implementation. Without O_LARGEFILE, open(2) fails with EOVERFLOW.
+		mov eax, 3101o  ; EAX := O_TRUNC | O_CREAT | O_WRONLY | O_APPEND.
+		mov edx, 1101o  ; EAX := O_TRUNC | O_CREAT | O_WRONLY. 
 %ifdef CONFIG_I386
 		je .after_cmovne
 		mov eax, edx
@@ -61,14 +61,14 @@ mini_fopen:
 		cmovne eax, edx
 %endif		
 		jmp short .2
-.14:		xor eax, eax
+.14:		xor eax, eax  ; EAX := O_RDONLY.
 .2:		mov edi, mini___M_global_file_bufs
 		mov esi, mini___M_global_files
 .3:		cmp esi, mini___M_global_files_end
 		je .9
 		cmp byte [esi+0x14], 0x0
 		jne .4
-		push dword 0x1b6
+		push dword 666o
 		push eax
 		push dword [esp+0x18]
 		call mini_open
