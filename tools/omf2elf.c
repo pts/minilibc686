@@ -165,6 +165,8 @@ typedef struct {
 #define FIXUPP386 0x9d
 #define LEDATA 0xa0  /* Emitted by NASM. */
 #define LEDATA386 0xa1  /* Emitted by OpenWatcom. */
+#define LIDATA 0xa2
+#define LIDATA386 0xa3  /* Emitted by OpenWatcom for long runs of 0. */
 #define LPUBDEF 0xb6
 #define LPUBDEF386 0xb7
 #define LEXTDEF 0xb4
@@ -369,6 +371,10 @@ int main(int argc, char **argv) {
   uint32_t fix_ofs, fix_disp, fix_fd, fix_td;
   uint32_t data_ofs;
   uint32_t elf_file_ofs;
+  uint32_t lidata_repeat_count;
+  unsigned lidata_block_count;
+  unsigned char lidata_block_size;
+  unsigned char *lidata_leoutp;
   unsigned rel_count;
   unsigned shdr_count;
   uint32_t allnames_size;
@@ -512,9 +518,9 @@ int main(int argc, char **argv) {
       return 10;
     }
     rdata = data;
-    if (rhd[0] == LEDATA || rhd[0] == LEDATA386) {
+    if (rhd[0] == LEDATA || rhd[0] == LEDATA386 || rhd[0] == LIDATA || rhd[0] == LIDATA386) {
       if (is_pass2 && (argc = flush_ledata(fdo, elfoname)) != 0) return argc;
-      rdata = unflushed_ledata_data;
+      if (rhd[0] == LEDATA || rhd[0] == LEDATA386) rdata = unflushed_ledata_data;
     }
     up = rdata;
     if (fread(rdata, 1, rec_size, f) != rec_size) {
@@ -729,24 +735,28 @@ int main(int argc, char **argv) {
       }
     } else if (rhd[0] == LINNUM386) {
       /* Created by `owcc -gwatcom'. Ignore. */
-    } else if (rhd[0] == LEDATA || rhd[0] == LEDATA386) {
+    } else if (rhd[0] == LEDATA || rhd[0] == LEDATA386 || rhd[0] == LIDATA || rhd[0] == LIDATA386) {
       if (up == rdata_end) {
        ledata_too_short:
         fprintf(stderr, "fatal: ledata too short in OMF: %s\n", omfname);
         return 35;
       }
-      seg_idx = *up++;  /* TODO(pts): When is this 2 bytes? Probably if there are more than 255 segments. But that never happens for us. */
+      seg_idx = *up++;
+      if (seg_idx >= 0x80) {  /* This never happens in practice, the OMF files have just 5 segments (see in section_infos). */
+        fprintf(stderr, "fatal: seg_idx too large in ledata in OMF: %s\n", omfname);
+        return 36;
+      }
       if (seg_idx == 0 || seg_idx > seg_count) {
         fprintf(stderr, "fatal: bad ledata segment index in OMF: %s\n", omfname);
         return 36;
       }
       for (u = 0, section = sections; u < SECTION_COUNT && section->seg_idx != seg_idx; ++u, ++section) {}
       if (u == SECTION_COUNT) continue;  /* This happens for debug segments etc. */
-      if (rhd[0] == LEDATA) {
+      if (rhd[0] == LEDATA || rhd[0] == LIDATA) {
         if (up + 2 > rdata_end) goto ledata_too_short;
         data_ofs = g16(up);
         up += 2;
-      } else {  /* LEDATA386 */
+      } else {  /* LEDATA386 or LIDATA386. */
         if (up + 4 > rdata_end) goto ledata_too_short;
         data_ofs = g32(up);
         up += 4;
@@ -762,17 +772,72 @@ int main(int argc, char **argv) {
         fprintf(stderr, "fatal: assert: ledata in ghost segment in OMF: %s: %s\n", section->info->seg_name, omfname);
         return 79;
       }
-      seg_size = rdata_end - up;
-      if (verbose_level > 1) fprintf(stderr, "info: ledata segment=%s data_ofs=0x%x data_size=0x%x\n", section->info->seg_name, data_ofs, seg_size);
-      if (u == SECTION_BSS && seg_size != 0) {
-        fprintf(stderr, "fatal: trying to write data to _BSS segment in OMF: %s\n", omfname);
-        return 37;
-      }
-      unflushed_ledata_size = seg_size;
       unflushed_ledata_section_file_ofs = section->file_ofs;
       unflushed_ledata_ofs = data_ofs;  /* Affects the next fixupp* record. */
       unflushed_ledata_section_idx = u;
-      unflushed_ledata_up = up;
+      if (rhd[0] == LIDATA || rhd[0] == LIDATA386) {
+        lidata_leoutp = unflushed_ledata_data;
+        while (up != rdata_end) {
+          if (up + (rhd[0] == LIDATA ? 4 : 6) > rdata_end) {
+           lidata_too_short:
+            fprintf(stderr, "fatal: lidata too short in OMF: %s\n", omfname);
+            return 77;
+          }
+          if (rhd[0] == LIDATA) {
+            lidata_repeat_count = g16(up);
+            up += 2;
+          } else {  /* LIDATA386. */
+            lidata_repeat_count = g32(up);
+            up += 4;
+          }
+          lidata_block_count = g16(up);
+          up += 2;
+          if (lidata_block_count != 0) {  /* This is valid OMF, but we don't support it, because OpenWatcom doesn't emit it. */
+            if (verbose_level > 1) fprintf(stderr, "info: lidata repeat_count=0x%x block_count=0x%x\n", (unsigned)lidata_repeat_count, (unsigned)lidata_block_count);
+            fprintf(stderr, "fatal: nonzero lidata block count not allowed in OMF: %s\n", omfname);
+            return 77;
+          }
+          if (up == rdata_end) goto lidata_too_short;
+          lidata_block_size = *up++;
+          if (up + lidata_block_size > rdata_end) goto lidata_too_short;
+          if (lidata_repeat_count != 0 && lidata_block_size != 0) {
+            if (u == SECTION_BSS) goto data_in_bss;
+            /* The maximum OpenWatcom emits: lidata_repeat_count <= 0x2000, lidata_block_size == 1. We allow a bit more (sizeof(unflushed_ledata_data) >= 0x1000). */
+            if (verbose_level > 1) fprintf(stderr, "info: lidata repeat_count=0x%x block_size=0x%x\n", (unsigned)lidata_repeat_count, lidata_block_size);
+            if (lidata_repeat_count > 0xffffff || (size_t)(unflushed_ledata_data + sizeof(unflushed_ledata_data) - lidata_leoutp) < lidata_repeat_count * lidata_block_size) {
+              fprintf(stderr, "fatal: lidata data too long in OMF: %s\n", omfname);
+              return 77;
+            }
+            if (lidata_block_size == 1) {  /* Shortcut. */
+              memset(lidata_leoutp, *up, lidata_repeat_count);
+            } else {
+              do {
+                memcpy(lidata_leoutp, up, lidata_block_size);
+                lidata_leoutp += lidata_block_size;
+              } while (--lidata_repeat_count > 0);
+            }
+          }
+          up += lidata_block_size;
+        }
+        unflushed_ledata_size = lidata_leoutp - unflushed_ledata_data;
+        unflushed_ledata_up = unflushed_ledata_data;
+        /* Flush early, so that a subsequent FIXUPP record can't reference
+         * this LIDATA. It is not needed by OpenWatcom, and it would be
+         * complicated to implement.
+         */
+        if ((argc = flush_ledata(fdo, elfoname)) != 0) return argc;
+      } else {
+        seg_size = rdata_end - up;
+        if (verbose_level > 1) fprintf(stderr, "info: ledata segment=%s data_ofs=0x%x data_size=0x%x\n", section->info->seg_name, data_ofs, seg_size);
+        if (u == SECTION_BSS && seg_size != 0) {
+         data_in_bss:
+          fprintf(stderr, "fatal: trying to write data to _BSS segment in OMF: %s\n", omfname);
+          return 37;
+        }
+        unflushed_ledata_size = seg_size;
+        unflushed_ledata_up = up;
+        /* Don't flush yet, a subsequent FIXUPP record needs this data unflushed. */
+      }
     } else if (rhd[0] == EXTDEF || rhd[0] == LEXTDEF) {
       while (up != rdata_end) {
         if (up + up[0] + 2 > rdata_end) {
@@ -916,7 +981,7 @@ int main(int argc, char **argv) {
     } else if (rhd[0] == FIXUPP || rhd[0] == FIXUPP386) {
       seg_use32 = (rhd[0] == FIXUPP386);
       if (unflushed_ledata_section_idx + 1 == 0 || unflushed_ledata_ofs + 1 == 0) {
-        fprintf(stderr, "fatal: assert: unknown segment in fixupp in OMF: %s\n", omfname);
+        fprintf(stderr, "fatal: unknown segment in fixupp in OMF: %s\n", omfname);  /* This can happen after LIDATA, but in practice OpenWatcom doesn't generate suce a file. */
         return 61;
       }
       while (up != rdata_end) {
