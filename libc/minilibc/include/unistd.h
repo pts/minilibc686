@@ -72,7 +72,7 @@ __LIBC_FUNC(void *, sys_brk, (void *addr), __LIBC_NOATTR);
     long syscall6(long nr, long arg1, long arg2, long arg3, long arg4, long arg5, long arg6) __asm__("mini_syscall6_RP1") __attribute__((__regparm__(1)));  /* It's imposible for a Linux i386 syscall to receive more than 6 arguments. */
     /*long syscall_upto_3(long nr, ...) __asm__("mini_syscall3_RP1") __attribute__((__regparm__(1)));*/  /* Unfortunately this doesn't work, __regparm__(1) is ignored. */
 #  endif  /* else __WATCOMC__ */
-#  if defined(CONFIG_MACRO_SYSCALL) && !defined(__cplusplus) && (defined(__WATCOMC__) || defined(__TINYC__) || (defined(__GNUC__) && (!defined(__STRICT_ANSI__) || __STDC_VERSION__ >= 199901L)))
+#  if defined(CONFIG_MACRO_SYSCALL) && (defined(__WATCOMC__) || defined(__TINYC__) || (defined(__GNUC__) && (!defined(__STRICT_ANSI__) || __STDC_VERSION__ >= 199901L)))
      /* Using this (-DCONFIG_MACRO_SYSCALL) sometimes make the code longer,
       * sometimes shorter. The call site is 3 bytes longer for
       * small-numbered syscalls (because `mov eax, ...' is 5 bytes, and
