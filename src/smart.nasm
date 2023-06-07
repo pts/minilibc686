@@ -335,6 +335,17 @@ __smart_extern main
 global mini__start
 global _start
 _start:
+%define CONFIG_USE_MAIN_ENVP  ; TODO(pts): Make it configurable (`minicc -mno-main-envp') that the program doesn't use envp, and omit it here.
+%define MAIN_ARG_MODE 4  ; 0: no argc--argv--envp; 1: has argc, no argv---envp; 2: has argc--argv, no envp (and no mini_environ); 3: has argc--argv--environ, no envp (but has mini_environ); 4: has argc--argv--envp.
+%ifdef CONFIG_USE_MAIN_ENVP
+%elifdef __NEED___smart_main_noarg  ; Inserted by minicc for .c files containing main, compiled by OpenWatcom.
+  %define MAIN_ARG_MODE 0
+%endif
+%ifdef __NEED_mini_environ
+  %if MAIN_ARG_MODE<3
+    %define MAIN_ARG_MODE 3
+  %endif
+%endif
 mini__start:  ; Entry point (_start) of the Linux i386 executable.
 		; Now the stack looks like (from top to bottom):
 		;   dword [esp]: argc
@@ -348,23 +359,27 @@ mini__start:  ; Entry point (_start) of the Linux i386 executable.
 		;   environment strings
 		;   program name
 		;   NULL		
+%if MAIN_ARG_MODE<1
+%elif MAIN_ARG_MODE==1  ; argc only.
+		;pop eax  ; Needed only if main is __watcall or __regparm__(1..3).
+%elif MAIN_ARG_MODE==2  ; This works for __cdecl, __watcall and __regparm__(2..3).
 		pop eax  ; argc.
 		mov edx, esp  ; argv.
-%define CONFIG_USE_MAIN_ENVP  ; TODO(pts): Make it configurable (`minicc -mno-main-envp') that the program doesn't use envp, and omit it here.
-%ifdef CONFIG_USE_MAIN_ENVP
+		push edx  ; Argument argv for main. Only needed for __cdecl.
+		push eax  ; Argument argc for main. Only needed for __cdecl.
+%elif MAIN_ARG_MODE>=3  ; Tested only with __cdecl.
+		pop eax  ; argc.
+		mov edx, esp  ; argv.
 		lea ecx, [edx+eax*4+4]  ; envp.
+  %if MAIN_ARG_MODE==4
 		push ecx  ; Argument envp for main.
+  %endif
   %ifdef __NEED_mini_environ
 		mov [mini_environ], ecx
   %endif
-%else
-  %ifdef __NEED_mini_environ
-		lea ecx, [edx+eax*4+4]  ; envp.
-		mov [mini_environ], ecx
-  %endif
-%endif
 		push edx  ; Argument argv for main.
 		push eax  ; Argument argc for main.
+%endif
 		_call_extern_if_needed mini___M_start_isatty_stdin
 		_call_extern_if_needed mini___M_start_isatty_stdout
 		call main  ; Return value (exit code) in EAX (AL).
