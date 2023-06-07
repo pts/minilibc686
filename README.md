@@ -391,6 +391,52 @@ Here is how to pick the libc:
   or Clang compiler and the linker of the bundled TinyCC compiler, specify
   `--utcc --gcc=... --tccld`.
 
+Here is how to make the executable program file even smaller:
+
+* Don't use features you don't need. For example, if you don't need buffered
+  I/O, then call write(2) instead of fwrite(3). Likewise, use write(2)
+  instead of printf(3). minilibc686 does very hard work,
+* Keep using smart linking (`-msmart`, enabled by default). minilibc686,
+  especially with smart linking enabled, does very hard work to unused
+  functions and features out of the generated executable. For example, if
+  you don't use `errno`, it won't be created or populated, so the syscall
+  wrapper code becomes shorter.
+* Don't use TinyCC (`--tcc`) as your C compiler, it doesn't optimize code.
+  See below for using GCC, Clang or the default OpenWatcom C compiler.
+* Don't use the TinyCC linker (`--tccld`, it's also the default with
+  `--tcc`), it generates larger programs than needed.
+* If your main(...) function doesn't use *envp* (its 3rd argument), then
+  specify `-mno-envp`. It doesn't matter if you mention this variable
+  in the function declaration.
+* If your main(...) function doesn't use *argv* (its 2nd argument), then
+  specify `-mno-argv`. It doesn't matter if you mention this variable
+  in the function declaration.
+* If your main(...) function doesn't use *argc* (its 1st argument), then
+  specify `-mno-argc`. It doesn't matter if you mention this variable
+  in the function declaration. If you use the OpenWatcom C compiler, and
+  you write `int main(void) { ... }`, then *minicc* detects this, and
+  enables `-mno-argc` for you.
+* If you don't mind that your code in memory (in the `.text` section)
+  becomes writable, specify `-Wl,-N`. This will save 0x20 bytes or a few
+  more. Please note that writable code is a security concern, it can make it
+  easier for attachers to exploit vulnerabilities in your program.
+* Try both `-fomit-frame-pointer` and `-fno-omit-frame-pointer`, and pick
+  the smaller.
+* Try both `-march=i386` and `-march=i686`, and pick the smaller.
+* Try both `--gcc` and without it (i.e. OpenWatcom C compiler). Try
+  different versionf of GCC. Versions 4.x tend to generate shorter code than
+  newer versions. Clang tends to generate a bit longer code than GCC.
+* The default calling convention (`__watcall`) of the vanilla OpenWatcom C
+  complier often produces shorter code than the minilibc686 calling
+  convention (GCC-flavored `__cdecl`). However, when used by *minicc*,
+  the minilibc686 calling convention is activated by default for the
+  OpenWatcom C compiler is well. You may want to decorate some of your C
+  functions with `__watcall` instead, e.g.
+  `int __watcall mul3(int x) { return 3 * x; }`.
+  For GCC (and TinyCC), you may want to try another similar calling
+  convention:
+  `__attribute__((regparm(3))) int mul3(int x) { return 3 * x; }`.
+
 Here is how to disable some default *minicc* functionality:
 
 * Disable code size optimization: specify any `-O...` flag, e.g. `-O0` for
@@ -404,6 +450,16 @@ Here is how to disable some default *minicc* functionality:
 * Disable linking against minilibc686: specify `-nostdlib -nostdinc`, and
   specify any libc (with `-I...` for the #include directory and `....a` for
   the static library).
+
+If you program doesn't compile or doesn't work with minilibc686:
+
+* Try `minicc --diet` for diet libc instead of minilibc686.
+* Try `minicc --uclibc` for uClibc instead of minilibc686.
+* Try `minicc --eglibc` for EGLIBC (huge, bloated) instead of minilibc686.
+* Drop `--tcc`, `--tccld` and `--utcc` to prevent using the TinyCC compiler
+  and linker.
+* Try `--gcc` (system GCC) instead of the default OpenWatcom C compiler.
+* Try both `-msmart` and `-mno-smart`.
 
 ## Testing
 
@@ -535,6 +591,7 @@ This section is mostly an FYI, it doesn't affter minilibc686 users directly.
     executable segfaults at startup, even when symbol __gcc_personality_v0
     is defined. Is this bug because of buggy weak symbol handling?
     minilibc686, uClibc and diet libc don't segfault.
+  * It doesn't support -Wl,-N to merge .text and .data.
 
 # TODOs
 
