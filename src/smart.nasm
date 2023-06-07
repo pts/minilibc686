@@ -17,10 +17,14 @@
   %error Expecting UNDEFSYMS from minicc -msmart.
   times 1/0 nop
 %endif
-;%ifnidn __OUTPUT_FORMAT__, elf
-;  %error Expecting -f elf for minicc -msmart.
-;  times 1/0 nop
-;%endif
+%ifidn __OUTPUT_FORMAT__, bin  ; When called by minicc, it's elf.
+  %macro __smart_extern 1
+  %endmacro
+%else
+  %macro __smart_extern 1
+    extern %1
+  %endmacro
+%endif
 
 bits 32
 ;%ifdef CONFIG _I386
@@ -165,7 +169,7 @@ bits 32
 
 %macro _call_extern_if_needed 1
   %ifdef __NEED_%1
-    extern %1
+    __smart_extern %1
     call %1
   %endif
 %endmacro
@@ -315,11 +319,7 @@ _need mini__exit, mini___LM_push_exit_args
 
 section .text align=1
 %ifdef __NEED_mini__start
-%ifidn __OUTPUT_FORMAT__, bin  ; FAllback for size measurements.
-main equ +0x12345678
-%else
-extern main
-%endif
+__smart_extern main
 global mini__start
 global _start
 _start:
@@ -563,11 +563,7 @@ times 1/0 nop
 %endif
 
 %ifdef __NEED_mini_stdout
-%ifidn __OUTPUT_FORMAT__, bin  ; Fallback for size measurements.
-mini_stdout equ +0x12345679
-%else
-extern mini_stdout
-%endif
+__smart_extern mini_stdout
 %ifdef CONFIG_PIC
 %error Not PIC because it uses mini_stdout.
 times 1/0 nop
@@ -575,11 +571,7 @@ times 1/0 nop
 %endif
 
 %ifdef __NEED_mini_fputc_RP3
-%ifidn __OUTPUT_FORMAT__, bin  ; Fallback for size measurements.
-mini_fputc_RP3 equ +0x1234567a
-%else
-extern mini_fputc_RP3
-%endif
+__smart_extern mini_fputc_RP3
 %endif
 
 %ifdef __NEED_mini_putchar
