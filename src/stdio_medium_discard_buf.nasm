@@ -7,7 +7,6 @@
 bits 32
 cpu 386
 
-global mini_fflush
 global mini___M_discard_buf
 %ifdef CONFIG_SECTIONS_DEFINED
 %elifidn __OUTPUT_FORMAT__, bin
@@ -15,7 +14,6 @@ section .text align=1
 section .rodata align=1
 section .data align=1
 section .bss align=1
-mini_write equ +0x12345678
 %else
 section .text align=1
 section .rodata align=1
