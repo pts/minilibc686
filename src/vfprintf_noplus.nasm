@@ -10,7 +10,6 @@
 
 bits 32
 cpu 386
-B.code equ 0
 
 global mini_vfprintf
 %ifdef CONFIG_SECTIONS_DEFINED
@@ -132,7 +131,7 @@ mini_vfprintf:  ; int mini_vfprintf(FILE *filep, const char *format, va_list ap)
 		push dword [esp+0x38]
 		movsx eax, byte [esp+0x20]
 		push eax
-		call B.code+mini_fputc
+		call mini_fputc
 		add esp, byte 0x8
 		inc ebp
 		dec edi
@@ -144,7 +143,7 @@ mini_vfprintf:  ; int mini_vfprintf(FILE *filep, const char *format, va_list ap)
 		push dword [esp+0x38]
 		movsx eax, al
 		push eax
-		call B.code+mini_fputc
+		call mini_fputc
 		add esp, byte 0x8
 		inc ebp
 		inc esi
@@ -155,7 +154,7 @@ mini_vfprintf:  ; int mini_vfprintf(FILE *filep, const char *format, va_list ap)
 		push dword [esp+0x38]
 		movsx eax, byte [esp+0x20]
 		push eax
-		call B.code+mini_fputc
+		call mini_fputc
 		add esp, byte 0x8
 		inc ebp
 		dec edi
@@ -251,7 +250,7 @@ mini_vfprintf:  ; int mini_vfprintf(FILE *filep, const char *format, va_list ap)
 		je .28
 		push dword [esp+0x38]
 		push byte 0x2d
-		call B.code+mini_fputc
+		call mini_fputc
 		add esp, byte 0x8
 		inc ebp
 		dec edi
@@ -269,7 +268,7 @@ mini_vfprintf:  ; int mini_vfprintf(FILE *filep, const char *format, va_list ap)
 		movsx eax, byte [ebx]
 .31:
 		push eax
-		call B.code+mini_fputc
+		call mini_fputc
 		add esp, byte 0x8
 		inc ebp
 .32:
