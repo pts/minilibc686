@@ -76,6 +76,9 @@ DO_SMART=
 ANSIFLAG=
 OUTFILE=
 MINICC_LD=  # The default will be "$MYDIR"/tools/ld, using --minild.
+DO_ARGC=  # Argument 1 of main(...).
+DO_ARGV=  # Argument 2 of main(...).
+DO_ENVP=  # Argument 3 of main(...).
 
 case "$1" in
  "" | -* | *.[aocisS]) ;;  # A flag or a source file name is not a program name.
@@ -127,6 +130,12 @@ for ARG in "$@"; do
    -msmart) DO_SMART=1 ;;  # Enable smart linking.
    -mforce-smart) DO_SMART=2 ;;  # Force smart linking even for self-contained programs without undefined symbols. Most users need -msmart instead, that's faster.
    -mno-smart) DO_SMART=0 ;;
+   -margc) DO_ARGC=1 ;;
+   -mno-argc) DO_ARGC=0 ;;
+   -margv) DO_ARGV=1 ;;
+   -mno-argv) DO_ARGV=0 ;;
+   -menvp) DO_ENVP=1 ;;
+   -mno-envp) DO_ENVP=0 ;;
    -Wno-no) WFLAGS= ;;  # Disable warnings. GCC and Clang accept and ignore it.
    -W*) ARGS="$ARGS$NL$ARG"; WFLAGS= ;;
    -[fm]?* | -pedantic) ARGS="$ARGS$NL$ARG" ;;
@@ -206,6 +215,20 @@ if test "$USE_UTCC" && test "$ARCH" = i386; then
   echo "fatal: the --utcc bundled uClibc doesn't work on i386, it needs -march=i686" >&2
   exit 1
 fi
+
+DO_MAIN_AUTO=1
+test "$DO_ARGC" && DO_MAIN_AUTO=0
+test "$DO_ARGV" && DO_MAIN_AUTO=0
+test "$DO_ENVP" && DO_MAIN_AUTO=0
+test "$DO_ARGC" = 0 && test -z "$DO_ENVP" && DO_ENVP=0
+test "$DO_ARGC" = 0 && test -z "$DO_ARGV" && DO_ARGV=0
+test "$DO_ARGV" = 0 && test -z "$DO_ENVP" && DO_ENVP=0
+test "$DO_ENVP" || DO_ENVP=1  # Play it safe by default, the program may use it.
+test "$DO_ARGV" || DO_ARGV=1  # Play it safe by default, the program may use it.
+test "$DO_ARGC" || DO_ARGC=1  # Play it safe by default, the program may use it.
+if test "$DO_ENVP" = 1 && test "$DO_ARGV" = 0; then echo "fatal: -menvp needs -margv" >&2; exit 1; fi
+if test "$DO_ENVP" = 1 && test "$DO_ARGC" = 0; then echo "fatal: -menvp needs -margc" >&2; exit 1; fi
+if test "$DO_ARGV" = 1 && test "$DO_ARGC" = 0; then echo "fatal: -margv needs -margc" >&2; exit 1; fi
 
 case "$GCC" in "") ;; */*) ;; *)  # Resolve $GCC on $OLD_PATH. Useful for --noenv and --boxed.
   LOOKUP="$(PATH="$OLD_PATH"; type "$GCC" 2>/dev/null)"
@@ -362,6 +385,11 @@ if test "$DO_ADD_INCLUDEDIR"; then
     done
   fi
 fi
+test "$DO_MAIN_AUTO" && DEF_ARG="$DEF_ARG$NL-DCONFIG_MAIN_ARGS_AUTO"
+if test "$DO_ARGC" = 0; then DEF_ARG="$DEF_ARG$NL-DCONFIG_MAIN_NO_ARGC_ARGV_ENVP"
+elif test "$DO_ARGV" = 0; then DEF_ARG="$DEF_ARG$NL-DCONFIG_MAIN_NO_ARGV_ENVP"
+elif test "$DO_ENVP" = 0; then DEF_ARG="$DEF_ARG$NL-DCONFIG_MAIN_NO_ENVP"
+fi
 OUTFILE_ARG=
 test "$OUTFILE" && OUTFILE_ARG="-o$NL$OUTFILE"
 if test "$TCC"; then
@@ -444,8 +472,8 @@ if test "$DO_ADD_LIB"; then
   fi
   test "$DO_SMART" = 0 && ARGS="$ARGS$NL$LIBWL$LIBFN"
   if test "$TCC" && test -z "$USE_UTCC"; then NEED_LIBMINITCC1=1
-  elif test "$IS_TCCLD" && test "$IS_WATCOM"; then NEED_LIBMINITCC1=1  # We need it for dummy symbols start_ and _argc.
-  elif test "$IS_TCCLD" && test "$HAD_OFILE"; then NEED_LIBMINITCC1=1  # We need it for dummy symbols start_ and _argc.
+  elif test "$IS_TCCLD" && test "$IS_WATCOM"; then NEED_LIBMINITCC1=1  # We need it for dummy symbols cstart_ and _argc.
+  elif test "$IS_TCCLD" && test "$HAD_OFILE"; then NEED_LIBMINITCC1=1  # We need it for dummy symbols cstart_ and _argc.
   else NEED_LIBMINITCC1=
   fi
   if test "$NEED_LIBMINITCC1"; then
@@ -776,21 +804,6 @@ if test "$DO_SMART" != 0; then  # Smart linking.
       rm -f "$OUTFILE.err" $TMPOFILES
       exit "$EC"  # No undefined symbols found, this means there is another reason for the $TCC failure.
     fi
-    case ",$UNDEFSYMS," in ,_start*,)  # Search for cstart_ and _argc manually in the specified .o files.
-      SKIPARG=
-      for ARG in --skiparg $ARGS; do
-        if test "$SKIPARG"; then SKIPARG=; continue; fi
-        case "$ARG" in
-         --skiparg | -[zmeo]) SKIPARG=1 ;;
-         -*) ;;
-         *.o)
-          if grep -q main 2>/dev/null <"$ARG" && grep -q cstart_ 2>/dev/null <"$ARG" && ! grep -q _argc 2>/dev/null <"$ARG"; then  # !! Write a tool to properly check for undefined symbols.
-            UNDEFSYMS="$UNDEFSYMS,__smart_main_noarg"; break  # smart.nasm recognizes it.
-          fi
-          ;;
-        esac
-      done
-    esac
     rm -f "$OUTFILE.err" "$OUTFILE.smart.o"  # !! Generate temporary filename.
     NASMARCHARG=
     test "$ARCH" = i686 || NASMARCHARG=-DCONFIG_I386
@@ -798,6 +811,28 @@ if test "$DO_SMART" != 0; then  # Smart linking.
     for F in $(cat "$MYDIR/libc/$LIBC/libc.defs"); do  # Split on any whitespace, $IFS hasn't been set yet.
       DEF_ARG="$DEF_ARG$NL$F"
     done
+    if test "$DO_MAIN_AUTO" = 1; then
+      case ",$UNDEFSYMS," in ,_start*,)  # Search for cstart_ and _argc manually in the specified .o files.
+        SKIPARG=
+        for ARG in --skiparg $ARGS; do
+          if test "$SKIPARG"; then SKIPARG=; continue; fi
+          case "$ARG" in
+           --skiparg | -[zmeo]) SKIPARG=1 ;;
+           -*) ;;
+           *.o)
+            if grep -q main 2>/dev/null <"$ARG" && grep -q cstart_ 2>/dev/null <"$ARG" && ! grep -q _argc 2>/dev/null <"$ARG"; then  # !! Write a tool to properly check for undefined symbols.
+              DEF_ARG="$DEF_ARG$NL-DCONFIG_MAIN_NO_ARGC_ARGV_ENVP"; break  # smart.nasm recognizes it.
+            fi
+            ;;
+          esac
+        done
+      esac
+    else
+      if test "$DO_ARGC" = 0; then DEF_ARG="$DEF_ARG$NL-DCONFIG_MAIN_NO_ARGC_ARGV_ENVP"
+      elif test "$DO_ARGV" = 0; then DEF_ARG="$DEF_ARG$NL-DCONFIG_MAIN_NO_ARGV_ENVP"
+      elif test "$DO_ENVP" = 0; then DEF_ARG="$DEF_ARG$NL-DCONFIG_MAIN_NO_ENVP"
+      fi
+    fi
     NASMCMD="$MYDIR/tools/nasm-0.98.39$NL-O0$NL-w+orphan-labels$NL-f${NL}elf$NL$NASMARCHARG$NL-DUNDEFSYMS=$UNDEFSYMS$NL$DEF_ARG$NL-o$NL$OUTFILE.smart.o$NL$MYDIR/libc/$LIBC/smart.nasm"; EC="$?"
     test "$HAD_V" && echo "info: running smart nasm:" $NASMCMD >&2
     $NASMCMD; EC="$?"
