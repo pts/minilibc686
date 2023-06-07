@@ -7,7 +7,6 @@
 
 bits 32
 cpu 386
-B.code equ 0
 
 global mini_fprintf
 %ifidn __OUTPUT_FORMAT__, bin
@@ -36,7 +35,7 @@ mini_fprintf:
 ;esp:fmt ap=&val retaddr filep fmt val
 		push dword [esp+3*4]  ; 4 bytes.
 ;esp:filep fmt ap=&val retaddr filep fmt val
-		call B.code+mini_vfprintf  ; 5 bytes.
+		call mini_vfprintf  ; 5 bytes.
 ;esp:filep fmt ap=&val retaddr filep fmt val
 		add esp, strict byte 3*4  ; 3 bytes, same as `times 3 pop edx'.
 ;esp:retaddr filep fmt val

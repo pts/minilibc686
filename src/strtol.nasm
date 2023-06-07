@@ -11,7 +11,6 @@
 
 bits 32
 cpu 386
-B.code equ 0
 
 global mini_strtol
 %ifidn __OUTPUT_FORMAT__, bin

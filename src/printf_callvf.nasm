@@ -7,7 +7,6 @@
 
 bits 32
 cpu 386
-B.code equ 0
 
 global mini_printf
 %ifdef CONFIG_SECTIONS_DEFINED
@@ -43,7 +42,7 @@ times 1/0 nop
 %endif
 		push dword [mini_stdout]  ; 6 bytes.
 ;esp:filep fmt ap=&val retaddr fmt val
-		call B.code+mini_vfprintf  ; 5 bytes.
+		call mini_vfprintf  ; 5 bytes.
 ;esp:filep fmt ap=&val retaddr fmt val
 		add esp, strict byte 3*4  ; 3 bytes, same as `times 3 pop edx'.
 ;esp:retaddr fmt val
