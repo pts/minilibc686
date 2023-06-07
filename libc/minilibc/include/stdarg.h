@@ -9,7 +9,7 @@
  */
 #ifdef __i386__
   typedef char *small_va_list;
-#  if !(defined(__clang__) || (defined(__WATCOMC__) && defined(_NO_EXT_KEYS)))
+#  if !(defined(__clang__) || (defined(__WATCOMC__) && defined(_NO_EXT_KEYS)) || (defined(__GNUC__) && !__GNUC_PREREQ(4, 6)))
     __extension__ typedef __libc__small_va_list small_va_list;  /* Make sure it's the same as in <stdarg_internal.h> */
 #  endif
 #  define small_va_start(ap, last) ((ap) = (char*)&(last) + ((sizeof(last)+3)&~3), (void)0)  /* i386 only. */
@@ -20,7 +20,7 @@
 
 #ifdef __GNUC__
   typedef __builtin_va_list va_list;
-#  if !(defined(__clang__) || (defined(__WATCOMC__) && defined(_NO_EXT_KEYS)))
+#  if !(defined(__clang__) || (defined(__WATCOMC__) && defined(_NO_EXT_KEYS)) || (defined(__GNUC__) && !__GNUC_PREREQ(4, 6)))
     __extension__ typedef __libc__va_list va_list;  /* Make sure it's the same as in <stdarg_internal.h> */
 #  endif
 #  define va_start(v,l)	__builtin_va_start(v,l)
@@ -30,7 +30,7 @@
 #else
 #  ifdef __i386__
     typedef small_va_list va_list;
-#    if !(defined(__clang__) || (defined(__WATCOMC__) && defined(_NO_EXT_KEYS)))
+#    if !(defined(__clang__) || (defined(__WATCOMC__) && defined(_NO_EXT_KEYS)) || (defined(__GNUC__) && !__GNUC_PREREQ(4, 6)))
       __extension__ typedef __libc__small_va_list va_list;  /* Make sure it's the same as in <stdarg_internal.h> */
 #    endif
 #    define va_start(ap, last) small_va_start(ap, last)
