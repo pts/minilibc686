@@ -540,10 +540,15 @@ if test "$GCC" || test -z "$IS_TCCLD"; then
     WFFLAG=-of+  # GCC -fno-omit-frame-pointer default.
     WSFLAG=
     WJFLAG=-j  # `signed char' is GCC default.
+    # Not specifying -zls makes wcc386 insert these extern symbols:
+    # * _cstart_: if main is defined.
+    # * __argc: if main has at least 1 argument. There is no distinction between argc, argc+argv and argc+argv+envp.
+    WAUTOSYMFLAG=-zls
     WARGS=
+    WISOMF=
     WISOBJ=1
     test "$HAD_V" || WARGS="$WARGS$NL-q"
-    WARGS="$WARGS$NL-bt=linux$NL-fr"
+    WARGS="$WARGS$NL-bt=linux$NL-fr$NL-zl$NL-zld"
     unset INCLUDE  # Don't let wcc386 find any system #include etc. file.
     unset WATCOM  # Don't let wcc386 find any system #include etc. file.
     SKIPARG=
@@ -567,15 +572,17 @@ if test "$GCC" || test -z "$IS_TCCLD"; then
        -fno-omit-leaf-frame-pointer) WFFLAG=-of+ ;;
        -U_FORTIFY_SOURCE) ;;
        -fno-stack-protector) WSFLAG=-s ;;
+       -fstack-protector) WSFLAG= ;;
+       -mno-autosym) WAUTOSYMFLAG=-zls ;;  # minicc-specific.
+       -mautosym) WAUTOSYMFLAG= ;;  # minicc-specific.
        -fsigned-char | -fno-unsigned-char) WJFLAG=-j ;;
        -fno-signed-char | -funsigned-char) WJFLAG= ;;
        -finline-fp-rounding) WARGS="$WARGS$NL-zri" ;;  # To prevent the call to __CHP.
-       -fstack-protector) WSFLAG= ;;
        -march=i386) WARGS="$WARGS$NL-3r" ;;
        -march=i686) WARGS="$WARGS$NL-6r" ;;  # !! TODO(pts): Does it generate larger code? Then change the default with -Os.
        -mno-80387 | -msoft-float) WARGS="$WARGS$NL-fpc" ;;  # Useful for string merging in .rodata.str1.1.
        -m80387 | -mhard-float | -mhard-emu-float) WARGS="$WARGS$NL-fpi" ;;  # Default.  # -mhard-float would be `-fpi87'.
-       -nostdlib) WARGS="$WARGS$NL-zl$NL-zld$NL-zls" ;;  # minicc always has it.
+       -nostdlib) ;;  # minicc $CCARGS always contains -nostdlib.
        -W | -Wextra) WARGS="$WARGS$NL-wx" ;;
        -Wall) WARGS="$WARGS$NL-w4" ;;
        -Werror) WARGS="$WARGS$NL-we" ;;
@@ -604,7 +611,7 @@ if test "$GCC" || test -z "$IS_TCCLD"; then
        *) echo "fatal: assert: input file not allowed: $ARG" >&2; exit 5 ;;
       esac
     done
-    CCARGS="$GCC$NL$WSFLAG$NL$WJFLAG$NL$WFFLAG$NL$WARGS"
+    CCARGS="$GCC$NL$WSFLAG$NL$WJFLAG$NL$WFFLAG$NL$WAUTOSYMFLAG$NL$WARGS"
     # TODO(pts): Add -m... flag for string optimizations (like in minilibc32).
   fi
 
