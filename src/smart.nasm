@@ -62,7 +62,10 @@ bits 32
 
 %define SYSCALLS
 
-; _syscall <name>[, <name2>...], <number>
+; Usage: _syscall <name>[, <name2>...], <number>
+;
+; If the syscall has at least 4 arguments, use _syscall_456 instead,
+; otherwise the program will crash.
 %macro _syscall 2-*
   %rep %0-2
     %ifdef __NEED_mini_%1
@@ -90,7 +93,10 @@ bits 32
   %endif
 %endmacro
 
-; _syscall <name>[, <name2>...], <number>
+; Usage: _syscall_456 <name>[, <name2>...], <number>
+;
+; If the syscall has less than 4 arguments, _syscall also works, and is more
+; space-efficient, so please use that.
 %macro _syscall_456 2-*
   %rep %0-2
     %ifdef __NEED_mini_%1
@@ -197,6 +203,11 @@ _need mini_putchar_RP3, mini_fputc_RP3
 _need mini_puts, mini_stdout
 _need mini_printf, mini_stdout
 _need mini_vprintf, mini_stdout
+_need mini_printf, mini_vfprintf
+_need mini_vprintf, mini_vfprintf
+_need mini_vfprintf, mini___M_writebuf_relax_RP1
+_need mini_vfprintf, mini___M_writebuf_unrelax_RP1
+_need mini_vfprintf, mini_fputc_RP3
 _need mini_stdin,  mini___M_start_isatty_stdin
 _need mini_stdout, mini___M_start_isatty_stdout
 _need mini_stdout, mini___M_start_flush_stdout
@@ -219,6 +230,7 @@ _need mini_fputc, mini_fputc_RP3
 _need mini_fputc_RP3, mini_write
 _need mini_fputc_RP3, mini_fflush
 _need mini_fflush, mini_write
+_need mini_fflush, mini___M_discard_buf
 _need mini_getc, mini_fread
 _need mini_fgetc, mini_fread
 _need mini___M_fgetc_fallback_RP3, mini_fread
@@ -582,6 +594,35 @@ mini_putchar_RP3:  ; int REGPARM3 mini_putchar_RP3(int c);
 		mov edx, [mini_stdout]
 		call mini_fputc_RP3
 		ret
+%endif
+
+; Helpfully %include some needed minilibc686 source files.
+; demo_hello_linux_printf.nasm relies on this.
+%ifidn __OUTPUT_FORMAT__, bin
+  ; Usage: _include_if_needed <name>[, <name2>...], "<include-file.nasm>"
+  ;
+  ; Includes "<influcde-file.nasm>" if at least one of the specified names
+  ; are needed.
+  %macro _include_if_needed 1-*
+    %undef INCLUDE_NEEDED
+    %rep %0-1
+      %ifdef __NEED_%1
+        %define INCLUDE_NEEDED
+      %endif
+      %rotate 1
+    %endrep
+    %ifdef INCLUDE_NEEDED
+      %include %1
+    %endif
+  %endmacro
+  _include_if_needed mini_printf, "src/printf_callvf.nasm"
+  _include_if_needed mini_fputc_RP3, "src/stdio_medium_fputc_rp3.nasm"
+  _include_if_needed mini_stdout, "src/stdio_medium_stdout.nasm"  ; Also defines: global mini___M_start_isatty_stdout, mini___M_start_flush_stdout.
+  _include_if_needed mini_vfprintf, "src/stdio_medium_vfprintf.nasm"
+  _include_if_needed mini___M_writebuf_relax_RP1, mini___M_writebuf_unrelax_RP1, "src/stdio_medium_writebuf_relax.nasm"
+  _include_if_needed mini_isatty, "src/isatty_linux.nasm"
+  _include_if_needed mini_fflush, "src/stdio_medium_fflush.nasm"
+  _include_if_needed mini___M_discard_buf, "src/stdio_medium_discard_buf.nasm"
 %endif
 
 ; __END__

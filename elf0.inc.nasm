@@ -81,6 +81,12 @@ section .bss align=1 follows=.bss_gap nobits
 %endif
 bss_start:
 
+%define UNDEFSYMS  ; Used by smart.nasm.
+%macro __extern 1  ; Appends %1 to UNDEFSYMS, used by smart.nasm.
+  %xdefine UNDEFSYMS UNDEFSYMS,%1
+%endmacro
+%define extern __extern
+
 %macro _end 0
 section .rodata
 rodata_noaend:  ; Before alignment.
