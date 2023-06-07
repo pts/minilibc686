@@ -335,11 +335,14 @@ __smart_extern main
 global mini__start
 global _start
 _start:
-%define CONFIG_USE_MAIN_ENVP  ; TODO(pts): Make it configurable (`minicc -mno-main-envp') that the program doesn't use envp, and omit it here.
-%define MAIN_ARG_MODE 4  ; 0: no argc--argv--envp; 1: has argc, no argv---envp; 2: has argc--argv, no envp (and no mini_environ); 3: has argc--argv--environ, no envp (but has mini_environ); 4: has argc--argv--envp.
-%ifdef CONFIG_USE_MAIN_ENVP
-%elifdef __NEED___smart_main_noarg  ; Inserted by minicc for .c files containing main, compiled by OpenWatcom.
+%ifdef CONFIG_MAIN_NO_ARGC_ARGV_ENVP
   %define MAIN_ARG_MODE 0
+%elifdef CONFIG_MAIN_NO_ARGV_ENVP
+  %define MAIN_ARG_MODE 1
+%elifdef CONFIG_MAIN_NO_ENVP
+  %define MAIN_ARG_MODE 2
+%else
+  %define MAIN_ARG_MODE 4  ; 0: no argc--argv--envp; 1: has argc, no argv---envp; 2: has argc--argv, no envp (and no mini_environ); 3: has argc--argv--environ, no envp (but has mini_environ); 4: has argc--argv--envp.
 %endif
 %ifdef __NEED_mini_environ
   %if MAIN_ARG_MODE<3
@@ -567,7 +570,7 @@ _define_alias_syms ALIASES  ; Must be called after alias targets have been defin
 %ifdef __NEED_.bss
 section .bss align=4
 %endif
-%ifdef __NEED_mini_errno
+%ifdef __NEED_mini_errno  ; !! TODO(pts): Make strtok and strtod populate errno, but -fno-math-errno.
 global mini_errno  ; TODO(pts): Add this (including populating it in syscalls) to -mno-smart.
 mini_errno:	resd 1  ; int mini_errno;
 %ifdef CONFIG_PIC
