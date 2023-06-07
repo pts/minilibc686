@@ -67,6 +67,7 @@ DO_STRIP=1
 WFLAGS="-W$NL-Wall$NL-Werror=implicit-function-declaration"
 HAD_OFLAG=
 HAD_V=
+HAD_OFILE=
 ARCH=i686
 USE_UTCC=
 GCC_BARG=-pipe  # Harmless default.
@@ -147,6 +148,7 @@ for ARG in "$@"; do
    -*) echo "fatal: unsupported minicc flag: $ARG" >&2; exit 1 ;;
    *.[aocisS])
     if ! test -f "$ARG"; then echo "fatal: missing source file: $ARG" >&2; exit 1; fi
+    test "${ARG%.o}" = "$ARG" || HAD_OFILE=1
     ARGS="$ARGS$NL$ARG"
     ;;
    *) echo "fatal: unsupported input file extension: $ARG" >&2; exit 1 ;;
@@ -378,6 +380,7 @@ else
   # !! TODO(pts): Document -Wl,-N for merging sections .text and .data.
   ARGS="$TCC$NL$GCC$NL$GCC_BARG$NL-m32$NL-march=$ARCH$NL-static$NL-fno-pic$NL-U_FORTIFY_SOURCE$NL-fcommon$NL-fno-stack-protector$NL-fno-unwind-tables$NL-fno-asynchronous-unwind-tables$NL-fno-builtin$NL-fno-ident$NL-fsigned-char$NL-ffreestanding$NL-fno-lto$NL-nostdlib$NL-nostdinc$NL$SFLAG$NL$OFLAG_ARGS$NL$ANSIFLAG$NL$WFLAGS$NL$DEF_ARG$NL$ARGS$NL$INCLUDEDIR_ARG$NL$OUTFILE_ARG"
 fi
+NEED_LIBMINITCC1=
 if test "$DO_ADD_LIB"; then
   LIBWL=
   if test "$USE_UTCC"; then
@@ -440,7 +443,12 @@ if test "$DO_ADD_LIB"; then
     fi
   fi
   test "$DO_SMART" = 0 && ARGS="$ARGS$NL$LIBWL$LIBFN"
-  if test "$TCC" && test -z "$USE_UTCC"; then
+  if test "$TCC" && test -z "$USE_UTCC"; then NEED_LIBMINITCC1=1
+  elif test "$IS_TCCLD" && test "$IS_WATCOM"; then NEED_LIBMINITCC1=1  # We need it for dummy symbols start_ and _argc.
+  elif test "$IS_TCCLD" && test "$HAD_OFILE"; then NEED_LIBMINITCC1=1  # We need it for dummy symbols start_ and _argc.
+  else NEED_LIBMINITCC1=
+  fi
+  if test "$NEED_LIBMINITCC1"; then
     LIBFN="$MYDIR/helper_lib/libminitcc1.a"
     if ! test -f "$LIBFN"; then
       if "$MYDIR/build.sh" && test -f "$LIBFN"; then :; else
@@ -543,7 +551,7 @@ if test "$GCC" || test -z "$IS_TCCLD"; then
     # Not specifying -zls makes wcc386 insert these extern symbols:
     # * _cstart_: if main is defined.
     # * __argc: if main has at least 1 argument. There is no distinction between argc, argc+argv and argc+argv+envp.
-    WAUTOSYMFLAG=-zls
+    WAUTOSYMFLAG=
     WARGS=
     WISOMF=
     WISOBJ=1
@@ -748,7 +756,7 @@ fi
 
 if test "$DO_SMART" != 0; then  # Smart linking.
   LIBMINITCC1=
-  test "$TCC" && LIBMINITCC1="$MYDIR/helper_lib/libminitcc1.a"
+  test "$NEED_LIBMINITCC1" && LIBMINITCC1="$MYDIR/helper_lib/libminitcc1.a"
   test "$HAD_V" && echo "info: running $WHAT:" $ARGS >&2  # GCC also writes to stderr.
   $ARGS $LIBMINITCC1 2>"$OUTFILE.err"; EC="$?"  # TODO(pts): Write a C program to extract undefined references and display errors in a streaming way. (Some errors like `In ...' need to be buffered.)
   if test "$EC" = 0 && test "$DO_SMART" != 2; then
