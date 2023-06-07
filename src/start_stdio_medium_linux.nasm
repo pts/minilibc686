@@ -14,7 +14,6 @@ cpu 386
 %ifdef mini__start
   global $mini__start  ; Without expanding the macro.
 %endif
-global mini__start
 global mini__exit
 global mini_environ
 global mini_syscall3_AL
@@ -31,7 +30,8 @@ global mini_ioctl
 
 %macro define_weak 1
   %ifidn __OUTPUT_FORMAT__, bin  ; E.g. when using elf0.inc.nasm.
-    %ifndef %1
+    %ifidn %1, mini__start
+    %elifndef %1
       %define %1 WEAK..%1
     %endif
   %else
@@ -42,6 +42,8 @@ define_weak mini___M_start_isatty_stdin
 define_weak mini___M_start_isatty_stdout
 define_weak mini___M_start_flush_stdout
 define_weak mini___M_start_flush_opened
+define_weak mini__start
+define_weak $mini__start
 
 %ifdef CONFIG_SECTIONS_DEFINED
 %elifidn __OUTPUT_FORMAT__, bin
@@ -65,13 +67,15 @@ section .bss align=1
 
 section .text
 %ifdef mini__start
-  $mini__start:  ; Without expanding the macro.
+;  $mini__start:  ; Without expanding the macro.
 %else
   %ifidn __OUTPUT_FORMAT__, bin
     _start:
   %endif
 %endif
-mini__start:  ; Entry point (_start) of the Linux i386 executable.
+WEAK.._start:
+WEAK..mini__start:
+;mini__start:  ; Entry point (_start) of the Linux i386 executable.
 		; Now the stack looks like (from top to bottom):
 		;   dword [esp]: argc
 		;   dword [esp+4]: argv[0] pointer
