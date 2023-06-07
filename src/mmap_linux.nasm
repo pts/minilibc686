@@ -41,6 +41,7 @@ mini_mmap:  ; void *mini_mmap(void *addr, size_t length, int prot, int flags, in
 		mov ecx, [ecx+2*4]  ; Argument length.
 		mov al, 192  ; __NR_mmap2.
 		int 0x80  ; Linux i386 syscall.
+		; TODO(pts): Use mini___M_jmp_pop_ebp_edi_esi_ebx_syscall_return if available.
 		pop ebp
 		pop edi
 		pop esi

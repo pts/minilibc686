@@ -99,6 +99,7 @@ for F in src/[a-zA-Z0-9_]*.nasm; do
       test "$ARCH" = i386 && CFLAGS_ARCH=-DCONFIG_I386
     fi
     test "${F#src/start_}" != "$F" && CFLAGS_ARCH="$CFLAGS_ARCH -Dmini__start=_start"  # Makes both _start and mini__start defined.
+    test "$F" = src/smart.nasm && CFLAGS_ARCH="$CFLAGS_ARCH -DUNDEFSYMS="
     set -ex
     # We cd into src, otherwise NASM would insert `build_tmp/' to the "$BFA".o as filename.
     "$NASM" $CFLAGS_ARCH $CFLAGS -O999999999 -w+orphan-labels -f elf -o "$BFA".o "$F" || exit 4  # Can %include "src/....nasm".
