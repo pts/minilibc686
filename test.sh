@@ -84,16 +84,28 @@ for TF in "$@"; do
     echo "info: skipping non-test file: $TF"; continue
   esac
   if ! test -f "$TF"; then echo "fatal: missing test script: $TF"; exit 2; fi
-  case "$TF" in
-   /*) DD="$(cd "$MYDIR" && pwd)/"; if test "$DD" = /; then echo "fatal: error getting current directory: $MYDIR"; exit 4; fi ;;
-   *//*)  echo "fatal: double slash in test pathname: $TF" >&2; exit 4 ;;
-   */*/*/*/*/*) echo "fatal: too many components in test pathname: $TF" >&2; exit 4 ;;  # TODO(pts): Support more.
-   */*/*/*/*) DD=../../../../../"$MYDIRP" ;;
-   */*/*/*) DD=../../../../"$MYDIRP" ;;
-   */*/*) DD=../../../"$MYDIRP" ;;
-   */*) DD=../../"$MYDIRP" ;;
-   *) DD=../"$MYDIRP" ;;
+  while test "${TF#./}" != "$TF"; do  # Remove leading ./, as long as possible.
+    TF="${TF#./}"
+    while test "${TF#/}" != "$TF"; do TF="${TF/}"; done
+  done
+  DD=
+  case "$TF" in  # Just make it simpler for convenience.
+   /* | */../* | */../* | */../* | *//* | */) ;;  # Too complicated, give up.
+   ../*/*) test "$MYDIRP" = ../ && DD=../../ ;;
+   ./*/*) if test "$MYDIRP" = ./ || test -z "$MYDIRP"; then DD=../../; fi ;;
   esac
+  echo "$MYDIRP---$TF--$DD"
+  if test -z "$DD"; then
+    case "$TF" in
+     /* | ./* | */../* | */./* | ../* | */../* | *//* | */) DD="$(cd "$MYDIR" && pwd)/"; if test "$DD" = /; then echo "fatal: error getting current directory: $MYDIR"; exit 4; fi ;;
+     */*/*/*/*/*) echo "fatal: too many components in test pathname: $TF" >&2; exit 4 ;;  # TODO(pts): Support more.
+     */*/*/*/*) DD=../../../../../"$MYDIRP" ;;
+     */*/*/*) DD=../../../../"$MYDIRP" ;;
+     */*/*) DD=../../../"$MYDIRP" ;;
+     */*) DD=../../"$MYDIRP" ;;
+     *) DD=../"$MYDIRP" ;;
+    esac
+  fi
   echo "info: running test: $TF" >&2
   RUNDIR="${TF%.*}.rundir"  # TODO(pts): When parallel execution is active, add $$ etc. here.
   if test -e "$RUNDIR"; then
@@ -126,6 +138,7 @@ done
 
 if test "$FAILC" = 0; then
   printf "info: done running tests, all %d \\033[0;32msucceeded\033[0m\n" "$OKC" >&2
+  exit
 else
   printf "fatal: done running tests, %d succeeded, %d \\033[0;31mfailed\\033[0m\n" "$OKC" "$FAILC" >&2
   exit 3

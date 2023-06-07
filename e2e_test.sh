@@ -19,6 +19,7 @@ unset BUSYBOX_SH_SCRIPT
 set -ex
 
 cd "$MYDIR"
+export PATH=shbin
 test -d e2e_test_tmp || mkdir e2e_test_tmp
 test -d e2e_test_tmp
 cd e2e_test_tmp
@@ -36,8 +37,10 @@ test "$(./demo_hello_linux_printf.prog)" = "Hello, World!"
 "$MYDIR"/minicc -v -o demo_hello_linux_printf.prog2 demo_hello_linux_printf.o
 cmp demo_hello_linux_printf.prog demo_hello_linux_printf.prog2
 
+"$MYDIR"/test.sh
+
 set +ex
 cd ..
 export PATH=shbin
 rm -rf e2e_test_tmp
-echo ": $0 OK." >&2
+printf "info: done running end-to-end tests, all \\033[0;32msucceeded\033[0m\n" >&2
