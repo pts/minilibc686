@@ -776,6 +776,21 @@ if test "$DO_SMART" != 0; then  # Smart linking.
       rm -f "$OUTFILE.err" $TMPOFILES
       exit "$EC"  # No undefined symbols found, this means there is another reason for the $TCC failure.
     fi
+    case ",$UNDEFSYMS," in ,_start*,)  # Search for cstart_ and _argc manually in the specified .o files.
+      SKIPARG=
+      for ARG in --skiparg $ARGS; do
+        if test "$SKIPARG"; then SKIPARG=; continue; fi
+        case "$ARG" in
+         --skiparg | -[zmeo]) SKIPARG=1 ;;
+         -*) ;;
+         *.o)
+          if grep -q main 2>/dev/null <"$ARG" && grep -q cstart_ 2>/dev/null <"$ARG" && ! grep -q _argc 2>/dev/null <"$ARG"; then  # !! Write a tool to properly check for undefined symbols.
+            UNDEFSYMS="$UNDEFSYMS,__smart_main_noarg"; break  # smart.nasm recognizes it.
+          fi
+          ;;
+        esac
+      done
+    esac
     rm -f "$OUTFILE.err" "$OUTFILE.smart.o"  # !! Generate temporary filename.
     NASMARCHARG=
     test "$ARCH" = i686 || NASMARCHARG=-DCONFIG_I386
