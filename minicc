@@ -735,7 +735,7 @@ if test "$GCC" || test -z "$IS_TCCLD"; then
     echo "fatal: assert: unused --tmpofile=..." >&2; rm -f $TMPOFILES; exit 7;
   fi
   if test -z "$DO_LINK"; then
-    rm -f $TMPOFILES; exit "$EC"
+    rm -f $TMPOFILES; exit
   fi
   ARGS="$LDARGS"
   WHAT=linker
