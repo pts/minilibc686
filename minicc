@@ -541,9 +541,9 @@ if test "$GCC" || test -z "$IS_TCCLD"; then
     WSFLAG=
     WJFLAG=-j  # `signed char' is GCC default.
     WARGS=
+    WISOBJ=1
     test "$HAD_V" || WARGS="$WARGS$NL-q"
     WARGS="$WARGS$NL-bt=linux$NL-fr"
-    WISOBJ=1
     unset INCLUDE  # Don't let wcc386 find any system #include etc. file.
     unset WATCOM  # Don't let wcc386 find any system #include etc. file.
     SKIPARG=
@@ -597,6 +597,7 @@ if test "$GCC" || test -z "$IS_TCCLD"; then
        -c) ;;
        -S) echo "fatal: assembly generation not supported by minicc wcc386" >&2; exit 5 ;;
        -E) WARGS="$WARGS$NL-pl"; WISOBJ= ;;
+       -momf) WISOMF=1 ;;  # minicc-specific. Generate the object file in OMF format (OpenWatcom native) rather than ELF-32.
        -[DUI]?*) WARGS="$WARGS$NL$ARG" ;;
        -g*) echo "fatal: debug generation not supported by minicc wcc386" >&2; exit 5 ;;
        -*) echo "fatal: unsupported minicc wcc386 flag: $ARG" >&2; exit 5 ;;
@@ -605,6 +606,12 @@ if test "$GCC" || test -z "$IS_TCCLD"; then
     done
     CCARGS="$GCC$NL$WSFLAG$NL$WJFLAG$NL$WFFLAG$NL$WARGS"
     # TODO(pts): Add -m... flag for string optimizations (like in minilibc32).
+  fi
+
+  if test "$IS_WATCOM" && test "$WISOMF"; then
+    if test -z "$WISOBJ" || test "$DO_LINK" || test "$CCMODE" != -c; then  # Checking $CCMODE should be enough.
+      echo "fatal: -momf needs -c" >&2; exit 5
+    fi
   fi
 
   # Now create all the temporary .o files which will be written to $GCC or $TCC.
@@ -626,7 +633,7 @@ if test "$GCC" || test -z "$IS_TCCLD"; then
       else
         TMPOFILE="${ARG#--*=}"
         if test "$CCMODE" = -c; then
-          if test "$IS_WATCOM"; then
+          if test "$IS_WATCOM" && test -z "$WISOMF"; then
             TMPOFILE="$("$MYDIR"/tools/mktmpf "$TMPDIR"/minicc.@@@@@@."$OEXT")"  # Already creates the file.
             if test -z "$TMPOFILE"; then
               echo "fatal: error creating temporary .o file" >&2; rm -f $TMPOFILES; exit 7
@@ -682,13 +689,13 @@ if test "$GCC" || test -z "$IS_TCCLD"; then
         $CCARGS $FOFLAG"$TMPOFILE" "${ARG#--*=}"; EC="$?"
       fi
       if test "$EC" != 0; then
-        if test "$WISOBJ" && test "$CCMODE"; then
+        if test "$IS_WATCOM" && test "$WISOBJ" && test -z "$WISOMF"; then
           TMPOFILE2="${ARG#--*=}"; TMPOFILE2="${TMPOFILE2%.*}.o"; rm -f "$TMPOFILE2"
         fi
         rm -f $TMPOFILES "$TMPOFILE"; exit "$EC"
       fi
       if test "$IS_WATCOM"; then
-        if test "$WISOBJ"; then
+        if test "$WISOBJ" && test -z "$WISOMF"; then
           if test "$CCMODE" = -c; then
             if test "$OUTFILE"; then TMPOFILE2="$OUTFILE" 
             else TMPOFILE2="${ARG#--*=}"; TMPOFILE2="${TMPOFILE2%.*}.o"; TMPOFILE2="${TMPOFILE2##*/}"
