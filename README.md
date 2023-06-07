@@ -174,9 +174,15 @@ The following components are included:
   manipulating ELF executable and relocatable files. build.sh and minicc
   invoke them automatically when needed. C source is also included.
 
-* test_*.sh: Shell script to build parts of minilibc686 and run some unit
+* test.sh: Shell script to build parts of minilibc686 and run some unit
   tests. Please note that there is no full test coverage, and the testing
   infrastructure (i.e. bunch of hacky shell scripts) is primitive (so far).
+
+* test/*.test: Unit tests run by test.sh.
+
+* e2e_test.sh: Shell script to build the entire minilibc686 (`./build.sh'),
+  run all the unit tests (`./test.sh`), and run some end-to-end tests with
+  linkining against minilibc686 using minicc.
 
 * fyi/*.c: C reference implementations of some libc functions. Some of the
   algorithmically interesting ones are `fyi/qsort_fast.nasm` and
