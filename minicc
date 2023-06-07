@@ -3,6 +3,8 @@
 # minicc: compiler frontend for building with minilib686
 # by pts@fazekas.hu at Sun May 21 02:21:27 CEST 2023
 #
+# !! Enable -fomit-frame-pointer by default, see how smaller it gets with GCC. OpenWatcom definitely benefits.
+#
 
 export LC_ALL=C  # To avoid surprises with localized error messages etc.
 
@@ -535,6 +537,7 @@ if test "$GCC" || test -z "$IS_TCCLD"; then
         exit 5
       fi
     fi
+    WFFLAG=-of+  # GCC -fno-omit-frame-pointer default.
     WSFLAG=
     WJFLAG=-j  # `signed char' is GCC default.
     WARGS=
@@ -558,6 +561,10 @@ if test "$GCC" || test -z "$IS_TCCLD"; then
        -pedantic) ;;
        -m32 | -static | -fno-pic | -fcommon | -fno-unwind-tables | -fno-asynchronous-unwind-tables | -fno-builtin | -fno-ident | -ffreestanding | -fno-lto | -nostdinc | -falign-functions=* | -falign-jumps=* | -falign-loops=* | -mpreferred-stack-boundary=*) ;;
        -fno-unroll-loops | -fmerge-all-constants | -fno-math-errno | -g0 | -Wno-no) ;;
+       -fomit-frame-pointer) WFFLAG= ;;
+       -fomit-leaf-frame-pointer) WFFLAG=-of ;;
+       -fno-omit-frame-pointer) WFFLAG=-of ;;
+       -fno-omit-leaf-frame-pointer) WFFLAG=-of+ ;;
        -U_FORTIFY_SOURCE) ;;
        -fno-stack-protector) WSFLAG=-s ;;
        -fsigned-char | -fno-unsigned-char) WJFLAG=-j ;;
@@ -579,7 +586,7 @@ if test "$GCC" || test -z "$IS_TCCLD"; then
        -Wn[0-9]*) WARGS="$WARGS$NL-wce=${ARG#-Wn}" ;;
        -Wstop-after-errors=[0-9]*) WARGS="$WARGS$NL-e${ARG#*=}" ;;  # owcc(1)-specific.
        -H) WARGS="$WARGS$NL-fti" ;;
-       -O0) WARGS="$WARGS$NL-od" ;;
+       -O0) WARGS="$WARGS$NL-od" ;;  # TODO(pts): Try -oh (expensive optimizations). Does it reduce size?
        -O1) WARGS="$WARGS$NL-oil" ;;
        -O2) WARGS="$WARGS$NL-onatx" ;;
        -O3) WARGS="$WARGS$NL-onatxl+" ;;
@@ -596,7 +603,7 @@ if test "$GCC" || test -z "$IS_TCCLD"; then
        *) echo "fatal: assert: input file not allowed: $ARG" >&2; exit 5 ;;
       esac
     done
-    CCARGS="$GCC$NL$WSFLAG$NL$WJFLAG$NL$WARGS"
+    CCARGS="$GCC$NL$WSFLAG$NL$WJFLAG$NL$WFFLAG$NL$WARGS"
     # TODO(pts): Add -m... flag for string optimizations (like in minilibc32).
   fi
 
