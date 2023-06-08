@@ -53,10 +53,12 @@ elif test "$1" = --download; then
     WGET_V=; CURL_V=
   fi
   for NAME in "$@"; do
-    case "$NAME" in -* | *[/?%@]*) echo "fatal: bad tool name syntax for download: $NAME" >&2; exit 8 ;; esac
-    OF="$MYDIR/tools/$NAME"
-    # !! TODO(pts): Download for --eglibc or --libc=eglibc as well.
-    URL="https://github.com/pts/minilibc686/releases/download/cc1-linux-i686/$NAME"
+    case "$NAME" in
+      -* | *[/?%@]*) echo "fatal: bad tool name syntax for download: $NAME" >&2; exit 8 ;;
+     eglibc.sfx.7z | eglibc-2.19.sfx.7z) OF="$MYDIR/libc/eglibc-2.19.sfx.7z"; URL="https://github.com/pts/minilibc686/releases/download/eglibc-2.19-v1/eglibc-2.19.sfx.7z" ;;
+     *libc*.sfx.7z) echo "fatal: unknown libc for download: $NAME" >&2; exit 8 ;;
+     *) OF="$MYDIR/tools/$NAME"; URL="https://github.com/pts/minilibc686/releases/download/cc1-linux-i686/$NAME" ;;
+    esac
     if test -f "$OF" && test -s "$OF"; then
       echo "info: tool already downloaded: $OF" >&2
     else
@@ -381,7 +383,6 @@ case "$MINICC_LD" in "") ;; */*) ;; *)  # Resolve $MINICC_LD on $OLD_PATH. Usefu
   esac
   MINICC_LD="$LOOKUP"
 esac
-unset OLD_PATH
 
 test "$DO_ADD_LIB" || DO_SMART=0
 
@@ -412,11 +413,13 @@ if test "$NEED_LIBC"; then
     echo "fatal: missing libc.defs file: $MYDIR/libc/$LIBC/libc.defs" >&2
     exit 4
   else
-    for D in "$MYDIR/libc/$LIBC"-*; do
-      if test -f "$D/libc.defs"; then
-        LIBC="${D##*/}"; break  # Use the first one found. TODO(pts): Does the list get sorted?
-      fi
-    done
+    if test "${LIBC#*-}" = "$LIBC"; then
+      for D in "$MYDIR/libc/$LIBC"-*; do
+        if test -f "$D/libc.defs"; then
+          LIBC="${D##*/}"; break  # Use the first one found. TODO(pts): Does the list get sorted?
+        fi
+      done
+    fi
     if ! test -f "$MYDIR/libc/$LIBC/libc.defs"; then
       SFX=
       for D in "$MYDIR/libc/$LIBC"-*.sfx.7z; do
@@ -424,10 +427,32 @@ if test "$NEED_LIBC"; then
           SFX="$D"; LIBC="${D##*/}"; LIBC="${LIBC%.sfx.7z}"; break  # Use the first one found. TODO(pts): Does the list get sorted?
         fi
       done
-      if test "$SFX" && test -f "$SFX"; then
+      if test "$SFX" && test -f "$SFX" && test -s "$SFX"; then
+        :
+      elif test -z "$DO_DOWNLOAD"; then
+        :
+      elif test "$LIBC" = eglibc || test "${LIBC#eglibc-}" != "$LIBC"; then
+        if ! sh "$0" --boxed-path "$OLD_PATH" --download $HAD_V "$LIBC.sfx.7z"; then
+          echo "fatal: libc download failed: $LIBC" >&2; exit 6
+        fi
+        SFX=
+        if test "${LIBC#*-}" = "$LIBC"; then
+          for D in "$MYDIR/libc/$LIBC"-*.sfx.7z; do  # Repeats the loop above.
+            if test -f "$D"; then
+              SFX="$D"; LIBC="${D##*/}"; LIBC="${LIBC%.sfx.7z}"; break  # Use the first one found. TODO(pts): Does the list get sorted?
+            fi
+          done
+        else
+          test -f "$MYDIR/libc/$LIBC.sfx.7z" && SFX="$MYDIR/libc/$LIBC.sfx.7z"
+        fi
+        if test -z "$SFX"; then
+          echo "fatal: libc download hasn't created file: $MYDIR/libc/$LIBC*.sfx.7z: $LIBC" >&2; exit 4
+        fi
+      fi
+      if test "$SFX" && test -f "$SFX" && test -s "$SFX"; then
         chmod +x "$SFX" 2>/dev/null
         rm -rf "$MYDIR/libc/$LIBC"
-        echo "info: extracting libc sfx: $SFX" >&2
+        echo "info: extracting libc sfx archive: $SFX" >&2
         (cd "${SFX%/*}" && ./"${SFX##*/}" -y >/dev/null)
         if ! test -f "$MYDIR/libc/$LIBC/libc.defs"; then
           echo "fatal: libc sfx extraction failed: $SFX" >&2
@@ -444,6 +469,7 @@ if test "$NEED_LIBC"; then
     fi
   fi
 fi
+unset OLD_PATH
 
 if test "$DO_STRIP" = 0 || test -z "$DO_LINK"; then
   DO_STRIP=

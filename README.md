@@ -48,7 +48,7 @@ headers, program code and libc code):
     [tinylinux-2.2](https://justine.lol/cosmopolitan/cosmopolitan-amalgamation-tinylinux-2.2.zip) is
     24576 bytes; it should be ~16000 bytes; please note that it targets
     amd64
-  * eglibc 2.19 (`./minicc --eglibc`) is
+  * EGLIBC 2.19 (`./minicc --eglibc`) is
     582714 bytes after stripping
   * glibc 2.27 (`gcc -m32 -s -Os -static`) is
     594716 bytes after stripping
@@ -389,11 +389,11 @@ Here is how to pick the libc:
 * To use the bundled diet libc built for i686, specify `--diet`.
 * To use the bundled diet libc built for i386, specify `--diet -march=i386`.
   This will also make the specified C source files be compiled for i386.
-* To use the bundled eglibc built for i686, specify `--eglibc`.
-  Please note that you have to download
-  libc/[eglibc-2.19.sfx.7z](https://github.com/pts/minilibc686/releases/download/eglibc-2.91-v1/eglibc-2.19.sfx.7z)
-  separately first, and move the file to the `libc/` directory next to
-  `minicc`. (*minicc* will extract it automatically.)
+* To use the prepared EGLIBC built for i686, specify `--eglibc`.
+  *minicc* will download (using *wget* or *curl*)
+  the prepared archive
+  [eglibc-2.19.sfx.7z](https://github.com/pts/minilibc686/releases/download/eglibc-2.19-v1/eglibc-2.19.sfx.7z)
+  from GitHub, and it will extract it upon first use.
 * (Most users want `--uclibc` instead of this.)
   To use the bundled uClibc 0.9.30.1 (built for `-march=i686`) with the
   bundled TinyCC compiler, specify `--utcc`. Instead of the full uClibc .h
@@ -616,7 +616,7 @@ This section is mostly an FYI, it doesn't affter minilibc686 users directly.
 * !! fflush(stdout) before getchar() or any read on stdin.
   https://man7.org/linux/man-pages/man3/stdio.3.html
   Should it also flush if reading from stdin buffer? No, no flush after
-  ungetc(..., stdin) in eglibc. diet libc doesn't flush on fread(3),
+  ungetc(..., stdin) in EGLIBC. diet libc doesn't flush on fread(3),
   uClibc does.
 * Allow C++ with `g++ -fno-rtii -fno-exceptions', also clang++ like this.
 * Make strtod and strtol set errno if errno is used by the program.
