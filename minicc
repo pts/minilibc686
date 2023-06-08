@@ -79,6 +79,7 @@ MINICC_LD=  # The default will be "$MYDIR"/tools/ld, using --minild.
 DO_ARGC=  # Argument 1 of main(...).
 DO_ARGV=  # Argument 2 of main(...).
 DO_ENVP=  # Argument 3 of main(...).
+HAD_TRADITIONAL=
 
 case "$1" in
  "" | -* | *.[aocisS]) ;;  # A flag or a source file name is not a program name.
@@ -124,7 +125,21 @@ for ARG in "$@"; do
    --eglibc) LIBC=eglibc ;;
    --minilibc) LIBC=minilibc ;;
    --libc=?*) LIBC="${ARG#*=}" ;;
-   -static | -m32 | -fno-pic | -fpic | -fno-pie | -pie | -no-pie | -flto | -fno-lto | -nostartfiles) ;;
+   -traditional*) HAD_TRADITIONAL="$ARG"; ARGS="$ARGS$NL$ARG" ;;  # Includes -traditional-cpp.
+   -static | -m32 | -fno-pic | -fno-PIC | -fno-pie | -fno-PIE | -no-pie | -nostartfiles | -Bstatic | -dn | -non_shared | -static-libgcc | -fplt | -fno-plt | -fno-use-linker-plugin | -no-cacnonical-prefixes | --no-sysroot-suffix) ;;
+   -fno-lto) ;;  # Passing it to compiling gcc(1) or GCC cc1 doesn't seem to make a difference in the output .s file. So we just omit it for simplicity.
+   -flto | -fuse-linker-plugin) echo "fatal: unsupported LTO flag: $ARG" >&2; exit 1 ;;  # LTO is link-time optimization.
+   -fno-rtti | -fno-exceptions | -nostdinc++) ;;  # Ignore some C++ flags. minicc otherwise doesn't support C++.
+   -shared | -dynamic | -Bshared | -Bdynamic | -Bshareable | -rpath* | -dy | -call-shared | -shared-libgcc | -rdynamic) echo "fatal: unsupported shared library flag: $ARG" >&2; exit 1 ;;
+   --sysroot | --sysroot= | -B | -B* | --gcc-toolchain | --gcc-toolchain | -target | -target=* | -sysld*) echo "fatal: unsupported toolchain flag: $ARG" >&2; exit 1 ;; # These are GCC and/or clang flags.
+   -p | -pg | --profile) echo "fatal: unsupported profiling flag: $ARG" >&2; exit 1 ;;
+   -m64 | -march=x86_64 | -imultiarch) echo "fatal: unsupported 64-bit flag: $ARG" >&2; exit 1 ;;
+   -pie | -fpic | -fPIC | -fpie | -fPIE) echo "fatal: unsupported position-independent code flag: $ARG" >&2; exit 1 ;;  # TODO(pts): Add support. It is not useful anyway for static linking, it just adds bloat.
+   -idirafter | -imultilib | -iplugindir* | -iquote | -isysroot | -system | -iwithprefix | -iwithprefixbefore) echo "fatal: unsupported include dir flag, use -I instead: $ARG" >&2; exit 1 ;;
+   -include | -imacros | -iprefix) echo "fatal: unsupported include file flag: $ARG" >&2; exit 1 ;;  # TODO(pts): Adding support is relatively easy, we just have to pass these to GCC.
+   -mregparm=0) ;;  # Default GCC cdecl calling convention.
+   -mregparm=* | -msseregparm | -mrtd | -mno-rtd) echo "fatal: unsupported calling convention flag: $ARG" >&2; exit 1 ;;  # FYI owcc -mregparm=1 ... -mregparm=3 activate __watcall rather than __regparm__(3).
+   # TODO(pts): Try to adjust -malign-data=type and -mlarge-data-threshold=threshold to avoid alignment of some arrays to 0x20 bytes.
    -march=i[36]86) ARCH="${ARG#*=}" ;;
    -march=*) echo "fatal: unsupported minicc arch flag: $ARG" >&2; exit 1 ;;
    -msmart) DO_SMART=1 ;;  # Enable smart linking.
@@ -166,6 +181,11 @@ done
 if test "$SKIPARG"; then
   echo "fatal: missing last flag argument: $SKIPARG" >&2
   exit 1
+fi
+
+
+if test "$HAD_TRADITIONAL" && test "$DO_ADD_INCLUDEDIR"; then  # libcs supported by minicc don't support -traditional.
+  echo "fatal: $HAD_TRADITIONAL needs -nostdinc in minicc" >&2
 fi
 
 GCCBASE="/${GCC##*/}"
@@ -643,7 +663,7 @@ if test "$GCC" || test -z "$IS_TCCLD"; then
        -momf) WISOMF=1 ;;  # minicc-specific. Generate the object file in OMF format (OpenWatcom native) rather than ELF-32.
        -[DUI]?*) WARGS="$WARGS$NL$ARG" ;;
        -g*) echo "fatal: debug generation not supported by minicc wcc386" >&2; exit 5 ;;
-       -*) echo "fatal: unsupported minicc wcc386 flag: $ARG" >&2; exit 5 ;;
+       -*) echo "fatal: unsupported minicc wcc386 flag (try it with --gcc?): $ARG" >&2; exit 5 ;;
        *) echo "fatal: assert: input file not allowed: $ARG" >&2; exit 5 ;;
       esac
     done
