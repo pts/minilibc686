@@ -83,6 +83,7 @@ HAD_TRADITIONAL=
 
 case "$1" in
  "" | -* | *.[aocisShHCmMfFd] | *.c[cp] | *.[ch]pp | *.cxx | *.asm | *.[nw]asm | *.m[im] | *.mii | *.ii | *.c++ | *.[CH]PP | *.h[hp] | *.hxx | *.hpp | *.h++ | *.tcc | *.for | *.ftn | *.FOR | *.fpp | *.FPP | *.FTN | *.[fF][0-9][0-9] | *.go | *.brig | *.java | *.ad[sb] | *.d[id] | *.sx | *.obj) ;;  # A flag or a source file name is not a program name.
+ .) ;; # An escape to prevent the next source file from being interpreted as a compiler command.
  *)
   BASENAME="${1##*/}"
   case "$BASENAME" in
