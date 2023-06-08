@@ -14,3 +14,14 @@
 /libc/minilibc/libc.i?86.a
 /libc/minilibc/smart.nasm
 /e2e_test_tmp
+/tools/as
+/tools/as-2.22
+/tools/cc1-4.1.2
+/tools/cc1-4.2.1
+/tools/cc1-4.3.6
+/tools/cc1-4.4.7
+/tools/cc1-4.5.4
+/tools/cc1-4.6.4
+/tools/cc1-4.7.4
+/tools/cc1-4.8.5
+/tools/cc1-4.9.3
