@@ -435,7 +435,7 @@ else
   # !! TODO(pts): Try -mno-align-stringops. What happens with old GCC not supporting it, or Clang?
   # !! TODO(pts): Try -fno-unroll-loops -fmerge-all-constants -fno-math-errno. What happens with old GCC not supporting it, or Clang?
   # !! TODO(pts): Document -Wl,-N for merging sections .text and .data.
-  ARGS="$TCC$NL$GCC$NL$GCC_BARG$NL-m32$NL-march=$ARCH$NL-static$NL-fno-pic$NL-U_FORTIFY_SOURCE$NL-fcommon$NL-fno-stack-protector$NL-fno-unwind-tables$NL-fno-asynchronous-unwind-tables$NL-fno-builtin$NL-fno-ident$NL-fsigned-char$NL-ffreestanding$NL-fno-lto$NL-nostdlib$NL-nostdinc$NL$SFLAG$NL$OFLAG_ARGS$NL$ANSIFLAG$NL$WFLAGS$NL$DEF_ARG$NL$ARGS$NL$INCLUDEDIR_ARG$NL$OUTFILE_ARG"
+  ARGS="$TCC$NL$GCC$NL$GCC_BARG$NL-m32$NL-march=$ARCH$NL-static$NL-fno-pic$NL-U_FORTIFY_SOURCE$NL-fcommon$NL-fno-stack-protector$NL-fno-unwind-tables$NL-fno-asynchronous-unwind-tables$NL-fno-builtin$NL-fno-ident$NL-fsigned-char$NL-ffreestanding$NL-nostdlib$NL-nostdinc$NL$SFLAG$NL$OFLAG_ARGS$NL$ANSIFLAG$NL$WFLAGS$NL$DEF_ARG$NL$ARGS$NL$INCLUDEDIR_ARG$NL$OUTFILE_ARG"
 fi
 NEED_LIBMINITCC1=
 if test "$DO_ADD_LIB"; then
