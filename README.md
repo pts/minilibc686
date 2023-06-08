@@ -10,6 +10,32 @@ minilibc686 deviates from standard C in many aspects.
 Typical code sizes (total size of the executable program file, including ELF
 headers, program code and libc code):
 
+## Getting started
+
+Try it on Linux i386 or Linux amd64 (without the leading `$`):
+
+```
+$ git clone --depth 1 https://github.com/pts/minilibc686
+$ cd minilibc686
+$ ./minicc -o demo demo_c_hello.c
+$ ./demo
+Hello, World!
+$ ls -ld demo
+-rwxrwxr-x 1 pts pts 1204 Jun  8 19:07 demo
+$ printf '#include <unistd.h>\nint main() { write(1, "Hello, World!", 14); return 0; }\n' >demo_write.c
+$ ./minicc -fomit-frame-pointer -o demo_write demo_write.c
+$ ./demo_write
+Hello, World!
+-rwxrwxr-x 1 pts pts 164 Jun  8 19:12 demo_write
+```
+
+The first time you run *minicc*, it builds the libmini686.a using the
+bundled NASM (`tools/nasm-0.98.39`).
+
+## libc size analysis
+
+What sizes are achievable:
+
 * A hello-world program in NASM assembly language, using Linux syscalls
   (demo_hello_linux_nolibc.nasm): **118 bytes**. This is not the world
   record, because e.g. 88 bytes is achievable (see
@@ -76,18 +102,9 @@ How is this possible?
   already provides size savings for the libc functions for which it is
   implemented.)
 
-Try it on Linux i386 or Linux amd64 (without the leading `$`):
+## What's inside?
 
-```
-$ ./minicc -o demo demo_c_hello.c
-$ ./demo
-Hello, World!
-```
-
-The first time you run it, it builds the libmini686.a using the bundled NASM
-(`tools/nasm-0.98.39`).
-
-The following components are included:
+The following components are included in *minilibc686*:
 
 * elf0.inc.nasm: A NASM library for creating ELF-32 executables written in
   NASM assembly language, entirely using NASM. (A C compiler or linker is
@@ -196,7 +213,9 @@ cc` with various targets.) It's also not well-documented. However, if you
 start writing simple, new command-line tools for Linux, you may want to give
 it a try.
 
-Similar work:
+## Related work
+
+Other projects with tiny libc functions:
 
 * [aligrudi/neatlibc] has
   [some functions in 386 assembly]((https://github.com/aligrudi/neatlibc/tree/master/x86).
@@ -223,7 +242,7 @@ Other tiny libc projects targeting Windows:
 * [malxau/minicrt](https://github.com/malxau/minicrt) (2019)
 * [nidud/asmc libc](https://github.com/nidud/asmc/tree/master/source/libc) (2023--, implemented in assembly, for amd64)
 
-Features:
+## Features
 
 * It targets the i386 (first implemented by the Intel 80386 CPU introduced
   in 1985-10) or i686 (P6, first implemented by the Intel Pentium Pro CPU
@@ -606,7 +625,7 @@ This section is mostly an FYI, it doesn't affter minilibc686 users directly.
     minilibc686, uClibc and diet libc don't segfault.
   * It doesn't support -Wl,-N to merge .text and .data.
 
-# TODOs
+## TODOs
 
 * Break dependencies: by using sprintf(3), don't get fflush(3). We need
   smart linking or more weak symbols (e.g. mini___M_fputc_RP2 in
