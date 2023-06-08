@@ -22,7 +22,7 @@ $ ./demo
 Hello, World!
 $ ls -ld demo
 -rwxrwxr-x 1 pts pts 1204 Jun  8 19:07 demo
-$ printf '#include <unistd.h>\nint main() { write(1, "Hello, World!", 14); return 0; }\n' >demo_write.c
+$ printf '#include <unistd.h>\nint main() { write(1, "Hello, World!\\n", 14); return 0; }\n' >demo_write.c
 $ ./minicc -fomit-frame-pointer -o demo_write demo_write.c
 $ ./demo_write
 Hello, World!
@@ -225,7 +225,7 @@ it a try.
 
 Other projects with tiny libc functions:
 
-* [aligrudi/neatlibc] has
+* [aligrudi/neatlibc](https://github.com/aligrudi/neatlibc) has
   [some functions in 386 assembly]((https://github.com/aligrudi/neatlibc/tree/master/x86).
 * [sebastiencs/asm_minilibc](https://github.com/sebastiencs/asm_minilibc/tree/master/x86)
   targets i386 and amd64. It implements a few mem* str* functions. The code
