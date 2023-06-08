@@ -64,7 +64,7 @@ DO_LINK=1
 DO_COMPILE_OR_LINK=1
 SFLAG=
 DO_STRIP=1
-WFLAGS="-W$NL-Wall$NL-Werror=implicit-function-declaration"
+WFLAGS="-W$NL-Wall$NL-Werror-implicit-function-declaration"
 HAD_OFLAG=
 HAD_V=
 HAD_OFILE=
@@ -152,6 +152,7 @@ for ARG in "$@"; do
    -menvp) DO_ENVP=1 ;;
    -mno-envp) DO_ENVP=0 ;;
    -Wno-no) WFLAGS= ;;  # Disable warnings. GCC and Clang accept and ignore it.
+   -Werror[-=]implicit-function-declaration) ARGS="$ARGS$NL-Werror-implicit-function-declaration"; WFLAGS= ;;  # GCC 4.1 supports only -Werror-implicit-function-declaration, GCC >=4.2 supports it and also -Werror=implicit-function-declaration.
    -W*) ARGS="$ARGS$NL$ARG"; WFLAGS= ;;
    -[fm]?* | -pedantic) ARGS="$ARGS$NL$ARG" ;;
    -ansi | -std=*) ANSIFLAG="$ARG" ;;
@@ -603,6 +604,7 @@ if test "$GCC" || test -z "$IS_TCCLD"; then
     WARGS=
     WISOMF=
     WISOBJ=1
+    WHADWEXTRA=
     test "$HAD_V" || WARGS="$WARGS$NL-q"
     WARGS="$WARGS$NL-bt=linux$NL-fr$NL-zl$NL-zld"
     unset INCLUDE  # Don't let wcc386 find any system #include etc. file.
@@ -639,8 +641,10 @@ if test "$GCC" || test -z "$IS_TCCLD"; then
        -mno-80387 | -msoft-float) WARGS="$WARGS$NL-fpc" ;;  # Useful for string merging in .rodata.str1.1.
        -m80387 | -mhard-float | -mhard-emu-float) WARGS="$WARGS$NL-fpi" ;;  # Default.  # -mhard-float would be `-fpi87'.
        -nostdlib) ;;  # minicc $CCARGS always contains -nostdlib.
-       -W | -Wextra) WARGS="$WARGS$NL-wx" ;;
-       -Wall) WARGS="$WARGS$NL-w4" ;;
+       -W | -Wextra) WARGS="$WARGS$NL-wx"; WHADWEXTRA=1 ;;
+       -Wimplicit-function-declaration) WARGS="$WARGS$NL-wce=308" ;;
+       -Werror[-=]implicit-function-declaration) WARGS="$WARGS$NL-wce=308" ;;  # Unfortunately it still remains a warning, there is no per-warning control of errors.
+       -Wall) test "$WHADWEXTRA" || WARGS="$WARGS$NL-w4" ;;
        -Werror) WARGS="$WARGS$NL-we" ;;
        -Werror=*) ;;  # No per-warning control, just ignore for simplicity.
        -w) WARGS="$WARGS$NL-w0" ;;
