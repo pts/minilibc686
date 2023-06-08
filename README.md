@@ -42,44 +42,52 @@ What sizes are achievable:
   [hellofli3.nasm](https://github.com/pts/mininasm/blob/master/demo/hello/hellofli3.nasm)),
   but it is a good demonstration of what is conveniently achievable with
   Linux syscalls only.
-
-* A hello-world program using printf (demo_hello_linux_printf.nasm):
+* A hello-world program in C, using Linux syscall write(2) (see demo_write.c
+  above): **164 bytes**. The extra bytes are mostly error handling code
+  after write(2) has returned, and C compiler register use overhead.
+* A hello-world program, using printf (demo_hello_linux_printf.nasm):
   **1196 bytes**. Only the very short main(...) function was written in C,
   the rest of the code is part of the libc, written in NASM assembly.
-  Comparison:
-  * minilibc686 (`./minicc --gcc`) is
-    1196 bytes, already stripped
-  * [Baselibc](https://github.com/PetteriAimonen/Baselibc)
-    [2018-11-06](https://github.com/PetteriAimonen/Baselibc/commit/245a5940483267ef501aa7cdbc1b6a422f6e9daf) is
-    1388 bytes after stripping, but it doesn't do output buffering;
-    it has a [tiny printf](https://github.com/PetteriAimonen/Baselibc/blob/master/src/tinyprintf.c) implementation
-  * [picolibc](https://keithp.com/picolibc/) 1.8 is
-    2180 bytes after stripping, but it doesn't do output buffering.
-  * [klibc](https://en.wikipedia.org/wiki/Klibc) 1.5.25 is
-    2647 bytes after stripping, but it doesn't do output buffering
-  * [diet libc](https://www.fefe.de/dietlibc/) 0.34 (`./minicc --diet`) is
-    5820 bytes after stripping
-  * [neatlibc](https://github.com/aligrudi/neatlibc) is
-    12684 bytes after stripping;
-    [some functions in 386 assembly](https://github.com/aligrudi/neatlibc/tree/master/x86)
-  * OpenWatcom 2023-02 (`owcc -blinux -Os -fno-stack-check`) is
-    12934 bytes after stripping
-  * uClibc 0.9.30.1 (`./minicc --uclibc`) is
-    14440 bytes, already stripped
-  * musl (`zig cc -target i386-linux-musl -Os`) is
-    15548 bytes after stripping
-  * [lunixbochs/lib43](https://github.com/lunixbochs/lib43) is
-    20576 bytes after stripping
-  * [Cosmopolitan libc](https://justine.lol/cosmopolitan/)
-    [tinylinux-2.2](https://justine.lol/cosmopolitan/cosmopolitan-amalgamation-tinylinux-2.2.zip) is
-    24576 bytes; it should be ~16000 bytes; please note that it targets
-    amd64
-  * EGLIBC 2.19 (`./minicc --eglibc`) is
-    582714 bytes after stripping
-  * glibc 2.27 (`gcc -m32 -s -Os -static`) is
-    594716 bytes after stripping
-  * glibc 2.19 (`gcc -m32 -s -Os -static`) is
-    663424 bytes after stripping
+  Please note that that `demo_c_hello.c` provides the same functionality,
+  but the program size depends on the C compiler. The built-in OpenWatcom C
+  compiler gives 1204 bytes, but GCC 7.5.0 gives 1196 bytes. It's always 1196
+  bytes when demo_hello_linux_printf.nasm is compiled with NASM.
+
+hello-world size comparison of different libcs:
+
+* minilibc686 (`./minicc --gcc`) is
+  1196 bytes, already stripped
+* [Baselibc](https://github.com/PetteriAimonen/Baselibc)
+  [2018-11-06](https://github.com/PetteriAimonen/Baselibc/commit/245a5940483267ef501aa7cdbc1b6a422f6e9daf) is
+  1388 bytes after stripping, but it doesn't do output buffering;
+  it has a [tiny printf](https://github.com/PetteriAimonen/Baselibc/blob/master/src/tinyprintf.c) implementation
+* [picolibc](https://keithp.com/picolibc/) 1.8 is
+  2180 bytes after stripping, but it doesn't do output buffering.
+* [klibc](https://en.wikipedia.org/wiki/Klibc) 1.5.25 is
+  2647 bytes after stripping, but it doesn't do output buffering
+* [diet libc](https://www.fefe.de/dietlibc/) 0.34 (`./minicc --diet`) is
+  5820 bytes after stripping
+* [neatlibc](https://github.com/aligrudi/neatlibc) is
+  12684 bytes after stripping;
+  [some functions in 386 assembly](https://github.com/aligrudi/neatlibc/tree/master/x86)
+* OpenWatcom 2023-02 (`owcc -blinux -Os -fno-stack-check`) is
+  12934 bytes after stripping
+* uClibc 0.9.30.1 (`./minicc --uclibc`) is
+  14440 bytes, already stripped
+* musl (`zig cc -target i386-linux-musl -Os`) is
+  15548 bytes after stripping
+* [lunixbochs/lib43](https://github.com/lunixbochs/lib43) is
+  20576 bytes after stripping
+* [Cosmopolitan libc](https://justine.lol/cosmopolitan/)
+  [tinylinux-2.2](https://justine.lol/cosmopolitan/cosmopolitan-amalgamation-tinylinux-2.2.zip) is
+  24576 bytes; it should be ~16000 bytes; please note that it targets
+  amd64
+* EGLIBC 2.19 (`./minicc --eglibc`) is
+  582714 bytes after stripping
+* glibc 2.27 (`gcc -m32 -s -Os -static`) is
+  594716 bytes after stripping
+* glibc 2.19 (`gcc -m32 -s -Os -static`) is
+  663424 bytes after stripping
 
 How is this possible?
 
