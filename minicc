@@ -191,13 +191,21 @@ fi
 
 GCCBASE="/${GCC##*/}"
 IS_WATCOM=
-test "$GCC" && test "${GCCBASE#*[-/._]wcc386*}" != "$GCCBASE" && IS_WATCOM=1
+IS_CC1=
+if test -z "$GCC"; then :
+elif test "${GCCBASE#*[-/._]wcc386*}" != "$GCCBASE"; then IS_WATCOM=1
+elif test "${GCCBASE#*[-/._]cc1}" != "$GCCBASE"; then IS_CC1=1
+elif test "${GCCBASE#*[-/._]cc1[-+._]}" != "$GCCBASE"; then IS_CC1=1
+fi
 if test "$MINICC_LD" = ///gcc; then
   if test "$TCC"; then  # TODO(pts): Allow this.
     echo "fatal: conflicting combination of --tcc=... and --gccld" >&2
     exit 1
-  elif test "$IS_WATCOM"; then
+  elif test "$IS_WATCOM" ; then
     echo "fatal: conflicting combination of --watcom and --gccld" >&2
+    exit 1
+  elif test "$IS_CC1" ; then
+    echo "fatal: conflicting combination of cc1 compiler and --gccld" >&2
     exit 1
   elif test -z "$GCC"; then
     echo "fatal: -gcc=... needed by --gccld" >&2
@@ -522,8 +530,8 @@ export TMPDIR
 IFS="$NL"  # Argument splitting will happen over newlines only.
 if test "$DO_LINK"; then
   test "$OUTFILE" || OUTFILE=a.out
-  test "${OUTFILE#-?}" = "$OUTFILE" || OUTFILE="./$OUTFILE"  # Make it not a command-line flag (-...).
 fi
+test "${OUTFILE#-?}" = "$OUTFILE" || OUTFILE="./$OUTFILE"  # Make it not a command-line flag (-...).
 
 TMPOFILES=
 if test "$GCC" || test -z "$IS_TCCLD"; then
@@ -567,8 +575,11 @@ if test "$GCC" || test -z "$IS_TCCLD"; then
      *.[ao]) FILEARGS="$FILEARGS$NL--ldfile=$ARG" ;;
      *.[ci]) FILEARGS="$FILEARGS$NL--srcfile=$ARG" ;;  # owcc386 treats .i files just like .c, but gcc doesn't allow `#' in .i files, because they are apready preprocesed.
      *.[sS])
-       if test "$IS_WATCOM"; then
-         echo "fatal: unsupported minicc wcc386 assembly source file type: $ARG" >&2; exit 5;
+       if test "$IS_CC1"; then
+         if test "${ARG%.S}" != "$ARG"; then echo "fatal: unsupported preprocessor--assembly source file type for cc1: $ARG" >&2; exit 5; fi
+         echo "fatal: unsupported assembly source file type for cc1: $ARG" >&2; exit 5  # !!! Run .s files with tools/as -I.... Still fail for .S files, no preprocessor.
+       elif test "$IS_WATCOM"; then
+         echo "fatal: unsupported minicc wcc386 assembly source file type: $ARG" >&2; exit 5
        fi
        FILEARGS="$FILEARGS$NL--srcfile=$ARG"
        ;;
@@ -586,8 +597,7 @@ if test "$GCC" || test -z "$IS_TCCLD"; then
   LDARGS="$LDARGS$NL$OUTFILE_ARG"
   # echo "CCARGS: $CCARGS" >&2; echo "LDARGS: $LDARGS" >&2; echo "FILEARGS: $FILEARGS" >&2
 
-  # If $IS_WATCOM, convert $CCARGS for wcc386.
-  if test "$IS_WATCOM"; then
+  if test "$IS_WATCOM"; then  # If $IS_WATCOM, convert $CCARGS for wcc386.
     if test "$DO_ADD_INCLUDEDIR"; then
       if ! test -f "$MYDIR/libc/$LIBC/include/_preincl.h"; then
         echo "fatal: libc not prepared for wcc386, file missing: $MYDIR/libc/$LIBC/include/_preincl.h" >&2
@@ -603,7 +613,6 @@ if test "$GCC" || test -z "$IS_TCCLD"; then
     WAUTOSYMFLAG=
     WARGS=
     WISOMF=
-    WISOBJ=1
     WHADWEXTRA=
     test "$HAD_V" || WARGS="$WARGS$NL-q"
     WARGS="$WARGS$NL-bt=linux$NL-fr$NL-zl$NL-zld"
@@ -663,7 +672,7 @@ if test "$GCC" || test -z "$IS_TCCLD"; then
        # !! TODO(pts): Copy more flag translations from owcc.c.
        -c) ;;
        -S) echo "fatal: assembly generation not supported by minicc wcc386" >&2; exit 5 ;;
-       -E) WARGS="$WARGS$NL-pl"; WISOBJ= ;;
+       -E) WARGS="$WARGS$NL-pl" ;;
        -momf) WISOMF=1 ;;  # minicc-specific. Generate the object file in OMF format (OpenWatcom native) rather than ELF-32.
        -[DUI]?*) WARGS="$WARGS$NL$ARG" ;;
        -g*) echo "fatal: debug generation not supported by minicc wcc386" >&2; exit 5 ;;
@@ -671,37 +680,66 @@ if test "$GCC" || test -z "$IS_TCCLD"; then
        *) echo "fatal: assert: input file not allowed: $ARG" >&2; exit 5 ;;
       esac
     done
-    CCARGS="$GCC$NL$WSFLAG$NL$WJFLAG$NL$WFFLAG$NL$WAUTOSYMFLAG$NL$WARGS"
+    CCARGS="$GCC$NL$WSFLAG$NL$WJFLAG$NL$WFFLAG$NL$WAUTOSYMFLAG$NL$WARGS"; WARGS=
     # TODO(pts): Add -m... flag for string optimizations (like in minilibc32).
+  elif test "$IS_CC1"; then  # If $IS_CC1, convert $CCARGS for GCC cc1.
+    SKIPARG=
+    CC1ARGS=-quiet  # Some gcc(1) frontends add -Wformat-security, we don't.
+    test "$HAD_V" && CC1ARGS="$CC1ARGS$NL-v$NL-version"
+    for ARG in --skiparg $CCARGS; do  # !! TODO(pts): Check that -S and -E work.
+      if test "$SKIPARG"; then SKIPARG=; continue; fi
+      case "$ARG" in
+       *"$NL"*) echo "fatal: unexpected newline in minicc wcc386 argument" >&2; exit 5 ;;
+       "") echo "fatal: empty minicc wcc386 argument" >&2; exit 5 ;;
+       --skiparg) SKIPARG=1 ;;
+       -B?*) ;;  # Just to be sure. minicc doesn't add it for wcc386.
+       -v) ;;  # Already processed as $HAD_V above.
+       -[csS] | -static | -nostdlib) ;;
+       -*) CC1ARGS="$CC1ARGS$NL$ARG" ;;
+       *) echo "fatal: assert: input file not allowed: $ARG" >&2; exit 5 ;;
+      esac
+    done
+    CCARGS="$GCC$NL$CC1ARGS"; CC1ARGS=
   fi
 
-  if test "$IS_WATCOM" && test "$WISOMF"; then
-    if test -z "$WISOBJ" || test "$DO_LINK" || test "$CCMODE" != -c; then  # Checking $CCMODE should be enough.
-      echo "fatal: -momf needs -c" >&2; exit 5
-    fi
+  if test "$IS_WATCOM" && test "$WISOMF" && test "$CCMODE" != -c; then  # Checking $CCMODE should be enough.
+    echo "fatal: -momf needs -c" >&2; exit 5
   fi
 
   # Now create all the temporary .o files which will be written to $GCC or $TCC.
   TMPOFILES=
   CCFILEARGS=
-  OEXT=o
-  test "$IS_WATCOM" && OEXT=obj
+  if test "$IS_WATCOM"; then TMPCCOUTEXT=obj
+  elif test "$IS_CC1"; then TMPCCOUTEXT=s
+  else TMPCCOUTEXT=o
+  fi
+  NEED_OCONV=
+  if test "$DO_LINK" || test "$CCMODE" = -c; then
+    if test "$IS_WATCOM" && test -z "$WISOMF"; then NEED_OCONV=1
+    elif test "$IS_CC1"; then NEED_OCONV=1
+    fi
+  fi
   for ARG in $FILEARGS; do
     case "$ARG" in
      --srcfile=?*)
       if test "$DO_LINK"; then
-        TMPOFILE="$("$MYDIR"/tools/mktmpf "$TMPDIR"/minicc.@@@@@@."$OEXT")"  # Already creates the file.
+        TMPOFILE="$("$MYDIR"/tools/mktmpf "$TMPDIR"/minicc.@@@@@@."$TMPCCOUTEXT")"  # Already creates the file.
         if test -z "$TMPOFILE"; then
-          echo "fatal: error creating temporary .o file" >&2; rm -f $TMPOFILES; exit 7
+          echo "fatal: error creating temporary .$TMPCCOUTEXT file: $TMPOFILE" >&2; rm -f $TMPOFILES; exit 7
         fi
         TMPOFILES="$TMPOFILES$NL$TMPOFILE"
-        test "$IS_WATCOM" && TMPOFILES="$TMPOFILES$NL${TMPOFILE%.*}.o"
+        if test "$TMPCCOUTEXT" != o; then  # With $DO_LINK, this test is equivalent to "$NEED_OCONV".
+          if ! : >"${TMPOFILE%.*}.o"; then
+            echo "fatal: error creating temporary .o file: ${TMPOFILE%.*}.o" >&2; rm -f $TMPOFILES; exit 7
+          fi
+          TMPOFILES="$TMPOFILES$NL${TMPOFILE%.*}.o"
+        fi
         LDARGS="$LDARGS$NL${TMPOFILE%.*}.o"
       else
         TMPOFILE="${ARG#--*=}"
         if test "$CCMODE" = -c; then
-          if test "$IS_WATCOM" && test -z "$WISOMF"; then
-            TMPOFILE="$("$MYDIR"/tools/mktmpf "$TMPDIR"/minicc.@@@@@@."$OEXT")"  # Already creates the file.
+          if test "$NEED_OCONV"; then
+            TMPOFILE="$("$MYDIR"/tools/mktmpf "$TMPDIR"/minicc.@@@@@@."$TMPCCOUTEXT")"  # Already creates the file.
             if test -z "$TMPOFILE"; then
               echo "fatal: error creating temporary .o file" >&2; rm -f $TMPOFILES; exit 7
             fi
@@ -709,7 +747,7 @@ if test "$GCC" || test -z "$IS_TCCLD"; then
           elif test "$OUTFILE"; then
             TMPOFILE="$OUTFILE"
           else
-            TMPOFILE="${TMPOFILE%.*}"."$OEXT"; TMPOFILE="${TMPOFILE##*/}"  # GCC also strips the dirname.
+            TMPOFILE="${TMPOFILE%.*}"."$TMPCCOUTEXT"; TMPOFILE="${TMPOFILE##*/}"  # GCC also strips the dirname.
           fi
         elif test "$CCMODE" = -S; then
           if test "$OUTFILE"; then TMPOFILE="$OUTFILE"
@@ -718,6 +756,7 @@ if test "$GCC" || test -z "$IS_TCCLD"; then
         else
           TMPOFILE=-  # For -E.
         fi
+        test "$TMPOFILE" != - && test "${TMPOFILE#-}" != "$TMPOFILE" && TMPOFILE="./$TMPOFILE"  # Make it not a command-line flag (-...).
       fi
       CCFILEARGS="$CCFILEARGS$NL--tmpofile=$TMPOFILE$NL--srcfile=${ARG#--*=}"
       ;;
@@ -729,8 +768,6 @@ if test "$GCC" || test -z "$IS_TCCLD"; then
 
   # Now run `CC -c -o ... ...' for each file in $CCFILEARGS.
   TMPOFILE=
-  FOFLAG="-o$NL"
-  test "$IS_WATCOM" && FOFLAG=-fo=
   for ARG in $CCFILEARGS; do
     case "$ARG" in
      --tmpofile=?*)
@@ -748,33 +785,54 @@ if test "$GCC" || test -z "$IS_TCCLD"; then
         test "$HAD_V" && echo "info: running compiler:" $CCARGS "${ARG#--*=}" >&2  # GCC also writes to stderr.
         $CCARGS "${ARG#--*=}"; EC="$?"
       else
-        if test "$IS_WATCOM" && test "${TMPOFILE#.}" != "$TMPOFILE"; then
-          # Otherwise wcc386 would prepend a basename of the source file.
-          echo "fatal: object filename for minicc wcc386 must not start with a dot: $TMPOFILE" >&2; rm -f $TMPOFILES; exit 7;
-        fi
-        test "$HAD_V" && echo "info: running compiler:" $CCARGS $FOFLAG"$TMPOFILE" "${ARG#--*=}" >&2  # GCC also writes to stderr.
-        $CCARGS $FOFLAG"$TMPOFILE" "${ARG#--*=}"; EC="$?"
-      fi
-      if test "$EC" != 0; then
-        if test "$IS_WATCOM" && test "$WISOBJ" && test -z "$WISOMF"; then
-          TMPOFILE2="${ARG#--*=}"; TMPOFILE2="${TMPOFILE2%.*}.o"; rm -f "$TMPOFILE2"
-        fi
-        rm -f $TMPOFILES "$TMPOFILE"; exit "$EC"
-      fi
-      if test "$IS_WATCOM"; then
-        if test "$WISOBJ" && test -z "$WISOMF"; then
-          if test "$CCMODE" = -c; then
-            if test "$OUTFILE"; then TMPOFILE2="$OUTFILE" 
-            else TMPOFILE2="${ARG#--*=}"; TMPOFILE2="${TMPOFILE2%.*}.o"; TMPOFILE2="${TMPOFILE2##*/}"
-            fi
-          else TMPOFILE2="${TMPOFILE%.*}.o"
+        CCFARGS=
+        ARG="${ARG#--*=}"
+        if test "$IS_WATCOM"; then
+          if test "${TMPOFILE#.}" != "$TMPOFILE"; then
+            # Otherwise wcc386 would prepend a basename of the source file.
+            echo "fatal: object filename for minicc wcc386 must not start with a dot: $TMPOFILE" >&2; rm -f $TMPOFILES; exit 7;
           fi
+          CCFARGS="-fo=$TMPOFILE$NL$ARG"
+        elif test "$IS_CC1"; then
+          CCFARGS="-dumpbase$NL$ARG$NL-auxbase-strip$NL${ARG%.*}.o$NL-o$NL$TMPOFILE$NL$ARG"
+          # !! Convert the .s file to .o with GNU as(1).
+        else
+          CCFARGS="-o$NL$TMPOFILE$NL$ARG"
+        fi
+        test "$HAD_V" && echo "info: running compiler:" $CCARGS $CCFARGS >&2  # GCC also writes to stderr.
+        $CCARGS $CCFARGS; EC="$?"
+      fi
+      if test "$EC" != 0; then  # The compiler has failed.
+        if test "$TMPOFILE" = -; then
+          rm -f $TMPOFILES
+        else
+          rm -f $TMPOFILES "$TMPOFILE"  # In case the compiler has created a partial, corrupt output file ($TMPOFILE).
+        fi
+        exit "$EC"
+      fi
+      if test "$NEED_OCONV"; then
+        if test "$CCMODE" = -c; then
+          if test "$OUTFILE"; then TMPOFILE2="$OUTFILE"
+          else TMPOFILE2="$ARG"; TMPOFILE2="${TMPOFILE2%.*}.o"; TMPOFILE2="${TMPOFILE2##*/}"
+          fi
+        else
+          TMPOFILE2="${TMPOFILE%.*}.o"
+        fi
+        if test "$IS_WATCOM"; then
           EFARGS="$MYDIR/tools/omf2elf$NL-h$NL$HAD_$V$NL-o$NL$TMPOFILE2$NL$TMPOFILE"
           test "$HAD_V" && echo "info: running OMF converter:" $EFARGS >&2
-          $EFARGS; EC="$?"
-          if test "$EC" != 0; then rm -f $TMPOFILES $TMPOFILE2; exit "$EC"; fi
+        else  # "$IS_CC1".
+          # GNU as(1) also accepts a `-I...' flag, but we don't need it
+          # here, because this .s source file was generated by GCC, which
+          # doesn't generates includes.
+          EFARGS="$MYDIR/tools/as$NL$HAD_V$NL--32$NL-march=$ARCH+387$NL-o$NL$TMPOFILE2$NL$TMPOFILE"
+          test "$HAD_V" && echo "info: running GNU assembler:" $EFARGS >&2
         fi
-      elif test "$DO_LINK" && test -z "$TCC"; then
+        $EFARGS; EC="$?"
+        if test "$EC" != 0; then rm -f $TMPOFILES $TMPOFILE2; exit "$EC"; fi
+        TMPOFILE="$TMPOFILE2"  # For elfnostack below.
+      fi
+      if test "$DO_LINK" && test -z "$TCC" && test -z "$IS_WATCOM"; then
         # GCC adds the .note.GNU-stack ELF section header to the .o file, adding
         # 0x20 bytes unnecessary. We remove it, so ld(1) won't generate the
         # PT_GNU_STACK program header in the executable. To get it, specify
@@ -799,7 +857,7 @@ if test "$GCC" || test -z "$IS_TCCLD"; then
   fi
   ARGS="$LDARGS"
   WHAT=linker
-  unset LDARGS CCARGS CCFILEARGS FILEARGS TMPOFILE TMPOFILE2 FOFLAG CCMODE OEXT
+  unset LDARGS CCARGS CCFILEARGS FILEARGS TMPOFILE TMPOFILE2 FOFLAG CCMODE TMPCCOUTEXT
   # Don't forget: rm -f $TMPOFILES
 else
   TMPOFILES=
