@@ -621,5 +621,7 @@ This section is mostly an FYI, it doesn't affter minilibc686 users directly.
 * Allow C++ with `g++ -fno-rtii -fno-exceptions', also clang++ like this.
 * Make strtod and strtol set errno if errno is used by the program.
 * Allow *.nasm source files in minicc; also make it work with --tcc.
+* Make eglibc work perfectly, without warnings with GCC, Clang, TinyCC,
+  -ansi, -std=c99. Make sure that sizeof(struct stat64) == 0x60.
 
 __END__
