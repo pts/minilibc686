@@ -339,12 +339,25 @@ Here is how to pick the compiler:
 
 * These compilers are supported: GCC, Clang, OpenWatcom C compiler,
   TinyCC (TCC).
+* These compilers are bundled with with *minicc*, being part of the package:
+  OpenWatcom C compiler, TinyCC (TCC).
+* These compilers are precompiled and prepared for use with *minicc*, but
+  they need a separate download: GCC 4.1.2 (released on 2007-02-13) .. 4.9.3
+  (released on 2015-06-26) . *minicc* does the download
+  automatically (using *wget* or *curl*) upon first use.
 * By default, *minicc* uses the the bundled OpenWatcom C compiler (released
   on 2023-03-04). You can specify it explicitly as `--watcom`.
 * To use the bundled TinyCC 0.9.26 compiler (`tools/pts-tcc`), specify
   `--tcc`.
+* To use one of the prepared versions of GCC 4.x, use any of:
+  `--gcc=4.1` .. `--gcc=4.9`. *minicc* will download (using *wget* or *curl*)
+  the prepared executable from GitHub upon first use. It will also download
+  the prepared GNU as(1) 2.22 assembler executable. Example donwload
+  locations: `tools/gcc-4.8.5` and `tools/as-2.22`. To prevent automatic
+  downloads, specify `--no-download`.
 * To use the system GCC, specify `--gcc` for *minicc*. Use `--gcc=...` to
-  run it with a specific GCC command, e.g. `--gcc=gcc-4.8`.
+  run it with a specific GCC command, e.g. `--gcc=gcc-4.8`. (Please note
+  that `--gcc=4.8` would use the prepared GCC, not the system GCC.)
 * To use the system Clang, run it with `--gcc=clang`. You can also specify
   a specific Clang command, e.g. `--gcc=clang-6.0`.
 * To use a specific version of the OpenWatcom C compiler, run it with

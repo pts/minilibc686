@@ -44,6 +44,41 @@ if test $# = 0 || test "$1" == --help; then
   echo "minicc: C compiler fronted for building small Linux i386 executables$NL""Usage: $0 [<gcc-flag>...] <file.c>$NL""There are minicc flags, e.g. --watcom, --gcc, --tcc, --utcc"
   test $# = 0 && exit 1
   exit 0
+elif test "$1" = --download; then
+  SAVE_PATH="$PATH"
+  shift
+  WGET_V=-q ; CURL_V=-s
+  if test "$1" = -v; then
+    shift;
+    WGET_V=; CURL_V=
+  fi
+  for NAME in "$@"; do
+    case "$NAME" in -* | *[/?%@]*) echo "fatal: bad tool name syntax for download: $NAME" >&2; exit 8 ;; esac
+    OF="$MYDIR/tools/$NAME"
+    # !! TODO(pts): Download for --eglibc or --libc=eglibc as well.
+    URL="https://github.com/pts/minilibc686/releases/download/cc1-linux-i686/$NAME"
+    if test -f "$OF" && test -s "$OF"; then
+      echo "info: tool already downloaded: $OF" >&2
+    else
+      export PATH="$OLD_PATH"
+      if type wget >/dev/null 2>&1; then  # `busybox wget --version' doesn't return 0, so we don't check that.
+        echo "info: downloading to $OF using wget: $URL" >&2
+        if ! wget $WGET_V -O "$OF".tmp "$URL"; then rm -f "$OF".tmp; exit 8; fi
+      elif curl --version >/dev/null 2>&1; then
+        echo "info: downloading to $OF using curl: $URL" >&2
+        if ! curl $CURL_V -Lo "$OF".tmp "$URL"; then rm -f "$OF".tmp; exit 8; fi
+      else
+        echo "info: no program to download tool $NAME, install wget or curl" >&2
+        exit 8
+      fi
+      export PATH="$SAVE_PATH"
+      mv "$OF".tmp "$OF" || exit 8
+    fi
+    if ! test -x "$OF"; then
+      chmod +x "$OF" || exit 8
+    fi
+  done
+  exit  # All downlodads succeeded.
 fi
 
 if ! test -f "$MYDIR/gcctooldir/dummy"; then
@@ -80,6 +115,7 @@ DO_ARGC=  # Argument 1 of main(...).
 DO_ARGV=  # Argument 2 of main(...).
 DO_ENVP=  # Argument 3 of main(...).
 HAD_TRADITIONAL=
+DO_DOWNLOAD=1
 
 case "$1" in
  "" | -* | *.[aocisShHCmMfFd] | *.c[cp] | *.[ch]pp | *.cxx | *.asm | *.[nw]asm | *.m[im] | *.mii | *.ii | *.c++ | *.[CH]PP | *.h[hp] | *.hxx | *.hpp | *.h++ | *.tcc | *.for | *.ftn | *.FOR | *.fpp | *.FPP | *.FTN | *.[fF][0-9][0-9] | *.go | *.brig | *.java | *.ad[sb] | *.d[id] | *.sx | *.obj) ;;  # A flag or a source file name is not a program name.
@@ -109,6 +145,7 @@ for ARG in "$@"; do
   case "$ARG" in
    *"$NL"*) echo "fatal: unexpected newline in minicc argument" >&2; exit 1 ;;
    "") echo "fatal: empty minicc argument" >&2; exit 1 ;;
+   --no-download) DO_DOWNLOAD= ;;
    --gcc) TCC=; GCC=gcc ;;  # Doesn't work with --boxed. TODO(pts): Look it up on old $PATH.
    --gcc=*/*) TCC=; GCC="${ARG#*=}"; test "$IS_BOXED" && GCC_BARG="-B${GCC%/*}" ;;
    --gcc=*) TCC=; GCC="${ARG#*=}" ;;
@@ -169,6 +206,7 @@ for ARG in "$@"; do
    -v) HAD_V=-v; ARGS="$ARGS$NL$ARG" ;;
    -o?*) echo "fatal: unsupported minicc -o flag: $ARG" >&2; exit 1 ;;
    -o) SKIPARG="$ARG" ;;
+   --download) SKIPARG="$ARG" ;;
    -L*) echo "fatal: unsupported minicc library path flag: $ARG" >&2; exit 1 ;;
    -l*) echo "fatal: unsupported minicc library flag: $ARG" >&2; exit 1 ;;
    -*) echo "fatal: unsupported minicc flag: $ARG" >&2; exit 1 ;;
@@ -185,15 +223,25 @@ if test "$SKIPARG"; then
   exit 1
 fi
 
-
 if test "$HAD_TRADITIONAL" && test "$DO_ADD_INCLUDEDIR"; then  # libcs supported by minicc don't support -traditional.
   echo "fatal: $HAD_TRADITIONAL needs -nostdinc in minicc" >&2
 fi
 
 GCCBASE="/${GCC##*/}"
 IS_WATCOM=
-IS_CC1=
+IS_CC1=  # A value of 2 indicates autodownload.
 if test -z "$GCC"; then :
+elif test "$GCC" = 4; then GCC="$MYDIR"/tools/cc1-4.8.5; IS_CC1=2  # minicc default of the GCC 4.x series.
+elif test "$GCC" = 4.1 || test "$GCC" = 4.1.2; then GCC="$MYDIR"/tools/cc1-4.1.2; IS_CC1=2
+elif test "$GCC" = 4.2 || test "$GCC" = 4.2.1; then GCC="$MYDIR"/tools/cc1-4.2.1; IS_CC1=2
+elif test "$GCC" = 4.3 || test "$GCC" = 4.3.6; then GCC="$MYDIR"/tools/cc1-4.3.6; IS_CC1=2
+elif test "$GCC" = 4.4 || test "$GCC" = 4.4.7; then GCC="$MYDIR"/tools/cc1-4.4.7; IS_CC1=2
+elif test "$GCC" = 4.5 || test "$GCC" = 4.5.4; then GCC="$MYDIR"/tools/cc1-4.5.4; IS_CC1=2
+elif test "$GCC" = 4.6 || test "$GCC" = 4.6.4; then GCC="$MYDIR"/tools/cc1-4.6.4; IS_CC1=2
+elif test "$GCC" = 4.7 || test "$GCC" = 4.7.4; then GCC="$MYDIR"/tools/cc1-4.7.4; IS_CC1=2
+elif test "$GCC" = 4.8 || test "$GCC" = 4.8.5; then GCC="$MYDIR"/tools/cc1-4.8.5; IS_CC1=2
+elif test "$GCC" = 4.9 || test "$GCC" = 4.9.3; then GCC="$MYDIR"/tools/cc1-4.9.3; IS_CC1=2
+elif test "${GCC#[1-9]}" != "$GCC"; then echo "fatal: GCC version $GCC isn't buundled with minicc; if you want your system GCC, use --gcc or --gcc=gcc-$GCC" >&2; exit 1
 elif test "${GCCBASE#*[-/._]wcc386*}" != "$GCCBASE"; then IS_WATCOM=1
 elif test "${GCCBASE#*[-/._]cc1}" != "$GCCBASE"; then IS_CC1=1
 elif test "${GCCBASE#*[-/._]cc1[-+._]}" != "$GCCBASE"; then IS_CC1=1
@@ -260,7 +308,53 @@ if test "$DO_ENVP" = 1 && test "$DO_ARGV" = 0; then echo "fatal: -menvp needs -m
 if test "$DO_ENVP" = 1 && test "$DO_ARGC" = 0; then echo "fatal: -menvp needs -margc" >&2; exit 1; fi
 if test "$DO_ARGV" = 1 && test "$DO_ARGC" = 0; then echo "fatal: -margv needs -margc" >&2; exit 1; fi
 
-case "$GCC" in "") ;; */*) ;; *)  # Resolve $GCC on $OLD_PATH. Useful for --noenv and --boxed.
+case "$GCC" in
+ "") ;;
+ */*)
+  if test "${GCC#*/}" = "$GCC"; then  # No slash.
+    :
+  elif test -f "$GCC" && test -s "$GCC"; then
+    if test -x "$GCC"; then
+      :
+    elif test "$IS_CC1" = 2; then
+      chmod +x "$GCC" || exit 6
+    else
+      echo "fatal: GCC program file not executable: $GCC" >&2
+    fi
+  elif test "$IS_CC1" != 2 || test "${GCC#$MYDIR/tools/cc1-*}" = "$GCC"; then
+    echo "fatal: GCC command not found: $GCC" >&2; exit 6
+  elif test -z "$DO_DOWNLOAD"; then
+    echo "fatal: GCC command not found; omit --no-download to get it downloaded: $GCC" >&2; exit 6
+  else
+    if sh "$0" --boxed-path "$OLD_PATH" --download $HAD_V "${GCC#$MYDIR/tools/}" && test -f "$GCC"; then :; else
+      echo "fatal: GCC download failed" >&2; exit 6
+    fi
+    chmod +x "$GCC" || exit 6
+  fi
+  if test "$IS_CC1" = 2; then
+    if test -f "$GCC" && test -s "$GCC" && test -x "$GCC"; then :; else
+      echo "fatal: problem with downloaded GCC cc1 tool: $GCC" >&2; exit 6
+    fi
+    if test -f "$MYDIR"/tools/as && test -s "$MYDIR"/tools/as; then
+      :
+    elif test -z "$DO_DOWNLOAD"; then
+      echo "fatal: GNU as(1) not found; omit --no-download to get it downloaded: $MYDIR/tools/as-2.22" >&2; exit 6
+    else
+      if sh "$0" --boxed-path "$OLD_PATH" --download $HAD_V as-2.22 && test -f "$MYDIR/tools/as-2.22"; then :; else
+        echo "fatal: GNU as(1) download failed" >&2; exit 6
+      fi
+      test -x "$MYDIR/tools/as-2.22" || chmod +x "$MYDIR/tools/as-2.22" || exit 6
+    fi
+    if ! test -x "$MYDIR/tools/as-2.22"; then chmod +x "$MYDIR/tools/as-2.22" || exit 6; fi
+    rm -f "$MYDIR/tools/as"
+    ln -s as-2.22 "$MYDIR/tools/as" || exit 6
+    test -x "$MYDIR/tools/as" || chmod +x "$MYDIR/tools/as" || exit 6
+    if test -f "$MYDIR"/tools/as && test -s "$MYDIR/tools/as" && test -x "$MYDIR"/tools/as; then :; else
+      echo "fatal: problem with downloaded assembler tool file: $MYDIR/tools/as"; exit 6
+    fi
+  fi
+  ;;
+ *)  # Resolve $GCC on $OLD_PATH. Useful for --noenv and --boxed.
   LOOKUP="$(PATH="$OLD_PATH"; type "$GCC" 2>/dev/null)"
   case "$LOOKUP" in
    *\ is\ /*)  LOOKUP="/${LOOKUP#*\ is\ /}"  ;;
