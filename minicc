@@ -39,7 +39,7 @@ while test "$1" = --boxed; do export PATH="$MYDIR/ccshbin"; IS_BOXED=1; shift; d
 NL="
 "
 
-if test $# = 0 || test "$1" == --help; then
+if test $# = 0 || test "$1" = --help; then
   test $# = 0 && exec >&2
   echo "minicc: C compiler fronted for building small Linux i386 executables$NL""Usage: $0 [<gcc-flag>...] <file.c>$NL""There are minicc flags, e.g. --watcom, --gcc, --tcc, --utcc"
   test $# = 0 && exit 1
