@@ -100,7 +100,7 @@ DO_ADD_INCLUDEDIR=1
 DO_LINK=1
 DO_COMPILE_OR_LINK=1
 SFLAG=
-DO_STRIP=1
+STRIP_MODE=2  # 0: Don't strip, don't chage he ELF OSABI (-g00); 1: change the ELF OSABI to Linux and fix first section alignment (-g0); 2: change the ELF OSABI to Linux and strip.
 WFLAGS="-W$NL-Wall$NL-Werror-implicit-function-declaration"
 HAD_OFLAG=
 HAD_V=
@@ -198,8 +198,9 @@ for ARG in "$@"; do
    -ansi | -std=*) ANSIFLAG="$ARG" ;;
    -[DUI]*?) ARGS="$ARGS$NL$ARG" ;;
    -O*) ARGS="$ARGS$NL$ARG"; HAD_OFLAG=1 ;;
-   -g0) DO_STRIP=0 ;;
-   -g*) ARGS="$ARGS$NL$ARG"; DO_STRIP=0 ;;
+   -g00) STRIP_MODE=0 ;;
+   -g0) STRIP_MODE=1 ;;
+   -g*) ARGS="$ARGS$NL$ARG"; STRIP_MODE=0 ;;
    -nostdlib | -nodefaultlibs) DO_ADD_LIB= ;;
    -nostdinc) DO_ADD_INCLUDEDIR= ;;
    -c) ARGS="$ARGS$NL$ARG"; DO_ADD_LIB=; DO_LINK= ;;
@@ -471,12 +472,9 @@ if test "$NEED_LIBC"; then
 fi
 unset OLD_PATH
 
-if test "$DO_STRIP" = 0 || test -z "$DO_LINK"; then
-  DO_STRIP=
-else
-  DO_STRIP=1
-  SFLAG=-s
-  test "$GCC" && SFLAG="-s"
+if test "$STRIP_MODE" = 0 || test -z "$DO_LINK"; then STRIP_MODE=0
+elif test "$STRIP_MODE" = 1; then :
+else STRIP_MODE=2; SFLAG=-s
 fi
 
 #if ! "$GCC" "$GCC_BARG" -print-search-dirs >/dev/null 2>&1; then  # Also works with Clang.
@@ -753,7 +751,7 @@ if test "$GCC" || test -z "$IS_TCCLD"; then
        -std=ow) WARGS="$WARGS$NL-ze" ;;
        -pedantic) ;;
        -m32 | -static | -fno-pic | -fcommon | -fno-unwind-tables | -fno-asynchronous-unwind-tables | -fno-builtin | -fno-ident | -ffreestanding | -fno-lto | -nostdinc | -falign-functions=* | -falign-jumps=* | -falign-loops=* | -mpreferred-stack-boundary=*) ;;
-       -fno-unroll-loops | -fmerge-all-constants | -fno-math-errno | -g0 | -Wno-no) ;;
+       -fno-unroll-loops | -fmerge-all-constants | -fno-math-errno | -g0 | -g00 | -Wno-no) ;;
        -fomit-frame-pointer) WFFLAG= ;;
        -fomit-leaf-frame-pointer) WFFLAG=-of ;;
        -fno-omit-frame-pointer) WFFLAG=-of ;;
@@ -992,7 +990,7 @@ if test "$DO_SMART" != 0; then  # Smart linking.
   $ARGS $LIBMINITCC1 2>"$OUTFILE.err"; EC="$?"  # TODO(pts): Write a C program to extract undefined references and display errors in a streaming way. (Some errors like `In ...' need to be buffered.)
   if test "$EC" = 0 && test "$DO_SMART" != 2; then
     cat "$OUTFILE.err" >&2
-    if test "$DO_STRIP"; then rm -f "$OUTFILE.err"
+    if test "$STRIP_MODE" != 0; then rm -f "$OUTFILE.err"
     else rm -f "$OUTFILE.err" $TMPOFILES
     fi
   else
@@ -1049,7 +1047,7 @@ if test "$DO_SMART" != 0; then  # Smart linking.
     ARGS="$ARGS$NL$OUTFILE.smart.o$NL$MYDIR/libc/$LIBC/libc.$ARCH.a$NL$LIBMINITCC1"
     test "$HAD_V" && echo "info: running $WHAT again:" $ARGS >&2  # GCC also writes to stderr.
     $ARGS >&2; EC="$?"  # Redirect linker stdout to stderr.
-    if test "$DO_STRIP" && test "$EC" = 0; then :
+    if test "$STRIP_MODE" != 0 && test "$EC" = 0; then :
     else rm -f "$OUTFILE.smart.o" $TMPOFILES
     fi
     test "$EC" = 0 || exit "$EC"
@@ -1057,13 +1055,19 @@ if test "$DO_SMART" != 0; then  # Smart linking.
 else
   test "$HAD_V" && echo "info: running $WHAT:" $ARGS >&2  # GCC also writes to stderr.
   $ARGS >&2; EC="$?"  # Redirect linker stdout to stderr.
-  if test -z "$DO_STRIP" || test "$EC" != 0; then
+  if test "$STRIP_MODE" = 0 || test "$EC" != 0; then
     rm -f $TMPOFILES
   fi
   test "$EC" = 0 || exit "$EC"
 fi
 
-if test "$DO_STRIP"; then
+if test "$STRIP_MODE" = 1; then
+  EFARGS="$MYDIR/tools/elfxfix$NL-l$NL-a$NL$HAD_V$NL--$NL$OUTFILE"
+  $EFARGS; EC="$?"
+  test "$HAD_V" && echo "info: fixing ELF executable:" $EFARGS >&2
+  test "$TMPOFILES" && rm -f $TMPOFILES
+  test "$EC" = 0 || exit "$EC"
+elif test "$STRIP_MODE" = 2; then
   FIX_O_FN=
   if ! test "$IS_TCCLD"; then
     FIX_O_FN="$("$MYDIR"/tools/mktmpf "$TMPDIR"/elfxfix.@@@@@@.o)"  # Already creates the file.
@@ -1076,7 +1080,7 @@ if test "$DO_STRIP"; then
   EFARGS="$MYDIR/tools/elfxfix$NL-l$NL-a$NL-s$NL$PARGS$NL$HAD_V$NL--$NL$OUTFILE"
   test "$HAD_V" && echo "info: running extra strip:" $EFARGS >&2
   if test "$FIX_O_FN"; then
-    $EFARGS >&2; EC="$?"
+    $EFARGS; EC="$?"
     if test "$EC" != 0; then
       rm -f -- "$FIX_O_FN"
       test "$DO_SMART" != 0 && rm -f "$OUTFILE.smart.o"
@@ -1085,18 +1089,18 @@ if test "$DO_STRIP"; then
     if test -s "$FIX_O_FN"; then  # elfxfix has written to it.
       ARGS="$ARGS$NL$FIX_O_FN"  # Make .bss larger by the size recommended by tools/elfxfix.
       test "$HAD_V" && echo "info: running linker after elfxfix:" $ARGS >&2
-      $ARGS >&2; EC="$?"
+      $ARGS; EC="$?"
       if test "$EC" = 0; then
         PARGS="-r$NL$FIX_O_FN"
         EFARGS="$MYDIR/tools/elfxfix$NL-l$NL-a$NL-s$NL$PARGS$NL$HAD_V$NL--$NL$OUTFILE"
         test "$HAD_V" && echo "info: running extra strip again:" $EFARGS >&2
-        $EFARGS >&2; EC="$?"
+        $EFARGS; EC="$?"
       fi
     fi
     rm -f -- "$FIX_O_FN" $TMPOFILES
   else
-    $EFARGS >&2; EC="$?"
-    rm -f -- $TMPOFILES
+    $EFARGS; EC="$?"
+    test "$TMPOFILES" && rm -f $TMPOFILES
   fi
   test "$DO_SMART" != 0 && rm -f "$OUTFILE.smart.o"
   test "$EC" = 0 || exit "$EC"
