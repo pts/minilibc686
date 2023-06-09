@@ -38,6 +38,8 @@ __LIBC_FUNC(pid_t, getpid, (void), __LIBC_NOATTR);
 __LIBC_FUNC(pid_t, getppid, (void), __LIBC_NOATTR);
 __LIBC_FUNC(pid_t, fork, (void), __LIBC_NOATTR);
 __LIBC_FUNC(void *, sys_brk, (void *addr), __LIBC_NOATTR);
+__LIBC_FUNC(int, execve, (const char *filename, char *const argv[], char *const envp[]), __LIBC_NOATTR);
+
 #ifdef __MINILIBC686__
   /* Returns 0 on success, anything else (and sets errno) on error. The
    * implementation quite shorter than lseek64(...).

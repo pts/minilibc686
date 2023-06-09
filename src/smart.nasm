@@ -278,6 +278,7 @@ _syscall mkdir, 39
 _syscall lstat64, 196
 _syscall symlink, 83
 _syscall umask, 60
+_syscall execve, 11
 _syscall utimes, 271
 ;
 _need mini_syscall, mini___M_jmp_pop_ebp_edi_esi_ebx_syscall_return
