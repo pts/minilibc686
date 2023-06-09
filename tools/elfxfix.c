@@ -1,6 +1,8 @@
 /*
  * elfxfix: do various fixes on ELF executables
  * by pts@fazekas.hu at Wed May 24 02:20:35 CEST 2023
+ *
+ * Compile: ./minicc --noenv --gcc=4.8 -o tools/elfxfix.new tools/elfxfix.c
  */
 
 #include <fcntl.h>
@@ -134,7 +136,7 @@ int main(int argc, char **argv) {
             "-v: verbose operation, write info to stderr\n"
             "-l: change the ELF OSABI to Linux\n"
             "-a: align the early PT_LOAD phdr to page size\n"
-            "-s: strip beyond the last PT_LOAD\n"
+            "-s: strip beyond the last PT_LOAD (sstrip)\n"
             "-p <fix.o>: detect the GNU ld .data padding bug\n"
             "-r <fix.o>: make .bss smaller by fix.o\n",
             argv[0]);
