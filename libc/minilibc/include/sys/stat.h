@@ -52,6 +52,7 @@ __LIBC_FUNC(int, mkdir, (const char *pathname, mode_t mode), __LIBC_NOATTR);
 __LIBC_FUNC(mode_t, umask, (mode_t mask), __LIBC_NOATTR);
 __LIBC_FUNC(int, chmod, (const char *pathname, mode_t mode), __LIBC_NOATTR);
 __LIBC_FUNC(int, fchmod, (int fd, mode_t mode), __LIBC_NOATTR);
+__LIBC_FUNC(int, stat64, (const char *path, struct stat64 *buf), __LIBC_NOATTR);
 __LIBC_FUNC(int, lstat64, (const char *path, struct stat64 *buf), __LIBC_NOATTR);
 
 #endif  /* _SYS_STAT_H */

@@ -275,6 +275,7 @@ _syscall gettimeofday, 78
 _syscall chmod, 15
 _syscall fchmod, 94
 _syscall mkdir, 39
+_syscall stat64, 195
 _syscall lstat64, 196
 _syscall symlink, 83
 _syscall umask, 60
