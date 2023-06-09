@@ -16,24 +16,24 @@ fi
 MYDIR="${MYDIR%/*}"
 test "${MYDIR#-}" = "$MYDIR" || MYDIR="./$MYDIR"
 # Use BusyBox (if available) for consistent shell and coreutils.
-test -z "$BUSYBOX_SH_SCRIPT" && test -f "$MYDIR/shbin/sh" &&
-    export BUSYBOX_SH_SCRIPT=1 PATH="$MYDIR/shbin:$PATH" &&
+test -z "$BUSYBOX_SH_SCRIPT" && test -f "$MYDIR/ccshbin/sh" &&
+    export BUSYBOX_SH_SCRIPT=1 PATH="$MYDIR/ccshbin:$PATH" &&
     exec sh -- "$0" "$@"
 
 # --noenv is for reproducible builds and testing: unset all environment
-# variables, and use a short hardcoded $PATH (`$MYDIR/shbin'). Toolchain
+# variables, and use a short hardcoded $PATH (`$MYDIR/ccshbin'). Toolchain
 # tools (e.g. pts-tcc and ld) are always run from `$MYDIR/tools', no matter
 # the $PATH. System tools (such as with `--gcc=...') will be excplicitly
 # looked up on the old $PATH.
-test "$1" = --noenv && shift && exec env -i PATH="$MYDIR/shbin" BUSYBOX_SH_SCRIPT=1 TMPDIR="$TMPDIR" sh -- "$0" --boxed-path "$PATH" "$@"
+test "$1" = --noenv && shift && exec env -i PATH="$MYDIR/ccshbin" BUSYBOX_SH_SCRIPT=1 TMPDIR="$TMPDIR" sh -- "$0" --boxed-path "$PATH" "$@"
 
 # --boxed is a weaker version of --noenv for reproducible builds and
 # testing: keep most environment variables, but use a short hardcoded
-# $PATH (`$MYDIR/shbin').
+# $PATH (`$MYDIR/ccshbin').
 OLD_PATH="$PATH"
 IS_BOXED=
-while test "$1" = --boxed-path && test "$2"; do OLD_PATH="$2"; shift; shift; export PATH="$MYDIR/shbin"; IS_BOXED=1; done
-while test "$1" = --boxed; do export PATH="$MYDIR/shbin"; IS_BOXED=1; shift; done
+while test "$1" = --boxed-path && test "$2"; do OLD_PATH="$2"; shift; shift; export PATH="$MYDIR/ccshbin"; IS_BOXED=1; done
+while test "$1" = --boxed; do export PATH="$MYDIR/ccshbin"; IS_BOXED=1; shift; done
 # Now $OLD_PATH contains the initial $PATH, with system tools like `gcc'.
 
 NL="

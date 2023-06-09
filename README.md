@@ -650,5 +650,8 @@ This section is mostly an FYI, it doesn't affter minilibc686 users directly.
 * Allow *.nasm source files in minicc; also make it work with --tcc.
 * Make eglibc work perfectly, without warnings with GCC, Clang, TinyCC,
   -ansi, -std=c99. Make sure that sizeof(struct stat64) == 0x60.
+* Wht doesn't -fomit-frame-pointer make a difference for OpenWatcom? Does
+  OpenWatcom always emit a frame pointer?
+* Add OpenWatcom-compatible NAN (extern __float_nan) to all 4 libcs: libc/uclibc-0.9.30.1/include/bits/nan.h
 
 __END__
