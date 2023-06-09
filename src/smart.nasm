@@ -277,6 +277,7 @@ _syscall fchmod, 94
 _syscall mkdir, 39
 _syscall stat64, 195
 _syscall lstat64, 196
+_syscall fstat64, 197
 _syscall symlink, 83
 _syscall umask, 60
 _syscall execve, 11
