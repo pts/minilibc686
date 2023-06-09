@@ -650,8 +650,12 @@ This section is mostly an FYI, it doesn't affter minilibc686 users directly.
 * Allow *.nasm source files in minicc; also make it work with --tcc.
 * Make eglibc work perfectly, without warnings with GCC, Clang, TinyCC,
   -ansi, -std=c99. Make sure that sizeof(struct stat64) == 0x60.
-* Wht doesn't -fomit-frame-pointer make a difference for OpenWatcom? Does
+* Why doesn't -fomit-frame-pointer make a difference for OpenWatcom? Does
   OpenWatcom always emit a frame pointer?
 * Add OpenWatcom-compatible NAN (extern __float_nan) to all 4 libcs: libc/uclibc-0.9.30.1/include/bits/nan.h
+* Why does GCC 4.8 align the end of `main' to a multiple of 8, even if
+  -falign-functions=1? It's because main is in .text.startup, other
+  functions are in .text (alignment 2**2). Fix it by changing the alingmen
+  tof .text to 2**0 in tools/elfofix.
 
 __END__
