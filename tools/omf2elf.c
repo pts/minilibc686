@@ -2,6 +2,8 @@
  * omf2elf.c: convert i386 OMF .obj object file to i386 ELF relocatable .o object file
  * by pts@fazekas.hu at Thu Jun  1 14:22:39 CEST 2023
  *
+ * Compile: minicc -o tools/omf2elf tools/omf2elf.c
+ *
  * This program was only tested on OMF .obj files created by OpenWatcom
  * wcc386. It will probably fail on the output of assemblers or other C
  * compilers. (The output of NASM on test/demo_obj.nasm works though,
@@ -306,7 +308,11 @@ static char is_openwatcom_libc_symbol(const char *name) {
          strcmp(name, "I8LS") == 0 ||
          strcmp(name, "U8LS") == 0 ||
          strcmp(name, "U8M") == 0 ||
-         strcmp(name, "I8M") == 0;
+         strcmp(name, "I8M") == 0 ||
+         strcmp(name, "FSU87") == 0 ||
+         strcmp(name, "FDU87") == 0 ||
+         strcmp(name, "U8FD7") == 0 ||
+         strcmp(name, "U8FS7") == 0;
 }
 
 static unsigned char unflushed_ledata_data[0x10000], *unflushed_ledata_up;  /* OMF record data for ledata* records. */
