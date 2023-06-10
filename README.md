@@ -494,8 +494,8 @@ Here is how to disable some default *minicc* functionality:
 * Disable executable stripping: specify any `-g...` flag, e.g. `-g0` for the
   GCC default. If you specify `-g0 -s`, the executable will be stripped just
   like `gcc -s`, rather than full stripping done by *minicc*.
-* Disable C compiler warnings enabled by *minicc*: specify any `-W...` flag,
-  e.g. `-Wno-no` for the GCC default.
+* Disable C compiler warnings enabled by *minicc*: specify `-Wno-no` (or any
+  `-W...` flag which is not a `-Wno-...` fag) for the GCC default.
 * Disable linking against minilibc686: specify `-nostdlib -nostdinc`, and
   specify any libc (with `-I...` for the #include directory and `....a` for
   the static library).

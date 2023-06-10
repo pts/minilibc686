@@ -291,6 +291,7 @@ for ARG in "$@"; do
    -menvp) DO_ENVP=1 ;;
    -mno-envp) DO_ENVP=0 ;;
    -Wno-no) WFLAGS= ;;  # Disable warnings. GCC and Clang accept and ignore it.
+   -Wno-*) ARGS="$ARGS$NL$ARG" ;;
    -Werror[-=]implicit-function-declaration) ARGS="$ARGS$NL-Werror-implicit-function-declaration"; WFLAGS= ;;  # GCC 4.1 supports only -Werror-implicit-function-declaration, GCC >=4.2 supports it and also -Werror=implicit-function-declaration.
    -W*) ARGS="$ARGS$NL$ARG"; WFLAGS= ;;
    -[fm]?* | -pedantic) ARGS="$ARGS$NL$ARG" ;;
