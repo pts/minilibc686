@@ -3,29 +3,88 @@
 # minicc: compiler frontend for building with minilib686
 # by pts@fazekas.hu at Sun May 21 02:21:27 CEST 2023
 #
+# Don't run this script manually, but run 
+#
 # !! Enable -fomit-frame-pointer by default, see how smaller it gets with GCC. OpenWatcom definitely benefits.
 #
 
 export LC_ALL=C  # To avoid surprises with localized error messages etc.
 
 unset MYDIR
-MYDIR="$(readlink "$0" 2>/dev/null)"
-if test "$MYDIR"; then test "${MYDIR#/}" = "$MYDIR" && MYDIR="${0%/*}/$MYDIR"
-else MYDIR="$0"
+if test "$1" = --sh-script; then  # This is the fast path.
+  shift  # Remove --sh-script.
+  MYPROG="$0"
+  MYDIR="${0%/*}"  # The caller ensures that there is a `/'.
+  # TODO(pts): Remove code duplication with the `else' branch below.
+  while test "${MYDIR#./}" != "$MYDIR"; do MYDIR="${MYDIR#./}"; done
+  if test "$MYDIR" = shbin/..; then MYDIR=.  # Simplification.
+  elif test "${MYDIR%/shbin/..}"; then MYDIR="${MYDIR%/shbin/..}"  # Simplification.
+  fi
+  if test "$MYDIR" = pathbin/..; then MYDIR=.  # Simplification.
+  elif test "${MYDIR%/pathbin/..}"; then MYDIR="${MYDIR%/pathbin/..}"  # Simplification.
+  fi
+  test "${MYDIR#-}" = "$MYDIR" || MYDIR="./$MYDIR"  # Make it not a command-line flag (-...).
+  #
+  # The symlinks in $0 have already been resolved by the caller.
+  # --noenv is for reproducible builds and testing: unset all environment
+  # variables, and use a short hardcoded $PATH (`$MYDIR/ccshbin'). Toolchain
+  # tools (e.g. pts-tcc and ld) are always run from `$MYDIR/tools', no matter
+  # the $PATH. System tools (such as with `--gcc=...') will be excplicitly
+  # looked up on the old $PATH.
+  test "$1" = --noenv && shift && exec env -i PATH="$MYDIR/ccshbin" TMPDIR="$TMPDIR" sh -- "$MYPROG" --sh-script --boxed-path "$PATH" "$@"
+else
+  # Rerun ourselves ($0) with the bundled `busybox sh'. This a hack and a
+  # fallback. Most users should use the `shbin/minicc' ELF program to run
+  # minicc.sh, which will run it with the bundled `busybox sh', without ever
+  # running the system /bin/sh, thus much more efficiently and reliably than
+  # this hack.
+  if test "${0%/*}" = "$0" && test "${0#-}" = "$0"; then  # We do the `-' check as a fallback to avoid command-lone flag interpretations of $0.
+    if test -f "$0"; then  # In case `sh minicc.sh' was run.
+      MYPROG=./"$0"
+    else  # Try to find $0 on $PATH.
+      MYPROG="$(type -p "$0" 2>/dev/null)"
+      case "$MYPROG" in
+       -p:*)  # dash(1) reports: `-p: not found'.
+        MYPROG="$(type "$0" 2>/dev/null)"
+        case "$MYPROG" in
+         "$0 is "*) MYPROG="${MYPROG#$0 is }" ;; 
+         *) MYPROG=""  # Make it fail below.
+        esac
+        ;;
+       "$0 is "*) MYPROG="${MYPROG#$0 is }" ;;
+      esac
+      if ! test -f "$MYPROG"; then echo "fatal: my own command not found: $0" >&2; exit 1; fi
+    fi
+  else
+    MYPROG="$0"
+  fi
+  while true; do
+    MYDIR="$(readlink "$MYPROG" 2>/dev/null)"
+    test "$MYDIR" || break
+    test "${MYDIR#/}" = "$MYDIR" && MYDIR="${MYPROG%/*}/$MYDIR"
+    MYPROG="$MYDIR"  # Resolve another symlink. TODO(pts): Detect more than 0x100 to avoid infinite loops.
+  done
+  MYDIR="${MYPROG%/*}"
+  while test "${MYDIR#./}" != "$MYDIR"; do MYDIR="${MYDIR#./}"; done
+  if test "$MYDIR" = shbin/..; then MYDIR=.  # Simplification.
+  elif test "${MYDIR%/shbin/..}"; then MYDIR="${MYDIR%/shbin/..}"  # Simplification.
+  fi
+  if test "$MYDIR" = pathbin/..; then MYDIR=.  # Simplification.
+  elif test "${MYDIR%/pathbin/..}"; then MYDIR="${MYDIR%/pathbin/..}"  # Simplification.
+  fi
+  test "${MYDIR#-}" = "$MYDIR" || MYDIR="./$MYDIR"  # Make it not a command-line flag (-...).
+   # Use BusyBox (if available) for consistent shell and coreutils.
+  if test -f "$MYDIR/ccshbin/sh" && test -x "$MYDIR/ccshbin/sh"; then
+    if test "$1" = --noenv; then
+      shift
+      exec env -i PATH="$MYDIR/ccshbin" TMPDIR="$TMPDIR" sh -- "$MYPROG" --sh-script --boxed-path "$PATH" "$@"
+    fi
+    export PATH="$MYDIR/ccshbin:$PATH"
+    exec sh -- "$MYPROG" --sh-script "$@"
+  elif test "$1" = --noenv; then
+    echo "fatal: BusyBox shell not found: $MYDIR/ccshbin/sh" >&2; exit 1
+  fi
 fi
-MYDIR="${MYDIR%/*}"
-test "${MYDIR#-}" = "$MYDIR" || MYDIR="./$MYDIR"
-# Use BusyBox (if available) for consistent shell and coreutils.
-test -z "$BUSYBOX_SH_SCRIPT" && test -f "$MYDIR/ccshbin/sh" &&
-    export BUSYBOX_SH_SCRIPT=1 PATH="$MYDIR/ccshbin:$PATH" &&
-    exec sh -- "$0" "$@"
-
-# --noenv is for reproducible builds and testing: unset all environment
-# variables, and use a short hardcoded $PATH (`$MYDIR/ccshbin'). Toolchain
-# tools (e.g. pts-tcc and ld) are always run from `$MYDIR/tools', no matter
-# the $PATH. System tools (such as with `--gcc=...') will be excplicitly
-# looked up on the old $PATH.
-test "$1" = --noenv && shift && exec env -i PATH="$MYDIR/ccshbin" BUSYBOX_SH_SCRIPT=1 TMPDIR="$TMPDIR" sh -- "$0" --boxed-path "$PATH" "$@"
 
 # --boxed is a weaker version of --noenv for reproducible builds and
 # testing: keep most environment variables, but use a short hardcoded
@@ -36,12 +95,15 @@ while test "$1" = --boxed-path && test "$2"; do OLD_PATH="$2"; shift; shift; exp
 while test "$1" = --boxed; do export PATH="$MYDIR/ccshbin"; IS_BOXED=1; shift; done
 # Now $OLD_PATH contains the initial $PATH, with system tools like `gcc'.
 
+test "$TMPDIR" || unset TMPDIR
+
 NL="
 "
 
-if test $# = 0 || test "$1" = --help; then
+if test $# = 0 || test "$1" = --help || test "$1" = help || test "$1" = -h || test "$1" = "-?"; then
+  # TODO(pts): Add help for e.g <command> sh.
   test $# = 0 && exec >&2
-  echo "minicc: C compiler fronted for building small Linux i386 executables$NL""Usage: $0 [<gcc-flag>...] <file.c>$NL""There are minicc flags, e.g. --watcom, --gcc, --tcc, --utcc"
+  echo "minicc: C compiler fronted for building small Linux i386 executables$NL""Usage: $0 [<command>] [<gcc-flag>...] <file.c>$NL""There are minicc flags, e.g. --watcom, --gcc, --tcc, --utcc"
   test $# = 0 && exit 1
   exit 0
 elif test "$1" = --download; then
@@ -92,9 +154,64 @@ if ! test -x "$MYDIR/gcctooldir/dummy"; then
   exit 1
 fi
 
-ARCH=i686
 GCC="$MYDIR/tools/wcc386"  # Use the OpenWatcom C compiler by default.
 TCC=
+USE_UTCC=
+CMD=minicc
+case "$1" in
+ "" | -* | *.[aocisShHCmMfFd] | *.c[cp] | *.[ch]pp | *.cxx | *.asm | *.[nw]asm | *.m[im] | *.mii | *.ii | *.c++ | *.[CH]PP | *.h[hp] | *.hxx | *.hpp | *.h++ | *.tcc | *.for | *.ftn | *.FOR | *.fpp | *.FPP | *.FTN | *.[fF][0-9][0-9] | *.go | *.brig | *.java | *.ad[sb] | *.d[id] | *.sx | *.obj) ;;  # A flag or a source file name is not a program name.
+ .) ;;  # An escape to prevent the next source file from being interpreted as a compiler command.
+ utcc) GCC=; TCC="$MYDIR"/tools/pts-tcc; USE_UTCC=1; shift ;;  # Same as: --utcc
+ diet) LIBC=dietlibc; shift ;;  # Same as: --dietlibc
+ xstatic) LIBC=uclibc; shift  ;;  # Same as: --uclibc. Please note that this is not perfect, some .a and .h files are missing from pts-xstatic.
+ owcc) GCC="$MYDIR/tools/wcc386"; TCC=; shift ;;
+ minicc | cc) shift ;;  # Official way to prevent the next source file from being interpreted as a compiler command.
+ sh | shell) CMD=sh; shift ;;
+ exec) CMD=exec; shift ;;
+ busybox | uname | env) CMD="$MYDIR/shbin/$1"; shift ;;
+ nasm | ndisasm) CMD="$MYDIR/tools/$1-0.98.39"; shift ;;
+ ar) CMD="$MYDIR/tools/tiny_libmaker"; shift ;;
+ as | ld | elfnostack | elfoxifx | elfxfix | mktmpf | omf2elf | wcc386 | tiny_libmaker) CMD="$MYDIR/tools/$1"; shift ;;
+ tool)
+  if test -z "$2"; then echo "fatal: missing tool name argument" >&2; exit 1; fi
+  CMD="$MYDIR/tools/$2"  # E.g. pts-tcc.
+  shift; shift ;;
+ *)
+  BASENAME="${1##*/}"
+  case "$BASENAME" in
+   *tcc*) TCC="$1"; GCC= ;;
+   *) GCC="$1"; TCC= ;;
+  esac
+  shift
+  ;;
+esac
+case "$CMD" in
+ */*) exec "$CMD" "$@" ;;  # !! TODO(pts): Download "$MYCMD/bin/as" if needed here.
+ minicc) ;;  # Continue below.
+ sh | exec)
+  test "$PATH" = "$MYDIR/ccshbin" && PATH=
+  if test "${MYDIR#/}" = "$MYDIR"; then
+    MYDIR="$(cd "$MYDIR" && pwd)"
+    if test -z "$MYDIR"; then
+      echo "fatal: could not find absolute directory" >&2; exit 9
+    fi
+  fi
+  test "$TMPDIR" || unset TMPDIR
+  # We also pass environment variable LC_ALL=C above.
+  if test -z "$PATH"; then export PATH="$MYDIR/shbin"
+  else export PATH="$MYDIR/shbin:$PATH"
+  fi
+  if test "$CMD" = exec && test "$1" && test "${1#*/}" = "$1" && test -x "$MYDIR/shbin/$1"; then
+    exec "$@"  # Example: `minicc sh ls' executes `ls' without `sh'. `sh' would interpret is a shell script.
+  fi
+  export PS1='minicc-sh$ '  # Our busybox can't substitute directory name here anyway.
+  exec sh "$@"  # Executes "$MYDIR/shbin/sh.
+  ;;
+esac
+
+# --- The rest of this file implements CMD=minicc.
+
+ARCH=i686
 DO_ADD_LIB=1
 DO_ADD_INCLUDEDIR=1
 DO_LINK=1
@@ -106,7 +223,6 @@ HAD_OFLAG=
 HAD_V=
 HAD_OFILE=
 ARCH=i686
-USE_UTCC=
 GCC_BARG=-pipe  # Harmless default.
 LIBC=
 DO_SMART=
@@ -118,23 +234,6 @@ DO_ARGV=  # Argument 2 of main(...).
 DO_ENVP=  # Argument 3 of main(...).
 HAD_TRADITIONAL=
 DO_DOWNLOAD=1
-
-case "$1" in
- "" | -* | *.[aocisShHCmMfFd] | *.c[cp] | *.[ch]pp | *.cxx | *.asm | *.[nw]asm | *.m[im] | *.mii | *.ii | *.c++ | *.[CH]PP | *.h[hp] | *.hxx | *.hpp | *.h++ | *.tcc | *.for | *.ftn | *.FOR | *.fpp | *.FPP | *.FTN | *.[fF][0-9][0-9] | *.go | *.brig | *.java | *.ad[sb] | *.d[id] | *.sx | *.obj) ;;  # A flag or a source file name is not a program name.
- .) ;; # An escape to prevent the next source file from being interpreted as a compiler command.
- *)
-  BASENAME="${1##*/}"
-  case "$BASENAME" in
-   utcc) GCC=; TCC="$MYDIR"/tools/pts-tcc; USE_UTCC=1 ;;  # Same as: --utcc
-   diet) LIBC=dietlibc ;;  # Same as: --dietlibc
-   xstatic) LIBC=uclibc  ;;  # Same as: --uclibc. Please note that this is not perfect, some .a and .h files are missing from pts-xstatic.
-   *tcc*) TCC="$1"; GCC= ;;
-   owcc) GCC="$MYDIR/tools/wcc386"; TCC= ;;
-   *) GCC="$1"; TCC= ;;
-  esac
-  shift
-  ;;
-esac
 
 SKIPARG=
 ARGS=
@@ -218,7 +317,8 @@ for ARG in "$@"; do
     test "${ARG%.o}" = "$ARG" || HAD_OFILE=1
     ARGS="$ARGS$NL$ARG"
     ;;
-   *) echo "fatal: unsupported input file extension: $ARG" >&2; exit 1 ;;
+   *.*) echo "fatal: unsupported input file extension for minicc: $ARG" >&2; exit 1 ;;
+   *) echo "fatal: missing input file extension for minicc: $ARG" >&2; exit 1 ;;
   esac
 done
 if test "$SKIPARG"; then
@@ -643,7 +743,7 @@ fi
 test "$DO_SMART" || DO_SMART=0  # Fallback.
 
 test "$TMPDIR" || TMPDIR=/tmp
-test "${TMPDIR#/}" = "$TMPDIR" && TMPDIR="./$TMPDIR"  # Make it not a command-line flag (-...).
+test "${TMPDIR#-}" = "$TMPDIR" || TMPDIR="./$TMPDIR"  # Make it not a command-line flag (-...).
 export TMPDIR
 
 IFS="$NL"  # Argument splitting will happen over newlines only.

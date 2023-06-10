@@ -17,13 +17,14 @@ Try it on Linux i386 or Linux amd64 (without the leading `$`):
 ```
 $ git clone --depth 1 https://github.com/pts/minilibc686
 $ cd minilibc686
-$ ./minicc -o demo demo_c_hello.c
+$ export PATH="$PWD/pathbin:$PATH"  # Add minicc to $PATH.
+$ minicc -o demo demo_c_hello.c
 $ ./demo
 Hello, World!
 $ ls -ld demo
 -rwxrwxr-x 1 pts pts 1204 Jun  8 19:07 demo
 $ printf '#include <unistd.h>\nint main() { write(1, "Hello, World!\\n", 14); return 0; }\n' >demo_write.c
-$ ./minicc -fomit-frame-pointer -o demo_write demo_write.c
+$ minicc -fomit-frame-pointer -o demo_write demo_write.c
 $ ./demo_write
 Hello, World!
 -rwxrwxr-x 1 pts pts 164 Jun  8 19:12 demo_write
@@ -55,7 +56,7 @@ What sizes are achievable:
 
 hello-world size comparison of different libcs:
 
-* minilibc686 (`./minicc --gcc`) is
+* minilibc686 (`minicc --gcc`) is
   1196 bytes, already stripped
 * [Baselibc](https://github.com/PetteriAimonen/Baselibc)
   [2018-11-06](https://github.com/PetteriAimonen/Baselibc/commit/245a5940483267ef501aa7cdbc1b6a422f6e9daf) is
@@ -65,14 +66,14 @@ hello-world size comparison of different libcs:
   2180 bytes after stripping, but it doesn't do output buffering.
 * [klibc](https://en.wikipedia.org/wiki/Klibc) 1.5.25 is
   2647 bytes after stripping, but it doesn't do output buffering
-* [diet libc](https://www.fefe.de/dietlibc/) 0.34 (`./minicc --diet`) is
+* [diet libc](https://www.fefe.de/dietlibc/) 0.34 (`minicc --diet`) is
   5820 bytes after stripping
 * [neatlibc](https://github.com/aligrudi/neatlibc) is
   12684 bytes after stripping;
   [some functions in 386 assembly](https://github.com/aligrudi/neatlibc/tree/master/x86)
 * OpenWatcom 2023-02 (`owcc -blinux -Os -fno-stack-check`) is
   12934 bytes after stripping
-* uClibc 0.9.30.1 (`./minicc --uclibc`) is
+* uClibc 0.9.30.1 (`minicc --uclibc`) is
   14440 bytes, already stripped
 * musl (`zig cc -target i386-linux-musl -Os`) is
   15548 bytes after stripping
@@ -82,7 +83,7 @@ hello-world size comparison of different libcs:
   [tinylinux-2.2](https://justine.lol/cosmopolitan/cosmopolitan-amalgamation-tinylinux-2.2.zip) is
   24576 bytes; it should be ~16000 bytes; please note that it targets
   amd64
-* EGLIBC 2.19 (`./minicc --eglibc`) is
+* EGLIBC 2.19 (`minicc --eglibc`) is
   582714 bytes after stripping
 * glibc 2.27 (`gcc -m32 -s -Os -static`) is
   594716 bytes after stripping
@@ -140,11 +141,11 @@ The following components are included in *minilibc686*:
   [TinyCC](https://bellard.org/tcc/) 0.9.26, and the libc is uClibc 0.9.30.1
   (released on 2009-03-02). The C #include files are not provided, but the
   minilibc686 #include files can be used (they have the proper #ifdef()s).
-  To build a program, run `./minicc --utcc -o prog prog.c'.
+  To build a program, run `minicc --utcc -o prog prog.c'.
 
 * tools/wcc386: OpenWatcom C compiler (released on 2023-03-04). It's
   convenient to use it with *minicc* (see below). It is also the default C
-  compiler for *minicc*: to build a program, run `./minicc -o prog prog.c`.
+  compiler for *minicc*: to build a program, run `minicc -o prog prog.c`.
 
 * tools/omf2elf (with C source included): A tool to convert an i386 OMF
   .obj object file to an i386 ELF relocatable .o object file. This is
@@ -165,14 +166,14 @@ The following components are included in *minilibc686*:
 
 * libc/dietlibc-0.34.sfx.7z: Self-extracting archive containing diet libc
   0.34 (released on 2018-09-24) (.h and .a files) targeting Linux i386,
-  compiled for `-march=i386` and `-march=i686`. Use it with `./minicc
+  compiled for `-march=i386` and `-march=i686`. Use it with `minicc
   --diet`.
   diet libc provides more functionality and compatibility than minilibc686,
   but it has more overhead (i.e. the program becomes a few KiB larger).
 
 * libc/uclibc-0.9.30.1.sfx.7z: Self-extracting archive containing uClibc
   0.9.30.1 (released on 2009-03-02) (.h and .a files) targeting Linux i386,
-  compiled for `-march=i686`. Use it with `./minicc --uclibc`.
+  compiled for `-march=i686`. Use it with `minicc --uclibc`.
   uClibc provides more functionality and compatibility than minilibc686, but
   it has more overhead (i.e. the program becomes a few KiB larger, even
   larger than diet libc).
@@ -180,7 +181,7 @@ The following components are included in *minilibc686*:
 * libc/[eglibc-2.19.sfx.7z](https://github.com/pts/minilibc686/releases/download/eglibc-2.91-v1/eglibc-2.19.sfx.7z):
   Self-extracting archive containing EGLIBC
   2.19 (released on 2014-09-29) (.h and .a files) targeting Linux i386,
-  compiled for `-march=i686`. Use it with `./minicc --eglibc`.
+  compiled for `-march=i686`. Use it with `minicc --eglibc`.
   EGLIBC is glibc for embedded systems. It has full functionality, but
   for a hello-world it's quite bloated (>550 KiB).
 
@@ -340,16 +341,24 @@ they add some boilerplate which cannot be disabled.)
 
 The *minicc* compiler frontend is a batteries-included Linux command-line
 tool to build small, statically linked Linux i386 programs from C source. It
-is part of the minilibc686 distribution (just run it as `./minicc` from the
+is part of the minilibc686 distribution (just run it as `minicc` from the
 minilib686 directory). It is bundled with several C compilers, linkers and
 libcs. Use it like this: `./minlibc -o prog prog.c`. Try it:
 
 Try *minicc* on Linux i386 or Linux amd64 (without the leading `$`):
 
 ```
-$ ./minicc -o demo demo_c_hello.c
+$ minicc -o demo demo_c_hello.c
 $ ./demo
 Hello, World!
+```
+
+If you get *command not found* or similar for `minicc`, then you have to set
+up your $PATH first. Run this in the minilibc686 directory containing
+`minicc.sh`:
+
+```
+$ export PATH="$PWD/pathbin:$PATH"  # Add minicc to $PATH.
 ```
 
 *minicc* drop-in replacement for `gcc`, `clang`, `owcc` (OpenWatcom C
@@ -501,6 +510,33 @@ If you program doesn't compile or doesn't work with minilibc686:
 * Try `--gcc` (system GCC) instead of the default OpenWatcom C compiler.
 * Try both `-msmart` and `-mno-smart`.
 
+How to run *minicc*:
+
+* There are many ways to run minicc. For each of them the first step is
+  cloning the Git repository:
+
+  ```
+  $ git clone --depth 1 https://github.com/pts/minilibc686
+  $ cd minilibc686
+  ```
+
+* The convenient way is setting up the `$PATH`, and then running it as
+  `minicc`. Example path setup command, to be run in the minilibc686
+  directory containing `minicc.sh`:
+
+  ```
+  $ export PATH="$PWD/pathbin:$PATH"  # Add minicc to $PATH.
+  ```
+
+* If you don't want to change your `$PATH`, you can run `shbin/minicc` from
+  the Git working directory, or from anywhere else, specifying the correct
+  (relative or absolute) pathname.
+
+* Alternatively, you can run `sh minicc.sh`, but that uses the system shell
+  (`/bin/sh`) and the readlink(1) command (and then quickly hands it over to
+  the bundled BusyBox). This makes it slower, and it makes the reproducibility
+  weaker, because shells have subtle differences.
+
 ## Testing
 
 minilibc686 has some unit tess. Run all of them by running `./test.sh`.
@@ -589,9 +625,9 @@ This section is mostly an FYI, it doesn't affter minilibc686 users directly.
   * Binary size is huge: 2 082 968 bytes.
   * !! TODO(pts): For mininasm, why does --tccld create a smaller program?
     ```
-    $ qq ./minicc --tccld -Os -W -Wall -Werror -o mininasm mininasm.c && sstrip.static mininasm && ls -ld mininasm
+    $ qq minicc --tccld -Os -W -Wall -Werror -o mininasm mininasm.c && sstrip.static mininasm && ls -ld mininasm
     -rwxr-xr-x 1 pts pts 23200 May 21 17:12 mininasm
-    qq ./minicc -Os -W -Wall -Werror -o mininasm mininasm.c && sstrip.static mininasm && ls -ld mininasm
+    qq minicc -Os -W -Wall -Werror -o mininasm mininasm.c && sstrip.static mininasm && ls -ld mininasm
     -rwxr-xr-x 1 pts pts 24636 May 21 17:12 mininasm
     ```
   Linking command is:
