@@ -8,6 +8,20 @@
 bits 32
 cpu 386
 
+%ifdef CONFIG_SECTIONS_DEFINED
+%elifidn __OUTPUT_FORMAT__, bin
+section .text align=1
+section .rodata align=4
+section .data align=4
+section .bss align=4
+%else
+section .text align=1
+section .rodata align=1
+section .data align=1
+section .bss align=1
+%endif
+
+section .text
 global __FSU87
 __FSU87:  ; Convert float in EAX to uint64_t in EDX:EAX.
 ; For OpenWatcom.
