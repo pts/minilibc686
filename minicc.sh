@@ -872,7 +872,13 @@ if test "$GCC" || test -z "$IS_TCCLD"; then
        -W | -Wextra) WARGS="$WARGS$NL-wx"; WHADWEXTRA=1 ;;
        -Wimplicit-function-declaration) WARGS="$WARGS$NL-wce=308" ;;
        -Werror[-=]implicit-function-declaration) WARGS="$WARGS$NL-wce=308" ;;  # Unfortunately it still remains a warning, there is no per-warning control of errors.
-       -Wall) test "$WHADWEXTRA" || WARGS="$WARGS$NL-w4" ;;
+       -Wmissing-prototypes | -Wno-missing-prototypes) ;;  # Silently ignore.
+       -Wshadow | -Wno-shadow) ;;  # Silently ignore.
+       -Wsign-compare| -Wno-sign-compare) ;;  # Silently ignore.
+       -Wformat | -Wno-format) ;;  # Silently ignore.
+       -Wunused-parameter) WARGS="$WARGS$NL-wce=303" ;;
+       -Wno-unused-parameter) WARGS="$WARGS$NL-wcd=303" ;;
+       -Wall) test "$WHADWEXTRA" || WARGS="$WARGS$NL-w4$NL-wcd=303" ;;
        -Werror) WARGS="$WARGS$NL-we" ;;
        -Werror=*) ;;  # No per-warning control, just ignore for simplicity.
        -w) WARGS="$WARGS$NL-w0" ;;
