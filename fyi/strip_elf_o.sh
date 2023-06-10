@@ -1,0 +1,20 @@
+#! /bin/sh --
+set -ex
+for F in "$@"; do  # Pass ELF .o files.
+  ALL_SECTIONS="$(objdump -hw "$F" | busybox awk '$3~/^[0-9a-fA-F]+$/{print$2}')"
+  if test -z "$ALL_SECTIONS"; then
+    if test "$(objdump -t "$F" | grep '[*]COM[*]')"; then  # Found a common symbol.
+      strip -S -x "$F" ||:  # harmless: strip: error: the input file 'h_errno.o' has no sections
+    else
+      rm -f "$F"
+    fi
+    continue
+  fi
+  EMPTY_SECTIONS="$(objdump -hw "$F" | busybox awk '$3~/^0+$/{print"-R "$2}')"
+  strip -S -x -R .note.GNU-stack -R .comment -R .eh_frame $EMPTY_SECTIONS "$F"
+  ALL_SECTIONS="$(objdump -hw "$F" | busybox awk '$3~/^[0-9a-fA-F]+$/{print$2}')"
+  if test -z "$ALL_SECTIONS" && test -z "$(objdump -t "$F" | grep '[*]COM[*]')"; then 
+    rm -f "$F"
+  fi
+done
+: "$0" OK.
