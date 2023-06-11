@@ -136,12 +136,24 @@ The following components are included in *minilibc686*:
   implementation of the function can be created by a C compiler (using
   soptcc.pl), and then manually optimized later
 
-* tools/pts-tcc: A combined C compiler, ELF-32 linker and libc in a single
-  Linux i386 statically linked executable. The C compiler and linker is
+* tools/pts-tcc: A self-contained, combined driver, C preprocessor, C
+  compiler, ELF-32 linker and libc in a single Linux i386 statically linked
+  executable. The C compiler and linker is
   [TinyCC](https://bellard.org/tcc/) 0.9.26, and the libc is uClibc 0.9.30.1
   (released on 2009-03-02). The C #include files are not provided, but the
   minilibc686 #include files can be used (they have the proper #ifdef()s).
   To build a program, run `minicc --utcc -o prog prog.c'.
+
+* tools/pts-pcc: A self-contained, combined driver, C preprocessor and C
+  compiler based on PCC ([Portable C
+  Compiler](https://en.wikipedia.org/wiki/Portable_C_Compiler)) 1.1.0
+  (released on 2014-12-10). In 2009 it was able to build a working OpenBSD
+  kernel. It supports most of C99. Flags and extensions resemble GCC,
+  because it was built as a replacement for GCC in BSDs (in which it didn't
+  succeed, Clang did in some way). *minicc* uses it to generate assembly .s
+  output, then *minicc* calls GNU as(1) to generate object .o output, and
+  then *minicc* runs the linker (either GNU ld(1) or the TinyCC linker).
+  PCC has a long and amazing history, see blow.
 
 * tools/wcc386: OpenWatcom C compiler (released on 2023-03-04). It's
   convenient to use it with *minicc* (see below). It is also the default C
@@ -374,9 +386,9 @@ from that it generates OpenWatcom *wcc386* syntax and others as needed).
 Here is how to pick the compiler:
 
 * These compilers are supported: GCC, Clang, OpenWatcom C compiler,
-  TinyCC (TCC).
-* These compilers are bundled with with *minicc*, being part of the package:
-  OpenWatcom C compiler, TinyCC (TCC).
+  TinyCC (TCC), PCC.
+* These compilers are bundled with *minicc*, being part of the package:
+  OpenWatcom C compiler, TinyCC (TCC), PCC.
 * These compilers are precompiled and prepared for use with *minicc*, but
   they need a separate download: GCC 4.1.2 (released on 2007-02-13) .. 4.9.3
   (released on 2015-06-26) . *minicc* does the download
@@ -385,6 +397,7 @@ Here is how to pick the compiler:
   on 2023-03-04). You can specify it explicitly as `--watcom`.
 * To use the bundled TinyCC 0.9.26 compiler (`tools/pts-tcc`), specify
   `--tcc`.
+* To use the bundled PCC 1.1.0 compiler (`tools/pts-pcc`), specify `--pcc`.
 * To use one of the prepared versions of GCC 4.x, use any of:
   `--gcc=4.1` .. `--gcc=4.9`. *minicc* will download (using *wget* or *curl*)
   the prepared executable from GitHub upon first use. It will also download
@@ -430,11 +443,18 @@ Here is how to pick the libc:
   the prepared archive
   [eglibc-2.19.sfx.7z](https://github.com/pts/minilibc686/releases/download/eglibc-2.19-v1/eglibc-2.19.sfx.7z)
   from GitHub, and it will extract it upon first use.
+* When used with *minicc*, most libcs (minilibc686, diet libc, uClibc) work
+  with most compilers (OpenWatcom, GCC, Clang, TinyCC, PCC). Appropriate
+  `#ifdef` lines have been added to the .h files shipping with *minicc*.
+  However, EGLIBC works with GCC and Clang only. (Theoretically it's
+  possible to port the .h files to other compilers, but it hasn't happened
+  yet.) All libcs except for EGLIBC also work in `-ansi` and `-std=c99`
+  mode, all .h files included, without warnings.
 * (Most users want `--uclibc` instead of this.)
   To use the bundled uClibc 0.9.30.1 (built for `-march=i686`) with the
-  bundled TinyCC compiler, specify `--utcc`. Instead of the full uClibc .h
-  files, the minilibc686 .h files will be used. By doing so, a subset of
-  uClibc will be avaialble.
+  bundled TinyCC compiler in restricted mode, specify `--utcc`. Instead of
+  the full uClibc .h files, the minilibc686 .h files will be used. By doing
+  so, a subset of uClibc will be avaialble.
 * (Most users want `--uclibc` instead of this.)
   To use the bundled uClibc 0.9.30.1 (built for `-march=i686`) with the GCC
   or Clang compiler and the linker of the bundled TinyCC compiler, specify
@@ -608,6 +628,75 @@ you can run `./test.sh` without having to install anything.
 Assembly source files `src/*.nasm` are under the MIT license. Everything
 else is under GPL v2 (GNU General Public License, Version 2).
 
+## PCC history
+
+Development history:
+
+* See also [PCC on
+  Wikipedia](https://en.wikipedia.org/wiki/Portable_C_Compiler) and the
+  [official PCC history page](http://pcc.ludd.ltu.se/pcc_history/).
+
+* Dennis Ritchie invented the C language by extending the B languge,
+  starting in 1971 (see [C history notest by Dennis
+  Ritchie](https://www.bell-labs.com/usr/dmr/www/chist.html) for details),
+  and he wrote wrote the first C compiler for the PDP-11, starting in 1972.
+  In retrospect, we call this the DMR compiler. Some versions of the
+  original source code (in C and PDP-11 assembly) has been preserved (see
+  the [description]((https://www.bell-labs.com/usr/dmr/www/primevalC.html)
+  and the [code on GitHub](https://github.com/mortdeus/legacy-cc), and
+  later people succeeded running it in an emulator, and it was able to
+  compile itself.
+
+* The first known portable C complier was written in 1973 by Alan Snyder at
+  Bell Labs. PCC doesn't share code with this. *portable* (in both cases)
+  means retargetable, i.e. only a small part of the compiler has to be
+  rewritten or extended to add support for another target architecture. In
+  contrast, the DMR compiler ran on and targeted PDP-11 only, and it
+  contained many architecture-specific optimizations baked in deeply.
+
+* PCC was written by Stephen C. Johnson at Bell Labs in the mid 1970s,
+  released in 1978 (other sources say 1979). He wrote multiple articles
+  about it in the 1970s.
+
+* Anders Magnusson and Peter A Jonsson added C99 support between 2007 and
+  2008-01-27, rewriting most of the compiler along the way. They also added
+  support for new architectures, e.g. amd64. It was also their goal to write
+  a compiler that can replace GCC as a default compiler in NetBSD and
+  OpenBSD. To make such a transition easier, they added command-line flags
+  and language extensions exactly the same way as GCC did them. Thus,
+  depending on the code and the build scripts, PCC can be used as a drop-in
+  replacement for GCC.
+
+* The latest PCC, 1.1.0 was released on 2014-12-10. That's 36 years after it
+  was born. In the meantime (between 2008 and 2014) Magnusson and Jonsson
+  started adding a C++ compiler as well.
+
+* A quick size comparison in 2014: the *cc1* tool of GCC 4.8, running on and
+  targeting Linux i386, statically linked, uncompressed is ~12.25 MiB, and
+  PCC 1.1.0 is ~0.273 MiB, GCC being ~44.87 times larger. This indicates the
+  difference in the amount of creative input and engineering effort these
+  compilers received. GCC is a much larger project, with more contributors.
+
+Use history:
+
+* At Bell Labs, the DMR compiler was used between 1972 and 1978.
+
+* PCC debuted in Unix Version 7 in 1979-01 and replaced the DMR compiler in
+  both System V and the BSD 4.x releases until 4.4.
+
+* GCC replaced PCC in BSD 4.4 (4.4BSD), released beteen 1993-06 and 1994-03.
+
+* PCC was added to NetBSD pkgsrc and OpenBSD source tree in 2007-09, and
+  later also to the NetBSD source tree. (GCC was stll the default compiler,
+  and some BSD developers were looking at Clang.)
+
+* On 2009-12-29, PCC built a working OpenBSD kernel image.
+
+* PCC was removed from OpenBSD source tree in 2012. At that time there was
+  no realistic chance for it to replace GCC.
+
+* Since 2012, Clang has replaced GCCs for some targets in some BSDs.
+
 ## Linker problems
 
 This section is mostly an FYI, it doesn't affter minilibc686 users directly.
@@ -693,5 +782,6 @@ This section is mostly an FYI, it doesn't affter minilibc686 users directly.
   -falign-functions=1? It's because main is in .text.startup, other
   functions are in .text (alignment 2**2). Fix it by changing the alingmen
   tof .text to 2**0 in tools/elfofix.
+* Test the various regparm functions and <stdio.h> macros with PCC.
 
 __END__

@@ -251,6 +251,7 @@ for ARG in "$@"; do
    --gcc=*/*) TCC=; GCC="${ARG#*=}"; test "$IS_BOXED" && GCC_BARG="-B${GCC%/*}" ;;
    --gcc=*) TCC=; GCC="${ARG#*=}" ;;
    --wcc | --wcc386 | --watcom) GCC="$MYDIR/tools/wcc386"; TCC= ;;  # Specify --gcc=.../wcc386 to use a specific OpenWatcom compiler.
+   --pcc) GCC="$MYDIR"/tools/pts-pcc; TCC= ;;
    --tcc) GCC=; TCC="$MYDIR"/tools/pts-tcc ;;
    --tcc=*) GCC=; TCC="${ARG#*=}" ;;
    --utcc) GCC=; TCC="$MYDIR"/tools/pts-tcc; USE_UTCC=1 ;;
@@ -333,7 +334,7 @@ fi
 
 GCCBASE="/${GCC##*/}"
 IS_WATCOM=
-IS_CC1=  # A value of 2 indicates autodownload.
+IS_CC1=  # The value 2 indicates autodownload. The value 3 indicates autodownload + PCC.
 if test -z "$GCC"; then :
 elif test "$GCC" = 4; then GCC="$MYDIR"/tools/cc1-4.8.5; IS_CC1=2  # minicc default of the GCC 4.x series.
 elif test "$GCC" = 4.1 || test "$GCC" = 4.1.2; then GCC="$MYDIR"/tools/cc1-4.1.2; IS_CC1=2
@@ -349,6 +350,7 @@ elif test "${GCC#[1-9]}" != "$GCC"; then echo "fatal: GCC version $GCC isn't buu
 elif test "${GCCBASE#*[-/._]wcc386*}" != "$GCCBASE"; then IS_WATCOM=1
 elif test "${GCCBASE#*[-/._]cc1}" != "$GCCBASE"; then IS_CC1=1
 elif test "${GCCBASE#*[-/._]cc1[-+._]}" != "$GCCBASE"; then IS_CC1=1
+elif test "${GCCBASE#*[-/._]pcc}" != "$GCCBASE"; then IS_CC1=3
 fi
 if test "$MINICC_LD" = ///gcc; then
   if test "$TCC"; then  # TODO(pts): Allow this.
@@ -435,10 +437,12 @@ case "$GCC" in
     fi
     chmod +x "$GCC" || exit 6
   fi
-  if test "$IS_CC1" = 2; then
+  if test "$IS_CC1"; then
     if test -f "$GCC" && test -s "$GCC" && test -x "$GCC"; then :; else
-      echo "fatal: problem with downloaded GCC cc1 tool: $GCC" >&2; exit 6
+      echo "fatal: problem with C compiler program file: $GCC" >&2; exit 6
     fi
+  fi
+  if test "$IS_CC1" = 2 || test "$IS_CC1" = 3; then
     if test -f "$MYDIR"/tools/as && test -s "$MYDIR"/tools/as; then
       :
     elif test -z "$DO_DOWNLOAD"; then
@@ -453,8 +457,10 @@ case "$GCC" in
     rm -f "$MYDIR/tools/as"
     ln -s as-2.22 "$MYDIR/tools/as" || exit 6
     test -x "$MYDIR/tools/as" || chmod +x "$MYDIR/tools/as" || exit 6
+  fi
+  if test "$IS_CC1"; then
     if test -f "$MYDIR"/tools/as && test -s "$MYDIR/tools/as" && test -x "$MYDIR"/tools/as; then :; else
-      echo "fatal: problem with downloaded assembler tool file: $MYDIR/tools/as"; exit 6
+      echo "fatal: problem with assembler tool file: $MYDIR/tools/as"; exit 6
     fi
   fi
   ;;
@@ -797,7 +803,7 @@ if test "$GCC" || test -z "$IS_TCCLD"; then
      *.[sS])
        if test "$IS_CC1"; then
          if test "${ARG%.S}" != "$ARG"; then echo "fatal: unsupported preprocessor--assembly source file type for cc1: $ARG" >&2; exit 5; fi
-         echo "fatal: unsupported assembly source file type for cc1: $ARG" >&2; exit 5  # !!! Run .s files with tools/as -I.... Still fail for .S files, no preprocessor.
+         echo "fatal: unsupported assembly source file type for cc1: $ARG" >&2; exit 5  # !!! Run .s files with $GCC -E.
        elif test "$IS_WATCOM"; then
          echo "fatal: unsupported minicc wcc386 assembly source file type: $ARG" >&2; exit 5
        fi
@@ -910,8 +916,14 @@ if test "$GCC" || test -z "$IS_TCCLD"; then
     # TODO(pts): Add -m... flag for string optimizations (like in minilibc32).
   elif test "$IS_CC1"; then  # If $IS_CC1, convert $CCARGS for GCC cc1.
     SKIPARG=
-    CC1ARGS=-quiet  # Some gcc(1) frontends add -Wformat-security, we don't.
-    test "$HAD_V" && CC1ARGS="$CC1ARGS$NL-v$NL-version"
+    CC1ARGS=
+    if test "$IS_CC1" = 3; then  # PCC (https://en.wikipedia.org/wiki/Portable_C_Compiler)
+      CC1ARGS=-S  # PCC.
+      test "$HAD_V" && CC1ARGS="$CC1ARGS$NL-v"
+    else
+      CC1ARGS=-quiet  # Some gcc(1) frontends add -Wformat-security, we don't.
+      test "$HAD_V" && CC1ARGS="$CC1ARGS$NL-v$NL-version"
+    fi
     for ARG in --skiparg $CCARGS; do  # !! TODO(pts): Check that -S and -E work.
       if test "$SKIPARG"; then SKIPARG=; continue; fi
       case "$ARG" in
@@ -1020,7 +1032,11 @@ if test "$GCC" || test -z "$IS_TCCLD"; then
           fi
           CCFARGS="-fo=$TMPOFILE$NL$ARG"
         elif test "$IS_CC1"; then
-          CCFARGS="-dumpbase$NL$ARG$NL-auxbase-strip$NL${ARG%.*}.o$NL-o$NL$TMPOFILE$NL$ARG"
+          if test "$IS_CC1" = 3; then  # PCC.
+            CCFARGS="-o$NL$TMPOFILE$NL$ARG"
+          else
+            CCFARGS="-dumpbase$NL$ARG$NL-auxbase-strip$NL${ARG%.*}.o$NL-o$NL$TMPOFILE$NL$ARG"
+          fi
           # !! Convert the .s file to .o with GNU as(1).
         else
           CCFARGS="-o$NL$TMPOFILE$NL$ARG"
