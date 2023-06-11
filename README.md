@@ -697,6 +697,35 @@ Use history:
 
 * Since 2012, Clang has replaced GCCs for some targets in some BSDs.
 
+## GCC 4.x cc1 programs for Linux i686 (i386)
+
+See download links on the [release
+page](https://github.com/pts/minilibc686/releases/cc1-linux-i686).
+
+All files are statically linked Linux i386 32-bit ELF executable programs
+built for i686 = P6 processors, stripped and then compressed with UPX (`upx
+--best --no-lzma`).
+
+Individual GCC release dates and notes:
+
+* as-2.22: 2011-11-21, GNU as(1) assembler, part of GNU Binutils, this release was built for host i686 on 2013-12-14
+* cc1-4.1.2: 2007-02-13, found in https://www.uclibc.org/downloads/binaries/0.9.30.1/cross-compiler-i686.tar.bz2
+* cc1-4.2.1: 2007-07-18, found in https://landley.net/aboriginal/downloads/binaries/cross-compiler-i686.tar.gz
+* cc1-4.3.6: 2011-06-27, this release was built for host i686 with crosstool-ng-1.4.2 on 2023-06-07
+* cc1-4.4.7: 2012-03-13, this release was built for host i686 with crosstool-ng-1.4.2 on 2023-06-07, Ubuntu 10.04 has GCC 4.4.4.
+* cc1-4.5.4: 2012-07-02, this release was built for host i686 with crosstool-ng-1.4.2 on 2023-06-07
+* cc1-4.6.4: 2013-04-12, this release was built for host i686 with crosstool-ng-1.4.2 on 2023-06-07, Ubuntu 12.04 has GCC 4.6.3.
+* cc1-4.7.4: 2014-06-12, this release was built for host i686 with crosstool-ng-1.4.2 on 2023-06-07
+* cc1-4.8.5: 2015-06-23, this release was built for host i686 with crosstool-ng-1.4.2 on 2023-06-07; Ubuntu 14.04 has GCC 4.8.4.
+* cc1-4.9.3: 2015-06-26, this release was built for host i686 with crosstool-ng-1.4.2 on 2023-06-07
+
+Please note that no other files (such as the *cc1plus* C++ compiler, the
+*gcc* frontend tool, the *ld* linker, .h files, libc static library .a
+files, libc shared library .so files) are provided here. To compile C
+programs with these compilers, use *minicc* at
+https://github.com/pts/minilibc686/; example command: `minicc --gcc=4.8 -o
+prog prog.c`. *minicc* will download these executables from here for you.
+
 ## Linker problems
 
 This section is mostly an FYI, it doesn't affter minilibc686 users directly.
