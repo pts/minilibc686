@@ -3,7 +3,8 @@
 # minicc: compiler frontend for building with minilib686
 # by pts@fazekas.hu at Sun May 21 02:21:27 CEST 2023
 #
-# Don't run this script manually, but run 
+# Don't run this script manually, but run it as pathbin/minicc (from any
+# directory).
 #
 # !! Enable -fomit-frame-pointer by default, see how smaller it gets with GCC. OpenWatcom definitely benefits.
 #
@@ -47,7 +48,7 @@ else
        -p:*)  # dash(1) reports: `-p: not found'.
         MYPROG="$(type "$0" 2>/dev/null)"
         case "$MYPROG" in
-         "$0 is "*) MYPROG="${MYPROG#$0 is }" ;; 
+         "$0 is "*) MYPROG="${MYPROG#$0 is }" ;;
          *) MYPROG=""  # Make it fail below.
         esac
         ;;
