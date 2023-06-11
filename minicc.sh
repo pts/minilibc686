@@ -235,6 +235,8 @@ DO_ARGV=  # Argument 2 of main(...).
 DO_ENVP=  # Argument 3 of main(...).
 HAD_TRADITIONAL=
 DO_DOWNLOAD=1
+HAD_OPTIMIZE=
+HAD_NOINLINE=
 
 SKIPARG=
 ARGS=
@@ -296,10 +298,13 @@ for ARG in "$@"; do
    -Wno-*) ARGS="$ARGS$NL$ARG" ;;
    -Werror[-=]implicit-function-declaration) ARGS="$ARGS$NL-Werror-implicit-function-declaration"; WFLAGS= ;;  # GCC 4.1 supports only -Werror-implicit-function-declaration, GCC >=4.2 supports it and also -Werror=implicit-function-declaration.
    -W*) ARGS="$ARGS$NL$ARG"; WFLAGS= ;;
+   -fno-inline) ARGS="$ARGS$NL$ARG"; HAD_NOINLINE=1 ;;
+   -finline) ARGS="$ARGS$NL$ARG"; HAD_NOINLINE= ;;
    -[fm]?* | -pedantic) ARGS="$ARGS$NL$ARG" ;;
    -ansi | -std=*) ANSIFLAG="$ARG" ;;
    -[DUI]*?) ARGS="$ARGS$NL$ARG" ;;
-   -O*) ARGS="$ARGS$NL$ARG"; HAD_OFLAG=1 ;;
+   -O0) ARGS="$ARGS$NL$ARG"; HAD_OFLAG=1; HAD_OPTIMIZE= ;;
+   -O*) ARGS="$ARGS$NL$ARG"; HAD_OFLAG=1; HAD_OPTIMIZE=1 ;;
    -g00) STRIP_MODE=0 ;;
    -g0) STRIP_MODE=1 ;;
    -g*) ARGS="$ARGS$NL$ARG"; STRIP_MODE=0 ;;
@@ -620,6 +625,7 @@ esac
 
 OFLAG_ARGS=
 if test -z "$HAD_OFLAG"; then  # Add some size-optimizing flags.
+  HAD_OPTIMIZE=1; HAD_OS=1
   case "$GCCBASE" in
    "") ;;
    *[-/._]clang*) OFLAG_ARGS="-Os$NL-mstack-alignment=2" ;;
@@ -645,6 +651,12 @@ test "$DO_MAIN_AUTO" && DEF_ARG="$DEF_ARG$NL-DCONFIG_MAIN_ARGS_AUTO"
 if test "$DO_ARGC" = 0; then DEF_ARG="$DEF_ARG$NL-DCONFIG_MAIN_NO_ARGC_ARGV_ENVP"
 elif test "$DO_ARGV" = 0; then DEF_ARG="$DEF_ARG$NL-DCONFIG_MAIN_NO_ARGV_ENVP"
 elif test "$DO_ENVP" = 0; then DEF_ARG="$DEF_ARG$NL-DCONFIG_MAIN_NO_ENVP"
+fi
+if test "$IS_WATCOM" || test "$IS_CC1" = 3 || test "$TCC"; then
+  # Add some -D.. flags which GCC (>=1) already defines. These flags affect EGLIBC on other compilers.
+  test "$HAD_OPTIMIZE" && DEF_ARG="$DEF_ARG$NL-D__OPTIMIZE__"
+  test "$HAD_OS" && DEF_ARG="$DEF_ARG$NL-D__OPTIMIZE_SIZE__"
+  test "$HAD_NOINLINE" && DEF_ARG="$DEF_ARG$NL-D__NO_INLINE__"
 fi
 OUTFILE_ARG=
 test "$OUTFILE" && OUTFILE_ARG="-o$NL$OUTFILE"
@@ -859,7 +871,7 @@ if test "$GCC" || test -z "$IS_TCCLD"; then
        -std=ow) WARGS="$WARGS$NL-ze" ;;
        -pedantic) ;;
        -m32 | -static | -fno-pic | -fcommon | -fno-unwind-tables | -fno-asynchronous-unwind-tables | -fno-builtin | -fno-ident | -ffreestanding | -fno-lto | -nostdinc | -falign-functions=* | -falign-jumps=* | -falign-loops=* | -mpreferred-stack-boundary=*) ;;
-       -fno-unroll-loops | -fmerge-all-constants | -fno-math-errno | -g0 | -g00 | -Wno-no) ;;
+       -finline | -fno-inline | -fno-unroll-loops | -fmerge-all-constants | -fno-math-errno | -g0 | -g00 | -Wno-no) ;;
        -fomit-frame-pointer) WFFLAG= ;;
        -fomit-leaf-frame-pointer) WFFLAG=-of ;;
        -fno-omit-frame-pointer) WFFLAG=-of ;;
@@ -913,6 +925,7 @@ if test "$GCC" || test -z "$IS_TCCLD"; then
        *) echo "fatal: assert: input file not allowed: $ARG" >&2; exit 5 ;;
       esac
     done
+    test "$HAD_NOINLINE" && WARGS="$WARGS$NL-oe0"
     CCARGS="$GCC$NL$WSFLAG$NL$WJFLAG$NL$WFFLAG$NL$WAUTOSYMFLAG$NL$WARGS"; WARGS=
     # TODO(pts): Add -m... flag for string optimizations (like in minilibc32).
   elif test "$IS_CC1"; then  # If $IS_CC1, convert $CCARGS for GCC cc1.
