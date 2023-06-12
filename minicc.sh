@@ -216,7 +216,7 @@ ARCH=i686
 DO_ADD_LIB=1
 DO_ADD_INCLUDEDIR=1
 DO_LINK=1
-DO_COMPILE_OR_LINK=1
+NEED_GCC_AS=1
 SFLAG=
 STRIP_MODE=2  # 0: Don't strip, don't chage he ELF OSABI (-g00); 1: change the ELF OSABI to Linux and fix first section alignment (-g0); 2: change the ELF OSABI to Linux and strip.
 WFLAGS="-W$NL-Wall$NL-Werror-implicit-function-declaration"
@@ -237,6 +237,7 @@ HAD_TRADITIONAL=
 DO_DOWNLOAD=1
 HAD_OPTIMIZE=
 HAD_NOINLINE=
+DO_MODE=
 
 SKIPARG=
 ARGS=
@@ -310,8 +311,12 @@ for ARG in "$@"; do
    -g*) ARGS="$ARGS$NL$ARG"; STRIP_MODE=0 ;;
    -nostdlib | -nodefaultlibs) DO_ADD_LIB= ;;
    -nostdinc) DO_ADD_INCLUDEDIR= ;;
-   -c) ARGS="$ARGS$NL$ARG"; DO_ADD_LIB=; DO_LINK= ;;
-   -[SE]) ARGS="$ARGS$NL$ARG"; DO_ADD_LIB=; DO_LINK=; DO_COMPILE_OR_LINK= ;;
+   -[cSE])
+     if test "$DO_MODE" && test "$DO_MODE" != "$ARG"; then echo "fatal: conflicting combination of $ARG and $DO_MODE" >&2; exit 1; fi
+     test -z "$DO_MODE" && ARGS="$ARGS$NL$ARG"
+     DO_ADD_LIB=; DO_LINK=; DO_MODE="$ARG"
+     test "$ARG" = -c || NEED_GCC_AS=
+     ;;
    -s) SFLAG="$ARG" ;;
    -v) HAD_V=-v; ARGS="$ARGS$NL$ARG" ;;
    -o?*) echo "fatal: unsupported minicc -o flag: $ARG" >&2; exit 1 ;;
@@ -329,6 +334,7 @@ for ARG in "$@"; do
    *) echo "fatal: missing input file extension for minicc: $ARG" >&2; exit 1 ;;
   esac
 done
+unset DO_MODE
 if test "$SKIPARG"; then
   echo "fatal: missing last flag argument: $SKIPARG" >&2
   exit 1
@@ -616,12 +622,13 @@ if test "$DO_LINK"; then
   fi
 fi
 
-test "$GCC_BARG" = -pipe && GCC_BARG=
-case "$GCCBASE" in
- "") GCC_BARG= ;;
- *[-/._]clang* | *[-/._]wcc386*) GCC_BARG= ;;  # clang(1) and wcc386(1) (unlike gcc) don't need $GCC_BARG to find as(1).
- *) test "$DO_COMPILE_OR_LINK" || GCC_BARG= ;;  # For gcc to find as(1).
-esac
+if test -z "$GCC" || test "$GCC_BARG" = -pipe || test "$IS_CC1" || test "$IS_WATCOM" || test -z "$NEED_GCC_AS"; then
+  GCC_BARG=
+else
+  case "$GCCBASE" in
+   *[-/._]clang*) GCC_BARG= ;;  # clang(1) and wcc386(1) (unlike gcc) don't need $GCC_BARG to find as(1).
+  esac
+fi
 
 OFLAG_ARGS=
 if test -z "$HAD_OFLAG"; then  # Add some size-optimizing flags.
