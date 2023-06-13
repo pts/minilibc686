@@ -124,10 +124,10 @@ bits 32
   %endif
 %endmacro
 
-;%define LAST_SC123EAX ...  ; Will be defined by syscall3_EAX.
-;%define LAST_SC123AL  ...  ; Will be defined by syscall3_AL.
+;%define LAST_SC123EAX ...  ; Will be defined by syscall36_EAX.
+;%define LAST_SC123AL  ...  ; Will be defined by syscall36_AL.
 %macro _emit_syscalls 0-*
-  ; TODO(pts): Put some extra syscalls in front of syscall3_EAX, to save 3 bytes on the first `jmp strict near'. This is complicated.
+  ; TODO(pts): Put some extra syscalls in front of syscall36_EAX, to save 3 bytes on the first `jmp strict near'. This is complicated.
   %rep %0
     %ifnidn %1_, _  ; `%ifnidn $1,' doesn't work, so we append `_'.
       global %1
@@ -238,6 +238,7 @@ _need mini_fread, mini_read
 _need mini_exit, mini__exit
 _need mini_fopen, mini_open
 _need mini_fclose, mini_close
+_need mini_mq_getattr, mini_syscall3_RP1
 _need mini_errno, .bss
 _need mini_environ, .bss
 ;
@@ -283,6 +284,7 @@ _syscall umask, 60
 _syscall execve, 11
 _syscall readlink, 85
 _syscall utimes, 271
+_syscall mq_setattr, sys_mq_getsetattr, 282
 ;
 _need mini_syscall, mini___M_jmp_pop_ebp_edi_esi_ebx_syscall_return
 _need mini_syscall3_AL, mini_syscall3_RP1
