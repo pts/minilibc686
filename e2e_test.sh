@@ -34,7 +34,7 @@ test "$(./demo_hello_linux_printf.prog)" = "Hello, World!"
 "$MYDIR"/tools/nasm-0.98.39 -I"$MYDIR"/ -O0 -w+orphan-labels -f elf -o demo_hello_linux_printf.o "$MYDIR"/demo_hello_linux_printf.nasm
 
 "$MYDIR"/build.sh
-"$MYDIR"/minicc -v -o demo_hello_linux_printf.prog2 demo_hello_linux_printf.o
+"$MYDIR"/pathbin/minicc -v -o demo_hello_linux_printf.prog2 demo_hello_linux_printf.o
 cmp demo_hello_linux_printf.prog demo_hello_linux_printf.prog2
 
 "$MYDIR"/test.sh
