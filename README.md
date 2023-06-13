@@ -726,6 +726,18 @@ programs with these compilers, use *minicc* at
 https://github.com/pts/minilibc686/; example command: `minicc --gcc=4.8 -o
 prog prog.c`. *minicc* will download these executables from here for you.
 
+## Compiler-specific notes
+
+* *long double* size: 12 bytes with PCC, GCC and TinyCC. It's the same as
+  (double* (8 bytes) with OpenWatcom.
+* *long double* alignment: GCC (depending on the version) does a default
+  `__attribute__((aligned(8)))` for global variables of the type *double*
+  or *long double*. `-malign-double` and `-mno-align-double` doesn't seem to
+  affect it. In structs, the alignment is 4. PCC, TinyCC and OpenWatcom
+  align *double* and *long double* to 4, even for global variables.
+* For TinyCC and OpenWatcom, the provided definitions for NAN etc. in math.h
+  cannot be used to initialize a global variable.
+
 ## Linker problems
 
 This section is mostly an FYI, it doesn't affter minilibc686 users directly.
@@ -812,5 +824,6 @@ This section is mostly an FYI, it doesn't affter minilibc686 users directly.
   functions are in .text (alignment 2**2). Fix it by changing the alingmen
   tof .text to 2**0 in tools/elfofix.
 * Test the various regparm functions and <stdio.h> macros with PCC.
+* PCC: prevent function alignment to 4 bytes
 
 __END__
