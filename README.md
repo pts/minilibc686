@@ -825,5 +825,8 @@ This section is mostly an FYI, it doesn't affter minilibc686 users directly.
   tof .text to 2**0 in tools/elfofix.
 * Test the various regparm functions and <stdio.h> macros with PCC.
 * PCC: prevent function alignment to 4 bytes
+* Recompile diet libc without WANT_LARGEFILE_BACKCOMPAT.
+* Add wrappers for socketcall(2).
+* Add wrappers for ipc(2).
 
 __END__

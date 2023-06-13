@@ -873,8 +873,8 @@ if test "$GCC" || test -z "$IS_TCCLD"; then
        --skiparg) SKIPARG=1 ;;
        -B?*) ;;  # Just to be sure. minicc doesn't add it for wcc386.
        -v) ;;  # Already processed as $HAD_V.
-       -ansi | -std=c89) WARGS="$WARGS$NL-za" ;;
-       -std=c99) WARGS="$WARGS$NL-za99" ;;
+       -ansi | -std=c89 | -std=gnu89) WARGS="$WARGS$NL-za" ;;
+       -std=c99 | -std=gnu99) WARGS="$WARGS$NL-za99" ;;
        -std=ow) WARGS="$WARGS$NL-ze" ;;
        -pedantic) ;;
        -m32 | -static | -fno-pic | -fcommon | -fno-unwind-tables | -fno-asynchronous-unwind-tables | -fno-builtin | -fno-ident | -ffreestanding | -fno-lto | -nostdinc | -falign-functions=* | -falign-jumps=* | -falign-loops=* | -mpreferred-stack-boundary=*) ;;
