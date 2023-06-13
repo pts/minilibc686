@@ -3,7 +3,7 @@
 General notes:
 
 * Not all syscalls and libc functions listed here have been implemented yet
-  in minilibc686.
+  in minilibc686. The unimplemented ones are indicated by !!.
 
 * All syscall numbers for i386:
   https://github.com/torvalds/linux/blob/master/arch/x86/entry/syscalls/syscall_32.tbl
@@ -60,9 +60,11 @@ Syscall aliases in libc:
 * klogctl: alias to sys_syslog
 * select: alias to sys_newselect (available since Linux 2.0)
 
-libc wrappers:
+libc wrappers (!! implement these in minilibc686):
 
 * mq_getattr: wrapper around mq_getsetattr
+* !! sigreturn: fake ENOSYS, not to be called directly
+* !! rt_sigreturn: fake ENOSYS, not to be called directly
 * !! madvise1: fake ENOSYS
 * !! phys: fake ENOSYS
 * !! security: fake ENOSYS
@@ -172,7 +174,7 @@ Syscall functions with the sys_ prefix, with a 32-bit and a 16-bit variant:
 * sys_geteuid32
 * sys_getgid
 * sys_getgid32
-* sys_getgroups, uses gid16_t[]
+* sys_getgroups: uses gid16_t[]
 * sys_getgroups32
 * sys_getresgid
 * sys_getresgid32
@@ -188,7 +190,7 @@ Syscall functions with the sys_ prefix, with a 32-bit and a 16-bit variant:
 * sys_setfsuid32
 * sys_setgid
 * sys_setgid32
-* sys_setgroups, uses gid16_t[]
+* sys_setgroups: uses gid16_t[]
 * sys_setgroups32
 * sys_setregid
 * sys_setregid32
@@ -452,6 +454,7 @@ Syscalls without a diet libc wrapper, with the sys_ prefix:
 * sys_mpx: unimplemented
 * sys_prof: unimplemented
 * sys_vserver: unimplemented
+* sys_set_zone_reclaim: unimplemented
 
 Syscall direct socketcall functions, without a dietlibc wrapper:
 
@@ -485,8 +488,6 @@ Syscall direct IPC functions, without a dietlibc wrapper:
 * sys_msgsnd
 * sys_semctl
 * sys_semget
-* sys_semop
-* sys_semtimedop
 * sys_shmat
 * sys_shmctl
 * sys_shmdt
@@ -507,7 +508,6 @@ Syscalls without a diet libc wrapper, without the sys_prefix:
 * get_kernel_syms
 * nfsservctl
 * vfork
-* set_zone_reclaim
 * exit_group
 * lookup_dcookie
 * kexec_load
