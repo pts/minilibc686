@@ -246,7 +246,7 @@ _need_aliases ALIASES  ; Must be called after _alias.
 ;
 ; We have to put _syscall definitions right here, just above `_need
 ; mini_syscall3_AL, ...', because syscalls need mini_syscall3_AL.
-;_syscall _exit, 1  ; We don't define it here, because we emit `mini__exit:' below manually. TODO(pts): Keep exit_linux.nasm as a fallback.
+;_syscall _exit, sys_exit, 1  ; We don't define it here, because we emit `mini__exit:' below manually. TODO(pts): Keep exit_linux.nasm as a fallback.
 ; The order of the first few syscalls matches the order in src/start_stdio_medium_linux_nasm, used by demo_hello_linux_printf.nasm.
 _syscall fork, 2
 _syscall read, 3
@@ -256,15 +256,11 @@ _syscall close, 6
 _syscall creat, 8
 _syscall remove, unlink, 10
 _syscall lseek, 19
-_syscall getuid,  199  ; Actually, it's __NR_getuid32, for 32-bit UIDs.
-_syscall geteuid, 201  ; Actually, it's __NR_geteuid32, for 32-bit UIDs.
-_syscall getgid,  200  ; Actually, it's __NR_getgid32, for 32-bit GIDs.
-_syscall getegid, 202  ; Actually, it's __NR_getegid32, for 32-bit GIDs.
 _syscall getpid, 20
 _syscall getppid, 64
 _syscall ioctl, 54
 _syscall ftruncate, 93
-_syscall sys__llseek, 140  ; Use mini_lseek64(...) instead, it's more convenient from C code.
+_syscall llseek, _llseek, sys_llseek, 140  ; Use mini_lseek64(...) instead, it's more convenient from C code.
 ;_syscall sys_mmap2, 192  ; Cannot define here, it has more than 3 arguments.
 ;_syscall mremap, 163  ; Cannot define here, it has more than 3 arguments.
 _syscall munmap, 91
@@ -285,6 +281,28 @@ _syscall execve, 11
 _syscall readlink, 85
 _syscall utimes, 271
 _syscall mq_setattr, sys_mq_getsetattr, 282
+_syscall getrlimit, sys_ugetrlimit, 191  ; SuS-compliant getrlimit; sys_getrlimit isn't SuS-compliant.
+_syscall chown, sys_chown32, 212  ; For 32-bit UIDs.
+_syscall fchown, sys_fchown32, 207
+_syscall getegid, sys_getegid32, 202
+_syscall geteuid, sys_geteuid32, 201
+_syscall getgid, sys_getgid32, 200
+_syscall getgroups, sys_getgroups32, 205
+_syscall getresgid, sys_getresgid32, 211
+_syscall getuid, sys_getuid32, 199
+_syscall lchown, sys_lchown32, 198
+_syscall setfsgid, sys_setfsgid32, 216
+_syscall setfsuid, sys_setfsuid32, 215
+_syscall setgid, sys_setgid32, 214
+_syscall setgroups, sys_setgroups32, 206
+_syscall setregid, sys_setregid32, 204
+_syscall setresgid, sys_setresgid32, 210
+_syscall setreuid, sys_setreuid32, 203
+_syscall setresuid, sys_setresuid32, 208
+_syscall getresuid, sys_getresuid32, 209
+_syscall posix_fadvise, fadvise64_64, 272
+_syscall klogctl, sys_syslog, 103
+_syscall select, sys_newselect, 142  ; Available since Linux 2.0.
 ;
 _need mini_syscall, mini___M_jmp_pop_ebp_edi_esi_ebx_syscall_return
 _need mini_syscall3_AL, mini_syscall3_RP1
@@ -295,7 +313,8 @@ _need mini___M_jmp_pop_ebp_edi_esi_ebx_syscall_return, mini___M_jmp_pop_ebx_sysc
 _need mini_syscall3_RP1, mini___M_jmp_pop_ebx_syscall_return
 _need mini___M_jmp_pop_ebx_syscall_return, mini___M_jmp_syscall_return
 _need mini_syscall3_RP1, mini___LM_push_exit_args
-_need mini__exit, mini___LM_push_exit_args
+_need mini__exit, mini_sys_exit
+_need mini_sys_exit, mini___LM_push_exit_args
 
 %define CLEANUP_IS_EMPTY 1
 %ifdef __NEED_mini___M_start_flush_stdout
@@ -393,10 +412,10 @@ mini__start:  ; Entry point (_start) of the Linux i386 executable.
 		_call_extern_if_needed mini___M_start_isatty_stdout
 		call main  ; Return value (exit code) in EAX (AL).
 %ifdef __NEED_mini___LM_push_exit_args
-		push eax  ; Save exit code, for mini__exit(...).
-		push eax  ; Push fake return address, for mini__exit(...).
+		push eax  ; Save exit code, for mini_sys_exit(...).
+		push eax  ; Push fake return address, for mini_sys_exit(...).
 %elifdef NEED_cleanup
-		push eax  ; Save exit code, for mini__exit(...).
+		push eax  ; Save exit code, for mini_sys_exit(...).
 %endif
 		; Fall through.
 %endif  ; __NEED_mini_start
@@ -409,7 +428,9 @@ mini_exit:  ; void mini_exit(int exit_code);
 		_call_extern_if_needed mini___M_start_flush_opened
 		; Fall through.
 %endif  ; NEED_cleanup
-%ifdef __NEED_mini__exit  ; Always true.
+%ifdef __NEED_mini_sys_exit
+  global mini_sys_exit
+  mini_sys_exit:  ; void mini_sys_exit(int exit_code);
   global mini__exit
   mini__exit:  ; void mini__exit(int exit_code);
   %ifdef __NEED_mini_syscall3_AL
@@ -420,7 +441,7 @@ mini_exit:  ; void mini_exit(int exit_code);
 		inc eax  ; EAX := 1 (__NR_exit).
 		; Fall through to mini_syscall3_RP1 or mini_syscall6_RP1.
   %else
-		pop ebx  ; Fake or real return address of mini__exit.
+		pop ebx  ; Fake or real return address of mini_sys_exit.
 		pop ebx  ; Exit code.
 		xor eax, eax
 		inc eax  ; EAX := 1 (__NR__exit).
@@ -435,7 +456,7 @@ mini_exit:  ; void mini_exit(int exit_code);
 		; Fall through to mini_syscall3_RP1 or mini_syscall6_RP1.
 %elifdef __NEED_mini__start
   %ifdef mini___LM_push_exit_args
-		pop ebx  ; Fake or real return address of mini__exit.
+		pop ebx  ; Fake or real return address of mini_sys_exit.
 		pop ebx  ; Exit code.
   %elifdef NEED_cleanup
 		pop ebx  ; Exit code.
@@ -505,7 +526,7 @@ mini_syscall:  ; long mini_syscall(long nr, ...);  /* Supports up to 6 arguments
 		; lodsd ; EAX already contains the syscall number for mini_syscall6_RP1 and mini_syscall6_AL.
 %elifdef NEED_syscall6_syscall_only
 ; This is quite rare, but it can happen: main(...) just calls mini_syscall(...) and returns.
-; Another way: main(...) just calls mini_syscall(...) and then calls mini__exit(...).
+; Another way: main(...) just calls mini_syscall(...) and then calls mini_sys_exit(...).
 ; TODO(pts): Test both.
 global mini_syscall
 mini_syscall:  ; long mini_syscall(long nr, ...);  /* Supports up to 6 arguments after nr, that's the maximum on Linux. */

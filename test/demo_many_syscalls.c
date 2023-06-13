@@ -14,7 +14,7 @@
 #  define MINI_NAME(name) name
 #endif
 
-static __inline__ int sys__llseek_syscall(int fd, int offset_high, int offset_low, loff_t *result, int whence) {
+static __inline__ int sys_llseek_syscall(int fd, int offset_high, int offset_low, loff_t *result, int whence) {
   return syscall(SYS__llseek, fd, offset_high, offset_low, /*(int)*/result, whence);
 }
 static __inline__ void *sys_mmap2_syscall(void *addr, size_t length, int prot, int flags, int fd, off_t offset) {
@@ -25,7 +25,7 @@ static __inline__ void *sys_brk_syscall(void *addr) {
 }
 
 #ifdef __MINILIBC686__
-static __inline__ int sys__llseek_syscalln(int fd, int offset_high, int offset_low, loff_t *result, int whence) {
+static __inline__ int sys_llseek_syscalln(int fd, int offset_high, int offset_low, loff_t *result, int whence) {
   return syscall5(SYS__llseek, fd, offset_high, offset_low, (int)result, whence);
 }
 static __inline__ void *sys_mmap2_syscalln(void *addr, size_t length, int prot, int flags, int fd, off_t offset) {
@@ -35,13 +35,13 @@ static __inline__ void *sys_brk_syscalln(void *addr) {
   return (void*)syscall1(SYS_brk, (int)addr);
 }
 #else
-#  define sys__llseek_syscalln sys__llseek_syscall
+#  define sys_llseek_syscalln sys_llseek_syscall
 #  define sys_mmap2_syscalln sys_mmap2_syscall
 #  define sys_brk_syscalln sys_brk_syscall
 #endif
 
 #ifndef __MINILIBC686__
-static __inline__ int sys__llseek(int fd, int offset_high, int offset_low, loff_t *result, int whence) {
+static __inline__ int sys_llseek(int fd, int offset_high, int offset_low, loff_t *result, int whence) {
   return syscall(SYS__llseek, fd, offset_high, offset_low, /*(int)*/result, whence);
 }
 static __inline__ void *sys_mmap2(void *addr, size_t length, int prot, int flags, int fd, off_t offset) {
@@ -74,9 +74,9 @@ int main(int argc, char **argv) {
     getegid();
     ioctl(0, TCGETS, 0);
     ftruncate(0, 0);
-    sys__llseek(0, 0, 0, 0, 0);
-    sys__llseek_syscall(0, 0, 0, 0, 0);
-    sys__llseek_syscalln(0, 0, 0, 0, 0);
+    sys_llseek(0, 0, 0, 0, 0);
+    sys_llseek_syscall(0, 0, 0, 0, 0);
+    sys_llseek_syscalln(0, 0, 0, 0, 0);
     sys_mmap2(0, 0, 0, 0, 0, 0);
     sys_mmap2_syscalln(0, 0, 0, 0, 0, 0);
     sys_mmap2_syscall(0, 0, 0, 0, 0, 0);

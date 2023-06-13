@@ -47,7 +47,7 @@ static __inline__ int getpagesize(void) { return 0x1000; }  /* The .a file also 
    * implementation quite shorter than lseek64(...).
    */
   __LIBC_FUNC_RP3(int, lseek64_set, (int fd, off64_t offset), __LIBC_NOATTR);
-  __LIBC_FUNC(int, sys__llseek, (int fd, int offset_high, int offset_low, loff_t *result, int whence), __LIBC_NOATTR);  /* System call. Use lseek(...) or lseek64(...) above instead. */
+  __LIBC_FUNC(int, sys_llseek, (int fd, int offset_high, int offset_low, loff_t *result, int whence), __LIBC_NOATTR);  /* System call. Use lseek(...) or lseek64(...) above instead. */
 #endif  /* __MINILIBC686__ */
 
 #ifdef __MINILIBC686__
