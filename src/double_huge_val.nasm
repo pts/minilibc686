@@ -1,6 +1,6 @@
 ;
 ; written by pts@fazekas.hu at Mon Jun  5 21:37:45 CEST 2023
-; Compile to i386 ELF .o object: nasm -O999999999 -w+orphan-labels -f elf -o huge_val.o huge_val.nasm
+; Compile to i386 ELF .o object: nasm -O999999999 -w+orphan-labels -f elf -o double_huge_val.o double_huge_val.nasm
 ;
 ; Data size: 8 bytes.
 ;

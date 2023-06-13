@@ -34,23 +34,27 @@
 #  define HUGE_VALF (__builtin_huge_valf())
 #  define HUGE_VALL (__builtin_huge_vall())
 #  define INFINITY  (__builtin_huge_valf())
+#  define NAN (__builtin_nan(""))
 #elif __GNUC_PREREQ(2, 96)
 #  define HUGE_VAL  (__extension__ (double)0x1.0p2047L)  /* L to avoid -Woverflow warning. */
 #  define HUGE_VALF (__extension__ (float)0x1.0p255)
 #  define HUGE_VALL ((long double) HUGE_VAL)
 #  define INFINITY  (__extension__ (float)0x1.0p255)
+#  define NAN       (__extension__ ((union { unsigned __i;            float __f; })  { 0x7fc00000U }).__f)
 #elif defined(__GNUC__) || defined(__TINYC__)
 #  define HUGE_VAL  (__extension__ ((union { unsigned long long __ll; double __d; }) { 0x7ff0000000000000ULL }).__d)
 #  define HUGE_VALF (__extension__ ((union { unsigned __i;            float __f; })  { 0x7f800000U }).__f)
 #  define HUGE_VALL ((long double) HUGE_VAL)
 #  define INFINITY  (__extension__ ((union { unsigned __i;            float __f; })  { 0x7f800000U }).__f)  /* Same as HUFE_VALF. */
+#  define NAN       (__extension__ ((union { unsigned __i;            float __f; })  { 0x7fc00000U }).__f)
 #else  /* E.g. __WATCOMC__ */
-  extern float __float_huge_val, __float_infinity;
+  extern float __float_huge_val, __float_infinity, __float_nan;
   extern double __double_huge_val;
 #  define HUGE_VAL  __double_huge_val
 #  define HUGE_VALF __float_huge_val
 #  define HUGE_VALL ((long double) HUGE_VAL)
 #  define INFINITY  __float_infinity
+#  define NAN       __float_nan
 #endif
 #if 0 && defined(__i386__)  /* Works in __GNUC__, __TINYC__ and __WATCOMC__, but it is a bit inefficient. */
 static __inline__ double __get_huge_val(void) { static union { unsigned long long __ll; double __d; } __u = { 0x7ff0000000000000ULL }; return __u.__d; }

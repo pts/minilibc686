@@ -1,6 +1,6 @@
 ;
 ; written by pts@fazekas.hu at Mon Jun  5 21:37:45 CEST 2023
-; Compile to i386 ELF .o object: nasm -O999999999 -w+orphan-labels -f elf -o float_huge_val.o float_huge_val.nasm
+; Compile to i386 ELF .o object: nasm -O999999999 -w+orphan-labels -f elf -o float_nan.o float_nan.nasm
 ;
 ; Data size: 4 bytes.
 ;
@@ -10,8 +10,7 @@
 bits 32
 cpu 386
 
-global __float_huge_val
-global __float_infinity
+global __float_nan
 %ifdef CONFIG_SECTIONS_DEFINED
 %elifidn __OUTPUT_FORMAT__, bin
 section .text align=1
@@ -27,9 +26,8 @@ section .bss align=1
 
 section .rodata
 ; For OpenWatcom.
-__float_huge_val:  ; extern float __float_huge_val;
-__float_infinity:  ; extern float __float_infinity;  /* Same as __float_huge_val, on purpose. */
-		dd 0x7f800000
+__float_nan:  ; extern float __float_nan;
+		dd 0x7fc00000
 
 %ifdef CONFIG_PIC
 %error Not PIC because of global variables.
