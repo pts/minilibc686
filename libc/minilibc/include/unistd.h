@@ -41,6 +41,7 @@ __LIBC_FUNC(void *, sys_brk, (void *addr), __LIBC_NOATTR);
 __LIBC_FUNC(int, execve, (const char *filename, char *const argv[], char *const envp[]), __LIBC_NOATTR);
 __LIBC_FUNC(ssize_t, readlink, (const char *pathname, char *buf, size_t bufsiz), __LIBC_NOATTR);
 
+static __inline__ int getpagesize(void) { return 0x1000; }  /* The .a file also contains mini_getpagesize(...), for binary compatibility. */
 #ifdef __MINILIBC686__
   /* Returns 0 on success, anything else (and sets errno) on error. The
    * implementation quite shorter than lseek64(...).
