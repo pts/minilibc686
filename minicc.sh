@@ -861,7 +861,7 @@ if test "$GCC" || test -z "$IS_TCCLD"; then
     WISOMF=
     WHADWEXTRA=
     test "$HAD_V" || WARGS="$WARGS$NL-q"
-    WARGS="$WARGS$NL-bt=linux$NL-fr$NL-zl$NL-zld$NL-e=2147483647"
+    WARGS="$WARGS$NL-bt=linux$NL-fr$NL-zl$NL-zld$NL-e=2147483647$NL-zp=4"
     unset INCLUDE  # Don't let wcc386 find any system #include etc. file.
     unset WATCOM  # Don't let wcc386 find any system #include etc. file.
     SKIPARG=
