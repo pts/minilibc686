@@ -1013,7 +1013,9 @@ if test "$GCC" || test -z "$IS_TCCLD"; then
           else TMPOFILE="${TMPOFILE%.*}".s; TMPOFILE="${TMPOFILE##*/}"  # GCC also strips the dirname.
           fi
         else
-          TMPOFILE=-  # For -E.
+          if test "$OUTFILE"; then TMPOFILE="$OUTFILE"
+          else TMPOFILE=-  # For -E.
+          fi
         fi
         test "$TMPOFILE" != - && test "${TMPOFILE#-}" != "$TMPOFILE" && TMPOFILE="./$TMPOFILE"  # Make it not a command-line flag (-...).
       fi
