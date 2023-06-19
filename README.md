@@ -737,6 +737,11 @@ prog prog.c`. *minicc* will download these executables from here for you.
   align *double* and *long double* to 4, even for global variables.
 * For TinyCC and OpenWatcom, the provided definitions for NAN etc. in math.h
   cannot be used to initialize a global variable.
+* Only OpenWatcom (*wcc386*) unifies (merges) function bodies and function
+  body tails, to save space. It also adds a `nop` so that that different
+  functions won't end up at the same address.
+* OpenWatcom unifies (merges) NUL-terminated string constants within an .o
+  file, GNU ld(1) merges them globally withing section `.rodata.str1.1`.
 
 ## Linker problems
 
