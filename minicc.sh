@@ -146,12 +146,12 @@ elif test "$1" = --download; then
   exit  # All downlodads succeeded.
 fi
 
-if ! test -f "$MYDIR/gcctooldir/dummy"; then
-  echo "fatal: missing tool: $MYDIR/gcctooldir/collect2" >&2
+if ! test -f "$MYDIR/tools/elfxfix"; then
+  echo "fatal: missing tool: $MYDIR/tools/elfxfix" >&2
   exit 1
 fi
-if ! test -x "$MYDIR/gcctooldir/dummy"; then
-  echo "fatal: tool not executable: $MYDIR/gcctooldir/collect2" >&2
+if ! test -x "$MYDIR/tools/elfxfix"; then
+  echo "fatal: tool not executable: $MYDIR/tools/elfxfix" >&2
   exit 1
 fi
 
@@ -673,7 +673,6 @@ if test "$TCC"; then
   ARGS="$TCC$NL-m32$NL-march=$ARCH$NL-static$NL-nostdlib$NL-nostdinc$NL$SFLAG$NL$OFLAG_ARGS$NL$WFLAGS$NL$DEF_ARG$NL$ARGS$NL$INCLUDEDIR_ARG$NL$OUTFILE_ARG"
 else
   # This also works with TCC, but it's too much cruft.
-  # The `-B$MYDIR/gcctooldir' argument makes our gcctooldir/collect2 or gcctooldir/ld run.
   # Add $INCLUDEDIR_ARG last, so that -I... specified by the user takes precedence. !! TODO(pts): Does GCC do this or the opposite?
   # Specifying -fcommon since -fno-common is the default since GCC 10 and Clang 11: https://maskray.me/blog/2022-02-06-all-about-common-symbols
   # DYI dietlibc 0.34 adds: gcc -Os -fomit-frame-pointer -falign-functions=1 -falign-jumps=1 -falign-loops=1 -mpreferred-stack-boundary=4
