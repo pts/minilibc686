@@ -1,14 +1,18 @@
-# minilibc686: size-optimized libc for Linux i386 and i686, for static linking
+# minilibc686: libc and tools for creating size-optimized, statically linked Linux i386 and i686 programs
 
 minilibc686 is a minimalistic, size-optimized C runtime library (libc)
 targeting Linux i386 and i686, for building statically linked ELF-32
-executables. Most of the code of minilibc686 is written in NASM assembly
-language, and it is manually optimized for size (rather than speed) in
-assembly. Feature tradeoffs were made to achieve small code sizes, so
-minilibc686 deviates from standard C in many aspects.
-
-Typical code sizes (total size of the executable program file, including ELF
-headers, program code and libc code):
+executable programs. minilibc686 is batteries-included: it contains all
+necessary tools (e.g. the compiler driver *minicc*, C preprocessor, C
+compiler, assembler, linker) for building size-optimized Linux i386
+programs. All of the libc code of minilibc686 is written in NASM assembly
+language, and it is manually optimized for size (rather than speed). Feature
+tradeoffs were made to achieve small code sizes, so minilibc686 deviates
+from standard C in many aspects. In case some functionality is missing from
+minilibc686, with the *minicc* compiler fronted it's convenient to use some
+other supported libcs (diet libc, uClibc and EGLIBC), which are precompiled,
+and *minicc* automatically downloads each of them the first time it is
+needed.
 
 ## Getting started
 
@@ -30,16 +34,20 @@ Hello, World!
 -rwxrwxr-x 1 pts pts 164 Jun  8 19:12 demo_write
 ```
 
-The first time you run *minicc*, it builds the libmini686.a using the
-bundled NASM (`tools/nasm-0.98.39`).
+The first time you run *minicc*, it builds the static libraries
+`libc/minilibc/libc.i386.a` and `libc/minilibc/libc.i686.a`, using the
+bundled NASM (`tools/nasm-0.98.39`) assembler. That's why you get hundrdeds
+of command log lines upon your first compile.
 
 ## libc size analysis
 
 What sizes are achievable:
 
 * A hello-world program in NASM assembly language, using Linux syscalls
-  (demo_hello_linux_nolibc.nasm): **118 bytes**. This is not the world
-  record, because e.g. 88 bytes is achievable (see
+  (demo_hello_linux_nolibc.nasm): **118 bytes**. This includes the ELF
+  headers, program code, libc code, program data and libc data.
+  This is longer than the world record, because e.g. 88 bytes is achievable
+  (see
   [hellofli3.nasm](https://github.com/pts/mininasm/blob/master/demo/hello/hellofli3.nasm)),
   but it is a good demonstration of what is conveniently achievable with
   Linux syscalls only.
