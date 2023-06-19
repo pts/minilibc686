@@ -33,7 +33,7 @@
 #  define HUGE_VAL  (__builtin_huge_val())
 #  define HUGE_VALF (__builtin_huge_valf())
 #  define HUGE_VALL (__builtin_huge_vall())
-#  define INFINITY  (__builtin_huge_valf())
+#  define INFINITY  (__builtin_inff())
 #  define NAN (__builtin_nan(""))
 #elif __GNUC_PREREQ(2, 96)
 #  define HUGE_VAL  (__extension__ (double)0x1.0p2047L)  /* L to avoid -Woverflow warning. */

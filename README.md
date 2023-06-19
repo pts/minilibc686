@@ -443,13 +443,13 @@ Here is how to pick the libc:
   the prepared archive
   [eglibc-2.19.sfx.7z](https://github.com/pts/minilibc686/releases/download/eglibc-2.19-v1/eglibc-2.19.sfx.7z)
   from GitHub, and it will extract it upon first use.
-* When used with *minicc*, most libcs (minilibc686, diet libc, uClibc) work
-  with most compilers (OpenWatcom, GCC, Clang, TinyCC, PCC). Appropriate
-  `#ifdef` lines have been added to the .h files shipping with *minicc*.
-  However, EGLIBC works with GCC and Clang only. (Theoretically it's
-  possible to port the .h files to other compilers, but it hasn't happened
-  yet.) All libcs except for EGLIBC also work in `-ansi` and `-std=c99`
-  mode, all .h files included, without warnings.
+* When used with *minicc*, all supported libcs (minilibc686, diet libc,
+  uClibc, EGLIBC) work with all supported C compilers (OpenWatcom, GCC,
+  Clang, TinyCC, PCC). Appropriate `#ifdef` lines have been added to the
+  libc .h files shipping with *minicc*. Compilation works and is warningless
+  within the libc headers with or without `-ansi` (same as `-std=c89`) and
+  `-std=c99`. Compilation works and is warningles with or without
+  `-pedantic`.
 * (Most users want `--uclibc` instead of this.)
   To use the bundled uClibc 0.9.30.1 (built for `-march=i686`) with the
   bundled TinyCC compiler in restricted mode, specify `--utcc`. Instead of

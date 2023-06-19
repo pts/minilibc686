@@ -45,7 +45,16 @@
 #    if !defined(__i386__) && (defined(_M_I386) || defined(__386__))
 #      define __i386__ 1  /* Matches __GNUC__. */
 #    endif
-#    if !defined(__i386__) && !defined(__FLAT__)
+#    if _M_IX86 >= 400 && !defined(__i486__) && _M_IX86 < 500
+#      define __i486__ 1  /* Matches __GNUC__. */
+#    endif
+#    if _M_IX86 >= 500 && !defined(__i586__) && _M_IX86 < 600
+#      define __i586__ 1  /* Matches __GNUC__. */
+#    endif
+#    if _M_IX86 >= 600 && !defined(__i686__)
+#      define __i686__ 1  /* Matches __GNUC__. */
+#    endif
+#    if !defined(__i386__) || !defined(__FLAT__)
 #      error This libc requires flat memory model and i386.
 #    endif
     /* TODO(pts): Add inline functions for getc(...) and putc(...), check __inline. How does it work? */
@@ -61,6 +70,7 @@
 #    define __restrict__  /* Ignore __GNUC__ construct. */
 #    define __attribute__(x)  /* Ignore __GNUC__ construct. */
 #    define __inline__ __inline  /* Use OpenWatcom symtax for __GNUC__ construct. */
+#    define __signed__ signed
 #    ifdef _NO_EXT_KEYS  /* wcc386 -za */
 #      define __STRICT_ANSI__ 1  /* `gcc -ansi' == `gcc -std=c89'. */
 #    endif

@@ -24,27 +24,31 @@
 #define S_ISFIFO(m)	(((m) & S_IFMT) == S_IFIFO)
 #define S_ISSOCK(m)	(((m) & S_IFMT) == S_IFSOCK)
 
+/* These fields must be __LIBC_PACKED for amd64, because the default
+ * alignment for `long long' is 8 there. __PCC__ fails with in internal
+ * error `strmemb' if we add __LIBC_PACKED here.
+ */
 __LIBC_PACKED_STRUCT struct stat64 {
-  __extension__ __LIBC_PACKED unsigned long long st_dev;
+  __extension__ unsigned long long st_dev;
   unsigned char __pad0[4];
   unsigned long __st_ino;
   unsigned int  st_mode;
   unsigned int  st_nlink;
   unsigned long st_uid;
   unsigned long st_gid;
-  __extension__ __LIBC_PACKED unsigned long long st_rdev;
+  __extension__ unsigned long long st_rdev;
   unsigned char __pad3[4];
-  __extension__ __LIBC_PACKED unsigned long long st_size;
+  __extension__ unsigned long long st_size;
   unsigned long st_blksize;
   /* Number 512-byte blocks allocated. */
-  __extension__ __LIBC_PACKED unsigned long long st_blocks;
+  __extension__ unsigned long long st_blocks;
   unsigned long st_atime;
   unsigned long st_atime_nsec;
   unsigned long st_mtime;
   unsigned int  st_mtime_nsec;
   unsigned long st_ctime;
   unsigned long st_ctime_nsec;
-  __extension__ __LIBC_PACKED unsigned long long st_ino;
+  __extension__ unsigned long long st_ino;
 };
 __LIBC_STATIC_ASSERT(sizeof_struct_stat64, sizeof(struct stat64) == 96);
 
