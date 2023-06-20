@@ -44,7 +44,7 @@ of command log lines upon your first compile.
 What sizes are achievable:
 
 * A hello-world program in NASM assembly language, using Linux syscalls
-  (demo_hello_linux_nolibc.nasm): **118 bytes**. This includes the ELF
+  (demo_hello_linux_nolibc.nasm): **117 bytes**. This includes the ELF
   headers, program code, libc code, program data and libc data.
   This is longer than the world record, because e.g. 88 bytes is achievable
   (see

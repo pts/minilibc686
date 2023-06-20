@@ -20,7 +20,7 @@
 ; https://github.com/pts/mininasm/blob/master/demo/hello/helloli3.nasm .
 ;
 
-%define CONFIG_NO_RW_SECTIONS
+%define ALIGN_RODATA 1
 %include "elf0.inc.nasm"
 
 _start:  ; ELF program entry point.

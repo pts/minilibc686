@@ -4,6 +4,7 @@
 ;
 ; Usage in your prog.nasm:
 ;
+;     ;%define ALIGN_RODATA 1
 ;     %include "elf0.inc.nasm"
 ;     _start:
 ;     ... ; Put your code here.
