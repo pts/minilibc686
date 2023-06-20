@@ -246,11 +246,14 @@ _need mini_fputc, mini_fputc_RP3
 _need mini_fputc_RP3, mini_write
 _need mini_fputc_RP3, mini_fflush
 _need mini_fflush, mini_write
-_need mini_fflush, mini___M_discard_buf
+;_need mini_fflush, mini___M_discard_buf
 _need mini_getc, mini_fread
 _need mini_fgetc, mini_fread
 _need mini___M_fgetc_fallback_RP3, mini_fread
 _need mini_fread, mini_read
+_need mini_fread, mini___M_discard_buf
+_need mini_fopen, mini___M_discard_buf
+_need mini_fseek, mini___M_discard_buf
 _need mini_exit, mini__exit
 _need mini_fopen, mini_open
 _need mini_fclose, mini_close
@@ -866,7 +869,6 @@ mini_exit:  ; void mini_exit(int exit_code);
 %endif
 %ifdef NEED_cleanup
 %ifdef __NEED_start.mini___M_start_flush_stdout
-__smart_extern mini_fflush
 start.mini___M_start_flush_stdout:
 		push dword [mini_stdout]
 		call mini_fflush
@@ -1103,6 +1105,15 @@ mini_putchar_RP3:  ; int REGPARM3 mini_putchar_RP3(int c);
   section .text
 %endif
 
+%ifdef __NEED_mini_fflush
+  %ifdef __NEED_mini___M_discard_buf
+    __smart_extern mini___M_discard_buf
+  %else
+    %define CONFIG_FLUSH_INLINE_DISCARD_BUF
+  %endif
+  %include "src/stdio_medium_fflush.nasm"
+%endif
+
 %ifdef __NEED_mini___M_vfsprintf
   %define mini_vfprintf mini___M_vfsprintf
   ; %include these file, so that the `call mini_vfprintf_for_s_printf' they
@@ -1142,12 +1153,11 @@ mini_putchar_RP3:  ; int REGPARM3 mini_putchar_RP3(int c);
   %endmacro
   _include_if_needed mini_isatty, "src/isatty_linux.nasm"
   _include_if_needed mini_printf, "src/printf_callvf.nasm"
-  _include_if_needed mini_fflush, "src/stdio_medium_fflush.nasm"
+  _include_if_needed mini___M_discard_buf, "src/stdio_medium_discard_buf.nasm"
   _include_if_needed mini_fputc_RP3, "src/stdio_medium_fputc_rp3.nasm"
   _include_if_needed mini___M_vfsprintf, "src/stdio_medium_vfsprintf.nasm"
   _include_if_needed mini_vfprintf, "src/stdio_medium_vfprintf.nasm"
   _include_if_needed mini___M_writebuf_relax_RP1, mini___M_writebuf_unrelax_RP1, "src/stdio_medium_writebuf_relax.nasm"
-  _include_if_needed mini___M_discard_buf, "src/stdio_medium_discard_buf.nasm"
 %endif
 
 ; __END__
