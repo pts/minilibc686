@@ -769,7 +769,7 @@ int main(int argc, char **argv) {
       }
       if (is_pass2 && orig_sdata_size != 0) {
         if (u == SECTION_SDATA) {
-          ++u; ++section;  /* Put it to SECTION_RODATA instead. */
+          ++u; ++section;  /* Put it to the beginning of SECTION_RODATA instead. */
         } else if (u == SECTION_RODATA) {
           data_ofs += orig_sdata_size;
         }
@@ -1139,10 +1139,12 @@ int main(int argc, char **argv) {
     for (u = 0, section = sections; u < SECTION_COUNT; ++u, ++section) {
       if (u == SECTION_SDATA && !may_optimize_strings && section->size != 0) {
         /* Put everything to SECTION_RODATA (section[1]) instead of
-         * SECTION_SDATA, so that GNU ld(1) won't try to misinterpret and
-         * optimize generic data as ASCIIZ strings.
+         * SECTION_SDATA (section[0], *section), so that GNU ld(1) won't try
+         * to misinterpret and optimize generic data as ASCIIZ strings.
          */
-        orig_sdata_size = (section->size + section[1].align - 1) & -section[1].align;  /* Nonzero, checked above. */
+        orig_sdata_size = section->size;  /* Nonzero, checked above. */
+        if (section[1].size != 0) orig_sdata_size += -orig_sdata_size & (section[1].align - 1);  /* Add alignment for SECTION_RODATA after SECTION_SDATA. */
+        if (section[1].align < section->align) section[1].align = section->align;
         section[1].size += orig_sdata_size;
         section[1].rel_count += section->rel_count;
         section[1].sym_count += section->sym_count;
