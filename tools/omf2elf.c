@@ -677,7 +677,7 @@ int main(int argc, char **argv) {
           return 34;
         }
         section->seg_idx = seg_count;
-        section->align = seg_align;
+        section->align = (may_optimize_strings && u == SECTION_SDATA) ? 1 : seg_align;  /* Override align=4 of segment CONST (as emitted by wcc386) with align=1. */
         section->size = seg_size;
         section->info = section_infos + u;
         section->rel_count = section->sym_count = 0;

@@ -66,8 +66,9 @@ What sizes are achievable:
   the rest of the code is part of the libc, written in NASM assembly. Please
   note that that `demo_c_hello.c` provides the same functionality, but the
   program size depends on the C compiler. The built-in OpenWatcom C compiler
-  gives 1160 bytes, but GCC 7.5.0 gives 1148 bytes. It's always 1148 bytes
-  when demo_hello_linux_printf.nasm is compiled with NASM.
+  gives 1160 bytes (with `-msoft-float` it would be 4 bytes less), but GCC
+  7.5.0 gives 1148 bytes. It's always 1148 bytes when
+  demo_hello_linux_printf.nasm is compiled with NASM.
 
 hello-world size comparison of different libcs:
 
