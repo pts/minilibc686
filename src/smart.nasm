@@ -214,10 +214,16 @@ _need mini_printf, mini_stdout
 _need mini_vprintf, mini_stdout
 _need mini_vsprintf, mini_sprintf
 _need mini_vsnprintf, mini_snprintf
-_need mini_printf, mini_vfprintf
+;_need mini_printf, mini_vfprintf  ; Inlined.
+_need mini_printf, mini___M_writebuf_relax_RP1
+_need mini_printf, mini___M_writebuf_unrelax_RP1
+_need mini_printf, mini_fputc_RP3
 _need mini_sprintf, mini___M_vfsprintf
 _need mini_snprintf, mini___M_vfsprintf
 _need mini_vprintf, mini_vfprintf
+_need mini_fprintf, mini___M_writebuf_relax_RP1
+_need mini_fprintf, mini___M_writebuf_unrelax_RP1
+_need mini_fprintf, mini_fputc_RP3
 _need mini_vfprintf, mini___M_writebuf_relax_RP1
 _need mini_vfprintf, mini___M_writebuf_unrelax_RP1
 _need mini_vfprintf, mini_fputc_RP3
@@ -265,6 +271,9 @@ _need mini_stdout, .bss
 ;
 %ifdef __NEED_mini___M_vfsprintf
   %ifdef __NEED_mini_vfprintf
+    %undef __NEED_mini___M_vfsprintf  ; mini_vfprintf(...) will do it instead.
+  %endif
+  %ifdef __NEED_mini_printf
     %undef __NEED_mini___M_vfsprintf  ; mini_vfprintf(...) will do it instead.
   %endif
 %endif
@@ -1132,6 +1141,38 @@ mini_putchar_RP3:  ; int REGPARM3 mini_putchar_RP3(int c);
   %endif
 %endif  ; __NEED_mini___M_vfsprintf
 
+%ifdef __NEED_mini_printf
+  global mini_printf
+  mini_printf:  ; int mini_printf(const char *fmt, ...) { return mini_vfprintf(mini_stdout, fmt, ap); }
+  %ifndef __NEED_mini_vfprintf
+		mov eax, esp
+  %endif
+  ;esp:retaddr fmt val
+		push esp  ; 1 byte.
+  ;esp:&retaddr retaddr fmt val
+		add dword [esp], strict byte 2*4  ; 4 bytes.
+  ;esp:ap=&val retaddr fmt val
+		push dword [esp+2*4]  ; 4 bytes.
+  ;esp:fmt ap=&val retaddr fmt val
+		push dword [mini_stdout]  ; 6 bytes.
+  ;esp:filep fmt ap=&val retaddr fmt val
+  %ifdef __NEED_mini_vfprintf
+    __smart_extern mini_vfprintf
+		call mini_vfprintf  ; 5 bytes.
+    ;esp:filep fmt ap=&val retaddr fmt val
+		add esp, strict byte 3*4  ; 3 bytes, same as `times 3 pop edx'.
+    ;esp:retaddr fmt val
+		ret  ; 1 byte.
+  %else
+		push eax  ; Prepared return ESP instead of return address, for CONFIG_VFPRINTF_POP_ESP_BEFORE_RET.
+		; Fall through to mini_vfprintf.
+    %define CONFIG_VFPRINTF_POP_ESP_BEFORE_RET
+    section .rodata align=1
+    section .text
+    %include "src/stdio_medium_vfprintf.nasm"
+  %endif
+%endif  ; __NEED_mini_printf
+
 ; Helpfully %include some needed minilibc686 source files.
 ; demo_hello_linux_printf.nasm relies on this.
 %ifidn __OUTPUT_FORMAT__, bin
@@ -1152,7 +1193,6 @@ mini_putchar_RP3:  ; int REGPARM3 mini_putchar_RP3(int c);
     %endif
   %endmacro
   _include_if_needed mini_isatty, "src/isatty_linux.nasm"
-  _include_if_needed mini_printf, "src/printf_callvf.nasm"
   _include_if_needed mini___M_discard_buf, "src/stdio_medium_discard_buf.nasm"
   _include_if_needed mini_fputc_RP3, "src/stdio_medium_fputc_rp3.nasm"
   _include_if_needed mini___M_vfsprintf, "src/stdio_medium_vfsprintf.nasm"

@@ -7,6 +7,7 @@
 ;
 ; Uses: %ifdef CONFIG_PIC
 ; Uses; %ifdef CONFIG_VFPRINTF_IS_FOR_S_PRINTF_ONLY
+; Uses; %ifdef CONFIG_VFPRINTF_POP_ESP_BEFORE_RET
 ;
 
 bits 32
@@ -20,32 +21,41 @@ cpu 386
   %undef  mini_vfprintf
 %endif
 
+%ifndef CONFIG_VFPRINTF_POP_ESP_BEFORE_RET
 global mini_vfprintf
+%endif
+
 %ifdef CONFIG_SECTIONS_DEFINED
 %elifidn __OUTPUT_FORMAT__, bin
 section .text align=1
 section .rodata align=1
 section .data align=1
 section .bss align=1
-%ifndef CONFIG_VFPRINTF_IS_FOR_S_PRINTF_ONLY
-mini_fputc_RP3 equ $+0x12345678
-mini___M_writebuf_relax_RP1 equ $+0x12345679
-mini___M_writebuf_unrelax_RP1 equ $+0x1234567a
-%endif
 %else
-%ifndef CONFIG_VFPRINTF_IS_FOR_S_PRINTF_ONLY
-extern mini_fputc_RP3
-extern mini___M_writebuf_relax_RP1
-extern mini___M_writebuf_unrelax_RP1
-%endif
 section .text align=1
 section .rodata align=1
 section .data align=4
 section .bss align=4
 %endif
 
+%ifndef CONFIG_VFPRINTF_IS_FOR_S_PRINTF_ONLY
+  %ifidn __OUTPUT_FORMAT__, bin
+    %ifndef UNDEFSYMS
+      mini_fputc_RP3 equ $+0x12345678
+      mini___M_writebuf_relax_RP1 equ $+0x12345679
+      mini___M_writebuf_unrelax_RP1 equ $+0x1234567a
+    %endif
+  %else
+    extern mini_fputc_RP3
+    extern mini___M_writebuf_relax_RP1
+    extern mini___M_writebuf_unrelax_RP1
+  %endif
+%endif
+
 section .text
+%ifndef CONFIG_VFPRINTF_POP_ESP_BEFORE_RET
 mini_vfprintf:  ; int mini_vfprintf(FILE *filep, const char *format, va_list ap);
+%endif
 		push ebx
 		push esi
 		push edi
@@ -281,6 +291,9 @@ mini_vfprintf:  ; int mini_vfprintf(FILE *filep, const char *format, va_list ap)
 		pop edi
 		pop esi
 		pop ebx
+%ifdef CONFIG_VFPRINTF_POP_ESP_BEFORE_RET
+		pop esp
+%endif
 		ret
 .call_mini_putc:  ; Input: AL contains the byte to be printed. Can use EAX, EDX and ECX as scratch. Output: byte is written to the buffer, EBP is incremented on success only.
 		mov edx, [esp+0x38]  ; filep. AL contains the byte to be printed, the high 24 bits of EAX is garbage here.
