@@ -31,7 +31,7 @@ $ printf '#include <unistd.h>\nint main() { write(1, "Hello, World!\\n", 14); re
 $ minicc -fomit-frame-pointer -o demo_write demo_write.c
 $ ./demo_write
 Hello, World!
--rwxrwxr-x 1 pts pts 164 Jun  8 19:12 demo_write
+-rwxrwxr-x 1 pts pts 163 Jun  8 19:12 demo_write
 ```
 
 The first time you run *minicc*, it builds the static libraries
@@ -52,7 +52,7 @@ What sizes are achievable:
   but it is a good demonstration of what is conveniently achievable with
   Linux syscalls only.
 * A hello-world program in C, using Linux syscall write(2) (see demo_write.c
-  above): **164 bytes**. The extra bytes are mostly error handling code
+  above): **163 bytes**. The extra bytes are mostly error handling code
   after write(2) has returned, and C compiler register use overhead.
 * A hello-world program, using snprintf(3) and Linux syscall write(2)
   (test/demo_hello_linux_snprintf.nasm): **832 bytes**. Only the very short
@@ -773,15 +773,12 @@ This section is mostly an FYI, it doesn't affter minilibc686 users directly.
   * With `-N`, it can merge all sections (rwx).
   * It supports linking weak ELF symbols properly.
   * Binary size is huge: 2 082 968 bytes.
-  * !! TODO(pts): For mininasm, why does --tccld create a smaller program?
+  * Why does file size differ? Is it because of of string merging?
     ```
-    $ qq minicc --tccld -Os -W -Wall -Werror -o mininasm mininasm.c && sstrip.static mininasm && ls -ld mininasm
-    -rwxr-xr-x 1 pts pts 23200 May 21 17:12 mininasm
-    qq minicc -Os -W -Wall -Werror -o mininasm mininasm.c && sstrip.static mininasm && ls -ld mininasm
-    -rwxr-xr-x 1 pts pts 24636 May 21 17:12 mininasm
-    ```
-  Linking command is:
-  `ld -z execstack -nostdlib -m elf_i386 -static -o prog f1.o f2.o lib.a`
+    $ minicc -o mininasm mininasm.c && ls -ld mininasm
+    -rwxrwxr-x 1 pts pts 23033 Jun 20 12:53 mininasm
+    $ minicc --tccld -o mininasm mininasm.c && ls -ld mininasm
+    -rwxrwxr-x 1 pts pts 23072 Jun 20 12:53 mininasm
 
   FYI mark stack as nonexecutable in GNU as:
   `.section .note.GNU-stack,"",@progbits`
@@ -848,5 +845,9 @@ This section is mostly an FYI, it doesn't affter minilibc686 users directly.
 * Recompile diet libc without WANT_LARGEFILE_BACKCOMPAT.
 * Add wrappers for socketcall(2).
 * Add wrappers for ipc(2).
+* Inline mini___M_start_isatty_stdout(...) etc. to smart.nasm, save on code size.
+* Merge mini___M_discard_buf(...) to mini_fflush(...) if there are no other callers.
+* Get rid of .rodata alignment for for demo_write.c in omf2elf, only with
+  `-msoft-float'.
 
 __END__
