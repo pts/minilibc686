@@ -62,17 +62,17 @@ What sizes are achievable:
   program size depends on the C compiler. It's always 832 bytes when
   demo_hello_linux_printf.nasm is compiled with NASM.
 * A hello-world program, using printf(3) (demo_hello_linux_printf.nasm):
-  **1184 bytes**. Only the very short main(...) function was written in C,
+  **1168 bytes**. Only the very short main(...) function was written in C,
   the rest of the code is part of the libc, written in NASM assembly. Please
   note that that `demo_c_hello.c` provides the same functionality, but the
   program size depends on the C compiler. The built-in OpenWatcom C compiler
-  gives 1204 bytes, but GCC 7.5.0 gives 1184 bytes. It's always 1184 bytes
+  gives 1204 bytes, but GCC 7.5.0 gives 1168 bytes. It's always 1168 bytes
   when demo_hello_linux_printf.nasm is compiled with NASM.
 
 hello-world size comparison of different libcs:
 
 * minilibc686 (`minicc --gcc`) is
-  1184 bytes, already stripped
+  1168 bytes, already stripped
 * [Baselibc](https://github.com/PetteriAimonen/Baselibc)
   [2018-11-06](https://github.com/PetteriAimonen/Baselibc/commit/245a5940483267ef501aa7cdbc1b6a422f6e9daf) is
   1388 bytes after stripping, but it doesn't do output buffering;
@@ -162,25 +162,23 @@ How is this possible?
   * 32 bytes: ELF-32 phdr for .text + .rodata
   * 32 bytes: ELF-32 phdr for .data
   * 35 bytes: main(...) function, compiled by GCC 7.5.0
-  * 77 bytes: _start (entry point) + stdout startup isatty + main(...) call +
-    stdout exit flush + _exit(3) + syscalls wrapper
+  * 93 bytes: _start (entry point) + stdout startup isatty ioctl + main(...)
+    call + stdout exit flush + _exit(3) + syscalls wrapper
   * 4 bytes: write(2) syscall wrapper
-  * 4 bytes: ioctl(2) syscall wrapper
   * 24 bytes: printf(3), calls vfprintf(3)
   * 89 bytes: mini_fputc_RP3(...), calls fflush(3) and write(2)
   * 569 bytes: vfprintf(3), calls mini_fputc_RP3(...),
     mini___M_writebuf_relax_RP1(...), mini___M_writebuf_unrelax_RP1(...)
   * 27 bytes: mini___M_writebuf_relax_RP1(...)
   * 37 bytes: mini___M_writebuf_unrelax_RP1(...), calls fflush(3)
-  * 29 bytes: isatty(3), calls ioctl(2)
   * 76 bytes: fflush(3), calls mini___M_discard_buf(...)
   * 30 bytes: mini___M_discard_buf(...)
   * 18 bytes: two NUL-terminated strings in main(...)
   * 7 bytes: `"(null)"` string (NUL-terminated) in mini___M_vfsprintf(...)
-  * 2 bytes: alignment padding for section .data
+  * 3 bytes: alignment padding for section .data
   * 4 bytes: stdout pointer
   * 36 bytes: stdout struct
-  * (1184 bytes): total
+  * (1168 bytes): total
 
 ## What's inside?
 

@@ -90,6 +90,9 @@ bits 32
     %else
       %define __NEED_mini_syscall3_AL
     %endif
+  %else
+    %rotate 2
+    %define __NRM_mini_%1 %2  ; Save syscall number.
   %endif
 %endmacro
 
@@ -225,7 +228,8 @@ _need mini_fopen, mini___M_start_flush_opened
 _need mini_freopen, mini___M_start_flush_opened
 _need mini_fdopen, mini___M_start_flush_opened
 _need mini___M_start_isatty_stdin, mini_isatty
-_need start.mini___M_start_isatty_stdout, mini_isatty
+;_need start.mini___M_start_isatty_stdout, mini_isatty  ; Inlined.
+_need start.mini___M_start_isatty_stdout, mini_syscall3_AL
 _need mini___M_start_isatty_stdout, mini_isatty
 _need mini_isatty, mini_ioctl
 _need start.mini___M_start_flush_stdout, mini_fflush
@@ -817,13 +821,35 @@ mini__start:  ; Entry point (_start) of the Linux i386 executable.
 %endif
 		_call_extern_if_needed mini___M_start_isatty_stdin
 %ifdef __NEED_start.mini___M_start_isatty_stdout
-__smart_extern mini_isatty
 start.mini___M_start_isatty_stdout:
+  %ifdef __NEED_mini_isatty
+  __smart_extern mini_isatty
 		push byte 1  ; STDOUT_FILENO.
 		call mini_isatty
 		pop edx  ; Clean up the argument of mini_isatty from the stack.
 		add eax, eax
 		add [mini_stdout_struct.dire], al  ; filep->dire = FD_WRITE_LINEBUF, changed from FD_WRITE.
+  %else
+		sub esp, strict byte 0x24
+		push esp  ; 3rd argument of ioctl TCGETS.
+		push strict dword 0x5401  ; TCGETS.
+		push byte 1  ; fd argument of ioctl: STDOUT_FILENO == 1.
+    %ifdef __NEED_mini_ioctl
+		call mini_ioctl
+    %else
+      %if __NRM_mini_ioctl>255
+        %error ioctl syscall number too large.
+        times 1/0 nop
+      %endif
+		mov al, __NRM_mini_ioctl
+		call mini_syscall3_AL
+    %endif
+		add esp, strict byte 0x24+3*4  ; Clean up everything pushed.
+		test eax, eax
+		jnz .stdout_notty
+		mov byte [mini_stdout_struct.dire], 6  ; FD_WRITE_LINEBUF.
+    .stdout_notty:
+  %endif
 %endif
 		call main  ; Return value (exit code) in EAX (AL).
 %ifdef __NEED_mini___LM_push_exit_args
