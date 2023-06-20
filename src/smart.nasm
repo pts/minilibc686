@@ -203,7 +203,11 @@ _need mini_putchar_RP3, mini_fputc_RP3
 _need mini_puts, mini_stdout
 _need mini_printf, mini_stdout
 _need mini_vprintf, mini_stdout
+_need mini_vsprintf, mini_sprintf
+_need mini_vsnprintf, mini_snprintf
 _need mini_printf, mini_vfprintf
+_need mini_sprintf, mini___M_vfsprintf
+_need mini_snprintf, mini___M_vfsprintf
 _need mini_vprintf, mini_vfprintf
 _need mini_vfprintf, mini___M_writebuf_relax_RP1
 _need mini_vfprintf, mini___M_writebuf_unrelax_RP1
@@ -241,6 +245,12 @@ _need mini_fclose, mini_close
 _need mini_mq_getattr, mini_syscall3_RP1
 _need mini_errno, .bss
 _need mini_environ, .bss
+;
+%ifdef __NEED_mini___M_vfsprintf
+  %ifdef __NEED_mini_vfprintf
+    %undef __NEED_mini___M_vfsprintf  ; mini_vfprintf(...) will do it instead.
+  %endif
+%endif
 ;
 _need_aliases ALIASES  ; Must be called after _alias.
 ;
@@ -740,6 +750,7 @@ _need mini_sys_exit, mini___LM_push_exit_args
   %endif
 %endif
 
+%define CONFIG_SECTIONS_DEFINED  ; Used by %include files below.
 section .text align=1
 %ifdef __NEED_mini__start
 __smart_extern main
@@ -1031,6 +1042,24 @@ mini_putchar_RP3:  ; int REGPARM3 mini_putchar_RP3(int c);
 		ret
 %endif
 
+%ifdef __NEED_mini___M_vfsprintf
+  %define mini_vfprintf mini___M_vfsprintf
+  ; %include these file, so that the `call mini_vfprintf_for_s_printf' they
+  ; %contain can be replaced with `call mini___M_vfsprintf'.
+  ; TODO(pts): Unify mini_sprintf(...) and mini_snprintf(...) if both are needed.
+  %ifdef __NEED_mini_sprintf
+    %include "src/stdio_medium_sprintf.nasm"
+  %endif  ; __NEED_mini_sprintf
+  %ifdef __NEED_mini_snprintf
+    %include "src/stdio_medium_snprintf.nasm"
+  %endif  ; __NEED_mini_snprintf
+  %undef mini_vfprintf
+  %ifdef __NEED_mini_vfprintf
+    %error conflicting labels: mini___M_vfsprintf and mini_vfprintf
+    times 1/0 nop
+  %endif
+%endif  ; __NEED_mini___M_vfsprintf
+
 ; Helpfully %include some needed minilibc686 source files.
 ; demo_hello_linux_printf.nasm relies on this.
 %ifidn __OUTPUT_FORMAT__, bin
@@ -1053,6 +1082,7 @@ mini_putchar_RP3:  ; int REGPARM3 mini_putchar_RP3(int c);
   _include_if_needed mini_printf, "src/printf_callvf.nasm"
   _include_if_needed mini_fputc_RP3, "src/stdio_medium_fputc_rp3.nasm"
   _include_if_needed mini_stdout, "src/stdio_medium_stdout.nasm"  ; Also defines: global mini___M_start_isatty_stdout, mini___M_start_flush_stdout.
+  _include_if_needed mini___M_vfsprintf, "src/stdio_medium_vfsprintf.nasm"
   _include_if_needed mini_vfprintf, "src/stdio_medium_vfprintf.nasm"
   _include_if_needed mini___M_writebuf_relax_RP1, mini___M_writebuf_unrelax_RP1, "src/stdio_medium_writebuf_relax.nasm"
   _include_if_needed mini_isatty, "src/isatty_linux.nasm"

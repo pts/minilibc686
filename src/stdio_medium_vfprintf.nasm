@@ -6,10 +6,19 @@
 ; Code+data size: 0x240 bytes; 0x240 bytes with CONFIG_PIC.
 ;
 ; Uses: %ifdef CONFIG_PIC
+; Uses; %ifdef CONFIG_VFPRINTF_IS_FOR_S_PRINTF_ONLY
 ;
 
 bits 32
 cpu 386
+
+%ifdef __NEED_mini___M_vfsprintf
+  %define CONFIG_VFPRINTF_IS_FOR_S_PRINTF_ONLY
+  %define mini_vfprintf mini___M_vfsprintf
+%else
+  %undef  CONFIG_VFPRINTF_IS_FOR_S_PRINTF_ONLY
+  %undef  mini_vfprintf
+%endif
 
 global mini_vfprintf
 %ifdef CONFIG_SECTIONS_DEFINED
@@ -18,13 +27,17 @@ section .text align=1
 section .rodata align=1
 section .data align=1
 section .bss align=1
+%ifndef CONFIG_VFPRINTF_IS_FOR_S_PRINTF_ONLY
 mini_fputc_RP3 equ $+0x12345678
 mini___M_writebuf_relax_RP1 equ $+0x12345679
 mini___M_writebuf_unrelax_RP1 equ $+0x1234567a
+%endif
 %else
+%ifndef CONFIG_VFPRINTF_IS_FOR_S_PRINTF_ONLY
 extern mini_fputc_RP3
 extern mini___M_writebuf_relax_RP1
 extern mini___M_writebuf_unrelax_RP1
+%endif
 section .text align=1
 section .rodata align=1
 section .data align=4
@@ -38,8 +51,10 @@ mini_vfprintf:  ; int mini_vfprintf(FILE *filep, const char *format, va_list ap)
 		push edi
 		push ebp
 		sub esp, byte 0x20
+%ifndef CONFIG_VFPRINTF_IS_FOR_S_PRINTF_ONLY
 		mov eax, [esp+0x34]  ; filep.
 		call mini___M_writebuf_relax_RP1  ; mini___M_writebuf_relax_RP1(filep); Subsequent bytes written will be buffered until mini___M_writebuf_relax_RP1 below.
+%endif
 		mov ebx, [esp+0x38]  ; EBX := format.
 		xor ebp, ebp
 .1:
@@ -256,8 +271,10 @@ mini_vfprintf:  ; int mini_vfprintf(FILE *filep, const char *format, va_list ap)
 		inc ebx  ; TODO(pts): Swap the role of EBX and ESI, and use lodsb.
 		jmp near .1
 .33:
+%ifndef CONFIG_VFPRINTF_IS_FOR_S_PRINTF_ONLY
 		mov eax, [esp+0x34]  ; filep.
 		call mini___M_writebuf_unrelax_RP1  ; mini___M_writebuf_unrelax_RP1(filep);
+%endif
 		xchg eax, ebp  ; EAX := number of bytes written; EBP := junk.
 		add esp, byte 0x20
 		pop ebp
@@ -280,6 +297,11 @@ mini_vfprintf:  ; int mini_vfprintf(FILE *filep, const char *format, va_list ap)
 %endif
 		mov [ecx], al  ; *buf_write_ptr := AL.
 		inc dword [edx]  ; buf_write_ptr += 1.
+%ifdef CONFIG_VFPRINTF_IS_FOR_S_PRINTF_ONLY
+.call_mini_fputc:  ; Assumes dire == FD_WRITE_SATURATE.
+.after_putc:	inc ebp
+		ret
+%else
 .after_putc:	inc ebp  ; Increment EBP on success (as per .call_mini_putc contract).
 		ret
 .call_mini_fputc:
@@ -292,11 +314,14 @@ mini_vfprintf:  ; int mini_vfprintf(FILE *filep, const char *format, va_list ap)
 		add eax, byte 1  ; CF := (EAX != 1).
 		sbb ebp, byte -1  ; If EAX wasn't -1 (EOF), then EBP += 1.
 		ret
+%endif  ; else CONFIG_VFPRINTF_IS_FOR_S_PRINTF_ONLY
 		
 %ifndef CONFIG_PIC
 section .rodata
 str_null:
 		db '(null)', 0
 %endif
+
+%undef mini_vfprintf
 
 ; __END__

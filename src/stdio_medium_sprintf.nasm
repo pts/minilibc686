@@ -11,6 +11,7 @@ cpu 386
 global mini_sprintf
 global mini_sprintf.do
 %ifdef CONFIG_SECTIONS_DEFINED
+extern mini_vfprintf
 %elifidn __OUTPUT_FORMAT__, bin
 section .text align=1
 section .rodata align=1
@@ -34,7 +35,7 @@ mini_sprintf.do:  ; mini_vsprintf(...) jumps here.
 		push byte 0  ; .buf_off.
 		push byte -1  ; .buf_capacity_end.
 		push dword [edx-8]  ; .buf_start == str argument.
-		push byte 4  ; .dire == FD_WRITE. Also push the 3 .padding bytes.
+		push byte 7  ; .dire == FD_WRITE_SATURATE. Also push the 3 .padding bytes.
 		push byte -1  ; .fd.
 		push byte 0  ; .buf_last.
 		push byte 0  ; .buf_read_ptr.

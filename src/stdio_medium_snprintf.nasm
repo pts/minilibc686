@@ -13,6 +13,7 @@ cpu 386
 global mini_snprintf
 global mini_snprintf.do
 %ifdef CONFIG_SECTIONS_DEFINED
+extern mini_vfprintf
 %elifidn __OUTPUT_FORMAT__, bin
 section .text align=1
 section .rodata align=1

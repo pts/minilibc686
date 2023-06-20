@@ -54,13 +54,20 @@ What sizes are achievable:
 * A hello-world program in C, using Linux syscall write(2) (see demo_write.c
   above): **164 bytes**. The extra bytes are mostly error handling code
   after write(2) has returned, and C compiler register use overhead.
-* A hello-world program, using printf (demo_hello_linux_printf.nasm):
+* A hello-world program, using snprintf(3) and Linux syscall write(2)
+  (test/demo_hello_linux_snprintf.nasm): **832 bytes**. Only the very short
+  main(...) function was written in C, the rest of the code is part of the
+  libc, written in NASM assembly. Please note that that
+  `test/demo_c_hello_snprintf.c` provides the same functionality, but the
+  program size depends on the C compiler. It's always 832 bytes when
+  demo_hello_linux_printf.nasm is compiled with NASM.
+* A hello-world program, using printf(3) (demo_hello_linux_printf.nasm):
   **1196 bytes**. Only the very short main(...) function was written in C,
-  the rest of the code is part of the libc, written in NASM assembly.
-  Please note that that `demo_c_hello.c` provides the same functionality,
-  but the program size depends on the C compiler. The built-in OpenWatcom C
-  compiler gives 1204 bytes, but GCC 7.5.0 gives 1196 bytes. It's always 1196
-  bytes when demo_hello_linux_printf.nasm is compiled with NASM.
+  the rest of the code is part of the libc, written in NASM assembly. Please
+  note that that `demo_c_hello.c` provides the same functionality, but the
+  program size depends on the C compiler. The built-in OpenWatcom C compiler
+  gives 1204 bytes, but GCC 7.5.0 gives 1196 bytes. It's always 1196 bytes
+  when demo_hello_linux_printf.nasm is compiled with NASM.
 
 hello-world size comparison of different libcs:
 

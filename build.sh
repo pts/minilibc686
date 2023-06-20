@@ -156,7 +156,9 @@ for OUTFN in $OUTFNS; do
   OUTPNS="$OUTPNS $OUTPN"
 done
 set -ex
-<src/smart.nasm >libc/minilibc/smart.nasm awk '{sub(/;.*/,""); sub(/[ \t]+$/, ""); sub(/^[ \t]+/, ""); if (/[^ \t]/) {print}}'
+<src/smart.nasm >build_tmp/smart1.nasm awk '{if(/^ *%include "src\/[^"]+"/){print ";;"$0;sub(/^[^"]*"/,"");sub(/".*/,"");fn=$0;for(;;){if((getline<fn)<1){break};print}close(fn);print";;"}else{print}}'
+<build_tmp/smart1.nasm >build_tmp/smart2.nasm awk '{sub(/;.*/,""); sub(/[ \t]+$/, ""); sub(/^[ \t]+/, ""); if (/[^ \t]/) {print}}'
+<build_tmp/smart2.nasm >libc/minilibc/smart.nasm cat
 set +ex
 OUTPNS="$OUTPNS libc/minilibc/smart.nasm"
 
