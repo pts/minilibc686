@@ -219,14 +219,16 @@ _need mini_vfprintf, mini___M_writebuf_relax_RP1
 _need mini_vfprintf, mini___M_writebuf_unrelax_RP1
 _need mini_vfprintf, mini_fputc_RP3
 _need mini_stdin,  mini___M_start_isatty_stdin
-_need mini_stdout, mini___M_start_isatty_stdout
-_need mini_stdout, mini___M_start_flush_stdout
+_need mini_stdout, start.mini___M_start_isatty_stdout
+_need mini_stdout, start.mini___M_start_flush_stdout
 _need mini_fopen, mini___M_start_flush_opened
 _need mini_freopen, mini___M_start_flush_opened
 _need mini_fdopen, mini___M_start_flush_opened
 _need mini___M_start_isatty_stdin, mini_isatty
+_need start.mini___M_start_isatty_stdout, mini_isatty
 _need mini___M_start_isatty_stdout, mini_isatty
 _need mini_isatty, mini_ioctl
+_need start.mini___M_start_flush_stdout, mini_fflush
 _need mini___M_start_flush_stdout, mini_fflush
 _need mini___M_start_flush_opened, mini_fflush
 _need mini_fclose, mini_fflush
@@ -721,7 +723,7 @@ _need mini__exit, mini_sys_exit
 _need mini_sys_exit, mini___LM_push_exit_args
 
 %define CLEANUP_IS_EMPTY 1
-%ifdef __NEED_mini___M_start_flush_stdout
+%ifdef __NEED_start.mini___M_start_flush_stdout
   %define CLEANUP_IS_EMPTY 0
 %endif
 %ifdef __NEED_mini___M_start_flush_opened
@@ -814,7 +816,15 @@ mini__start:  ; Entry point (_start) of the Linux i386 executable.
 		push eax  ; Argument argc for main.
 %endif
 		_call_extern_if_needed mini___M_start_isatty_stdin
-		_call_if_needed mini___M_start_isatty_stdout
+%ifdef __NEED_start.mini___M_start_isatty_stdout
+__smart_extern mini_isatty
+start.mini___M_start_isatty_stdout:
+		push byte 1  ; STDOUT_FILENO.
+		call mini_isatty
+		pop edx  ; Clean up the argument of mini_isatty from the stack.
+		add eax, eax
+		add [mini_stdout_struct.dire], al  ; filep->dire = FD_WRITE_LINEBUF, changed from FD_WRITE.
+%endif
 		call main  ; Return value (exit code) in EAX (AL).
 %ifdef __NEED_mini___LM_push_exit_args
 		push eax  ; Save exit code, for mini_sys_exit(...).
@@ -829,7 +839,13 @@ global mini_exit
 mini_exit:  ; void mini_exit(int exit_code);
 %endif
 %ifdef NEED_cleanup
-		_call_if_needed mini___M_start_flush_stdout
+%ifdef __NEED_start.mini___M_start_flush_stdout
+__smart_extern mini_fflush
+start.mini___M_start_flush_stdout:
+		push dword [mini_stdout]
+		call mini_fflush
+		pop edx  ; Clean up the argument of mini_fflush from the stack.
+%endif
 		_call_extern_if_needed mini___M_start_flush_opened
 		; Fall through.
 %endif  ; NEED_cleanup
@@ -1053,28 +1069,6 @@ global mini_putchar_RP3
 mini_putchar_RP3:  ; int REGPARM3 mini_putchar_RP3(int c);
 		mov edx, [mini_stdout]
 		call mini_fputc_RP3
-		ret
-%endif
-
-%ifdef __NEED_mini___M_start_isatty_stdout
-__smart_extern mini_isatty
-global mini___M_start_isatty_stdout
-mini___M_start_isatty_stdout:
-		push byte 1  ; STDOUT_FILENO.
-		call mini_isatty
-		pop edx  ; Clean up the argument of mini_isatty from the stack.
-		add eax, eax
-		add [mini_stdout_struct.dire], al  ; filep->dire = FD_WRITE_LINEBUF, changed from FD_WRITE.
-		ret
-%endif
-
-%ifdef __NEED_mini___M_start_flush_stdout
-__smart_extern mini_fflush
-global mini___M_start_flush_stdout
-mini___M_start_flush_stdout:
-		push dword [mini_stdout]
-		call mini_fflush
-		pop edx  ; Clean up the argument of mini_fflush from the stack.
 		ret
 %endif
 

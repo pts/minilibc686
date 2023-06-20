@@ -62,17 +62,17 @@ What sizes are achievable:
   program size depends on the C compiler. It's always 832 bytes when
   demo_hello_linux_printf.nasm is compiled with NASM.
 * A hello-world program, using printf(3) (demo_hello_linux_printf.nasm):
-  **1196 bytes**. Only the very short main(...) function was written in C,
+  **1184 bytes**. Only the very short main(...) function was written in C,
   the rest of the code is part of the libc, written in NASM assembly. Please
   note that that `demo_c_hello.c` provides the same functionality, but the
   program size depends on the C compiler. The built-in OpenWatcom C compiler
-  gives 1204 bytes, but GCC 7.5.0 gives 1196 bytes. It's always 1196 bytes
+  gives 1204 bytes, but GCC 7.5.0 gives 1184 bytes. It's always 1184 bytes
   when demo_hello_linux_printf.nasm is compiled with NASM.
 
 hello-world size comparison of different libcs:
 
 * minilibc686 (`minicc --gcc`) is
-  1196 bytes, already stripped
+  1184 bytes, already stripped
 * [Baselibc](https://github.com/PetteriAimonen/Baselibc)
   [2018-11-06](https://github.com/PetteriAimonen/Baselibc/commit/245a5940483267ef501aa7cdbc1b6a422f6e9daf) is
   1388 bytes after stripping, but it doesn't do output buffering;
@@ -139,7 +139,7 @@ How is this possible?
   * 52 bytes: ELF-32 ehdr
   * 32 bytes: ELF-32 phdr for .text + .rodata
   * 20 bytes: main(...) function, compiled by OpenWatcom
-  * 39 bytes: _start (entry point) + _exit(3) + syscalls wrapper
+  * 39 bytes: _start (entry point) + main(...) call + _exit(3) + syscalls wrapper
   * 4 bytes: write(2) syscall wrapper
   * 1 byte: alignment padding for section .rodata (not needed, inserted by OpenWatcom)
   * 15 bytes: `"Hello, World!\n"` string (NUL-terminated, termination not needed)
@@ -162,14 +162,12 @@ How is this possible?
   * 32 bytes: ELF-32 phdr for .text + .rodata
   * 32 bytes: ELF-32 phdr for .data
   * 35 bytes: main(...) function, compiled by GCC 7.5.0
-  * 59 bytes: _start (entry point) + stdout startup call + stdout flush call +
-    _exit(3) + syscalls wrapper
+  * 77 bytes: _start (entry point) + stdout startup isatty + main(...) call +
+    stdout exit flush + _exit(3) + syscalls wrapper
   * 4 bytes: write(2) syscall wrapper
   * 4 bytes: ioctl(2) syscall wrapper
   * 24 bytes: printf(3), calls vfprintf(3)
   * 89 bytes: mini_fputc_RP3(...), calls fflush(3) and write(2)
-  * 17 bytes: mini___M_start_isatty_stdout(...), calls isatty(3)
-  * 13 bytes: mini___M_start_flush_stdout(...), calls fflush(3)
   * 569 bytes: vfprintf(3), calls mini_fputc_RP3(...),
     mini___M_writebuf_relax_RP1(...), mini___M_writebuf_unrelax_RP1(...)
   * 27 bytes: mini___M_writebuf_relax_RP1(...)
@@ -182,7 +180,7 @@ How is this possible?
   * 2 bytes: alignment padding for section .data
   * 4 bytes: stdout pointer
   * 36 bytes: stdout struct
-  * (1196 bytes): total
+  * (1184 bytes): total
 
 ## What's inside?
 
@@ -903,7 +901,6 @@ This section is mostly an FYI, it doesn't affter minilibc686 users directly.
 * Recompile diet libc without WANT_LARGEFILE_BACKCOMPAT.
 * Add wrappers for socketcall(2).
 * Add wrappers for ipc(2).
-* Inline mini___M_start_isatty_stdout(...) etc. to smart.nasm, save on code size.
 * Merge mini___M_discard_buf(...) to mini_fflush(...) if there are no other callers.
 * Get rid of .rodata alignment for for demo_write.c in omf2elf, only with
   `-msoft-float'.
