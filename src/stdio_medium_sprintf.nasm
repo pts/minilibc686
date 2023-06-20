@@ -47,7 +47,7 @@ mini_sprintf.do:  ; mini_vsprintf(...) jumps here.
 		push ecx  ; Argument filep of mini_vfprintf(...). Address of newly created struct _SMS_FILE on stack.
 		call mini_vfprintf
 		mov edx, [esp+3*4]  ; .buf_write_ptr.
-		mov byte [edx], 0  ; Add '\0'.
+		mov byte [edx], 0  ; Add '\0'. It's OK to omit the `EDX == NULL' check here, uClibc and EGLIBC also omit it.
 		add esp, byte (3+9)*4  ; Clean up arguments of mini_vfprintf(...) and the struct _SMS_FILE from the stack.
 		ret 
 
