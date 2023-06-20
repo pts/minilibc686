@@ -3,7 +3,7 @@
 ; Based on vfprintf_plus.nasm, with stdio_medium buffering added.
 ; Compile to i386 ELF .o object: nasm -O999999999 -w+orphan-labels -f elf -o stdio_medium_vfprintf.o stdio_medium_vfprintf.nasm
 ;
-; Code+data size: !! more than 0x214 bytes; 0x215 bytes with CONFIG_PIC.
+; Code+data size: 0x240 bytes; 0x240 bytes with CONFIG_PIC.
 ;
 ; Uses: %ifdef CONFIG_PIC
 ;
