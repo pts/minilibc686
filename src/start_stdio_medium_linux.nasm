@@ -2,9 +2,6 @@
 ; written by pts@fazekas.hu at Fri May 19 17:25:38 CEST 2023
 ; Compile to i386 ELF .o object: nasm -O999999999 -w+orphan-labels -f elf -o start_stdio_file_linux.o start_stdio_file_linux.nasm
 ;
-; This file is not in active use! Its replacement is currently
-; start_stdio_medium_linux.s.
-;
 ; Uses: %ifdef CONFIG_PIC
 ;
 
