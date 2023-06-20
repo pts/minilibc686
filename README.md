@@ -126,6 +126,64 @@ How is this possible?
   already provides size savings for the libc functions for which it is
   implemented.)
 
+## Detailed size analysis of hello-world programs
+
+* demo_hello_linux_nolibc.nasm
+  * 52 bytes: ELF-32 ehdr
+  * 32 bytes: ELF-32 phdr for .text + .rodata
+  * 19 bytes: code calling write(2) and sys_exit(2)
+  * 14 bytes: `"Hello, World!\n"` string (not NUL-terminated)
+  * (117 bytes): total
+* demo_write.c
+  * Compile: `minicc -fomit-frame-pointer -W -Wall -Werror -o demo_write demo_write.c`
+  * 52 bytes: ELF-32 ehdr
+  * 32 bytes: ELF-32 phdr for .text + .rodata
+  * 20 bytes: main(...) function, compiled by OpenWatcom
+  * 39 bytes: _start (entry point) + _exit(3) + syscalls wrapper
+  * 4 bytes: write(2) syscall wrapper
+  * 1 byte: alignment padding for section .rodata (not needed, inserted by OpenWatcom)
+  * 15 bytes: `"Hello, World!\n"` string (NUL-terminated, termination not needed)
+  * (163 bytes): total
+* test/demo_c_hello_snprintf.c == test/demo_hello_linux_snprintf.nasm
+  * Compile with GCC 7.5.0: `minicc --gcc -W -Wall -Werror test/demo_c_hello_snprintf.c`
+  * 52 bytes: ELF-32 ehdr
+  * 32 bytes: ELF-32 phdr for .text + .rodata
+  * 70 bytes: main(...) function, compiled by GCC 7.5.0
+  * 49 bytes: _start (entry point) + _exit(3) + syscalls wrapper
+  * 4 bytes: write(2) syscall wrapper
+  * 67 bytes: snprintf(3), calls mini___M_vfsprintf(...)
+  * 533 bytes: mini___M_vfsprintf(...)
+  * 18 bytes: two NUL-terminated strings in main(...)
+  * 7 bytes: `"(null)"` string (NUL-terminated) in mini___M_vfsprintf(...)
+  * (832 bytes): total
+* demo_c_hello.c == demo_hello_linux_printf.nasm
+  * Compile with GCC 7.5.0: `minicc --gcc -W -Wall -Werror demo_c_hello.c`
+  * 52 bytes: ELF-32 ehdr
+  * 32 bytes: ELF-32 phdr for .text + .rodata
+  * 32 bytes: ELF-32 phdr for .data
+  * 35 bytes: main(...) function, compiled by GCC 7.5.0
+  * 59 bytes: _start (entry point) + stdout startup call + stdout flush call +
+    _exit(3) + syscalls wrapper
+  * 4 bytes: write(2) syscall wrapper
+  * 4 bytes: ioctl(2) syscall wrapper
+  * 24 bytes: printf(3), calls vfprintf(3)
+  * 89 bytes: mini_fputc_RP3(...), calls fflush(3) and write(2)
+  * 17 bytes: mini___M_start_isatty_stdout(...), calls isatty(3)
+  * 13 bytes: mini___M_start_flush_stdout(...), calls fflush(3)
+  * 569 bytes: vfprintf(3), calls mini_fputc_RP3(...),
+    mini___M_writebuf_relax_RP1(...), mini___M_writebuf_unrelax_RP1(...)
+  * 27 bytes: mini___M_writebuf_relax_RP1(...)
+  * 37 bytes: mini___M_writebuf_unrelax_RP1(...), calls fflush(3)
+  * 29 bytes: isatty(3), calls ioctl(2)
+  * 76 bytes: fflush(3), calls mini___M_discard_buf(...)
+  * 30 bytes: mini___M_discard_buf(...)
+  * 18 bytes: two NUL-terminated strings in main(...)
+  * 7 bytes: `"(null)"` string (NUL-terminated) in mini___M_vfsprintf(...)
+  * 2 bytes: alignment padding for section .data
+  * 4 bytes: stdout pointer
+  * 36 bytes: stdout struct
+  * (1196 bytes): total
+
 ## What's inside?
 
 The following components are included in *minilibc686*:
