@@ -79,6 +79,7 @@ for F in src/[a-zA-Z0-9_]*.nasm; do
      strcasecmp.nasm) ;;  # TODO(pts): How to link strcasecmp.nasm if only strcasecmp(3) is needed, and strncasecmp_both.nasm if both strcasecmp(3) and strncasecmp(3) are needed?
      strtok_sep1.nasm) ;;  # TODO(pts): Link it with the symbol name strtok_sep.
      write_linux.nasm) ;;  # start_stdio_medium_linux.nasm provides it.
+     stdio_medium_stdout_in_data.nasm) ;; # src/stdio_medium_stdout.nasm %include()s it.
      m_flushall_dummy.nasm) ;;
      start_uclibc_linux.nasm) ;;
      need_start.nasm) ;;

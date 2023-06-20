@@ -180,6 +180,12 @@ bits 32
   %endif
 %endmacro
 
+%macro _call_if_needed 1
+  %ifdef __NEED_%1
+    call %1
+  %endif
+%endmacro
+
 ; ---
 
 _define_needs UNDEFSYMS  ; Must be called before _need and _alias.
@@ -245,6 +251,8 @@ _need mini_fclose, mini_close
 _need mini_mq_getattr, mini_syscall3_RP1
 _need mini_errno, .bss
 _need mini_environ, .bss
+_need mini_stdout, .data
+_need mini_stdout, .bss
 ;
 %ifdef __NEED_mini___M_vfsprintf
   %ifdef __NEED_mini_vfprintf
@@ -806,7 +814,7 @@ mini__start:  ; Entry point (_start) of the Linux i386 executable.
 		push eax  ; Argument argc for main.
 %endif
 		_call_extern_if_needed mini___M_start_isatty_stdin
-		_call_extern_if_needed mini___M_start_isatty_stdout
+		_call_if_needed mini___M_start_isatty_stdout
 		call main  ; Return value (exit code) in EAX (AL).
 %ifdef __NEED_mini___LM_push_exit_args
 		push eax  ; Save exit code, for mini_sys_exit(...).
@@ -821,7 +829,7 @@ global mini_exit
 mini_exit:  ; void mini_exit(int exit_code);
 %endif
 %ifdef NEED_cleanup
-		_call_extern_if_needed mini___M_start_flush_stdout
+		_call_if_needed mini___M_start_flush_stdout
 		_call_extern_if_needed mini___M_start_flush_opened
 		; Fall through.
 %endif  ; NEED_cleanup
@@ -992,10 +1000,24 @@ _emit_syscalls SYSCALLS
 _define_alias_syms ALIASES  ; Must be called after alias targets have been defined.
 
 %ifdef __NEED_.bss
-section .bss align=4
+  section .bss align=4
+  section .text
+  %ifdef CONFIG_PIC
+    %error Not PIC because it uses .bss.
+    times 1/0 nop
+  %endif
+%endif
+%ifdef __NEED_.data
+  section .data align=4
+  section .text
+  %ifdef CONFIG_PIC
+    %error Not PIC because it uses .data.
+    times 1/0 nop
+  %endif
 %endif
 
 %ifdef __NEED_mini_errno  ; !! TODO(pts): Make strtok and strtod populate errno, but -fno-math-errno.
+section .bss
 global mini_errno  ; TODO(pts): Add this (including populating it in syscalls) to -mno-smart.
 mini_errno:	resd 1  ; int mini_errno;
 section .text
@@ -1016,14 +1038,6 @@ times 1/0 nop
 %endif
 %endif
 
-%ifdef __NEED_mini_stdout
-__smart_extern mini_stdout
-%ifdef CONFIG_PIC
-%error Not PIC because it uses mini_stdout.
-times 1/0 nop
-%endif
-%endif
-
 %ifdef __NEED_mini_fputc_RP3
 __smart_extern mini_fputc_RP3
 %endif
@@ -1040,6 +1054,33 @@ mini_putchar_RP3:  ; int REGPARM3 mini_putchar_RP3(int c);
 		mov edx, [mini_stdout]
 		call mini_fputc_RP3
 		ret
+%endif
+
+%ifdef __NEED_mini___M_start_isatty_stdout
+__smart_extern mini_isatty
+global mini___M_start_isatty_stdout
+mini___M_start_isatty_stdout:
+		push byte 1  ; STDOUT_FILENO.
+		call mini_isatty
+		pop edx  ; Clean up the argument of mini_isatty from the stack.
+		add eax, eax
+		add [mini_stdout_struct.dire], al  ; filep->dire = FD_WRITE_LINEBUF, changed from FD_WRITE.
+		ret
+%endif
+
+%ifdef __NEED_mini___M_start_flush_stdout
+__smart_extern mini_fflush
+global mini___M_start_flush_stdout
+mini___M_start_flush_stdout:
+		push dword [mini_stdout]
+		call mini_fflush
+		pop edx  ; Clean up the argument of mini_fflush from the stack.
+		ret
+%endif
+
+%ifdef __NEED_mini_stdout
+  %include "src/stdio_medium_stdout_in_data.nasm"
+  section .text
 %endif
 
 %ifdef __NEED_mini___M_vfsprintf
@@ -1079,14 +1120,13 @@ mini_putchar_RP3:  ; int REGPARM3 mini_putchar_RP3(int c);
       %include %1
     %endif
   %endmacro
+  _include_if_needed mini_isatty, "src/isatty_linux.nasm"
   _include_if_needed mini_printf, "src/printf_callvf.nasm"
+  _include_if_needed mini_fflush, "src/stdio_medium_fflush.nasm"
   _include_if_needed mini_fputc_RP3, "src/stdio_medium_fputc_rp3.nasm"
-  _include_if_needed mini_stdout, "src/stdio_medium_stdout.nasm"  ; Also defines: global mini___M_start_isatty_stdout, mini___M_start_flush_stdout.
   _include_if_needed mini___M_vfsprintf, "src/stdio_medium_vfsprintf.nasm"
   _include_if_needed mini_vfprintf, "src/stdio_medium_vfprintf.nasm"
   _include_if_needed mini___M_writebuf_relax_RP1, mini___M_writebuf_unrelax_RP1, "src/stdio_medium_writebuf_relax.nasm"
-  _include_if_needed mini_isatty, "src/isatty_linux.nasm"
-  _include_if_needed mini_fflush, "src/stdio_medium_fflush.nasm"
   _include_if_needed mini___M_discard_buf, "src/stdio_medium_discard_buf.nasm"
 %endif
 
