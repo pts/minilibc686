@@ -1084,7 +1084,7 @@ if test "$GCC" || test -z "$IS_TCCLD"; then
           TMPOFILE2="${TMPOFILE%.*}.o"
         fi
         if test "$IS_WATCOM"; then
-          EFARGS="$MYDIR/tools/omf2elf$NL-h$NL$HAD_$V$NL-o$NL$TMPOFILE2$NL$TMPOFILE"
+          EFARGS="$MYDIR/tools/omf2elf$NL-h$NL$HAD_V$NL-o$NL$TMPOFILE2$NL$TMPOFILE"
           test "$HAD_V" && echo "info: running OMF converter:" $EFARGS >&2
         else  # "$IS_CC1".
           # GNU as(1) also accepts a `-I...' flag, but we don't need it
