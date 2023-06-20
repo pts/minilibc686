@@ -41,10 +41,6 @@ mini___M_start_flush_stdout:
 		call mini_fflush
 		pop edx  ; Clean up the argument of mini_fflush from the stack.
 		ret
-%ifidn __OUTPUT_FORMAT__, bin  ; Affects start_stdio_medium_linux.nasm %included()d later: it won't try to redefine these symbols.
-  %define mini___M_start_isatty_stdout mini___M_start_isatty_stdout
-  %define mini___M_start_flush_stdout  mini___M_start_flush_stdout
-%endif
 
 section .data
 mini_stdout:	dd mini_stdout_struct
