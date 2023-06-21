@@ -3,7 +3,7 @@
 ; by pts@fazekas.hy at Wed Jun 21 22:22:14 CEST 2023
 ;
 ; Iput files: wcc386.nasm, wcc386.sym
-; Compile: ../tools/nasm-0.98.39 -O0 -w+orphan-labels -f bin -o wcc386.unc wcc386p.nasm && chmod +x wcc386.unc
+; Compile: ../tools/nasm-0.98.39 -DCONFIG_PATCH -O0 -w+orphan-labels -f bin -o wcc386.unc wcc386p.nasm && chmod +x wcc386.unc
 ;
 
 ; --- ELF header generation and code patching.
@@ -70,10 +70,12 @@ phdr.end:
 
 %macro _skip_code_until 1
   %if (%1)<$-B.code
-    %error 'Bad code padding (replacement code too long?).'
+    %assign CODE_EXCESS $-B.code-(%1)
+    %error error: excess code size: CODE_EXCESS
+    %error 'fatal: Bad code padding (replacement code too long?).'
     times 1/0 nop
   %elif CODE_ADDR>(%1)-$$
-    %error 'Bad code order (replacement code too long?).'
+    %error 'fatal: Bad code order (replacement code too long?).'
     times 1/0 nop
   %else
     times (%1)-($-B.code) db 0
@@ -152,6 +154,19 @@ SEG_BSS equ 11
 _elf32_ehdr_and_phdr
 
 _replace_code StringSegment_
+%ifdef CONFIG_PATCH
+		test byte [eax+0xe], STRLIT_FAR
+		jnz ss.1
+		mov ax, SEG_CONST
+		test byte [ec_switch_used_byte], ec_switch_used_mask
+		jz ss.ret
+		; test byte [eax+0xe], STRLIT_CONST  ; Ignore this, there is no room.
+		; mov eax, SEG_CODE  ; Ignore this, there is no room.
+		mov ax, SEG_YIB
+ss.ret:		ret
+ss.1:		mov ax, [FarStringSegId]
+		ret
+%else  ; Original StringSegment_.
 ; static segment_id StringSegment( STR_HANDLE strlit ) {
 ; #if _INTEL_CPU  // Defined.
 ;     if( strlit->flags & STRLIT_FAR )
@@ -172,6 +187,7 @@ ss.1:		mov ax, [FarStringSegId]
 ss.2:		mov eax, SEG_CONST
 		ret
 		nop
+%endif
 
 ;test byte [ec_switch_used_byte], ec_switch_used_mask
 
