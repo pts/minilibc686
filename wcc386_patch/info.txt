@@ -1,0 +1,155 @@
+
+$ tools/wcc386 -zc -s -j -of+ -bt=linux -fr -zl -zld -e=10000 -zp=4 -6r -os -wx -wce=308 -D__MINILIBC686__ -DCONFIG_INLINE_FILENO -DCONFIG_MAIN_ARGS_AUTO -D__OPTIMIZE__ -D__OPTIMIZE_SIZE__ -I./libc/minilibc/include -fo=t.obj t.c && wdis t.obj
+-zc moves "World" from CONST to _TEXT, but keeps the `3' (3.0 as double) in CONST.
+
+See all matches for CompFlags.strings_in_code_segment in ~/Downloads/open-watcom-v2-2023-05-09-Build/bld/cc/c
+STRLIT_CONST defined in ~/Downloads/open-watcom-v2-2023-05-09-Build/bld/cc/h/ctypes.h
+Corresponding flag: wcc386 with -zc: STRLIT_CONST; wcc386 without -zc: STRLIT_NONE
+
+~/Downloads/open-watcom-v2-2023-05-09-Build/bld/cc/c/cgen.c:
+static segment_id StringSegment( STR_HANDLE strlit ) { ... if( strlit->flags & STRLIT_CONST ) return( SEG_CODE ); ... else return SEG_CONST; }
+There are about 10 matches for SEG_CONST in c/.
+  segment_id FESegID( CGSYM_HANDLE cgsym_handle ) in c/cinfo.c  !! it's not it
+  objdump -d big-tools/wcc386.sym | grep -A60 -F ' <FESegID_>:'
+
+~/Downloads/open-watcom-v2-2023-05-09-Build/bld/cc/h/csegid.h
+   SEG_NULL = 0,           // unknown segment (for type checks only)
+   SEG_CODE = 1,           // code segment
+   SEG_CONST = 2,          // literal strings
+   SEG_CONST2 = 3,         // other static initialized data
+   SEG_DATA = 4,
+   SEG_YIB = 5,                // finializer segment begin
+   SEG_YI,                 // finializer segment data
+   SEG_YIE,                // finializer segment end
+   SEG_THREAD_BEG,         // beg thread
+   SEG_THREAD,             // __declspec(thread) data segment
+   SEG_THREAD_END,         // end thread
+   SEG_BSS,                // uninitialized data
+   SEG_STACK,              // used only by front end
+   SEG_END                 // end
+
+This is useless:
+
+  080550e8 <FESegID_>:
+   80550e8:       53                      push   %ebx
+   80550e9:       51                      push   %ecx
+   80550ea:       52                      push   %edx
+   80550eb:       e8 94 16 01 00          call   8066784 <SymGetPtr_>
+   80550f0:       89 c2                   mov    %eax,%edx
+   80550f2:       89 c3                   mov    %eax,%ebx
+   80550f4:       e8 1f f4 ff ff          call   8054518 <FESymAttr_>
+   80550f9:       89 c1                   mov    %eax,%ecx
+   80550fb:       a8 01                   test   $0x1,%al
+   80550fd:       74 4d                   je     805514c <FESegID_+0x64>
+   80550ff:       b8 01 00 00 00          mov    $0x1,%eax
+   8055104:       83 7a 28 00             cmpl   $0x0,0x28(%edx)
+   8055108:       75 15                   jne    805511f <FESegID_+0x37>
+   805510a:       f6 c1 08                test   $0x8,%cl
+   805510d:       74 0c                   je     805511b <FESegID_+0x33>
+   805510f:       f6 42 30 10             testb  $0x10,0x30(%edx)
+   8055113:       74 15                   je     805512a <FESegID_+0x42>
+   8055115:       f6 43 34 80             testb  $0x80,0x34(%ebx)
+   8055119:       75 1c                   jne    8055137 <FESegID_+0x4f>
+   805511b:       5a                      pop    %edx
+   805511c:       59                      pop    %ecx
+   805511d:       5b                      pop    %ebx
+   805511e:       c3                      ret
+   805511f:       8b 42 28                mov    0x28(%edx),%eax
+   8055122:       66 8b 40 08             mov    0x8(%eax),%ax
+   8055126:       5a                      pop    %edx
+   8055127:       59                      pop    %ecx
+   8055128:       5b                      pop    %ebx
+   8055129:       c3                      ret
+   805512a:       f6 05 04 ca 0f 08 04    testb  $0x4,0x80fca04
+   8055131:       75 e2                   jne    8055115 <FESegID_+0x2d>
+   8055133:       5a                      pop    %edx
+   8055134:       59                      pop    %ecx
+   8055135:       5b                      pop    %ebx
+   8055136:       c3                      ret
+   8055137:       66 8b 15 48 48 0f 08    mov    0x80f4848,%dx
+   805513e:       89 d0                   mov    %edx,%eax
+   8055140:       4a                      dec    %edx
+   8055141:       66 89 15 48 48 0f 08    mov    %dx,0x80f4848
+   8055148:       5a                      pop    %edx
+   8055149:       59                      pop    %ecx
+   805514a:       5b                      pop    %ebx
+   805514b:       c3                      ret
+   805514c:       66 8b 42 20             mov    0x20(%edx),%ax
+   8055150:       66 85 c0                test   %ax,%ax
+   8055153:       75 c6                   jne    805511b <FESegID_+0x33>
+   8055155:       f6 c1 04                test   $0x4,%cl
+   8055158:       74 09                   je     8055163 <FESegID_+0x7b>
+   805515a:       b8 04 00 00 00          mov    $0x4,%eax  # seg_id = SEG_DATA;
+   805515f:       5a                      pop    %edx
+   8055160:       59                      pop    %ecx
+   8055161:       5b                      pop    %ebx
+   8055162:       c3                      ret
+   8055163:       b8 02 00 00 00          mov    $0x2,%eax  # seg_id = SEG_CONST;
+   8055168:       5a                      pop    %edx
+   8055169:       59                      pop    %ecx
+   805516a:       5b                      pop    %ebx
+   805516b:       c3                      ret
+
+    if( CompFlags.ec_switch_used ) {
+        BEDefSeg( SEG_YIB,      GLOBAL | INIT,  TS_SEG_YIB, 2 );
+        BEDefSeg( SEG_YI,       GLOBAL | INIT,  TS_SEG_YI,  2 );
+        BEDefSeg( SEG_YIE,      GLOBAL | INIT,  TS_SEG_YIE, 2 );
+    }
+
+static void Set_EC( void )          { CompFlags.ec_switch_used = true; }
+
+0805fc70 <Set_EC_>:
+ 805fc70:       80 0d 8a d0 0f 08 08    orb    $0x8,0x80fd08a
+ 805fc77:       c3                      ret
+
+; typedef short segment_id;
+static segment_id StringSegment( STR_HANDLE strlit )
+{
+#if _INTEL_CPU  // Defined.
+    if( strlit->flags & STRLIT_FAR )
+        return( FarStringSegId );
+#endif
+    if( strlit->flags & STRLIT_CONST )
+        return( SEG_CODE );
+    return( SEG_CONST );
+}
+
+0807e8a4 <StringSegment_>:
+ 807e8a4:       f6 40 0e 01             testb  $0x1,0xe(%eax)
+ 807e8a8:       75 0c                   jne    807e8b6 <StringSegment_+0x12>
+ 807e8aa:       f6 40 0e 02             testb  $0x2,0xe(%eax)
+ 807e8ae:       74 0d                   je     807e8bd <StringSegment_+0x19>
+ 807e8b0:       b8 01 00 00 00          mov    $0x1,%eax
+ 807e8b5:       c3                      ret    
+ 807e8b6:       66 a1 90 d0 0f 08       mov    0x80fd090,%ax
+ 807e8bc:       c3                      ret    
+ 807e8bd:       b8 02 00 00 00          mov    $0x2,%eax
+ 807e8c2:       c3                      ret    
+ 807e8c3:       90                      nop
+
+by Jiri Malak:
+
+  There is colaboration between front-end (C compiler) and back-end (Code
+  Generator). FE create tree with operands and operators; it can be a little
+  optimized by FE then it is transform to CG tree and next processed by
+  optimizer and then generate data/code segments. Description of FE/CG API is
+  in Code Generator documentation
+  https://open-watcom.github.io/open-watcom-v2-wikidocs/cgdoc.html. For
+  Floating-point constant in CG is responsible CGFloat and for integer
+  constant CGInteger/CGInt64 API function in bld/cg/c/intrface.c. Of cause
+  constant is put in CONST segment as binary data by default. Take into
+  account that your expression can be optimized by FE and CG and constant can
+  be load to registers or memory directly that constant is not located in data
+  /code segment (in memory). Look on generated code what it uses. Anyway what
+  you find FESegID function is correct. It is called by CG to get segment for
+  appropriate handle (which represent object). For constant in memory (CONST
+  segment) this handle represent bytes of constant alocated by CG.
+
+wcc386 bugs:
+
+* documentation of `-zc' (`place const data into the code segment`) is
+  incorrect, `-zc' only affects tring literals
+* csegid.h is incorrect: `SEG_CONST, /* literal strings */`, actually CONST
+  contains floating-point constants as well
+
+__END__

@@ -25,3 +25,8 @@
 /tools/cc1-4.7.4
 /tools/cc1-4.8.5
 /tools/cc1-4.9.3
+/wcc386_patch/t.obj
+/wcc386_patch/wcc386.sym
+/wcc386_patch/wcc386.unc
+/wcc386_patch/wcc386.unc.golden
+/wcc386_patch/wcc386p.unc

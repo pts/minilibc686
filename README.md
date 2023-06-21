@@ -810,6 +810,7 @@ prog prog.c`. *minicc* will download these executables from here for you.
   functions won't end up at the same address.
 * OpenWatcom unifies (merges) NUL-terminated string constants within an .o
   file, GNU ld(1) merges them globally withing section `.rodata.str1.1`.
+* When returning *short*, OpenWatcom sets *ax* only, GCC sets the whole *eax*.
 
 ## Linker problems
 
