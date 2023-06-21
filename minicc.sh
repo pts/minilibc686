@@ -910,6 +910,9 @@ if test "$GCC" || test -z "$IS_TCCLD"; then
        -Wno-unused-parameter) WARGS="$WARGS$NL-wcd=303" ;;
        -Wpointer-sign) WARGS="$WARGS$NL-wce=1180$NL-wce=1181" ;;
        -Wno-pointer-sign) WARGS="$WARGS$NL-wcd=1180$NL-wcd=1181" ;;
+       -Wmissing-field-initializers | -Wno-missing-field-initializers) ;;  # Silently ignore.
+       -Wunused-result | -Wno-unused-result) ;;  # Silently ignore.
+       -Wshift-negative-value | -Wno-shift-negative-value)  ;;  # Silently ignore.
        -Wall) test "$WHADWEXTRA" || WARGS="$WARGS$NL-w4$NL-wcd=303" ;;
        -Werror) WARGS="$WARGS$NL-we" ;;
        -Werror=*) ;;  # No per-warning control, just ignore for simplicity.
