@@ -81,19 +81,44 @@ phdr.end:
 %assign CODE_ADDR $-ehdr-B.code
 
 %macro _emit_code_until 1
-  %if CODE_ADDR>(%1)
-    %error Bad code order
+  %if CODE_ADDR>(%1)-$$
+    %error 'Bad code order.'
     times 1/0 nop
   %else
-    incbin 'wcc386.sym', CODE_ADDR+B.code, (%1)-CODE_ADDR
-    %assign CODE_ADDR (%1)
+    incbin 'wcc386.sym', CODE_ADDR+B.code, (%1)-$$-CODE_ADDR
+    %assign CODE_ADDR (%1)-$$
+  %endif
+%endmacro
+
+%macro _skip_code 0
+  %assign CODE_ADDR ($-$$)-B.code
+%endmacro
+
+%macro _skip_code_until 1
+  %if (%1)<$-B.code
+    %error 'Bad code padding (replacement code too long?).'
+    times 1/0 nop
+  %elif CODE_ADDR>(%1)-$$
+    %error 'Bad code order (replacement code too long?).'
+    times 1/0 nop
+  %else
+    times (%1)-($-B.code) db 0
+    %assign CODE_ADDR (%1)-$$
   %endif
 %endmacro
 
 %macro _emit_rest 0
-  _emit_code_until PHDR0_OFFSET+PHDR0_FILESZ-B.code
+  _emit_code_until $$+PHDR0_OFFSET+PHDR0_FILESZ-B.code
   times PHDR1_OFFSET-(PHDR0_OFFSET+PHDR0_FILESZ) db 0
   incbin 'wcc386.sym', PHDR1_OFFSET, PHDR1_FILESZ
 %endmacro
+
+ec_switch_used_byte equ $$+0x80fd08a
+ec_switch_used_mask equ 8
+
+_emit_code_until $$+0x8048074
+;test byte [ec_switch_used_byte], ec_switch_used_mask
+;_skip_code_until $$+0x8048074+7
+;_skip_code
 
 _emit_rest
