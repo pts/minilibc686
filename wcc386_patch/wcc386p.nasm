@@ -78,9 +78,27 @@ phdr1:					; Elf32_Phdr
 		dd 0x1000		;   p_align
 phdr.end:
 
+%undef REPLACE_END_ADDR
 %assign CODE_ADDR $-ehdr-B.code
 
+%macro _skip_code_until 1
+  %if (%1)<$-B.code
+    %error 'Bad code padding (replacement code too long?).'
+    times 1/0 nop
+  %elif CODE_ADDR>(%1)-$$
+    %error 'Bad code order (replacement code too long?).'
+    times 1/0 nop
+  %else
+    times (%1)-($-B.code) db 0
+    %assign CODE_ADDR (%1)-$$
+  %endif
+%endmacro
+
 %macro _emit_code_until 1
+  %ifdef REPLACE_END_ADDR
+    _skip_code_until $$+REPLACE_END_ADDR
+    %undef REPLACE_END_ADDR
+  %endif
   %if CODE_ADDR>(%1)-$$
     %error 'Bad code order.'
     times 1/0 nop
@@ -94,17 +112,9 @@ phdr.end:
   %assign CODE_ADDR ($-$$)-B.code
 %endmacro
 
-%macro _skip_code_until 1
-  %if (%1)<$-B.code
-    %error 'Bad code padding (replacement code too long?).'
-    times 1/0 nop
-  %elif CODE_ADDR>(%1)-$$
-    %error 'Bad code order (replacement code too long?).'
-    times 1/0 nop
-  %else
-    times (%1)-($-B.code) db 0
-    %assign CODE_ADDR (%1)-$$
-  %endif
+%macro _replace_code 1
+  _emit_code_until %1
+  %assign REPLACE_END_ADDR (%1.end)-$$
 %endmacro
 
 %macro _emit_rest 0
@@ -129,8 +139,9 @@ SEG_CONST equ 2
 SEG_CONST2 equ 3
 SEG_DATA equ 4,
 SEG_YIB equ 5
+SEG_BSS equ 11
 
-_emit_code_until StringSegment_
+_replace_code StringSegment_
 ; static segment_id StringSegment( STR_HANDLE strlit ) {
 ; #if _INTEL_CPU  // Defined.
 ;     if( strlit->flags & STRLIT_FAR )
@@ -151,7 +162,6 @@ ss.1:		mov ax, [FarStringSegId]
 ss.2:		mov eax, SEG_CONST
 		ret
 		nop
-_skip_code_until StringSegment_.end
 
 ;test byte [ec_switch_used_byte], ec_switch_used_mask
 
