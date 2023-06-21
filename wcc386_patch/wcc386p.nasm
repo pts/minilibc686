@@ -78,6 +78,22 @@ phdr1:					; Elf32_Phdr
 		dd 0x1000		;   p_align
 phdr.end:
 
-incbin 'wcc386.sym', $-ehdr, PHDR0_OFFSET+PHDR0_FILESZ-($-ehdr)
-times PHDR1_OFFSET-(PHDR0_OFFSET+PHDR0_FILESZ) db 0
-incbin 'wcc386.sym', PHDR1_OFFSET, PHDR1_FILESZ
+%assign CODE_ADDR $-ehdr-B.code
+
+%macro _emit_code_until 1
+  %if CODE_ADDR>(%1)
+    %error Bad code order
+    times 1/0 nop
+  %else
+    incbin 'wcc386.sym', CODE_ADDR+B.code, (%1)-CODE_ADDR
+    %assign CODE_ADDR (%1)
+  %endif
+%endmacro
+
+%macro _emit_rest 0
+  _emit_code_until PHDR0_OFFSET+PHDR0_FILESZ-B.code
+  times PHDR1_OFFSET-(PHDR0_OFFSET+PHDR0_FILESZ) db 0
+  incbin 'wcc386.sym', PHDR1_OFFSET, PHDR1_FILESZ
+%endmacro
+
+_emit_rest
