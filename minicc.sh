@@ -849,6 +849,7 @@ if test "$GCC" || test -z "$IS_TCCLD"; then
         exit 5
       fi
     fi
+    WAFLAG=
     WFFLAG=-of+  # GCC -fno-omit-frame-pointer default.
     WSFLAG=
     WJFLAG=-j  # `signed char' is GCC default.
@@ -883,6 +884,8 @@ if test "$GCC" || test -z "$IS_TCCLD"; then
        -fomit-leaf-frame-pointer) WFFLAG=-of ;;
        -fno-omit-frame-pointer) WFFLAG=-of ;;
        -fno-omit-leaf-frame-pointer) WFFLAG=-of+ ;;
+       -fstrict-aliasing) WAFLAG= ;;
+       -fno-strict-aliasing) WAFLAG=-oa ;;
        -U_FORTIFY_SOURCE) ;;
        -fno-stack-protector) WSFLAG=-s ;;
        -fstack-protector) WSFLAG= ;;
@@ -933,7 +936,7 @@ if test "$GCC" || test -z "$IS_TCCLD"; then
       esac
     done
     test "$HAD_NOINLINE" && WARGS="$WARGS$NL-oe0"
-    CCARGS="$GCC$NL$WSFLAG$NL$WJFLAG$NL$WFFLAG$NL$WAUTOSYMFLAG$NL$WARGS"; WARGS=
+    CCARGS="$GCC$NL$WSFLAG$NL$WJFLAG$NL$WFFLAG$NL$WAFLAG$NL$WAUTOSYMFLAG$NL$WARGS"; WARGS=
     # TODO(pts): Add -m... flag for string optimizations (like in minilibc32).
   elif test "$IS_CC1"; then  # If $IS_CC1, convert $CCARGS for GCC cc1.
     SKIPARG=
