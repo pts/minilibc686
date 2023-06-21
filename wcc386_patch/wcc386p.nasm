@@ -113,12 +113,46 @@ phdr.end:
   incbin 'wcc386.sym', PHDR1_OFFSET, PHDR1_FILESZ
 %endmacro
 
+; Constants taken from `nm wcc386.sym' and `objdump -d wcc386.sym'.
+FarStringSegId equ $$+0x80fd090
 ec_switch_used_byte equ $$+0x80fd08a
 ec_switch_used_mask equ 8
+StringSegment_ equ $$+0x807e8a4
+StringSegment_.end equ $$+0x807e8c4  ; TODO(pts): Why is there a `nop' after the trailing `ret'?
 
-_emit_code_until $$+0x8048074
+; Constants taken from the OpenWatcom source code https://github.com/open-watcom/open-watcom-v2/tree/master/bld
+_INTEL_CPU equ 1
+STRLIT_FAR equ 1
+STRLIT_CONST equ 2
+SEG_CODE equ 1
+SEG_CONST equ 2
+SEG_CONST2 equ 3
+SEG_DATA equ 4,
+SEG_YIB equ 5
+
+_emit_code_until StringSegment_
+; static segment_id StringSegment( STR_HANDLE strlit ) {
+; #if _INTEL_CPU  // Defined.
+;     if( strlit->flags & STRLIT_FAR )
+;         return( FarStringSegId );
+; #endif
+;     if( strlit->flags & STRLIT_CONST )
+;         return( SEG_CODE );
+;     return( SEG_CONST );
+; }
+		test byte [eax+0xe], STRLIT_FAR
+		jnz ss.1
+		test byte [eax+0xe], STRLIT_CONST
+		jz ss.2
+		mov eax, SEG_CODE
+		ret
+ss.1:		mov ax, [FarStringSegId]
+		ret
+ss.2:		mov eax, SEG_CONST
+		ret
+		nop
+_skip_code_until StringSegment_.end
+
 ;test byte [ec_switch_used_byte], ec_switch_used_mask
-;_skip_code_until $$+0x8048074+7
-;_skip_code
 
 _emit_rest
