@@ -6,27 +6,11 @@
 ; Compile: ../tools/nasm-0.98.39 -O0 -w+orphan-labels -f bin -o wcc386.unc wcc386p.nasm && chmod +x wcc386.unc
 ;
 
+; --- ELF header generation and code patching.
+
 bits 32
 cpu 386
 org 0
-
-B.code equ -0x8048000
-R.code equ $+B.code
-B.data equ B.code
-
-; Extracted from the output of: objdump -p wcc386.sym
-PHDR0_OFFSET equ 0x100
-PHDR0_VADDR equ PHDR0_OFFSET-B.code
-PHDR0_FILESZ equ 0xabe97
-PHDR0_MEMSZ equ PHDR0_FILESZ
-
-; Extracted from the output of: objdump -p wcc386.sym
-PHDR1_OFFSET equ 0xac000
-PHDR1_VADDR equ PHDR1_OFFSET-B.code
-PHDR1_FILESZ equ 0x5572
-PHDR1_MEMSZ equ 0xd964
-
-ENTRY_POINT equ $$+0x809e7de
 
 PT:  ; Symbolic constants for ELF PT_... (program header type).
 .LOAD equ 1
@@ -34,6 +18,7 @@ PT:  ; Symbolic constants for ELF PT_... (program header type).
 OSABI:
 .Linux: equ 3
 
+%macro _elf32_ehdr_and_phdr 0
 ehdr:					; Elf32_Ehdr
 		db 0x7f, 'ELF'		;   e_ident[EI_MAG...]
 		db 1			;   e_ident[EI_CLASS]: 32-bit
@@ -77,9 +62,11 @@ phdr1:					; Elf32_Phdr
 		dd 6			;   p_flags: rw-: read and write, no execute
 		dd 0x1000		;   p_align
 phdr.end:
+  %assign CODE_ADDR $-ehdr-B.code
+%endmacro
 
 %undef REPLACE_END_ADDR
-%assign CODE_ADDR $-ehdr-B.code
+%undef CODE_ADDR
 
 %macro _skip_code_until 1
   %if (%1)<$-B.code
@@ -123,6 +110,27 @@ phdr.end:
   incbin 'wcc386.sym', PHDR1_OFFSET, PHDR1_FILESZ
 %endmacro
 
+; --- Program.
+
+; Extracted from the output of: objdump -p wcc386.sym
+B.code equ -0x8048000
+R.code equ $+B.code
+B.data equ B.code
+
+; Extracted from the output of: objdump -p wcc386.sym
+PHDR0_OFFSET equ 0x100
+PHDR0_VADDR equ PHDR0_OFFSET-B.code
+PHDR0_FILESZ equ 0xabe97
+PHDR0_MEMSZ equ PHDR0_FILESZ
+
+; Extracted from the output of: objdump -p wcc386.sym
+PHDR1_OFFSET equ 0xac000
+PHDR1_VADDR equ PHDR1_OFFSET-B.code
+PHDR1_FILESZ equ 0x5572
+PHDR1_MEMSZ equ 0xd964
+
+ENTRY_POINT equ $$+0x809e7de
+
 ; Constants taken from `nm wcc386.sym' and `objdump -d wcc386.sym'.
 FarStringSegId equ $$+0x80fd090
 ec_switch_used_byte equ $$+0x80fd08a
@@ -140,6 +148,8 @@ SEG_CONST2 equ 3
 SEG_DATA equ 4,
 SEG_YIB equ 5
 SEG_BSS equ 11
+
+_elf32_ehdr_and_phdr
 
 _replace_code StringSegment_
 ; static segment_id StringSegment( STR_HANDLE strlit ) {
