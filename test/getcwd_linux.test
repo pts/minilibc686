@@ -1,0 +1,7 @@
+_nasm2 getcwd_linux.o
+_nasm write_linux.o
+_nasm_start start_linux.o
+_mtcc -o test_getcwd_linux.prog "$TESTDIR"/test_getcwd.c getcwd_linux.o write_linux.o start_linux.o
+./test_getcwd_linux.prog
+unset PWD  # Invalidate any cached value in the shell.
+test "$(pwd)" = "$(./test_getcwd_linux.prog)"
