@@ -1,0 +1,7 @@
+_nasm2 abort_linux.o
+_nasm_start start_linux.o
+_mtcc -o test_abort.prog "$TESTDIR"/test_abort.c abort_linux.o start_linux.o
+set +e
+./test_abort.prog; EC="$?"
+set -e
+test "$EC" = 134  # 128+SIGABRT
