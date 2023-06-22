@@ -1,0 +1,5 @@
+_nasm2 setjmp.o
+_nasm2 longjmp.o
+_nasm_start start_linux.o
+_mtcc -o test_setjmp.prog "$TESTDIR"/test_setjmp.c setjmp.o longjmp.o start_linux.o
+./test_setjmp.prog
