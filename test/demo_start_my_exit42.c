@@ -8,14 +8,14 @@
 
 #if (defined(__linux__) || defined(__LINUX__)) && (defined(__i386__) || defined(__386__))
 #ifdef __WATCOMC__
-#  define NORETURN __declspec(aborts)
+#  define NORETURN __declspec(noreturn)
 #else
 #  define NORETURN __attribute__((__noreturn__))
 #endif
 
 #ifdef __WATCOMC__
 #if 0  /* This works, but it generates an extra jmp. */
-__declspec(naked) __declspec(aborts) static void __watcall my_exit(int exit_code) {
+__declspec(naked) __declspec(noreturn) static void __watcall my_exit(int exit_code) {
   (void)exit_code;
   __asm {
   		xchg eax, ebx  /* EBX := EAX; EAX := junk. */
@@ -26,7 +26,7 @@ __declspec(naked) __declspec(aborts) static void __watcall my_exit(int exit_code
 }
 #else  /* This will be inlined to the call site. */
 /* OpenWatcom is smart enough not to populate the higher bits of EBX. */
-__declspec(aborts) static void my_exit(unsigned char status);
+__declspec(noreturn) static void my_exit(unsigned char status);
 #pragma aux my_exit = "xor eax, eax"  "inc eax"  "int 0x80"  __parm [ __bl ];
 #endif
 #else  /* __WATCOMC__ */  /* This works in __GNUC__ and __TINYC__. */

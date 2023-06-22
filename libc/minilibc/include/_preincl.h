@@ -106,7 +106,7 @@
 #      define __LIBC_FUNC(type, name, args, gcc_attrs) type name args
 #    endif
 #    define __LIBC_VAR(type, name) type name
-#    define __LIBC_NORETURN __declspec(aborts)
+#    define __LIBC_NORETURN __declspec(noreturn)
 #    define __LIBC_NOATTR
 #    define __LIBC_PACKED_STRUCT _Packed
 #    define __LIBC_PACKED
