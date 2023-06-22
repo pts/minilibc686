@@ -811,6 +811,10 @@ prog prog.c`. *minicc* will download these executables from here for you.
 * OpenWatcom unifies (merges) NUL-terminated string constants within an .o
   file, GNU ld(1) merges them globally withing section `.rodata.str1.1`.
 * When returning *short*, OpenWatcom sets *ax* only, GCC sets the whole *eax*.
+* On i386, Clang 6.0.0 is quite bad at for-size optimization (`-Os`) when
+  compared to GCC (4.8 and 7.5.0).
+* TCC 0.9.26 has an assembler (for .s and .S input files), but it doesn't
+  optimize jump sizes.
 
 ## Linker problems
 
