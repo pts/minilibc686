@@ -168,7 +168,9 @@ section .bss
 mini_environ:	resd 1  ; char **mini_environ;
 %endif
 
-%ifdef CONFIG_PIC  ; Already position-independent code.
+%ifdef CONFIG_PIC
+%error Not PIC because it uses global variable mini_environ.
+times 1/0 nop
 %endif
 
 ; __END__

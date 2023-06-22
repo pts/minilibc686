@@ -14,6 +14,8 @@ __LIBC_VAR(extern char **, environ);
 __LIBC_FUNC(__LIBC_NORETURN void, exit, (int exit_code), __LIBC_NOATTR);   /* Flushes stdio streams first. To prevent flushing, _exit(...) instead. */
 __LIBC_FUNC(__LIBC_NORETURN void, abort, (void), __LIBC_NOATTR);   /* Doesn't flush stdio streams. Both behaviors are OK according to POSIX. Limitation: it doesn't call the SIGABRT handler. */
 
+__LIBC_FUNC(char *, getenv, (const char *name), __LIBC_NOATTR);
+
 __LIBC_FUNC(int, rand, (void), __LIBC_NOATTR);
 __LIBC_FUNC(void, srand, (unsigned seed), __LIBC_NOATTR);
 

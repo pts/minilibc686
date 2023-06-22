@@ -52,6 +52,7 @@ mini__start:  ; Entry point (_start) of the Linux i386 executable.
 		pop eax  ; argc.
 		mov edx, esp  ; argv.
 		lea ecx, [edx+eax*4+4]  ; envp.
+		mov [mini_environ], ecx
 		push ecx  ; Argument envp for main.
 		push edx  ; Argument argv for main.
 		push eax  ; Argument argc for main.
@@ -67,7 +68,13 @@ mini_exit:  ; void mini_exit(int exit_code);
 		int 0x80  ; Linux i386 syscall, exit(2) doesn't return.
 		; Not reached, the syscall above doesn't return.
 
-%ifdef CONFIG_PIC  ; Already position-independent code.
+section .bss
+global mini_environ
+mini_environ:	resd 1  ; char **mini_environ;
+
+%ifdef CONFIG_PIC
+%error Not PIC because it uses global variable mini_environ.
+times 1/0 nop
 %endif
 
 ; __END__

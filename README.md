@@ -903,6 +903,7 @@ This section is mostly an FYI, it doesn't affter minilibc686 users directly.
 * Recompile diet libc without WANT_LARGEFILE_BACKCOMPAT.
 * Add wrappers for socketcall(2).
 * Add wrappers for ipc(2).
+* Documen how to work around duplicate symbol error in *.start.o.
 * Get rid of .rodata alignment for for demo_write.c in omf2elf, only with
   `-msoft-float', making the OpenWatcom output of demo_c_hello.c shorter.
 * Remove boilerplate from `src/*.nasm`, especially related to `__OUTPUT_FORMAT__, bin`.

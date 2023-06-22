@@ -264,6 +264,7 @@ _need mini_exit, mini__exit
 _need mini_fopen, mini_open
 _need mini_fclose, mini_close
 _need mini_mq_getattr, mini_syscall3_RP1
+_need mini_getenv, mini_environ  ; Without this, the linker failes with duplicate symbols in *.smart.o and src/stdio_medium_linux.o. (It's a misleading error message, it doesn't mention mini_getenv or mini_environ). TODO(pts): Document this.
 _need mini_errno, .bss
 _need mini_environ, .bss
 _need mini_stdout, .data

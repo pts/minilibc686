@@ -1,0 +1,11 @@
+_nasm2 getenv.o
+_nasm write_linux.o
+_nasm_start start_linux.o
+_mtcc -o test_getenv.prog "$TESTDIR"/test_getenv.c getenv.o write_linux.o start_linux.o
+export FOO=bar FOO10=bar10 FOO1=bar1 FOO2=bar2
+env
+./test_getenv.prog FOO1
+test "$(./test_getenv.prog FOO1)" = bar1
+test "$(./test_getenv.prog FOO2)" = bar2
+test "$(./test_getenv.prog FOO10)" = bar10
+test "$(./test_getenv.prog FOO11)" = ""
