@@ -905,5 +905,6 @@ This section is mostly an FYI, it doesn't affter minilibc686 users directly.
 * Add wrappers for ipc(2).
 * Get rid of .rodata alignment for for demo_write.c in omf2elf, only with
   `-msoft-float', making the OpenWatcom output of demo_c_hello.c shorter.
+* Remove boilerplate from `src/*.nasm`, especially related to `__OUTPUT_FORMAT__, bin`.
 
 __END__
