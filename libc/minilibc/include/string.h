@@ -23,6 +23,7 @@ __LIBC_FUNC(char *, strstr_faster, (const char *haystack, const char *needle), _
 __LIBC_FUNC(void *, memcpy, (void *dest, const void *src, size_t n), __LIBC_NOATTR);
 __LIBC_FUNC(void *, memmove, (void *dest, const void *src, size_t n), __LIBC_NOATTR);
 __LIBC_FUNC(int, memcmp, (const void *s1, const void *s2, size_t n), __LIBC_NOATTR);
+__LIBC_FUNC(int, strncmp, (const char *s1, const char *s2, size_t n), __LIBC_NOATTR);
 __LIBC_FUNC(void *, memset, (void *s, int c, size_t n), __LIBC_NOATTR);
 __LIBC_FUNC(char *, memchr, (const char *s, int c, size_t n), __LIBC_NOATTR);
 

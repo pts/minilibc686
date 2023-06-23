@@ -1,0 +1,2 @@
+_utcc_nasm2 strncmp.o -o test_strncmp.prog "$TESTDIR"/test_strncmp.c
+./test_strncmp.prog
