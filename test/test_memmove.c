@@ -1,7 +1,7 @@
 typedef unsigned long size_t;
 
 extern void *mini_memmove(void *dest, const void *src, size_t n);  /* Function under test. */
-extern void *mini_memcmp(void *dest, const void *src, size_t n);
+extern int mini_memcmp(void *s1, const void *s2, size_t n);
 
 int main(int argc, char **argv) {
   char buf[0x80];
