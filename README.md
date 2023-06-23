@@ -907,5 +907,6 @@ This section is mostly an FYI, it doesn't affter minilibc686 users directly.
 * Get rid of .rodata alignment for for demo_write.c in omf2elf, only with
   `-msoft-float', making the OpenWatcom output of demo_c_hello.c shorter.
 * Remove boilerplate from `src/*.nasm`, especially related to `__OUTPUT_FORMAT__, bin`.
+* diet libc gmtime is buggy for negative time_t values, see test/test_gmtime.c.
 
 __END__
