@@ -1197,7 +1197,7 @@ if test "$DO_SMART" != 0; then  # Smart linking.
       exit "$EC"
     fi
     # /usr/bin/objdump -d "$OUTFILE.smart.o"
-    # /usr/bin/nm "$OUTFILE.smart.o"
+    # /usr/bin/nm "$OUTFILE.smart.o" | grep -v ' [dtbr] '
     ARGS="$ARGS$NL$OUTFILE.smart.o$NL$MYDIR/libc/$LIBC/libc.$ARCH.a$NL$LIBMINITCC1"
     test "$HAD_V" && echo "info: running $WHAT again:" $ARGS >&2  # GCC also writes to stderr.
     $ARGS >&2; EC="$?"  # Redirect linker stdout to stderr.
