@@ -2,7 +2,7 @@
 ; written by pts@fazekas.hu at Tue May 16 18:44:34 CEST 2023
 ; Compile to i386 ELF .o object: nasm -O999999999 -w+orphan-labels -f elf -o strchr.o strchr.nasm
 ;
-; Code size: !! 0x11 bytes.
+; Code size: 0x19 bytes.
 
 ; Uses: %ifdef CONFIG_PIC
 ;
@@ -29,9 +29,8 @@ section .text
 mini_strchr:  ; char *mini_strchr(const char *s, int c);
 mini_index:  ; char *mini_index(const char *s, int c);
 		push esi
-		mov al, [esp+0xc]
+		mov ah, [esp+0xc]
 		mov esi, [esp+8]
-		mov ah, al
 .next:		lodsb
 		cmp al, ah
 		je .found
