@@ -19,6 +19,7 @@ int main(int argc, char **argv) {
   if (!expect("", 0)) exit_code |= 1;
   if (!expect("", 'x')) exit_code |= 1;
   if (!expect("hello", 'x')) exit_code |= 1;
+  if (!expect("hello", '\0')) exit_code |= 1;
   if (!expect("hello", 'l')) exit_code |= 1;
   if (!expect("hello", 'o')) exit_code |= 1;
   if (!expect("hello", 'o'|0x100)) exit_code |= 1;
