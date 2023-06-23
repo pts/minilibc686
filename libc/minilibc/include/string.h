@@ -6,8 +6,10 @@
 
 __LIBC_FUNC(int, strcasecmp, (const char *l, const char *r), __LIBC_NOATTR);
 __LIBC_FUNC(int, strncasecmp, (const char *l, const char *r, size_t n), __LIBC_NOATTR);
-__LIBC_FUNC(char *, strchr, (const char *s, int c), __LIBC_NOATTR);
-__LIBC_FUNC(char *, index, (const char *s, int c), __LIBC_NOATTR);
+__LIBC_FUNC(char *, strchr,  (const char *s, int c), __LIBC_NOATTR);
+__LIBC_FUNC(char *, index,   (const char *s, int c), __LIBC_NOATTR);
+__LIBC_FUNC(char *, strrchr, (const char *s, int c), __LIBC_NOATTR);
+__LIBC_FUNC(char *, rindex,  (const char *s, int c), __LIBC_NOATTR);
 __LIBC_FUNC(size_t, strlen, (const char *s), __LIBC_NOATTR);
 __LIBC_FUNC(char *, strtok, (char *__restrict__ s, const char *__restrict__ sep), __LIBC_NOATTR);
 __LIBC_FUNC(char *, strcpy, (char *dest, const char *src), __LIBC_NOATTR);
