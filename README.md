@@ -317,6 +317,16 @@ Other projects with tiny libc functions:
 * [vladcebo/TinyStdio](https://github.com/vladcebo/TinyStdio) floating point
   support and scanf (with floating point support) to
   [tinyprintf](http://www.sparetimelabs.com/tinyprintf/tinyprintf.php).
+* [ALIB](https://www.sac.sk/download/utilprog/alib40.zip) written in
+  assembly for 8086 (16-bit).
+* [Freelib](https://www.sac.sk/download/utilprog/freeli30.zip) written in
+  assembly for 8086 (16-bit) and i386 in 16-bit mode.
+* [J.R.Ferguson's C
+  Library](https://www.sac.sk/download/utilprog/jrfc02.zip) written in C,
+  targeting DOS 8086 (16-bit).
+* The Zortech C++ compiler (e.g. version 3.1 from 1992) contains its libc
+  source. Some parts of the libc are written in C, other parts are written
+  in assembly 8086 (16-bit).
 
 Other tiny libc projects targeting Windows:
 
