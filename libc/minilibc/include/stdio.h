@@ -43,6 +43,7 @@ __LIBC_FUNC(int, snprintf, (char *str, size_t size, const char *format, ...), __
 __LIBC_FUNC(int, vsnprintf, (char *str, size_t size, const char *format, __libc__va_list ap), __attribute__((__format__(__printf__, 3, 0))));
 
 __LIBC_FUNC(FILE *, fopen, (const char *pathname, const char *mode), __LIBC_NOATTR);
+__LIBC_FUNC(FILE *, fdopen, (int fd, const char *mode), __LIBC_NOATTR);
 __LIBC_FUNC(int, fflush, (FILE *filep), __LIBC_NOATTR);
 __LIBC_FUNC(int, fclose, (FILE *filep), __LIBC_NOATTR);
 __LIBC_FUNC(size_t, fread, (void *ptr, size_t size, size_t nmemb, FILE *filep), __LIBC_NOATTR);

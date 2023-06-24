@@ -31,6 +31,7 @@ int main(int argc, char **argv) {
   char buf[0x20];
   char mode;
   int c;
+  FILE *fin, *fout;
   (void)argc; (void)argv;
   if (fileno(stdin) != STDIN_FILENO) return 2;
   if (fileno(stdout) != STDOUT_FILENO) return 3;
@@ -60,6 +61,12 @@ int main(int argc, char **argv) {
   if (mode == 'c') {  /* Cat: copy from stdin to stdout using getc and putc. */
     while ((c = getc(stdin)) != EOF) {
       putc(c, stdout);
+    }
+  } else if (mode == 'd') {  /* Cat: copy from fdopen(0) to fdopen(1) using getc and putc. */
+    if (!(fin = fdopen(STDIN_FILENO, "r"))) return 34;
+    if (!(fout = fdopen(STDOUT_FILENO, "w"))) return 35;
+    while ((c = getc(fin)) != EOF) {
+      putc(c, fout);
     }
   } else if (mode == 'h') {  /* Cat: copy from stdin to stdout using getchar and putchar. */
     while ((c = getchar()) != EOF) {
