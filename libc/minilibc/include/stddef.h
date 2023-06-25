@@ -4,4 +4,6 @@
 
 #include <sys/types.h>
 
-#endif  /* _UTIME_H */
+#define NULL ((void*)0)  /* Defined in multiple .h files: https://en.cppreference.com/w/c/types/NULL */
+
+#endif  /* _STDDEF_H */
