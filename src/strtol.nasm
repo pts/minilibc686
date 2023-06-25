@@ -7,12 +7,26 @@
 ; Limitation: it doesn't set errno, see c_strtol.c for that.
 ;
 ; Uses: %ifdef CONFIG_PIC
+; Uses: %ifdef CONFIG_THIS_STRTOUL
 ;
 
 bits 32
 cpu 386
 
-global mini_strtol
+%ifndef CONFIG_THIS_STRTOUL
+  %ifndef CONFIG_THIS_STRTOL
+    %define CONFIG_THIS_STRTOL  ; Default.
+  %endif
+%endif
+
+%ifdef CONFIG_THIS_STRTOUL
+  global mini_strtoul
+%elifdef CONFIG_THIS_STRTOL
+  global mini_strtol
+%else
+  %error Missing CONFIG_THIS_...
+  times 1/0 nop
+%endif
 %ifidn __OUTPUT_FORMAT__, bin
 section .text align=1
 section .rodata align=1
@@ -26,8 +40,11 @@ section .bss align=4
 %endif
 
 section .text
-
-mini_strtol:  ; long mini_strtol(const char *nptr, char **endptr, int base);
+%ifdef CONFIG_THIS_STRTOUL
+  mini_strtoul:  ; unsigned long strtoul(const char *nptr, char **endptr, int base);
+%elifdef CONFIG_THIS_STRTOL
+  mini_strtol:  ; long mini_strtol(const char *nptr, char **endptr, int base);
+%endif
 ; Register allocation:
 ;
 ; EAX: Scratch for input bytes (`byte [esi]') and digits. After the main loop (.after_loop), it's the (return) value.
@@ -132,6 +149,10 @@ mini_strtol:  ; long mini_strtol(const char *nptr, char **endptr, int base);
 		mov [ebx], esi
 .endptr_null_2:	xchg eax, edx  ; EAX := value; EDX := junk. From now on we use EAX as value and EDX as scratch.
 		test ch, ch
+%ifdef CONFIG_THIS_STRTOUL
+		jz .no_overflow
+		or eax, byte -1  ; Indicate overflow as saturated 0xffffffff.
+%else  ; Signed overflow check.
 		jnz .has_overflow
 		mov edx, 0x80000000
 		cmp eax, edx
@@ -144,6 +165,7 @@ mini_strtol:  ; long mini_strtol(const char *nptr, char **endptr, int base);
 		test cl, 1  ; [var_minus].
 		jnz .done  ; If negative, indicate overflow (actually underflow) as saturated -0x80000000.
 		dec eax  ; If nonnegative, indicate overflow as saturated 0x7fffffff.
+%endif
 		jmp short .done
 .no_overflow:	test cl, 1
 		jz .done

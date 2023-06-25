@@ -19,8 +19,10 @@ __LIBC_FUNC(char *, getenv, (const char *name), __LIBC_NOATTR);
 __LIBC_FUNC(int, rand, (void), __LIBC_NOATTR);
 __LIBC_FUNC(void, srand, (unsigned seed), __LIBC_NOATTR);
 
-/* Limitation: it doesn't set errno on overflow in minilibc686. */
+/* Limitation: they don't set errno on overflow in minilibc686. */
 __LIBC_FUNC(long, strtol, (const char *nptr, char **endptr, int base), __LIBC_NOATTR);
+__LIBC_FUNC(unsigned long, strtoul, (const char *nptr, char **endptr, int base), __LIBC_NOATTR);
+
 __LIBC_FUNC(int,  atoi, (const char *nptr), __LIBC_NOATTR);
 __LIBC_FUNC(long, atol, (const char *nptr), __LIBC_NOATTR);
 
