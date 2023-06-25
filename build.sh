@@ -125,7 +125,7 @@ for F in src/[a-zA-Z0-9_]*.nasm; do
 done
 
 # !! We don't have .c source ready for this. Needed by TCC 0.9.26.
-cp -a src/tcc_float.o build_tmp/
+cp -a src/tcc_float.o src/tcc_bcheck.o build_tmp/
 
 # Order of these .o files in libmini[34]86.a is importan when linking with
 # pts-tcc, because these .o files contain weak symbols, and if they were
