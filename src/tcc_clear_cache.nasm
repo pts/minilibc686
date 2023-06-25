@@ -22,6 +22,7 @@ section .bss align=1
 
 section .text
 ; Needed by the TCC (__TINYC__) compiler 0.9.26 https://github.com/anael-seghezzi/tcc-0.9.26
+; GCC 4.1+ doesn't generate the call, and it's empty in libgcc.a.
 __clear_cache:
 		ret
 
