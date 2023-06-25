@@ -24,8 +24,10 @@ __LIBC_FUNC(long, strtol, (const char *nptr, char **endptr, int base), __LIBC_NO
 __LIBC_FUNC(int,  atoi, (const char *nptr), __LIBC_NOATTR);
 __LIBC_FUNC(long, atol, (const char *nptr), __LIBC_NOATTR);
 
-/* Limitation: it doesn't set errno on overflow in minilibc686. */
+/* Limitation: they don't set errno on overflow in minilibc686. */
+__LIBC_FUNC(float, strtof, (const char *nptr, char **endptr), __LIBC_NOATTR);
 __LIBC_FUNC(double, strtod, (const char *nptr, char **endptr), __LIBC_NOATTR);
+__LIBC_FUNC(long double, strtold, (const char *nptr, char **endptr), __LIBC_NOATTR);
 
 #ifndef CONFIG_LIBC_NO_MALLOC
 #  if defined(CONFIG_MALLOC_MMAP) && defined(__MINILIBC686__)

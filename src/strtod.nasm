@@ -6,6 +6,9 @@
 ;
 ; Uses: %ifdef CONFIG_PIC
 ; Uses: %ifdef CONFIG_I386
+; Uses: %ifdef CONFIG_THIS_STRTOF
+; Uses: %ifdef CONFIG_THIS_STRTOD
+; Uses: %ifdef CONFIG_THIS_STRTOLD
 ;
 ; Limitation: it doesn't set errno, see -D_STDTOD_ERRNO c_strtod.c for that.
 ;
@@ -14,6 +17,14 @@
 ; 80387 FPU timings: https://www2.math.uni-wuppertal.de/~fpf/Uebungen/GdR-SS02/opcode_f.html
 ;
 
+%ifndef CONFIG_THIS_STRTOF
+  %ifndef CONFIG_THIS_STRTOD
+    %ifndef CONFIG_THIS_STRTOLD
+      %define CONFIG_THIS_STRTOD  ; Default.
+    %endif
+  %endif
+%endif
+
 bits 32
 %ifdef CONFIG_I386
 cpu 386
@@ -21,7 +32,16 @@ cpu 386
 cpu 686
 %endif
 
-global mini_strtod
+%ifdef CONFIG_THIS_STRTOF
+  global mini_strtof
+%elifdef CONFIG_THIS_STRTOD
+  global mini_strtod
+%elifdef CONFIG_THIS_STRTOLD
+  global mini_strtold
+%else
+  %error Missing CONFIG_THIS_...
+  times 1/0 nop
+%endif
 %ifidn __OUTPUT_FORMAT__, bin
 section .text align=1
 section .rodata align=1
@@ -34,10 +54,14 @@ section .data align=4
 section .bss align=4
 %endif
 
-global mini_strtod
-
 section .text
-mini_strtod:  ; double mini_strtod(const char *str, char **endptr)
+%ifdef CONFIG_THIS_STRTOF
+  mini_strtof:  ; float mini_strtof(const char *str, char **endptr);
+%elifdef CONFIG_THIS_STRTOD
+  mini_strtod:  ; double mini_strtod(const char *str, char **endptr);
+%elifdef CONFIG_THIS_STRTOLD
+  mini_strtold:  ; long double mini_strtold(const char *str, char **endptr);
+%endif
 %define VAR_TMP_DIGIT 0  ; 4 bytes.
 %define VAR_F32_10 4  ; 4 bytes f32.
 %define VARS_SIZE 8
@@ -186,8 +210,16 @@ MAX_ALLOWED_EXP equ 4973
 		test eax, eax
 		je .36
 		mov [eax], ebx
-.36:		fstp qword [esp]
+.36:
+%ifdef CONFIG_THIS_STRTOF
+		fstp dword [esp]
+		fld dword [esp]  ; By doing this fstp+fld combo, we round the result to f32.
+%elifdef CONFIG_THIS_STRTOD
+		fstp qword [esp]
 		fld qword [esp]  ; By doing this fstp+fld combo, we round the result to f64.
+%elifdef CONFIG_THIS_STRTOLD
+		; No need for rounding.
+%endif
 		times 2 pop ebp  ; Just `add esp, byte VARS_SIZE'.
 		pop ebp
 		pop edi

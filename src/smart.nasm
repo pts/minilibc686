@@ -279,6 +279,20 @@ _need mini_stdout, .bss
   %endif
 %endif
 ;
+%assign ___NEED_strtofld_count 0
+%ifdef __NEED_mini_strtof
+  %assign ___NEED_strtofld_count ___NEED_strtofld_count+1
+%endif
+%ifdef __NEED_mini_strtol
+  %assign ___NEED_strtofld_count ___NEED_strtofld_count+1
+%endif
+%ifdef __NEED_mini_strtold
+  %assign ___NEED_strtofld_count ___NEED_strtofld_count+1
+%endif
+%if ___NEED_strtofld_count>1
+  %define __NEED_mini_strtold
+%endif
+;
 _need_aliases ALIASES  ; Must be called after _alias.
 ;
 ; We have to put _syscall definitions right here, just above `_need
@@ -1173,6 +1187,37 @@ mini_putchar_RP3:  ; int REGPARM3 mini_putchar_RP3(int c);
     %include "src/stdio_medium_vfprintf.nasm"
   %endif
 %endif  ; __NEED_mini_printf
+
+%if ___NEED_strtofld_count>1
+  __smart_extern mini_strtold
+  %ifdef __NEED_mini_strtof
+    global mini_strtof
+    mini_strtof:  ; float mini_strtof(const char *str, char **endptr);
+		push dword [esp+2*4]  ; Argument endptr.
+		push dword [esp+2*4]  ; Argument str.
+		call mini_strtold
+		fstp dword [esp]
+		fld dword [esp]  ; By doing this fstp+fld combo, we round the result to f32.
+    mini_strtof.done:
+		times 2 pop edx  ; Clean up arguments of mini_strtold from the stack.
+		ret
+  %endif
+  %ifdef __NEED_mini_strtod
+    global mini_strtod
+    mini_strtod:  ; double mini_strtod(const char *str, char **endptr);
+		push dword [esp+2*4]  ; Argument endptr.
+		push dword [esp+2*4]  ; Argument str.
+		call mini_strtold
+		fstp qword [esp]
+		fld qword [esp]  ; By doing this fstp+fld combo, we round the result to f64.
+    %ifdef __NEED_mini_strtof
+		jmp strict short mini_strtof.done
+    %else
+		times 2 pop edx  ; Clean up arguments of mini_strtold from the stack.
+		ret
+    %endif
+  %endif
+%endif
 
 ; Helpfully %include some needed minilibc686 source files.
 ; demo_hello_linux_printf.nasm relies on this.
