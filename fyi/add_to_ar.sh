@@ -16,10 +16,12 @@ for F in "$@"; do  # Strip the .o file.
     fi
     continue
   fi
-  EMPTY_SECTIONS="$(objdump -hw "$F" | busybox awk '$3~/^0+$/{print"-R "$2}')"
+  HAS_GLOBALBEG="$(objdump -t "$F" | grep '^00000000  *g  *[.]text[     ]' ||:)"
+  test "$HAS_GLOBALBEG" && HAS_GLOBALBEG=.text
+  EMPTY_SECTIONS="$(objdump -hw "$F" | busybox awk '$3~/^0+$/&&$2!='"\"$HAS_GLOBALBEG\""'{print"-R "$2}')"
   strip -S -x -R .note.GNU-stack -R .comment -R .eh_frame $EMPTY_SECTIONS "$F"
   ALL_SECTIONS="$(objdump -hw "$F" | busybox awk '$3~/^[0-9a-fA-F]+$/{print$2}')"
-  if test -z "$ALL_SECTIONS" && test -z "$(objdump -t "$F" | grep '[*]COM[*]')"; then 
+  if test -z "$ALL_SECTIONS" && test -z "$(objdump -t "$F" | grep '[*]COM[*]')" && test -z "$HAS_GLOBALBEG"; then
     rm -f "$F"
   fi
 done
