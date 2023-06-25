@@ -2,6 +2,8 @@
 ; written by pts@fazekas.hu at Tue May 16 18:44:34 CEST 2023
 ; Compile to i386 ELF .o object: nasm -O999999999 -w+orphan-labels -f elf -o malloc_simple_unaligned_linux.o malloc_simple_unaligned_linux.nasm
 ;
+; Code size: 0x7c bytes.
+;
 ; Uses: %ifdef CONFIG_PIC
 ;
 ; !! TODO(pts): This code is currently untested.
@@ -79,8 +81,8 @@ mini_malloc_simple_unaligned:  ; void *mini_malloc_simple_unaligned(size_t size)
 		push eax ; Argument of sys_brk(2).
 		mov al, 45  ; __NR_brk.
 		; TODO(pts): Add sys_brk symbol with smart linking.
-		call mini_syscall3_AL  ; It destroys ECX and EDX.
-		pop ecx  ; Clean up argument of sys_brk2(0).
+		call mini_syscall3_AL	; It destroys ECX and EDX.
+		pop ecx  ; Clean up argument of sys_brk(2).
 		pop edx			; This (and the next line) could be ECX instead.
 		cmp eax, edx
 		jne .18
@@ -95,7 +97,8 @@ mini_malloc_simple_unaligned:  ; void *mini_malloc_simple_unaligned(size_t size)
 		mov [_malloc_simple_free], ebx
 		jmp short .17
 .21:		sub edx, [_malloc_simple_base]
-		lea eax, [edx+edx]
+		xchg eax, edx  ; EAX := EDX; EDX := junk.
+		add eax, eax
 		test eax, eax
 		jg .9
 .18:		xor eax, eax
