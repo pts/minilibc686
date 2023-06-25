@@ -19,8 +19,10 @@ section .rodata align=1
 section .data align=1
 section .bss align=1
 mini_malloc equ +0x12345678
+mini_free equ +0x12345679
 %else
 extern mini_malloc
+extern mini_free
 section .text align=1
 section .rodata align=4
 section .data align=4
@@ -46,6 +48,8 @@ mini_realloc:  ; void *mini_realloc(void *ptr, size_t size);
 		lea ebx, [eax-0x10]  ; old_address argument of mremap(2).
 		mov ecx, [ebx]  ; old_size argument of mremap(2).
 		mov edx, [esp+8+8]  ; new_size argument of mremap(2).
+		test edx, edx
+		jz .do_free
 		add edx, byte 0x10
 		push byte MREMAP.MAYMOVE  ; flags argument of mremap(2).
 		pop esi
@@ -59,6 +63,9 @@ mini_realloc:  ; void *mini_realloc(void *ptr, size_t size);
 .done:		pop esi
 		pop ebx
 		ret
+.do_free:	push eax
+		call mini_free
+		pop eax  ; Clean up arguments of mini_free from the stack.
 .error:		xor eax, eax  ; EAX := 0 (== NULL, error).
 		jmp short .done
 		

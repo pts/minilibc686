@@ -45,6 +45,6 @@ int main(int argc, char **argv) {
   if ((size_t)p & 0xf) return 14;  /* Not aligned. */
   fill_block(p, size);
   if (!is_block_intact(p, size)) return 15;
-  mini_free(p);
+  if (mini_realloc(p, 0)) return 16;
   return 0;  /* EXIT_SUCCESS. */
 }
