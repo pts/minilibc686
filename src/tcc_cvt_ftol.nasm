@@ -20,7 +20,7 @@ section .bss align=1
 %endif
 
 section .text
-; Needed by the TCC (__TINYC__) compiler 0.9.26.
+; Needed by the TCC (__TINYC__) compiler 0.9.26 https://github.com/anael-seghezzi/tcc-0.9.26
 __tcc_cvt_ftol:
 		push ebp
 		mov ebp, esp
