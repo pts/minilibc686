@@ -28,13 +28,28 @@ __LIBC_FUNC(long, atol, (const char *nptr), __LIBC_NOATTR);
 __LIBC_FUNC(double, strtod, (const char *nptr, char **endptr), __LIBC_NOATTR);
 
 #ifndef CONFIG_LIBC_NO_MALLOC
-  /* The current implementation does an mmap(2) call for each allocation, and
-   * it rounds up the size to 4 KiB boundary after adding 0x10. Thus it's
-   * suitable for a few large allocations.
-   */
-  __LIBC_FUNC(void *, malloc, (size_t size), __LIBC_NOATTR);
-  __LIBC_FUNC(void *, realloc, (void *ptr, size_t size), __LIBC_NOATTR);
-  __LIBC_FUNC(void, free, (void *ptr), __LIBC_NOATTR);
+#  if defined(CONFIG_MALLOC_MMAP) && defined(__MINILIBC686__)
+    /* This implementation does an mmap(2) call for each allocation, and
+     * it rounds up the size to 4 KiB boundary after adding 0x10. Thus it's
+     * suitable for a few large allocations.
+     */
+#    ifdef __WATCOMC__
+      void *malloc(size_t size);
+      void *realloc(void *ptr, size_t size);
+      void free(void *ptr);
+#      pragma aux malloc "_mini_malloc_mmap"
+#      pragma aux realloc "_mini_realloc_mmap"
+#      pragma aux free "_mini_free_mmap"
+#    else
+      void *malloc(size_t size) __asm__("mini_malloc_mmap");
+      void *realloc(void *ptr, size_t size) __asm__("mini_realloc_mmap");
+      void free(void *ptr) __asm__("mini_free_mmap");
+#    endif
+#  else
+    __LIBC_FUNC(void *, malloc, (size_t size), __LIBC_NOATTR);
+    __LIBC_FUNC(void *, realloc, (void *ptr, size_t size), __LIBC_NOATTR);
+    __LIBC_FUNC(void, free, (void *ptr), __LIBC_NOATTR);
+#  endif
 #endif
 
 /* Short and stable, but slow: insertion sort with O(n**2) worst time.
@@ -44,7 +59,9 @@ __LIBC_FUNC(void, qsort, (void *base, size_t n, size_t size, int (*cmp)(const vo
 
 #ifdef __MINILIBC686__
   /* Returns an unaligned pointer. There is no API to free it. Suitable for
-   * many small allocations.
+   * many small allocations. Be careful: if you use this with unaligned
+   * sizes, then regular malloc(...) and realloc(...) may also return
+   * unaligned pointers.
    */
   __LIBC_FUNC(void *, malloc_simple_unaligned, (size_t size), __LIBC_NOATTR);
 #endif  /* __MINiLIBC686__ */

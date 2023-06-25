@@ -12,17 +12,17 @@
 bits 32
 cpu 386
 
-global mini_realloc
+global mini_realloc_mmap
 %ifidn __OUTPUT_FORMAT__, bin
 section .text align=1
 section .rodata align=1
 section .data align=1
 section .bss align=1
-mini_malloc equ +0x12345678
-mini_free equ +0x12345679
+mini_malloc_mmap equ +0x12345678
+mini_free_mmap equ +0x12345679
 %else
-extern mini_malloc
-extern mini_free
+extern mini_malloc_mmap
+extern mini_free_mmap
 section .text align=1
 section .rodata align=4
 section .data align=4
@@ -35,12 +35,12 @@ MREMAP:  ; Symbolic constants.
 .MAYMOVE: equ 1
 
 ; TODO(pts): Split to separate .o file, to avoid unnecessary linking.
-mini_realloc:  ; void *mini_realloc(void *ptr, size_t size);
+mini_realloc_mmap:  ; void *mini_realloc_mmap(void *ptr, size_t size);
 		mov eax, [esp+4]
 		test eax, eax
 		jnz .existing
 		push dword [esp+8]  ; size.
-		call mini_malloc  ; mini_realloc(NULL, size) is equivalent to It's a no-op to mini_free(NULL).
+		call mini_malloc_mmap  ; mini_realloc_mmap(NULL, size) is equivalent to It's a no-op to mini_free(NULL).
 		pop edx  ; Value doesn't matter.
 		ret
 .existing:	push ebx
@@ -64,7 +64,7 @@ mini_realloc:  ; void *mini_realloc(void *ptr, size_t size);
 		pop ebx
 		ret
 .do_free:	push eax
-		call mini_free
+		call mini_free_mmap
 		pop eax  ; Clean up arguments of mini_free from the stack.
 .error:		xor eax, eax  ; EAX := 0 (== NULL, error).
 		jmp short .done

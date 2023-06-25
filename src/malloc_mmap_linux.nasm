@@ -11,7 +11,7 @@
 ; * Each memory allocation uses at last 0x1000 bytes (4 KiB) of memory, all
 ;   of them are rounded up to the page size.
 ; * There is 0x10 bytes of overhead per allocation, so if you call
-;   mini_malloc(0x1000), it will use 8 KiB instead of 4 KiB.
+;   mini_malloc_mmap(0x1000), it will use 8 KiB instead of 4 KiB.
 ;
 ; Uses: %ifdef CONFIG_PIC
 ;
@@ -19,7 +19,7 @@
 bits 32
 cpu 386
 
-global mini_malloc
+global mini_malloc_mmap
 %ifidn __OUTPUT_FORMAT__, bin
 section .text align=1
 section .rodata align=1
@@ -43,7 +43,7 @@ MAP:  ; Symbolic constants.
 .ANONYMOUS: equ 0x20
 
 ; TODO(pts): If just malloc is needed, provide alternative.
-mini_malloc:  ; void *mini_malloc(size_t size);
+mini_malloc_mmap:  ; void *mini_malloc_mmap(size_t size);
 		; We return a valid (non-NULL) pointer even if size == 0. uClibc malloc(3) does the same.
 		push ebx
 		push esi

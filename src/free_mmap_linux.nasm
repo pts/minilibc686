@@ -12,7 +12,7 @@
 bits 32
 cpu 386
 
-global mini_free
+global mini_free_mmap
 %ifidn __OUTPUT_FORMAT__, bin
 section .text align=1
 section .rodata align=1
@@ -27,10 +27,10 @@ section .bss align=4
 
 section .text
 
-mini_free:  ; void mini_free(void *ptr);
+mini_free_mmap:  ; void mini_free_mmap(void *ptr);
 		mov eax, [esp+4]
 		test eax, eax
-		jz .done  ; It's a no-op to mini_free(NULL).
+		jz .done  ; It's a no-op to mini_free_mmap(NULL).
 		push ebx
 		lea ebx, [eax-0x10]  ; addr argument of munmap(2).
 		xor eax, eax
