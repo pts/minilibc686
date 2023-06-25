@@ -27,13 +27,15 @@ __LIBC_FUNC(long, atol, (const char *nptr), __LIBC_NOATTR);
 /* Limitation: it doesn't set errno on overflow in minilibc686. */
 __LIBC_FUNC(double, strtod, (const char *nptr, char **endptr), __LIBC_NOATTR);
 
-/* The current implementation does an mmap(2) call for each allocation, and
- * it rounds up the size to 4 KiB boundary after adding 0x10. Thus it's
- * suitable for a few large allocations.
- */
-__LIBC_FUNC(void *, malloc, (size_t size), __LIBC_NOATTR);
-__LIBC_FUNC(void *, realloc, (void *ptr, size_t size), __LIBC_NOATTR);
-__LIBC_FUNC(void, free, (void *ptr), __LIBC_NOATTR);
+#ifndef CONFIG_LIBC_NO_MALLOC
+  /* The current implementation does an mmap(2) call for each allocation, and
+   * it rounds up the size to 4 KiB boundary after adding 0x10. Thus it's
+   * suitable for a few large allocations.
+   */
+  __LIBC_FUNC(void *, malloc, (size_t size), __LIBC_NOATTR);
+  __LIBC_FUNC(void *, realloc, (void *ptr, size_t size), __LIBC_NOATTR);
+  __LIBC_FUNC(void, free, (void *ptr), __LIBC_NOATTR);
+#endif
 
 /* Short and stable, but slow: insertion sort with O(n**2) worst time.
  * It's not quicksort because the implementation of insertion sort is shorter.
