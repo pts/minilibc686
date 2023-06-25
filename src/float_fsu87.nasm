@@ -25,7 +25,7 @@ section .text
 global __FSU87
 __FSU87:  ; Convert float in EAX to uint64_t in EDX:EAX.
 ; For OpenWatcom.
-	sub esp, byte 12
+	sub esp, byte 0xc
 	mov [esp], eax
 	fld dword [esp]
 	jmp short convert
@@ -33,7 +33,7 @@ __FSU87:  ; Convert float in EAX to uint64_t in EDX:EAX.
 global __FDU87
 __FDU87:  ; Convert double in EDX:EAX to uint64_t in EDX:EAX.
 ; For OpenWatcom.
-	sub esp, byte 12
+	sub esp, byte 0xc
 	mov [esp], eax
 	mov [esp+4], edx
 	fld qword [esp]
@@ -42,7 +42,7 @@ __FDU87:  ; Convert double in EDX:EAX to uint64_t in EDX:EAX.
 convert:
 	push ecx
 	fstp tword [esp+4]  ; get number out in memory
-	mov ax, [esp+12]  ; pick up sign/exponent
+	mov ax, [esp+0xc]  ; pick up sign/exponent
 	and ax, 0x7fff  ; isolate exponent
 	sub ax, 16383  ; remove bias
 	jl .ret_zero  ; if less than .5, return zero
@@ -64,7 +64,7 @@ convert:
 	neg eax  ; ...
 	sbb edx, byte 0  ; ...
 .done:	pop ecx  ; ...
-	add esp, byte 12  ; outta here
+	add esp, byte 0xc
 	ret  ; ...
 .ret_zero:
 	xor edx, edx
@@ -72,9 +72,9 @@ convert:
 	jmp .done
 
 .ret_inf:
-	mov edx, 0xffffffff
+	or edx, byte -1
 	mov eax, edx
-	jmp .done
+	jmp short .done
 
 %ifdef CONFIG_PIC  ; Already position-independent code.
 %endif
