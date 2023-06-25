@@ -118,7 +118,7 @@ for TF in "$@"; do
       MYDIRP="$DD" &&
       SRC="$DD"src && INCLUDE="$DD"libc/minilibc/include && TOOLS="$DD"tools &&
       NASM="$TOOLS"/nasm-0.98.39 && NDISASM="$TOOLS"/ndisasm-0.98.39 &&
-      AR="$TOOLS"/tiny_libmaker && TESTTCC="$TOOLS"/pts-tcc && TESTDIR=.. &&
+      AR="$TOOLS"/tiny_libmaker && TESTTCC="$TOOLS"/miniutcc && TESTDIR=.. &&
       unset DD RUNDIR && set -- && set -ex && . ../"${TF##*/}"); then
     let OKC+=1
     echo >&2  # Terminate possible partial line.

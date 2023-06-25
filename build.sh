@@ -85,8 +85,8 @@ for F in src/[a-zA-Z0-9_]*.nasm; do
      need_start.nasm) ;;
      need_uclibc_main.nasm) ;;
      tcc_*.nasm) ;;
-     stdio_medium_flush_opened.nasm) ;;  # We want special order in the .a file, for pts-tcc.
-     start_stdio_medium_linux.nasm) ;;  # We want special order in the .a file, for pts-tcc.
+     stdio_medium_flush_opened.nasm) ;;  # We want special order in the .a file, for miniutcc.
+     start_stdio_medium_linux.nasm) ;;  # We want special order in the .a file, for miniutcc.
      start_*.nasm) ;;
      smart.nasm) ;;  # Will be used in source form by smart linking, as libc/minilibc/smart.nasm.
      *.nasm) LA=1 ;;
@@ -128,8 +128,8 @@ done
 cp -a src/tcc_float.o src/tcc_bcheck.o build_tmp/
 
 # Order of these .o files in libmini[34]86.a is importan when linking with
-# pts-tcc, because these .o files contain weak symbols, and if they were
-# early, pts-tcc would pick them (and then use the weak symbols within,
+# miniutcc, because these .o files contain weak symbols, and if they were
+# early, miniutcc would pick them (and then use the weak symbols within,
 # rather than the full implementation in another .o file).
 #
 # TODO(pts): Does GNU ld(1) have the same behavior?

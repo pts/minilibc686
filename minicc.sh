@@ -29,7 +29,7 @@ if test "$1" = --sh-script; then  # This is the fast path.
   # The symlinks in $0 have already been resolved by the caller.
   # --noenv is for reproducible builds and testing: unset all environment
   # variables, and use a short hardcoded $PATH (`$MYDIR/ccshbin'). Toolchain
-  # tools (e.g. pts-tcc and ld) are always run from `$MYDIR/tools', no matter
+  # tools (e.g. miniutcc and ld) are always run from `$MYDIR/tools', no matter
   # the $PATH. System tools (such as with `--gcc=...') will be excplicitly
   # looked up on the old $PATH.
   test "$1" = --noenv && shift && exec env -i PATH="$MYDIR/ccshbin" TMPDIR="$TMPDIR" sh -- "$MYPROG" --sh-script --boxed-path "$PATH" "$@"
@@ -162,7 +162,7 @@ CMD=minicc
 case "$1" in
  "" | -* | *.[aocisShHCmMfFd] | *.c[cp] | *.[ch]pp | *.cxx | *.asm | *.[nw]asm | *.m[im] | *.mii | *.ii | *.c++ | *.[CH]PP | *.h[hp] | *.hxx | *.hpp | *.h++ | *.tcc | *.for | *.ftn | *.FOR | *.fpp | *.FPP | *.FTN | *.[fF][0-9][0-9] | *.go | *.brig | *.java | *.ad[sb] | *.d[id] | *.sx | *.obj) ;;  # A flag or a source file name is not a program name.
  .) ;;  # An escape to prevent the next source file from being interpreted as a compiler command.
- utcc) GCC=; TCC="$MYDIR"/tools/pts-tcc; USE_UTCC=1; shift ;;  # Same as: --utcc
+ utcc) GCC=; TCC="$MYDIR"/tools/miniutcc; USE_UTCC=1; shift ;;  # Same as: --utcc
  diet) LIBC=dietlibc; shift ;;  # Same as: --dietlibc
  xstatic) LIBC=uclibc; shift  ;;  # Same as: --uclibc. Please note that this is not perfect, some .a and .h files are missing from pts-xstatic.
  owcc) GCC="$MYDIR/tools/wcc386"; TCC=; shift ;;
@@ -172,10 +172,11 @@ case "$1" in
  busybox | uname | env) CMD="$MYDIR/shbin/$1"; shift ;;
  nasm | ndisasm) CMD="$MYDIR/tools/$1-0.98.39"; shift ;;
  ar) CMD="$MYDIR/tools/tiny_libmaker"; shift ;;
+ pts-tcc) CMD="$MYDIR/tools/miniutcc"; shift ;;
  as | ld | elfnostack | elfoxifx | elfxfix | mktmpf | omf2elf | wcc386 | tiny_libmaker) CMD="$MYDIR/tools/$1"; shift ;;
  tool)
   if test -z "$2"; then echo "fatal: missing tool name argument" >&2; exit 1; fi
-  CMD="$MYDIR/tools/$2"  # E.g. pts-tcc.
+  CMD="$MYDIR/tools/$2"  # E.g. miniutcc.
   shift; shift ;;
  *)
   BASENAME="${1##*/}"
@@ -256,11 +257,11 @@ for ARG in "$@"; do
    --gcc=*) TCC=; GCC="${ARG#*=}" ;;
    --wcc | --wcc386 | --watcom) GCC="$MYDIR/tools/wcc386"; TCC= ;;  # Specify --gcc=.../wcc386 to use a specific OpenWatcom compiler.
    --pcc) GCC="$MYDIR"/tools/pts-pcc; TCC= ;;
-   --tcc) GCC=; TCC="$MYDIR"/tools/pts-tcc ;;
+   --tcc) GCC=; TCC="$MYDIR"/tools/miniutcc ;;
    --tcc=*) GCC=; TCC="${ARG#*=}" ;;
-   --utcc) GCC=; TCC="$MYDIR"/tools/pts-tcc; USE_UTCC=1 ;;
+   --utcc) GCC=; TCC="$MYDIR"/tools/miniutcc; USE_UTCC=1 ;;
    --utcc=*) GCC=; TCC="${ARG#*=}"; USE_UTCC=1 ;;
-   --tccld) MINICC_LD="$MYDIR"/tools/pts-tcc ;;
+   --tccld) MINICC_LD="$MYDIR"/tools/miniutcc ;;
    --ld=* | --tccld=*) MINICC_LD="${ARG#*=}" ;;
    --minild) MINICC_LD="$MYDIR"/tools/ld ;;
    --gccld) MINICC_LD=///gcc ;;
@@ -401,8 +402,8 @@ if test "$USE_UTCC" && test "$DO_ADD_LIB"; then
     MINICC_LD="$TCC"
     IS_TCCLD=1
   fi
-  if test "${MINICC_LD%/pts-tcc}" = "$MINICC_LD"; then
-    # That's because ///tmp///LIBTCC1.a is embedded in the tools/pts-tcc executable.
+  if test "${MINICC_LD%/miniutcc}" = "$MINICC_LD"; then
+    # That's because ///tmp///LIBTCC1.a is embedded in the tools/miniutcc executable.
     echo "fatal: currently uClibc with --utcc needs --tccld; try --uclibc instead" >&2
     exit 1
   fi
@@ -686,7 +687,7 @@ NEED_LIBMINITCC1=
 if test "$DO_ADD_LIB"; then
   LIBWL=
   if test "$USE_UTCC"; then
-    LIBFN=///tmp///LIBTCC1.a  # Embedded in tools/pts-tcc.
+    LIBFN=///tmp///LIBTCC1.a  # Embedded in tools/miniutcc.
     if test "$DO_SMART" && test "$DO_SMART" != 0; then
       echo "fatal: --utcc doesn't support -msmart" >&2
       exit 3
@@ -762,7 +763,7 @@ if test "$DO_ADD_LIB"; then
   fi
   if test "$USE_UTCC"; then
     # OBJFN="$MYDIR/helper_lib/start_uclibc_linux.o"  # Not needed.
-    OBJFN="///tmp///crt1.o"  # Embedded in the tools/pts-tcc executable, same functionality as start_uclibc_linux.o.
+    OBJFN="///tmp///crt1.o"  # Embedded in the tools/miniutcc executable, same functionality as start_uclibc_linux.o.
     ARGS="$ARGS$NL$LIBWL$OBJFN"
   fi
 fi

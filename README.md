@@ -204,7 +204,7 @@ The following components are included in *minilibc686*:
   implementation of the function can be created by a C compiler (using
   soptcc.pl), and then manually optimized later
 
-* tools/pts-tcc: A self-contained, combined driver, C preprocessor, C
+* tools/miniutcc: A self-contained, combined driver, C preprocessor, C
   compiler, ELF-32 linker and libc in a single Linux i386 statically linked
   executable. The C compiler and linker is
   [TinyCC](https://bellard.org/tcc/) 0.9.26, and the libc is uClibc 0.9.30.1
@@ -241,8 +241,8 @@ The following components are included in *minilibc686*:
   GCC and Clang compilers installed onto the system, and it runs the
   compiler and the linker with many size-optimization flags, and it removes
   most unnecessary stuff from the final executable. In addition to these
-  compilers, it can use the bundled TinyCC compiler (`tools/pts-tcc`) (use the
-  `--tcc` flag).
+  compilers, it can use the bundled TinyCC compiler (`tools/miniutcc`) (use
+  the `--tcc` flag).
 
 * libc/dietlibc-0.34.sfx.7z: Self-extracting archive containing diet libc
   0.34 (released on 2018-09-24) (.h and .a files) targeting Linux i386,
@@ -473,7 +473,7 @@ Here is how to pick the compiler:
   automatically (using *wget* or *curl*) upon first use.
 * By default, *minicc* uses the the bundled OpenWatcom C compiler (released
   on 2023-03-04). You can specify it explicitly as `--watcom`.
-* To use the bundled TinyCC 0.9.26 compiler (`tools/pts-tcc`), specify
+* To use the bundled TinyCC 0.9.26 compiler (`tools/miniutcc`), specify
   `--tcc`.
 * To use the bundled PCC 1.1.0 compiler (`tools/pts-pcc`), specify `--pcc`.
 * To use one of the prepared versions of GCC 4.x, use any of:
@@ -501,7 +501,7 @@ Here is how to pick the linker:
 * To use the linker coming with the GCC (or Clang) used, specify `--gccld`.
   This will likely be GNU ld(1) or GNU gold(1) within GNU Binutils installed
   along with GCC.
-* To use the linker of the bundled TinyCC compiler (`tools/pts-tcc`),
+* To use the linker of the bundled TinyCC compiler (`tools/miniutcc`),
   specify `--tccld`.
 * To use the linker of another TinyCC compiler, run it with `--tccld=...`,
   specifying the TinyCC command.
@@ -850,7 +850,7 @@ This section is mostly an FYI, it doesn't affter minilibc686 users directly.
 
   FYI mark stack as nonexecutable in GNU as:
   `.section .note.GNU-stack,"",@progbits`
-* pts-tcc 0.9.26 (`pts-tcc -nostdlib`):
+* TinyCC 0.9.26 (`tools/miniutcc -nostdlib`):
   * (incorrect?!) It puts string contants (.rodata.str1.1) to .data (writable)
   * It aligns sections to 0x20 bytes.
   * It doesn't have -Wl,-e,_start to specify the entry point symbol.
@@ -874,10 +874,10 @@ This section is mostly an FYI, it doesn't affter minilibc686 users directly.
   * It requires some undefined symbols even if unused. For example,
     helper_lib/need_uclibc_main.o has `extern __uClibc_main', but
     __uClibc_main is not used in any relocation. GNU ld(1) and GNU gold(1)
-    do work without it, but pts-tcc fails with an undefined symbol.
+    do work without it, but miniutcc fails with an undefined symbol.
     GNU ld(1) still includes the .o file, but in the end it ignores
     undefined references which are not used in any relocations. This is the
-    behavior pts-tcc should copy.
+    behavior miniutcc should copy.
   * When linking against libc/eglibc-2.19/libc.i686.a, the generated
     executable segfaults at startup, even when symbol __gcc_personality_v0
     is defined. Is this bug because of buggy weak symbol handling?
