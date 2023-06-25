@@ -137,13 +137,13 @@ mini_strtol:  ; long mini_strtol(const char *nptr, char **endptr, int base);
 		cmp eax, edx
 		jb .no_overflow
 		jne .has_overflow
-		test cl, 1
+		test cl, 1  ; [var_minus].
 		jnz .no_overflow
 .has_overflow:	; Overflow would be indicated by setting errno := ERANGE, but we don't set it, because this libc doesn't support errno.
 		xchg eax, edx  ; EAX := 0x80000000; EDX := junk.
-		test cl, 1
-		jnz .done
-		dec eax
+		test cl, 1  ; [var_minus].
+		jnz .done  ; If negative, indicate overflow (actually underflow) as saturated -0x80000000.
+		dec eax  ; If nonnegative, indicate overflow as saturated 0x7fffffff.
 		jmp short .done
 .no_overflow:	test cl, 1
 		jz .done
