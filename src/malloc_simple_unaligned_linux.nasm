@@ -2,7 +2,7 @@
 ; written by pts@fazekas.hu at Tue May 16 18:44:34 CEST 2023
 ; Compile to i386 ELF .o object: nasm -O999999999 -w+orphan-labels -f elf -o malloc_simple_unaligned_linux.o malloc_simple_unaligned_linux.nasm
 ;
-; Code size: 0x7c bytes.
+; Code size: 0x85 bytes for i686, 0x86 bytes for i386.
 ;
 ; Uses: %ifdef CONFIG_PIC
 ;
@@ -10,7 +10,11 @@
 ;
 
 bits 32
+%ifdef CONFIG_I386
 cpu 386
+%else
+cpu 686
+%endif
 
 global mini_malloc_simple_unaligned
 %ifdef CONFIG_SECTIONS_DEFINED
@@ -48,7 +52,7 @@ mini_malloc_simple_unaligned:  ; void *mini_malloc_simple_unaligned(size_t size)
 ;         goto grow_heap;  /* TODO(pts): Reset base to NULL if we overflow below. */
 ;     }
 ;     while (size > (size_t)(end - free)) {  /* Double the heap size until there is `size' bytes free. */
-;         new_heap_size = (end - base) << 1;  /* !! TODO(pts): Don't allocate more than 1 MiB if not needed. */
+;         new_heap_size = (end - base) >= (1 << 20) ? (end - base) + (1 << 20) : (end - base) << 1;  /* Double it until 1 MiB. */
 ;       grow_heap:
 ;         if ((ssize_t)new_heap_size <= 0 || (size_t)base + new_heap_size < (size_t)base) return NULL;  /* Heap would be too large. */
 ;         if ((char*)sys_brk(base + new_heap_size) != base + new_heap_size) return NULL;  /* Out of memory. */
@@ -97,10 +101,17 @@ mini_malloc_simple_unaligned:  ; void *mini_malloc_simple_unaligned(size_t size)
 		mov [_malloc_simple_free], ebx
 		jmp short .17
 .21:		sub edx, [_malloc_simple_base]
-		xchg eax, edx  ; EAX := EDX; EDX := junk.
-		add eax, eax
-		test eax, eax
-		jg .9
+		mov eax, 1<<20  ; 1 MiB.
+		cmp edx, eax
+%ifdef CONFIG_I386
+		jnbe .22
+		mov eax, edx
+%else
+		cmovbe eax, edx
+%endif  ; else CONFIG_I386
+.22:		add eax, edx
+		test eax, eax  ; ZF=..., SF=..., OF=0.
+		jg .9  ; Jump iff ZF=0 and SF=OF=0. Why is this correct?
 .18:		xor eax, eax
 .17:		pop ebx
 		ret
