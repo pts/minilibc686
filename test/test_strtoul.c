@@ -55,5 +55,18 @@ int main(int argc, char **argv) {
   if (!expect("-4294967297", 0)) exit_code |= 1;
   if (!expect("-999999999", 0)) exit_code |= 1;
   if (!expect("-9999999999", 0)) exit_code |= 1;
+  if (!expect(" 9223372036854775807", 0)) exit_code |= 1;
+  if (!expect("9223372036854775808", 0)) exit_code |= 1;
+  if (!expect("+9223372036854775809", 0)) exit_code |= 1;
+  if (!expect("-9223372036854775807", 0)) exit_code |= 1;
+  if (!expect("-9223372036854775808", 0)) exit_code |= 1;
+  if (!expect("-9223372036854775809", 0)) exit_code |= 1;
+  if (!expect("-10223372036854775809", 0)) exit_code |= 1;
+  if (!expect("18446744073709551615", 0)) exit_code |= 1;
+  if (!expect("+18446744073709551616", 0)) exit_code |= 1;
+  if (!expect("18446744073709551617", 0)) exit_code |= 1;
+  if (!expect("-18446744073709551615", 0)) exit_code |= 1;
+  if (!expect("-18446744073709551616", 0)) exit_code |= 1;
+  if (!expect("-18446744073709551617", 0)) exit_code |= 1;
   return exit_code;
 }

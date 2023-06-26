@@ -1,24 +1,25 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-extern long mini_strtol(const char *nptr, char **endptr, int base);  /* Function under test. */
+extern unsigned long long mini_strtoull(const char *nptr, char **endptr, int base);  /* Function under test. */
 
 static char expect(const char *nptr, int base) {
   char *expected_endptr;
-  const int expected_value = strtol(nptr, &expected_endptr, base);
+  const unsigned long long expected_value = strtoull(nptr, &expected_endptr, base);
   const int expected_size = expected_endptr - nptr;
   char *endptr;
-  const int value = mini_strtol(nptr, &endptr, base);
+  const unsigned long long value = mini_strtoull(nptr, &endptr, base);
   int size = endptr - nptr;
-  const int value2 = mini_strtol(nptr, NULL, base);
+  const unsigned long long value2 = mini_strtoull(nptr, NULL, base);
   char is_ok = (value == expected_value && size == expected_size && value2 == expected_value);
-  printf("is_ok=%d str=(%s) base=%d expected_value=%d expected_size=%d value=%d size=%d value2=%d\n", is_ok, nptr, base, expected_value, expected_size, value, size, value2);
+  printf("is_ok=%d str=(%s) base=%d expected_value=%llu expected_size=%u value=%llu size=%d value2=%llu\n", is_ok, nptr, base, expected_value, expected_size, value, size, value2);
   return is_ok;
 }
 
 int main(int argc, char **argv) {
   int exit_code = 0;
   (void)argc; (void)argv;
+  if (!expect("  \t8", 0)) exit_code |= 1;
   if (!expect("  \t4567", 0)) exit_code |= 1;
   if (!expect("4567", 8)) exit_code |= 1;
   if (!expect("04567", 0)) exit_code |= 1;
@@ -43,6 +44,18 @@ int main(int argc, char **argv) {
   if (!expect("-2147483648", 0)) exit_code |= 1;
   if (!expect("-2147483649", 0)) exit_code |= 1;
   if (!expect("-3147483649", 0)) exit_code |= 1;
+  if (!expect("4294967294", 0)) exit_code |= 1;
+  if (!expect("+4294967295", 0)) exit_code |= 1;
+  if (!expect("4294967296", 0)) exit_code |= 1;
+  if (!expect("4294967297", 0)) exit_code |= 1;
+  if (!expect("9999999999", 0)) exit_code |= 1;
+  if (!expect("+999999999", 0)) exit_code |= 1;
+  if (!expect("-4294967294", 0)) exit_code |= 1;
+  if (!expect("-4294967295", 0)) exit_code |= 1;
+  if (!expect("-4294967296", 0)) exit_code |= 1;
+  if (!expect("-4294967297", 0)) exit_code |= 1;
+  if (!expect("-999999999", 0)) exit_code |= 1;
+  if (!expect("-9999999999", 0)) exit_code |= 1;
   if (!expect(" 9223372036854775807", 0)) exit_code |= 1;
   if (!expect("9223372036854775808", 0)) exit_code |= 1;
   if (!expect("+9223372036854775809", 0)) exit_code |= 1;
@@ -56,5 +69,6 @@ int main(int argc, char **argv) {
   if (!expect("-18446744073709551615", 0)) exit_code |= 1;
   if (!expect("-18446744073709551616", 0)) exit_code |= 1;
   if (!expect("-18446744073709551617", 0)) exit_code |= 1;
+  if (!expect("18446744073709551620", 0)) exit_code |= 1;
   return exit_code;
 }

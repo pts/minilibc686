@@ -22,9 +22,12 @@ __LIBC_FUNC(void, srand, (unsigned seed), __LIBC_NOATTR);
 /* Limitation: they don't set errno on overflow in minilibc686. */
 __LIBC_FUNC(long, strtol, (const char *nptr, char **endptr, int base), __LIBC_NOATTR);
 __LIBC_FUNC(unsigned long, strtoul, (const char *nptr, char **endptr, int base), __LIBC_NOATTR);
+__LIBC_FUNC(__extension__ long long, strtoll, (const char *nptr, char **endptr, int base), __LIBC_NOATTR);
+__LIBC_FUNC(__extension__ unsigned long long, strtoull, (const char *nptr, char **endptr, int base), __LIBC_NOATTR);
 
-__LIBC_FUNC(int,  atoi, (const char *nptr), __LIBC_NOATTR);
-__LIBC_FUNC(long, atol, (const char *nptr), __LIBC_NOATTR);
+__LIBC_FUNC(int,       atoi,  (const char *nptr), __LIBC_NOATTR);
+__LIBC_FUNC(long,      atol,  (const char *nptr), __LIBC_NOATTR);
+__LIBC_FUNC(__extension__ long long, atoll, (const char *nptr), __LIBC_NOATTR);
 
 /* Limitation: they don't set errno on overflow in minilibc686. */
 __LIBC_FUNC(float, strtof, (const char *nptr, char **endptr), __LIBC_NOATTR);

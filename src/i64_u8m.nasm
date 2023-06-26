@@ -24,7 +24,7 @@ section .bss align=1
 
 section .text
 ; For OpenWatcom.
-__U8M:
+__U8M:  ; Multiplies (sign doesn't matter) EDX:EAX by ECX:EBX, stores the product in EDX:EAX.
 __I8M:
 		test edx, edx
 		jne .1

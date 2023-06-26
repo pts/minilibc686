@@ -1,18 +1,18 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-extern long mini_strtol(const char *nptr, char **endptr, int base);  /* Function under test. */
+extern long long mini_strtoll(const char *nptr, char **endptr, int base);  /* Function under test. */
 
 static char expect(const char *nptr, int base) {
   char *expected_endptr;
-  const int expected_value = strtol(nptr, &expected_endptr, base);
+  const long long expected_value = strtoll(nptr, &expected_endptr, base);
   const int expected_size = expected_endptr - nptr;
   char *endptr;
-  const int value = mini_strtol(nptr, &endptr, base);
+  const long long value = mini_strtoll(nptr, &endptr, base);
   int size = endptr - nptr;
-  const int value2 = mini_strtol(nptr, NULL, base);
+  const long long value2 = mini_strtoll(nptr, NULL, base);
   char is_ok = (value == expected_value && size == expected_size && value2 == expected_value);
-  printf("is_ok=%d str=(%s) base=%d expected_value=%d expected_size=%d value=%d size=%d value2=%d\n", is_ok, nptr, base, expected_value, expected_size, value, size, value2);
+  printf("is_ok=%d str=(%s) base=%d expected_value=%lld expected_size=%d value=%lld size=%d value2=%lld\n", is_ok, nptr, base, expected_value, expected_size, value, size, value2);
   return is_ok;
 }
 
@@ -56,5 +56,12 @@ int main(int argc, char **argv) {
   if (!expect("-18446744073709551615", 0)) exit_code |= 1;
   if (!expect("-18446744073709551616", 0)) exit_code |= 1;
   if (!expect("-18446744073709551617", 0)) exit_code |= 1;
+  if (!expect("18446744073709551620", 0)) exit_code |= 1;
+  if (!expect("9223372036854775807", 0)) exit_code |= 1;
+  if (!expect("9223372036854775808", 0)) exit_code |= 1;
+  if (!expect("9223372036854775809", 0)) exit_code |= 1;
+  if (!expect("-9223372036854775807", 0)) exit_code |= 1;
+  if (!expect("-9223372036854775808", 0)) exit_code |= 1;
+  if (!expect("-9223372036854775809", 0)) exit_code |= 1;
   return exit_code;
 }
