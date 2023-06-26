@@ -711,6 +711,26 @@ you can run `./test.sh` without having to install anything.
 Assembly source files `src/*.nasm` are under the MIT license. Everything
 else is under GPL v2 (GNU General Public License, Version 2).
 
+## Projects that compile with minilibc686
+
+* Various C source files in the [tools directory of the
+  minilibc686](https://github.com/pts/minilibc686/tree/master/tools) source
+  tree.
+
+* [pts-tiny-7z-sfx](https://github.com/pts/pts-tiny-7z-sfx/blob/master/c-minilibc686.sh),
+  a .7z (self-)extractor.
+
+* [mininasm](https://github.com/pts/mininasm), a NASM-compatible mini
+  assembler for 16-bit x86 targets.
+
+* A [patched TinyCC (TCC)
+  0.9.26](https://github.com/pts/pts-tcc/blob/master/compile_mini_minilibc686.sh).
+
+* A [port of PNGOUT](https://github.com/pts/pts-pngout-20150319-i386) (PNG
+  compressor with very small output fies). The actual libc NASM sources are
+  embedded into the
+  [pngouta.nasm](https://github.com/pts/pts-pngout-20150319-i386) file.
+
 ## PCC history
 
 Development history:
