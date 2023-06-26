@@ -945,5 +945,7 @@ This section is mostly an FYI, it doesn't affter minilibc686 users directly.
 * diet libc gmtime is buggy for negative time_t values, see test/test_gmtime.c.
 * Run tools/as manually on a .s source file. This makes --pcc succedd and also
   removes -D... warnings for --gcc=clang.
+* Disable or redirect minilibc686 functions with `long double' for
+  OpenWatcom. With OpenWatcom, `long double' is the same as `double'.
 
 __END__
