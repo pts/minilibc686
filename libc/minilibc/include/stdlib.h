@@ -6,6 +6,9 @@
 
 #define NULL ((void*)0)
 
+#define EXIT_SUCCESS 0
+#define EXIT_FAILURE 1
+
 __LIBC_VAR(extern char **, environ);
 #ifdef __WATCOMC__  /* There is no other way with `wcc386 -za'. */
 #  pragma aux environ "_mini_*"
