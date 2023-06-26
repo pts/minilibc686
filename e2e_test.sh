@@ -49,6 +49,7 @@ cmp demo_hello_linux_snprintf.prog demo_hello_linux_snprintf.prog2
 "$MYDIR"/test.sh
 
 set +ex
+ls -ld demo_hello_linux_printf.prog demo_hello_linux_snprintf.prog
 cd ..
 export PATH=shbin
 rm -rf e2e_test_tmp
