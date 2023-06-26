@@ -27,11 +27,14 @@
 /* These fields must be __LIBC_PACKED for amd64, because the default
  * alignment for `long long' is 8 there. __PCC__ fails with in internal
  * error `strmemb' if we add __LIBC_PACKED here.
+ *
+ * The struct matches glibc 2.2 and Linux i386 stat64(2). The padding around
+ * st_dev and st_drev is useless, but this is how it was used in glibc 2.2.
  */
 __LIBC_PACKED_STRUCT struct stat64 {
   __extension__ unsigned long long st_dev;
   unsigned char __pad0[4];
-  unsigned long __st_ino;
+  unsigned long __st_ino;  /* Unused, see st_ino below. */
   unsigned int  st_mode;
   unsigned int  st_nlink;
   unsigned long st_uid;
