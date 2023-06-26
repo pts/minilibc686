@@ -1,0 +1,2 @@
+_utcc_nasm2 ffsll.nasm -o test_ffsll.prog "$TESTDIR"/test_ffsll.c
+./test_ffsll.prog

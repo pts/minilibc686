@@ -32,4 +32,8 @@ __LIBC_FUNC(char *, memchr, (const char *s, int c, size_t n), __LIBC_NOATTR);
   /*__LIBC_FUNC(void, memswap, (void *a, void *b, size_t size), __LIBC_NOATTR);*/  /* Also present in the .a library, but the other one is recommended. It's also used by mini_qsort_fast(...). */
 #endif  /* __MINILIBC686__ */
 
+__LIBC_FUNC(int, ffs, (int i), __LIBC_NOATTR);
+__LIBC_FUNC(int, ffsl, (long i), __LIBC_NOATTR);
+__LIBC_FUNC(__extension__ int, ffsll, (long long i), __LIBC_NOATTR);
+
 #endif  /* _STRING_H */
