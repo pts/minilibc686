@@ -19,6 +19,7 @@ __LIBC_FUNC(__LIBC_NORETURN void, abort, (void), __LIBC_NOATTR);   /* Doesn't fl
 
 __LIBC_FUNC(char *, getenv, (const char *name), __LIBC_NOATTR);
 
+#define RAND_MAX 0x7fffffff
 __LIBC_FUNC(int, rand, (void), __LIBC_NOATTR);
 __LIBC_FUNC(void, srand, (unsigned seed), __LIBC_NOATTR);
 

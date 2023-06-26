@@ -1,4 +1,5 @@
 ;
+; based on https://github.com/cloudius-systems/musl/blob/00733dd1cf791d13ff6155509cf139a5f7b2eecb/src/prng/rand.c
 ; Manually optimized for size based on the output of soptcc.pl for c_rand.c.
 ; Compile to i386 ELF .o object: nasm -O999999999 -w+orphan-labels -f elf -o rand.o rand.nasm
 ;
@@ -22,6 +23,8 @@ section .rodata align=1
 section .data align=1
 section .bss align=1
 %endif
+
+RAND_MAX equ 0x7fffffff
 
 section .text
 mini_srand:
