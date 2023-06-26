@@ -1,2 +1,3 @@
-_utcc_nasm2 ffsll.nasm -o test_ffsll.prog "$TESTDIR"/test_ffsll.c
+_nasm2 i64_ffsdi2.nasm
+_utcc_nasm2 ffsll.nasm -o test_ffsll.prog "$TESTDIR"/test_ffsll.c i64_ffsdi2.o
 ./test_ffsll.prog

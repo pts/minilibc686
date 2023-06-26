@@ -1219,6 +1219,13 @@ mini_putchar_RP3:  ; int REGPARM3 mini_putchar_RP3(int c);
   %endif
 %endif
 
+%ifdef __NEED_mini_ffsll
+  %ifdef __NEED___ffsdi2
+    %define CONFIG_FFSLL_ALSO_FFSDI2  ; Define both mini_ffsll(...) and __ffsdi2(...).
+    %include "src/ffsll.nasm"
+  %endif
+%endif
+
 ; Helpfully %include some needed minilibc686 source files.
 ; demo_hello_linux_printf.nasm relies on this.
 %ifidn __OUTPUT_FORMAT__, bin

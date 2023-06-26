@@ -12,9 +12,9 @@ int ffsll(long long i) {
 static char expect(long long i) {
   const int expected_value = ffsll(i);
   const int value = mini_ffsll(i);
-  const int value2 = __i64_ffsdi2(i);
-  char is_ok = (value == expected_value);
-  printf("is_ok=%d i=%lld expected_value=%d value=%d\n", is_ok, i, expected_value, value);
+  const int value2 = __ffsdi2(i);
+  char is_ok = (value == expected_value && value2 == expected_value);
+  printf("is_ok=%d i=%lld expected_value=%d value=%d value2=%d\n", is_ok, i, expected_value, value, value2);
   return is_ok;
 }
 
