@@ -387,8 +387,9 @@ Design limitations:
   single thread.
 * No debugging support.
 * No profiling support.
-* No errno. The return value indicate failure as usual, but more specific
-  error code is not available.
+* No errno for libc functions. libc functions strtol(3) and strtod(3) don't
+  set errno. Syscall wrappers (even when called from libc functions) do set
+  it.
 * No locale support: isalpha(3), tolower(3), strncasecmp(3) etc. are
   ASCII-only (equivalent of LC_ALL=C).
 * No wide character support, only the 8-bit string functions are provided.
@@ -398,13 +399,18 @@ Design limitations:
 * No stack protection.
 * No speed optimizations, code is optimized for size.
 * Building as a shared library (*.so, *.dylib, *.dll) is not supported.
-* Only the cdecl calling convention is supported.
+* Only the cdecl calling convention is supported. (This can be relaxed in
+  the future: most libc functions will still use cdecl, but the user can
+  write their functions in using any calling convention.)
 * No autodetection of needed features, the user has to pick the individual
   function from the alternatives provided.
-* No minimalist, tiny executable linking built in. To build an executable,
-  the user has to use external C compilers, linkers and build
-  configurations.
-* File offsets (off_t) are 32-bit. (This can be relaxed later.)
+* File offsets (off_t) for files opened with fopen(3) are 32-bit, maximum
+  file size that can be opened is 2 GiB - 1 byte. (This can be relaxed
+  later.) For files opened with open(2) (with `O_LARGEFILE` set), the
+  lseek64(3) function is provided.
+* No C++, Objective C or Objective C++ support. (Maybe in the future C++
+  code will be allowed with `-fno-rtti -fno-excepions`, and also without any
+  STL.)
 
 An end-to-end demo for building a printf-hello-world program in NASM
 assembly with minilibc686, targeting Linux i386 32-bit ELF (actually i686
@@ -423,9 +429,8 @@ compiler frontend is preferred (to the shell script
 
 Please note that minilibc686 is currently not ready as a general libc
 replacement for Linux, mostly because most of the functions haven't been
-written yet, and there is no good linker provided yet. (The linkers of GCC,
-Clang and TinyCC work, but they are not particularly impressive, because
-they add some boilerplate which cannot be disabled.)
+written yet. If you need more functions, try `minicc --diet` or `minicc
+--uclibc`.
 
 ## minicc
 
