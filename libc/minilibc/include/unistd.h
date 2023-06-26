@@ -9,6 +9,12 @@
 #define SEEK_CUR 1
 #define SEEK_END 2
 
+/* access(...) constants. */
+#define F_OK 0
+#define X_OK 1
+#define W_OK 2
+#define R_OK 4
+
 #define STDIN_FILENO 0
 #define STDOUT_FILENO 1
 #define STDERR_FILENO 2
@@ -41,6 +47,7 @@ __LIBC_FUNC(void *, sys_brk, (void *addr), __LIBC_NOATTR);
 __LIBC_FUNC(int, execve, (const char *filename, char *const argv[], char *const envp[]), __LIBC_NOATTR);
 __LIBC_FUNC(ssize_t, readlink, (const char *pathname, char *buf, size_t bufsiz), __LIBC_NOATTR);
 __LIBC_FUNC(char *, getcwd, (char *buf, size_t size), __LIBC_NOATTR);  /* Limitation: if argument buf is NULL, then it returns NULL, it doesn't allocate memory dynamically. */
+__LIBC_FUNC(int, access, (const char *name, int type), __LIBC_NOATTR);
 
 static __inline__ int getpagesize(void) { return 0x1000; }  /* The .a file also contains mini_getpagesize(...), for binary compatibility. */
 #ifdef __MINILIBC686__
