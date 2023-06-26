@@ -44,18 +44,22 @@ __LIBC_FUNC(long double, strtold, (const char *nptr, char **endptr), __LIBC_NOAT
       void *malloc(size_t size);
       void *realloc(void *ptr, size_t size);
       void free(void *ptr);
+      void *calloc(size_t nmemb, size_t size);
 #      pragma aux malloc "_mini_malloc_mmap"
 #      pragma aux realloc "_mini_realloc_mmap"
 #      pragma aux free "_mini_free_mmap"
+#      pragma aux calloc "_mini_calloc_mmap"
 #    else
       void *malloc(size_t size) __asm__("mini_malloc_mmap");
       void *realloc(void *ptr, size_t size) __asm__("mini_realloc_mmap");
       void free(void *ptr) __asm__("mini_free_mmap");
+      void *calloc(size_t nmemb, size_t size) __asm__("mini_calloc_mmap");
 #    endif
 #  else
     __LIBC_FUNC(void *, malloc, (size_t size), __LIBC_NOATTR);
     __LIBC_FUNC(void *, realloc, (void *ptr, size_t size), __LIBC_NOATTR);
     __LIBC_FUNC(void, free, (void *ptr), __LIBC_NOATTR);
+    __LIBC_FUNC(void *, calloc, (size_t nmemb, size_t size), __LIBC_NOATTR);
 #  endif
 #endif
 
