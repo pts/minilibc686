@@ -671,7 +671,11 @@ test "$OUTFILE" && OUTFILE_ARG="-o$NL$OUTFILE"
 if test "$TCC"; then
   # TODO(pts): Does TCC really generate i386-only code?
   # We don't pass $ANSIFLAG, because TCC 0.9.26 would fail for it.
-  ARGS="$TCC$NL-m32$NL-march=$ARCH$NL-static$NL-nostdlib$NL-nostdinc$NL$SFLAG$NL$OFLAG_ARGS$NL$WFLAGS$NL$DEF_ARG$NL$ARGS$NL$INCLUDEDIR_ARG$NL$OUTFILE_ARG"
+  case "$ANSIFLAG" in  # TinyCC 0.9.26 doesn't support -ansi or -std=*.
+   -std=c* | -ansi) ANSIFLAG=-D__STRICT_ANSI__ ;;
+   *) ANSIFLAG= ;;
+  esac
+  ARGS="$TCC$NL-m32$NL-march=$ARCH$NL-static$NL-nostdlib$NL-nostdinc$NL$SFLAG$NL$OFLAG_ARGS$NL$ANSIFLAG$NL$WFLAGS$NL$DEF_ARG$NL$ARGS$NL$INCLUDEDIR_ARG$NL$OUTFILE_ARG"
 else
   # This also works with TCC, but it's too much cruft.
   # Add $INCLUDEDIR_ARG last, so that -I... specified by the user takes precedence. !! TODO(pts): Does GCC do this or the opposite?
