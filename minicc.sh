@@ -897,7 +897,7 @@ if test "$GCC" || test -z "$IS_TCCLD"; then
        -mno-autosym) WAUTOSYMFLAG=-zls ;;  # minicc-specific.
        -mautosym) WAUTOSYMFLAG= ;;  # minicc-specific.
        -fsigned-char | -fno-unsigned-char) WJFLAG=-j ;;
-       -fno-signed-char | -funsigned-char) WJFLAG= ;;
+       -fno-signed-char | -funsigned-char) WJFLAG=-D__CHAR_UNSIGNED__ ;;  # For GCC compatibility.
        -finline-fp-rounding) WARGS="$WARGS$NL-zri" ;;  # To prevent the call to __CHP.
        -march=i386) WARGS="$WARGS$NL-3r" ;;
        -march=i686) WARGS="$WARGS$NL-6r" ;;  # !! TODO(pts): Does it generate larger code? Then change the default with -Os.
