@@ -1,0 +1,17 @@
+No luck in building a cross compiler with https://buildroot.org/
+
+http://crosstool-ng.org/download/crosstool-ng/
+http://crosstool-ng.org/download/crosstool-ng/crosstool-ng-1.22.0.tar.xz
+  released 2015-11-20
+  GCC 4.8.5, 4.9.3 (not the latest 4.9.x), 5.2.0
+
+# ctosstool-ng:
+./configure && make && sudo make install
+
+mkdir build
+cd build
+ct-ng menuconfig
+ct-ng build
+# All settings are in build/.config
+
+__END__
