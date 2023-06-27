@@ -274,6 +274,14 @@ for ARG in "$@"; do
    -static | -m32 | -fno-pic | -fno-PIC | -fno-pie | -fno-PIE | -no-pie | -nostartfiles | -Bstatic | -dn | -non_shared | -static-libgcc | -fplt | -fno-plt | -fno-use-linker-plugin | -no-cacnonical-prefixes | --no-sysroot-suffix) ;;
    -fno-lto) ;;  # Passing it to compiling gcc(1) or GCC cc1 doesn't seem to make a difference in the output .s file. So we just omit it for simplicity.
    -flto | -fuse-linker-plugin) echo "fatal: unsupported LTO flag: $ARG" >&2; exit 1 ;;  # LTO is link-time optimization.
+   -fno-stack-protector | -fno-stack-check)
+    # minicc and minilibc686 default: `gcc -fno-stack-protector', `owcc
+    # -fno-stack-check'. Also related to -U_FORTIFY_SOURCE. OpenWatcom has
+    # __STK, PCC has __stack_chk_fail and __stack_chk_guard, TinyCC doesn't
+    # have anything, GCC and Clang have some version-specific
+    # implementation.
+    ;;
+   -fstack-protector | -fstack-protector-*) echo "fatal: stack protector flag: $ARG" >&2; exit 1 ;;  # Not supported by minicc or minilibc686.
    -fno-rtti | -fno-exceptions | -nostdinc++) ;;  # Ignore some C++ flags. minicc otherwise doesn't support C++.
    -shared | -dynamic | -Bshared | -Bdynamic | -Bshareable | -rpath* | -dy | -call-shared | -shared-libgcc | -rdynamic) echo "fatal: unsupported shared library flag: $ARG" >&2; exit 1 ;;
    --sysroot | --sysroot= | -B | -B* | --gcc-toolchain | --gcc-toolchain | -target | -target=* | -sysld*) echo "fatal: unsupported toolchain flag: $ARG" >&2; exit 1 ;; # These are GCC and/or clang flags.
@@ -892,8 +900,8 @@ if test "$GCC" || test -z "$IS_TCCLD"; then
        -fstrict-aliasing) WAFLAG= ;;
        -fno-strict-aliasing) WAFLAG=-oa ;;
        -U_FORTIFY_SOURCE) ;;
-       -fno-stack-protector) WSFLAG=-s ;;
-       -fstack-protector) WSFLAG= ;;
+       -fno-stack-protector | -fno-stack-check) WSFLAG=-s ;;
+       #-fstack-protector) WSFLAG= ;;  # TODO(pts): Add libc support (__STK function).
        -mno-autosym) WAUTOSYMFLAG=-zls ;;  # minicc-specific.
        -mautosym) WAUTOSYMFLAG= ;;  # minicc-specific.
        -fsigned-char | -fno-unsigned-char) WJFLAG=-j ;;
