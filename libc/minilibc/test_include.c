@@ -7,6 +7,7 @@
 #include <stdarg.h>
 #include <stdarg_internal.h>
 #include <stddef.h>
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
