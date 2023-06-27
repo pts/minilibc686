@@ -2,7 +2,7 @@
  * elfxfix: do various fixes on ELF executables
  * by pts@fazekas.hu at Wed May 24 02:20:35 CEST 2023
  *
- * Compile: ./minicc --noenv --gcc=4.8 -o tools/elfxfix.new tools/elfxfix.c
+ * Compile: minicc --noenv --gcc=4.8 -o tools/elfxfix.new tools/elfxfix.c
  */
 
 #include <fcntl.h>
@@ -86,7 +86,7 @@ typedef struct {
 
 #if 0
 const unsigned bss_o_bss_size_idx = 0x20;
-static Elf32_Off bss_o[] = {  /* ELF-32 .o file containing a .bss of the specified size. */
+static Elf32_Off bss_o[] = {  /* ELF-32 .o file containing data of a specific specified size in section .bss. */
     CHR4(0x7f, 'E', 'L', 'F'), 0x10101, 0, 0, 0x30001, 1, 0, 0, 0x44, 0,
     0x34, 0x280000, 0x20003,
     CHR4(0, '.', 's', 'h'), CHR4('s', 't', 'r', 't'), CHR4('a', 'b', 0, '.'),
@@ -94,10 +94,10 @@ static Elf32_Off bss_o[] = {  /* ELF-32 .o file containing a .bss of the specifi
     0 /* EXTRA_BSS_SIZE */, 0, 0, 1, 0, 1, 3, 0, 0, 0x34, 0x10, 0, 0, 1, 0};
 /* This doesn't work well with the `-r' flag, because the user of the `-r'
  * flag assumes that the extra size was added to the end of .bss. But common
- * symbols come even later, so to get really he end, add a common symbol
+ * symbols come even later, so to get really the end, add a common symbol
  * instead, which we do below.
  */
-#else
+#elif 0
 const unsigned bss_o_bss_size_idx = 0x13;
 static Elf32_Off bss_o[] = {  /* ELF-32 .o file containing a common symbol named .linkpad of the specified size. */
     CHR4(0x7f, 'E', 'L', 'F'), 0x010101, 0, 0, 0x030001, 1, 0, 0, 0x7c, 0,
@@ -109,6 +109,19 @@ static Elf32_Off bss_o[] = {  /* ELF-32 .o file containing a common symbol named
     CHR4('r', 't', 'a', 'b'), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 0, 0,
     0x34, 0x20, 2, 1, 4, 0x10, 9, 3, 0, 0, 0x54, 0xa, 0, 0, 1, 0, 0x11, 3, 0,
     0, 0x5e, 0x1b, 0, 0, 1, 0};
+/* This still doesn't work 100% in EGLIBC and glibc, because its .o files
+ * have .bss-like (nobits) section __libc_freeres_ptrs, which GNU ld(1) adds
+ * after .bss. So to get really the end, we add our own .bss-like section
+ * later in lexicographic ordering (~~~~) below.
+ */
+#else
+const unsigned bss_o_bss_size_idx = 0x20;
+static Elf32_Off bss_o[] = {  /* ELF-32 .o file containing data of a specific specified size in section ~~~~ (similar to .bss). */
+    CHR4(0x7f, 'E', 'L', 'F'), 0x10101, 0, 0, 0x30001, 1, 0, 0, 0x44, 0,
+    0x34, 0x280000, 0x20003,
+    CHR4(0, '.', 's', 'h'), CHR4('s', 't', 'r', 't'), CHR4('a', 'b', 0, '~'),
+    CHR4('~', '~', '~', 0), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xb, 8, 3, 0, 0x34,
+    0 /* EXTRA_BSS_SIZE */, 0, 0, 1, 0, 1, 3, 0, 0, 0x34, 0x10, 0, 0, 1, 0};
 #endif
 
 int main(int argc, char **argv) {
