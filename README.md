@@ -814,13 +814,13 @@ Individual GCC release dates and notes:
 * as-2.22: 2011-11-21, GNU as(1) assembler, part of GNU Binutils, this release was built for host i686 on 2013-12-14
 * cc1-4.1.2: 2007-02-13, found in https://www.uclibc.org/downloads/binaries/0.9.30.1/cross-compiler-i686.tar.bz2
 * cc1-4.2.1: 2007-07-18, found in https://landley.net/aboriginal/downloads/binaries/cross-compiler-i686.tar.gz
-* cc1-4.3.6: 2011-06-27, this release was built for host i686 with crosstool-ng-1.4.2 on 2023-06-07
-* cc1-4.4.7: 2012-03-13, this release was built for host i686 with crosstool-ng-1.4.2 on 2023-06-07, Ubuntu 10.04 has GCC 4.4.4.
-* cc1-4.5.4: 2012-07-02, this release was built for host i686 with crosstool-ng-1.4.2 on 2023-06-07
-* cc1-4.6.4: 2013-04-12, this release was built for host i686 with crosstool-ng-1.4.2 on 2023-06-07, Ubuntu 12.04 has GCC 4.6.3.
-* cc1-4.7.4: 2014-06-12, this release was built for host i686 with crosstool-ng-1.4.2 on 2023-06-07
-* cc1-4.8.5: 2015-06-23, this release was built for host i686 with crosstool-ng-1.4.2 on 2023-06-07; Ubuntu 14.04 has GCC 4.8.4.
-* cc1-4.9.3: 2015-06-26, this release was built for host i686 with crosstool-ng-1.4.2 on 2023-06-07
+* cc1-4.3.6: 2011-06-27, this release was built for host i686 with crosstool-ng-1.22.0 on 2023-06-07
+* cc1-4.4.7: 2012-03-13, this release was built for host i686 with crosstool-ng-1.22.0 on 2023-06-07, Ubuntu 10.04 has GCC 4.4.4.
+* cc1-4.5.4: 2012-07-02, this release was built for host i686 with crosstool-ng-1.22.0 on 2023-06-07
+* cc1-4.6.4: 2013-04-12, this release was built for host i686 with crosstool-ng-1.22.0 on 2023-06-07, Ubuntu 12.04 has GCC 4.6.3.
+* cc1-4.7.4: 2014-06-12, this release was built for host i686 with crosstool-ng-1.22.0 on 2023-06-07
+* cc1-4.8.5: 2015-06-23, this release was built for host i686 with crosstool-ng-1.22.0 on 2023-06-07; Ubuntu 14.04 has GCC 4.8.4.
+* cc1-4.9.3: 2015-06-26, this release was built for host i686 with crosstool-ng-1.22.0 on 2023-06-07
 
 Please note that no other files (such as the *cc1plus* C++ compiler, the
 *gcc* frontend tool, the *ld* linker, .h files, libc static library .a
