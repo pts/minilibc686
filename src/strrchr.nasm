@@ -5,6 +5,7 @@
 ; Code size: 0x1a bytes. The i686 version isn't shorter either, but it's a bit faster.
 
 ; Uses: %ifdef CONFIG_PIC
+; Uses: %ifdef CONFIG_I386
 ;
 
 bits 32
