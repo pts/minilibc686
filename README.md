@@ -856,9 +856,11 @@ prog prog.c`. *minicc* will download these executables from here for you.
   `float _Complex ffc(void) { return 5 + 6i; }
 * PCC aligns functions to a multiple of 4, with `nop` (0x90), `o16 nop`
   (0x66, 0x90) and `lea esi, [esi]` (0x8d, 0x76, 0x00).
-* functions returning a struct: PCC and GCC expect the callee to remove the
-  return value pointer from the stack, OpenWatcom and miniutcc before
-  0.9.26-2 expect the caller to do it.
+* functions returning a struct: GCC, PCC and miniutcc >= 0.9.26-2 expect the
+  callee to remove the return value pointer from the stack, OpenWatcom and
+  miniutcc before 0.9.26-2 expect the caller to do it. Conclusion: don't
+  return a struct from a function if you want binary compatibility with
+  OpenWatcom. minilibc686 doesn't have such a libc function.
 
 ## Linker problems
 

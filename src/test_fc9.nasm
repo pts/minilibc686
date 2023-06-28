@@ -31,8 +31,8 @@ mini___M_test_fc9:  ; c9 mini___M_test_fc9(void);
 		mov eax, [esp+4]
 		mov byte [eax+1], 11
 		mov byte [eax+8], 88
-		ret  ; This was correct for pts-tcc before 0.9.26-2. It's also correct for OpenWatcom.
-		;ret 4  ; Correct for GCC, PCC and pts-tcc (TinyCC) >=0.9.26-2.
+		;ret  ; This was correct for pts-tcc before 0.9.26-2. It's also correct for OpenWatcom.
+		ret 4  ; Correct for GCC, PCC and pts-tcc (TinyCC) >=0.9.26-2.
 
 %ifdef CONFIG_PIC  ; Already position-independent code.
 %endif
