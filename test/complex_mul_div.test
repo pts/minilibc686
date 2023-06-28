@@ -1,0 +1,7 @@
+OBJS='float_muldc3.o float_mulsc3.o float_mulxc3.o float_divdc3.o float_divsc3.o float_divxc3.o'
+_nasm2 $OBJS
+_utcc -o test_complex_mul_div.prog "$TESTDIR"/test_complex_mul_div.c $OBJS
+./test_complex_mul_div.prog
+_nasm -DCONFIG_I386 $OBJS
+_utcc -o test_complex_mul_div_i386.prog "$TESTDIR"/test_complex_mul_div.c $OBJS
+./test_complex_mul_div_i386.prog
