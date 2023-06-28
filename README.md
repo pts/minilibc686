@@ -850,6 +850,15 @@ prog prog.c`. *minicc* will download these executables from here for you.
   compared to GCC (4.8 and 7.5.0).
 * TCC 0.9.26 has an assembler (for .s and .S input files), but it doesn't
   optimize jump sizes.
+* GCC returns `float _Complex` values EAX (real) and EAX (imaginary). GCC >=
+  4.7 generates suboptimal code: `mov eax, [...]` + `mov edx, ...`. GCC 4.6
+  still generates `mov eax, ...` + `mov edx, ...`. Example source:
+  `float _Complex ffc(void) { return 5 + 6i; }
+* PCC aligns functions to a multiple of 4, with `nop` (0x90), `o16 nop`
+  (0x66, 0x90) and `lea esi, [esi]` (0x8d, 0x76, 0x00).
+* functions returning a struct: PCC and GCC expect the callee to remove the
+  return value pointer from the stack, OpenWatcom and miniutcc before
+  0.9.26-2 expect the caller to do it.
 
 ## Linker problems
 
@@ -947,5 +956,7 @@ This section is mostly an FYI, it doesn't affter minilibc686 users directly.
   removes -D... warnings for --gcc=clang.
 * Disable or redirect minilibc686 functions with `long double' for
   OpenWatcom. With OpenWatcom, `long double' is the same as `double'.
+* Add `-fno-ident` to PCC.
+* Add `-falign-functions=1` to PCC.
 
 __END__
