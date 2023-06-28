@@ -10,8 +10,15 @@
 /* long works for both __i386__ and __amd64__. */
 typedef unsigned long size_t;
 typedef int long ssize_t;
-ssize_t mini_write(int fd, const void *buf, size_t count);
-size_t mini_strlen(const char *s);
+#ifdef __UCLIBC__
+  ssize_t write(int fd, const void *buf, size_t count);
+  size_t strlen(const char *s);
+  #define mini_write write
+  #define mini_strlen strlen
+#else
+  ssize_t mini_write(int fd, const void *buf, size_t count);
+  size_t mini_strlen(const char *s);
+#endif
 
 static long long parse_ll_dec(const char *p) {
   long long result = 0;
