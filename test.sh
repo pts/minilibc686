@@ -32,30 +32,33 @@ export LC_ALL=C  # For consistency. With Busybox we don't need it, because the e
 _utcc() { "$TESTTCC" -s -Os -W -Wall -Werror=implicit-function-declaration -nostdinc -I"$INCLUDE" -D"__asm__(x)=" -D__UCLIBC__ "$@"; }
 _mtcc() { "$TESTTCC" -s -Os -W -Wall -Werror=implicit-function-declaration -nostdlib -nostdinc -I"$INCLUDE" -D__MINILIBC686__ "$@"; }
 _nasm() {
-  local FNASM FBASE
+  local FNASM FBASE DEFINES=
+  while test "${1%-[DU]?*}" != "$1"; do DEFINES="$DEFINES $1"; shift; done
   for FNASM in "$@"; do
     FBASE="${FNASM%.*}"
     test "${FNASM%.o}" = "$FNASM" || FNASM="$FBASE".nasm
-    "$NASM" -I"$MYDIRP" $CFLAGS -O999999999 -w+orphan-labels -f elf -o "$FBASE".o "$SRC"/"$FBASE".nasm
+    "$NASM" -I"$MYDIRP" $DEFINES $CFLAGS -O999999999 -w+orphan-labels -f elf -o "$FBASE".o "$SRC"/"$FBASE".nasm
   done
 }
 _nasm_start() {
-  local FNASM FBASE
+  local FNASM FBASE DEFINES=
+  while test "${1%-[DU]?*}" != "$1"; do DEFINES="$DEFINES $1"; shift; done
   for FNASM in "$@"; do
     FBASE="${FNASM%.*}"
     test "${FNASM%.o}" = "$FNASM" || FNASM="$FBASE".nasm
-    "$NASM" -I"$MYDIRP" $CFLAGS -Dmini__start=_start -O999999999 -w+orphan-labels -f elf -o "$FBASE".o "$SRC"/"$FBASE".nasm
+    "$NASM" -I"$MYDIRP" $DEFINES $CFLAGS -Dmini__start=_start -O999999999 -w+orphan-labels -f elf -o "$FBASE".o "$SRC"/"$FBASE".nasm
     "$TOOLS"/elfofix -w -- "$FBASE".o  # `-w' fixes weak symbols. .nasm files containing WEAK.. are affected.
   done
 }
 _nasm2() {
-  local FNASM FBASE
+  local FNASM FBASE DEFINES=
+  while test "${1%-[DU]?*}" != "$1"; do DEFINES="$DEFINES $1"; shift; done
   for FNASM in "$@"; do
     FBASE="${FNASM%.*}"
     test "${FNASM%.o}" = "$FNASM" || FNASM="$FBASE".nasm
-    "$NASM" -I"$MYDIRP" $CFLAGS -O999999999 -w+orphan-labels -f elf -o "$FBASE".o "$SRC"/"$FBASE".nasm
-    "$NASM" -I"$MYDIRP" $CFLAGS -O999999999 -w+orphan-labels -f bin -o "$FBASE".bin "$SRC"/"$FBASE".nasm
-    "$NASM" -I"$MYDIRP" $CFLAGS -O0 -w+orphan-labels -f bin -o "$FBASE".o0.bin "$SRC"/"$FBASE".nasm
+    "$NASM" -I"$MYDIRP" $DEFINES $CFLAGS -O999999999 -w+orphan-labels -f elf -o "$FBASE".o "$SRC"/"$FBASE".nasm
+    "$NASM" -I"$MYDIRP" $DEFINES $CFLAGS -O999999999 -w+orphan-labels -f bin -o "$FBASE".bin "$SRC"/"$FBASE".nasm
+    "$NASM" -I"$MYDIRP" $DEFINES $CFLAGS -O0 -w+orphan-labels -f bin -o "$FBASE".o0.bin "$SRC"/"$FBASE".nasm
     "$NDISASM" -b 32 "$FBASE".bin | tail  # For the size.
     if ! cmp "$FBASE".bin "$FBASE".o0.bin; then
       "$NDISASM" -b 32 "$FBASE".bin >"$FBASE".ndisasm
