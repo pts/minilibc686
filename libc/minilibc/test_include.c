@@ -3,6 +3,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <features.h>
+#include <float.h>
 #include <inttypes.h>
 #include <iso646.h>
 #include <math.h>
