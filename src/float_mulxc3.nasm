@@ -36,7 +36,7 @@ section .bss align=1
 %ifdef CONFIG_I386  ; Emulate the missing i686 instructions using i386 instructions.
   %macro _fucomip 2
     fucomp %1, %2
-    fnstsw ax
+    fnstsw ax  ; !! Save/restore EAX. Needed at some places.
     sahf
   %endmacro
   %macro _fucomi 2
@@ -102,18 +102,16 @@ __mulxc3:  ; long double _Complex __muldc3(long double a, long double b, long do
 		_fucomi st0, st0
 		fsub st0, st0
 		setpo al
-		mov ecx, eax
 		_fucomip st0, st0
 		fxch st5
-		setp al
+		setp cl
 		and ecx, eax
 		_fucomi st0, st0
 		jp .5
 		fld tword [esp+0x18]
 		_fucomip st0, st0
 		jp near .46
-.5:		mov eax, ecx
-		test al, al
+.5:		test cl, cl
 		jne near .24
 .6:		fld st4
 		fsub st0, st5
@@ -134,8 +132,7 @@ __mulxc3:  ; long double _Complex __muldc3(long double a, long double b, long do
 		jp near .48
 .7:		test dl, dl
 		jne near .29
-		mov eax, ecx
-		test al, al
+		test cl, cl
 		jne near .21
 		fld st3
 		fsub st0, st4
@@ -373,8 +370,7 @@ __mulxc3:  ; long double _Complex __muldc3(long double a, long double b, long do
 		fstp st0
 		fld1
 		fchs
-.47:		mov eax, ecx  ; !! TODO(pts): Can we do xchg instead of mov sometimes?
-		test al, al
+.47:		test cl, cl
 		jne .25
 		fldz
 		jmp near .26
