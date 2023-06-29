@@ -1226,6 +1226,15 @@ mini_putchar_RP3:  ; int REGPARM3 mini_putchar_RP3(int c);
   %endif
 %endif
 
+%ifdef __NEED___mulxc3
+  %ifndef __NEED___muldc3
+    %ifndef __NEED___mulsc3
+      %define CONFIG_MULXC3_INLINE  ; Use the shorter, inline implementation of __mulxc3 if __mulc3 and __mulsc3 are not used.
+      %include "src/float_mulxc3.nasm"
+    %endif
+  %endif
+%endif
+
 ; Helpfully %include some needed minilibc686 source files.
 ; demo_hello_linux_printf.nasm relies on this.
 %ifidn __OUTPUT_FORMAT__, bin
