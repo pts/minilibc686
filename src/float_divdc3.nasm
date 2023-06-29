@@ -42,15 +42,9 @@ section .bss align=1
     fnstsw ax
     sahf
   %endmacro
-  %macro _cmovne 2
-    je %%skip
-    mov %1, %2
-    %%skip:
-  %endmacro
 %else
   %define _fucomip fucomip
   %define _fucomi fucomi
-  %define _cmovne cmovne
 %endif  ; CONFIG_I386
 
 section .text
@@ -106,12 +100,11 @@ __divdc3:  ; double _Complex __divdc3(double a, double b, double c, double d);
 ;   __real__ res = x; __imag__ res = y;
 ;   return res;
 ; }
-		push esi
 		push ebx
-		fld qword [esp+0x10]
-		fld qword [esp+0x18]
-		fld qword [esp+0x20]
-		fld qword [esp+0x28]
+		fld qword [esp+0xc]
+		fld qword [esp+0x14]
+		fld qword [esp+0x1c]
+		fld qword [esp+0x24]
 		fld st1
 		fabs
 		fld st1
@@ -132,7 +125,21 @@ __divdc3:  ; double _Complex __divdc3(double a, double b, double c, double d);
 		fmul st0, st5
 		fsub st0, st6
 		fdivrp st1, st0
-.1:		_fucomi st0, st0
+		jmp short .1
+.8:		fld st0
+		fdiv st0, st2
+		fld st1
+		fmul st0, st1
+		fadd st0, st3
+		fld st1
+		fmul st0, st5
+		fadd st0, st6
+		fdiv st0, st1
+		fxch st2
+		fmul st0, st6
+		fsubr st0, st5
+		fdivrp st1, st0
+.1:		_fucomi st0, st0  ; isnan(x)?
 		jp .9
 		fstp st5
 		fstp st3
@@ -149,61 +156,38 @@ __divdc3:  ; double _Complex __divdc3(double a, double b, double c, double d);
 		fstp st0
 		fstp st0
 		fxch st1
-.7:		mov eax, [esp+0xc]  ; Struct return pointer. We return it in EAX according to the ABI.
+.7:		mov eax, [esp+8]  ; Struct return pointer. We return it in EAX according to the ABI.
 		fstp qword [eax]
 		fstp qword [eax+8]
 		pop ebx
-		pop esi
 		ret 4
-.8:		fld st0
-		fdiv st0, st2
-		fld st1
-		fmul st0, st1
-		fadd st0, st3
-		fld st1
-		fmul st0, st5
-		fadd st0, st6
-		fdiv st0, st1
-		fxch st2
-		fmul st0, st6
-		fsubr st0, st5
-		fdivrp st1, st0
-		jmp short .1
 .9:		fxch st1
-		_fucomi st0, st0
-		jpo .2
+		_fucomi st0, st0  ; isnan(y)?
+		jpo .2  ; if (!(isnan(x) && isnan(y))) goto .2;
 		fxch st5
 		_fucomi st0, st0
-		mov esi, 0
 		fldz
-		setpo bl
-		_fucomi st0, st4
-		setpo al
-		_cmovne eax, esi
-		test al, al
-		je .13
-		_fucomip st0, st3
-		setpo al
-		_cmovne eax, esi
-		test al, al
-		je .14
+		setpo bl  ; BL := !isnan(a).
+		_fucomi st0, st4  ; c == 0.0?
+		jp .13
+		jne .13
+		_fucomip st0, st3 ; d == 0.0?
+		jp .14
+		jne .14
 		fxch st4
 		_fucomi st0, st0
-		jp near .29
+		jnp .10  ; if (!isnan(b)) goto .10;  Jump on PF=1, indicating unordered==nan (C2=1).
+		test bl, bl
+		jz near .10b  ; if (isnan(a)) goto .10b;
+.10:
+; x = COPYSIGN(INFINITY, c) * a; y = COPYSIGN(INFINITY, c) * b;
 		fstp st5
 		fstp st0
 		fstp st0
 		fxch st1
 		fxch st2
 		fxch st1
-		jmp short .11
-.10:		fstp st5
-		fstp st0
-		fstp st0
-		fxch st1
-		fxch st2
-		fxch st1
-.11:		fxam
+		fxam
 		fnstsw ax
 		fstp st0
 		test ah, 2
@@ -225,7 +209,7 @@ __divdc3:  ; double _Complex __divdc3(double a, double b, double c, double d);
 		_fucomi st0, st0
 		setp al
 		and bl, al
-		jne near .30
+		jnz near .30
 .15:		fld st5
 		fsub st0, st6
 		fxch st6
@@ -317,9 +301,7 @@ __divdc3:  ; double _Complex __divdc3(double a, double b, double c, double d);
 		fsubp st1, st0
 		fmulp st2, st0
 		jmp near .7
-.29:		test bl, bl
-		jne .10
-		fld st4
+.10b:		fld st4
 		xor ebx, ebx
 		fsub st0, st5
 		fxch st1

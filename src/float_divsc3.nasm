@@ -42,11 +42,6 @@ section .bss align=1
     fnstsw ax
     sahf
   %endmacro
-  %macro _cmovne 2
-    je %%skip
-    mov %1, %2
-    %%skip:
-  %endmacro
   %macro _fcmovne 2
     %ifnidn %1, st0
       %error fcmovne target must be st0, got: %1
@@ -60,7 +55,6 @@ section .bss align=1
 %else
   %define _fucomip fucomip
   %define _fucomi fucomi
-  %define _cmovne cmovne
   %define _fcmovne fcmovne
 %endif  ; CONFIG_I386
 
@@ -68,12 +62,11 @@ section .text
 ; For PCC and GCC >= 4.3.
 __divsc3:  ; double _Complex __divsc3(double a, double b, double c, double d);
 ; Returns: the quotient of (a + ib) / (c + id).
-		push ebx
-		push ebx  ; Create variable tmp at ESP. Shorter than `sub esp, byte 4'.
+		push ecx  ; Create variable tmp at ESP. Shorter than `sub esp, byte 4'.
+		fld dword [esp+8]  ; !! Use EBP everywhere, it's shorter.
 		fld dword [esp+0xc]
 		fld dword [esp+0x10]
 		fld dword [esp+0x14]
-		fld dword [esp+0x18]
 		fld st1
 		fabs
 		fld st1
@@ -108,11 +101,10 @@ __divsc3:  ; double _Complex __divsc3(double a, double b, double c, double d);
 		fstp st0
 		fstp st0
 		fstp st0
-.7:		mov eax, [esp]  ; Copy __real__ res to its final return location (EAX).
+.7:		pop eax  ; Copy __real__ res to its final return location (EAX), clean up variable TMP at ESP.
+		push edx  ; Create variable tmp at ESP. Shorter than `sub esp, byte 4'.
 		fstp dword [esp]  ; Save __imag__ res to tmp.
-		mov edx, [esp]  ; Copy __imag__ res to its final return location (EDX).
-		pop ebx  ; Clean up variable tmp at ESP. Shorter than `add esp, byte 4'.
-		pop ebx
+		pop edx  ; Copy __imag__ res to its final return location (EDX), clean up variable TMP at ESP.
 		ret
 .8:		fld st0
 		fdiv st0, st2
@@ -134,28 +126,27 @@ __divsc3:  ; double _Complex __divsc3(double a, double b, double c, double d);
 		jpo .1  ; if (!(isnan(x) && isnan(y))) goto .1;
 		fxch st4
 		_fucomi st0, st0
-		mov ebx, 0  ; TODO(pts): `xor ebx, ebx' above, before the flags.
 		fldz
 		setpo cl
 		_fucomi st0, st3
-		setpo al
-		_cmovne eax, ebx
-		test al, al
-		je .12
+		jp .12
+		jne .12
 		_fucomip st0, st2
-		setpo al
-		_cmovne eax, ebx
-		test al, al
-		je .13
+		jp .13
+		jne .13
 		fxch st3
 		_fucomi st0, st0
-		jp near .28
-.10:		fstp st4
+		jnp .10  ; if (!isnan(b)) goto .10;  Jump on PF=1, indicating unordered==nan (C2=1).
+		test cl, cl
+		jz near .10b  ; if (isnan(a)) goto .10b;
+.10:
+; x = COPYSIGN(INFINITY, c) * a; y = COPYSIGN(INFINITY, c) * b;
+		fstp st4
 		fstp st0
 		fxch st1
 		fxch st2
 		fxch st1
-.11:		fxam
+		fxam
 		fnstsw ax
 		fstp st0
 		push dword 0xff800000  ; -inf.
@@ -269,9 +260,7 @@ __divsc3:  ; double _Complex __divsc3(double a, double b, double c, double d);
 		fsubrp st1, st0
 		fmulp st1, st0
 		jmp near .7
-.28:		test cl, cl
-		jne .10
-		fld st3
+.10b:		fld st3
 		xor eax, eax
 		fsub st0, st4
 		fxch st1

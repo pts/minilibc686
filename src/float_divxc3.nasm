@@ -44,27 +44,20 @@ section .bss align=1
     fnstsw ax
     sahf
   %endmacro
-  %macro _cmovne 2
-    je %%skip
-    mov %1, %2
-    %%skip:
-  %endmacro
 %else
   %define _fucomip fucomip
   %define _fucomi fucomi
-  %define _cmovne cmovne
 %endif  ; CONFIG_I386
 
 section .text
 ; For PCC and GCC >= 4.3.
 __divxc3:  ; long double _Complex __divxc3(long double a, long double b, long double c, long double d);
 ; Returns: the quotient of (a + ib) / (c + id).
-		push esi
 		push ebx
-		fld tword [esp+0x10]
-		fld tword [esp+0x1c]
-		fld tword [esp+0x28]
-		fld tword [esp+0x34]
+		fld tword [esp+0xc]
+		fld tword [esp+0x18]
+		fld tword [esp+0x24]
+		fld tword [esp+0x30]
 		fld st1
 		fabs
 		fld st1
@@ -102,11 +95,10 @@ __divxc3:  ; long double _Complex __divxc3(long double a, long double b, long do
 		fstp st0
 		fstp st0
 		fxch st1
-.7:		mov eax, [esp+0xc]  ; Struct return pointer. We return it in EAX according to the ABI.
+.7:		mov eax, [esp+8]  ; Struct return pointer. We return it in EAX according to the ABI.
 		fstp tword [eax]
 		fstp tword [eax+0xc]
 		pop ebx
-		pop esi
 		ret 4
 .8:		fld st0
 		fdiv st0, st2
@@ -127,36 +119,28 @@ __divxc3:  ; long double _Complex __divxc3(long double a, long double b, long do
 		jpo .2
 		fxch st5
 		_fucomi st0, st0
-		mov esi, 0
 		fldz
 		setpo bl
 		_fucomi st0, st4
-		setpo al
-		_cmovne eax, esi
-		test al, al
-		je .13
+		jp .13
+		jne .13
 		_fucomip st0, st3
-		setpo al
-		_cmovne eax, esi
-		test al, al
-		je .14
+		jp .14
+		jne .14
 		fxch st4
 		_fucomi st0, st0
-		jp near .29
+		jnp .10  ; if (!isnan(b)) goto .10;  Jump on PF=1, indicating unordered==nan (C2=1).
+		test bl, bl
+		jz near .10b  ; if (isnan(a)) goto .10b;
+.10:
+; x = COPYSIGN(INFINITY, c) * a; y = COPYSIGN(INFINITY, c) * b;
 		fstp st5
 		fstp st0
 		fstp st0
 		fxch st1
 		fxch st2
 		fxch st1
-		jmp short .11
-.10:		fstp st5
-		fstp st0
-		fstp st0
-		fxch st1
-		fxch st2
-		fxch st1
-.11:		fxam
+		fxam
 		fnstsw ax
 		fstp st0
 		test ah, 2
@@ -270,9 +254,7 @@ __divxc3:  ; long double _Complex __divxc3(long double a, long double b, long do
 		fsubp st1, st0
 		fmulp st2, st0
 		jmp near .7
-.29:		test bl, bl
-		jne .10
-		fld st4
+.10b:		fld st4
 		xor ebx, ebx
 		fsub st0, st5
 		fxch st1

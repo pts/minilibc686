@@ -34,7 +34,7 @@ section .bss align=1
 %ifdef CONFIG_I386  ; Emulate the missing i686 instructions using i386 instructions.
   %macro _fucomip 2
     fucomp %1, %2
-    fnstsw ax
+    fnstsw ax  ; !! TODO(pts): Is it OK to override AX? Check everywhere.
     sahf
   %endmacro
   %macro _fucomi 2
