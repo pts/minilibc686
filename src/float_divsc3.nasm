@@ -42,20 +42,9 @@ section .bss align=1
     fnstsw ax
     sahf
   %endmacro
-  %macro _fcmovne 2
-    %ifnidn %1, st0
-      %error fcmovne target must be st0, got: %1
-      times 1/0 nop
-    %endif
-    je %%skip
-    fxch %1
-    fst %1
-    %%skip:
-  %endmacro
 %else
   %define _fucomip fucomip
   %define _fucomi fucomi
-  %define _fcmovne fcmovne
 %endif  ; CONFIG_I386
 
 section .text
@@ -149,15 +138,13 @@ __divsc3:  ; double _Complex __divsc3(double a, double b, double c, double d);
 		fxam
 		fnstsw ax
 		fstp st0
-		push dword 0xff800000  ; -inf.
-		fld dword [esp]  ; -inf.
+		test ah, 2  ; True if st0 was negative when fxam was called.
+		jnz .neg
+.nonneg:	push dword 0x7f800000  ; inf.
+		jmp short .done_neg
+.neg:		push dword 0xff800000  ; -inf.
+.done_neg:	fld dword [esp]  ; inf.
 		pop edx
-		test ah, 2
-		push dword 0x7f800000  ; inf.
-		fld dword [esp]  ; inf.
-		pop edx
-		_fcmovne st0, st1
-		fstp st1
 		fmul st2, st0
 		fxch st2
 		fstp dword [esp]  ; Save __real__ res to tmp.

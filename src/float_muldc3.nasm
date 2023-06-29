@@ -304,7 +304,7 @@ __muldc3:  ; double _Complex __muldc3(double a, double b, double c, double d);
 		fnstsw ax
 		fstp st0
 		fxch st6
-		test ah, 2
+		test ah, 2  ; True if st0 was negative when fxam was called.
 		fabs
 		je .32
 		fchs
