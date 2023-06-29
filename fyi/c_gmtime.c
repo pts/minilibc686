@@ -33,7 +33,7 @@ struct tm *mini_gmtime_r(const time_t *timep, struct tm *tm) {
   const int ts = *timep;
   int16_t t = ts / 86400;
   uint32_t hms = ts % 86400;
-  uint8_t c, h;
+  uint8_t c;
   uint16_t yday, a;
   if ((int32_t)hms < 0) { --t; hms += 86400; }
   tm->tm_sec = hms % 60;
