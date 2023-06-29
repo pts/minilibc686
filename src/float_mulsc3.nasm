@@ -93,10 +93,10 @@ __mulsc3:  ; float _Complex __muldc3(float a, float b, float c, float d);
 		fstp st0
 		fstp st0
 .3:		fstp dword [esp]
-		mov eax, [esp]
+		pop eax  ; Copy __real__ res to its final return location (EAX), clean up variable TMP at ESP.
 		fstp dword [esp]
-		mov edx, [esp]
-		add esp, byte 0x20
+		pop edx  ; Copy __imag__ res to its final return location (EDX), clean up variable TMP at ESP.
+		add esp, byte 0x20-8
 		ret
 .4:		fld st6
 		fsub st0, st7
