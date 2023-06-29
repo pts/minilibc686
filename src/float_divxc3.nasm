@@ -143,16 +143,13 @@ __divxc3:  ; long double _Complex __divxc3(long double a, long double b, long do
 		fxam
 		fnstsw ax
 		fstp st0
-		test ah, 2
-		push dword 0x7f800000
-		fld dword [esp]
-		pop ecx
-		je .12
-		fstp st0
-		push dword 0xff800000
-		fld dword [esp]
-		pop ecx
-.12:		fmul st2, st0
+		shr eax, 9
+		shl eax, 31  ; EAX := (st0 was negative when fxam was called) ? 0x80000000 : 0.
+		or eax, 0x7f800000  ; EAX := (st0 was negative when fxam was called) ? (f32)-inf : (f32)inf.
+		push eax ; inf or -inf.
+		fld dword [esp]  ; inf or -inf.
+		pop eax
+		fmul st2, st0
 		fmulp st1, st0
 		fxch st1
 		jmp near .7

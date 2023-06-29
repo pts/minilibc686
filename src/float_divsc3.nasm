@@ -138,13 +138,12 @@ __divsc3:  ; double _Complex __divsc3(double a, double b, double c, double d);
 		fxam
 		fnstsw ax
 		fstp st0
-		test ah, 2  ; True if st0 was negative when fxam was called.
-		jnz .neg
-.nonneg:	push dword 0x7f800000  ; inf.
-		jmp short .done_neg
-.neg:		push dword 0xff800000  ; -inf.
-.done_neg:	fld dword [esp]  ; inf.
-		pop edx
+		shr eax, 9
+		shl eax, 31  ; EAX := (st0 was negative when fxam was called) ? 0x80000000 : 0.
+		or eax, 0x7f800000  ; EAX := (st0 was negative when fxam was called) ? (f32)-inf : (f32)inf.
+		push eax ; inf or -inf.
+		fld dword [esp]  ; inf or -inf.
+		pop eax
 		fmul st2, st0
 		fxch st2
 		fstp dword [esp]  ; Save __real__ res to tmp.
