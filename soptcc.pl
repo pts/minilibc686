@@ -750,7 +750,7 @@ sub as2nasm($$$$$$$$$$) {
         }
         my $inst = $inst1 eq "byte" ? "db" : $inst1 eq "value" ? "dw" : $inst1 eq "long" ? "dd" : $inst1 eq "quad" ? "dq" : "d?";
         print $outfh "\t\t$inst $expr\n";
-      } elsif (m@\A[.]((string)|ascii)(?=\Z|\s)(?:\s+"((?:[^\\"]+|\\.)*)"\s*\Z)?@s) {
+      } elsif (m@\A[.]((string|asciz)|ascii)(?=\Z|\s)(?:\s+"((?:[^\\"]+|\\.)*)"\s*\Z)?@s) {
         if (!defined($3)) {
           ++$errc;
           print STDERR "error: bad $1 argument ($lc): $_\n";
