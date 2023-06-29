@@ -53,23 +53,26 @@ section .text
 ; For PCC and GCC >= 4.3.
 __mulxc3:  ; long double _Complex __muldc3(long double a, long double b, long double c, long double d);
 ; Returns: the product of a + ib and c + id.
-		sub esp, byte 0x24
-		fld tword [esp+0x2c]  ; Argument a.
-		fld tword [esp+0x44]  ; Argument c.
+		;push ebp
+		;mov ebp, esp
+		;sub esp, byte 0x24
+		enter 0x24, 0
+		fld tword [ebp-0x24+0x2c+4]  ; Argument a.
+		fld tword [ebp-0x24+0x44+4]  ; Argument c.
 		fld st1
 		fmul st0, st1
-		fld tword [esp+0x38]  ; Argument b.
-		fld tword [esp+0x50]  ; Argument d.
+		fld tword [ebp-0x24+0x38+4]  ; Argument b.
+		fld tword [ebp-0x24+0x50+4]  ; Argument d.
 		fmul st1, st0
 		fxch st1
 		fld st0
-		fstp tword [esp]
+		fstp tword [ebp-0x24]
 		fxch st1
 		fmul st0, st4
-		fld tword [esp+0x38]  ; Argument b.
+		fld tword [ebp-0x24+0x38+4]  ; Argument b.
 		fmul st0, st4
 		fld st0
-		fstp tword [esp+0xc]
+		fstp tword [ebp-0x24+0xc]
 		fld st3
 		fsubrp st3, st0
 		fld st1
@@ -90,15 +93,15 @@ __mulxc3:  ; long double _Complex __muldc3(long double a, long double b, long do
 .2:		fstp st2
 		fstp st0
 		fxch st1
-.3:		mov eax, [esp+0x28]  ; Struct return pointer. We return it in EAX according to the ABI.
-		add esp, byte 0x24
+.3:		mov eax, [ebp-0x24+0x28+4]  ; Struct return pointer. We return it in EAX according to the ABI.
 		fstp tword [eax]
 		fstp tword [eax+0xc]
+		leave
 		ret 4
 .4:		fld st5
 		fsub st0, st6
-		fstp tword [esp+0x18]
-		fld tword [esp+0x38]  ; Argument b.
+		fstp tword [ebp-0x24+0x18]
+		fld tword [ebp-0x24+0x38+4]  ; Argument b.
 		_fucomi st0, st0
 		fsub st0, st0
 		setpo ch
@@ -108,15 +111,15 @@ __mulxc3:  ; long double _Complex __muldc3(long double a, long double b, long do
 		and cl, ch
 		_fucomi st0, st0
 		jp .5
-		fld tword [esp+0x18]
+		fld tword [ebp-0x24+0x18]
 		_fucomip st0, st0
 		jp near .46
 .5:		test cl, cl
 		jne near .24
 .6:		fld st4
 		fsub st0, st5
-		fstp tword [esp+0x18]
-		fld tword [esp+0x50]  ; Argument d.
+		fstp tword [ebp-0x24+0x18]
+		fld tword [ebp-0x24+0x50+4]  ; Argument d.
 		_fucomi st0, st0
 		fld st0
 		setpo dl
@@ -127,7 +130,7 @@ __mulxc3:  ; long double _Complex __muldc3(long double a, long double b, long do
 		and dl, ch
 		_fucomi st0, st0
 		jp .7
-		fld tword [esp+0x18]
+		fld tword [ebp-0x24+0x18]
 		_fucomip st0, st0
 		jp near .48
 .7:		test dl, dl
@@ -144,7 +147,7 @@ __mulxc3:  ; long double _Complex __muldc3(long double a, long double b, long do
 		jp .14
 		jmp short .9
 .8:		fstp st3
-.9:		fld tword [esp]
+.9:		fld tword [ebp-0x24]
 		fld st0
 		fsub st0, st1
 		fxch st1
@@ -163,7 +166,7 @@ __mulxc3:  ; long double _Complex __muldc3(long double a, long double b, long do
 		jp .15
 		jmp short .13
 .12:		fstp st0
-.13:		fld tword [esp+0xc]
+.13:		fld tword [ebp-0x24+0xc+4]
 		fld st0
 		fsub st0, st1
 		fxch st1
@@ -177,14 +180,14 @@ __mulxc3:  ; long double _Complex __muldc3(long double a, long double b, long do
 		fstp st2
 .17:		_fucomi st0, st0
 		jp near .45
-.18:		fld tword [esp+0x38]  ; Argument b.
+.18:		fld tword [ebp-0x24+0x38+4]  ; Argument b.
 		_fucomi st0, st0
 		jp near .43
 		fstp st0
 		fxch st1
 .19:		_fucomi st0, st0
 		jp near .41
-.20:		fld tword [esp+0x50]  ; Argument d.
+.20:		fld tword [ebp-0x24+0x50+4]  ; Argument d.
 		_fucomi st0, st0
 		jp near .39
 		fstp st0
@@ -196,18 +199,18 @@ __mulxc3:  ; long double _Complex __muldc3(long double a, long double b, long do
 		fxch st1
 .23:		fld st1
 		fmul st0, st1
-		fld tword [esp+0x38]  ; Argument b.
-		fld tword [esp+0x50]  ; Argument d.
+		fld tword [ebp-0x24+0x38+4]  ; Argument b.
+		fld tword [ebp-0x24+0x50+4]  ; Argument d.
 		fmul st1, st0
 		fxch st2
 		fsubrp st1, st0
 		push dword 0x7f800000  ; inf.
-		fld dword [esp]
+		fld dword [ebp-0x24]
 		pop eax
 		fmul st1, st0
 		fxch st2
 		fmulp st4, st0
-		fld tword [esp+0x38]  ; Argument b.
+		fld tword [ebp-0x24+0x38+4]  ; Argument b.
 		fmulp st3, st0
 		fxch st3
 		faddp st2, st0
@@ -224,7 +227,7 @@ __mulxc3:  ; long double _Complex __muldc3(long double a, long double b, long do
 		fldz
 		fchs
 .25:		fld1
-.26:		fld tword [esp+0x38]  ; Argumend d.
+.26:		fld tword [ebp-0x24+0x38+4]  ; Argumend d.
 		fxam
 		fnstsw ax
 		fstp st0
@@ -232,11 +235,11 @@ __mulxc3:  ; long double _Complex __muldc3(long double a, long double b, long do
 		fabs
 		je .27
 		fchs
-.27:		fstp tword [esp+0x38]  ; Argument b.
+.27:		fstp tword [ebp-0x24+0x38+4]  ; Argument b.
 		fxch st4
 		_fucomi st0, st0
 		jp near .38
-.28:		fld tword [esp+0x50]  ; Argument d.
+.28:		fld tword [ebp-0x24+0x50+4]  ; Argument d.
 		_fucomip st0, st0
 		jp near .36
 		fxch st4
@@ -257,7 +260,7 @@ __mulxc3:  ; long double _Complex __muldc3(long double a, long double b, long do
 		fldz
 		fchs
 .30:		fld1
-.31:		fld tword [esp+0x50]  ; Argument d.
+.31:		fld tword [ebp-0x24+0x50+4]  ; Argument d.
 		fxam
 		fnstsw ax
 		fstp st0
@@ -265,11 +268,11 @@ __mulxc3:  ; long double _Complex __muldc3(long double a, long double b, long do
 		fabs
 		je .32
 		fchs
-.32:		fstp tword [esp+0x50]  ; Argument d.
+.32:		fstp tword [ebp-0x24+0x50+4]  ; Argument d.
 		fxch st1
 		_fucomi st0, st0
 		jp .35
-.33:		fld tword [esp+0x38]  ; Argument b.
+.33:		fld tword [ebp-0x24+0x38+4]  ; Argument b.
 		_fucomi st0, st0
 		jpo .22
 		fxam
@@ -281,7 +284,7 @@ __mulxc3:  ; long double _Complex __muldc3(long double a, long double b, long do
 		fstp st0
 		fldz
 		fchs
-.34:		fstp tword [esp+0x38]  ; Argument b.
+.34:		fstp tword [ebp-0x24+0x38+4]  ; Argument b.
 		fxch st1
 		jmp near .23
 .35:		fxam
@@ -294,7 +297,7 @@ __mulxc3:  ; long double _Complex __muldc3(long double a, long double b, long do
 		fldz
 		fchs
 		jmp short .33
-.36:		fld tword [esp+0x50]  ; Argument d.
+.36:		fld tword [ebp-0x24+0x50+4]  ; Argument d.
 		fxam
 		fnstsw ax
 		fstp st0
@@ -304,7 +307,7 @@ __mulxc3:  ; long double _Complex __muldc3(long double a, long double b, long do
 		fstp st0
 		fldz
 		fchs
-.37:		fstp tword [esp+0x50]  ; Argument d.
+.37:		fstp tword [ebp-0x24+0x50+4]  ; Argument d.
 		fxch st4
 		mov cl, dl
 		jmp near .6
@@ -327,7 +330,7 @@ __mulxc3:  ; long double _Complex __muldc3(long double a, long double b, long do
 		fstp st0
 		fldz
 		fchs
-.40:		fstp tword [esp+0x50]  ; Argument d.
+.40:		fstp tword [ebp-0x24+0x50+4]  ; Argument d.
 		jmp near .23
 .41:		fxam
 		fnstsw ax
@@ -348,7 +351,7 @@ __mulxc3:  ; long double _Complex __muldc3(long double a, long double b, long do
 		fstp st0
 		fldz
 		fchs
-.44:		fstp tword [esp+0x38]  ; Argument b.
+.44:		fstp tword [ebp-0x24+0x38+4]  ; Argument b.
 		fxch st1
 		jmp near .19
 .45:		fxam
