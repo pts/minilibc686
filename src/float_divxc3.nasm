@@ -20,6 +20,7 @@ cpu 686
 %endif
 
 global __divxc3
+global __divxc3_sub  ; Also used by __divdc3 and __divsc3.
 %ifdef CONFIG_SECTIONS_DEFINED
 %elifidn __OUTPUT_FORMAT__, bin
 section .text align=1
@@ -54,6 +55,55 @@ section .text
 ; For PCC and GCC >= 4.3.
 __divxc3:  ; long double _Complex __divxc3(long double a, long double b, long double c, long double d);
 ; Returns: the quotient of (a + ib) / (c + id).
+;
+; /* C source code below based on gcc-7.4.0/libgcc/libgcc2.c */
+; #define CONCAT3(A,B,C)_CONCAT3(A,B,C)
+; #define _CONCAT3(A,B,C) A##B##C
+; #define CONCAT2(A,B) _CONCAT2(A,B)
+; #define _CONCAT2(A,B) A##B
+; #define isnan(x) __builtin_expect((x) != (x), 0)
+; #define isfinite(x) __builtin_expect(!isnan((x) - (x)), 1)
+; #define isinf(x) __builtin_expect(!isnan(x) & !isfinite(x), 0)
+; #define INFINITY CONCAT2(__builtin_huge_val, CEXT)()
+; /* Helpers to make the following code slightly less gross. */
+; #define COPYSIGN CONCAT2(__builtin_copysign, CEXT)
+; #define FABS CONCAT2(__builtin_fabs, CEXT)
+; /* Verify that MTYPE matches up with CEXT. */
+; extern void *compile_type_assert[sizeof(INFINITY) == sizeof(MTYPE) ? 1 : -1];
+; /* Ensure that we've lost any extra precision. */
+; #define TRUNC(x) __asm__("" : "=m"(x) : "m"(x))
+; CTYPE CONCAT3(__div,MODE,3)(MTYPE a, MTYPE b, MTYPE c, MTYPE d) {
+;   MTYPE denom, ratio, x, y;
+;   CTYPE res;
+;   /* ??? We can get better behavior from logarithmic scaling instead of
+;    * the division.  But that would mean starting to link libgcc against
+;    * libm.  We could implement something akin to ldexp/frexp as gcc builtins
+;    * fairly easily...
+;    */
+;   if (FABS(c) < FABS(d)) {
+;     ratio = c / d; denom = (c * ratio) + d;
+;     x = ((a * ratio) + b) / denom; y = ((b * ratio) - a) / denom;
+;   } else {
+;     ratio = d / c; denom = (d * ratio) + c;
+;     x = ((b * ratio) + a) / denom; y = (b - (a * ratio)) / denom;
+;   }
+;   /* Recover infinities and zeros that computed as NaN+iNaN; the only cases
+;    * are nonzero/zero, infinite/finite, and finite/infinite.
+;    */
+;   if (isnan(x) && isnan(y)) {
+;     if (c == 0.0 && d == 0.0 && (!isnan(a) || !isnan(b))) {
+;       x = COPYSIGN(INFINITY, c) * a; y = COPYSIGN(INFINITY, c) * b;
+;     } else if ((isinf(a) || isinf(b)) && isfinite(c) && isfinite(d)) {
+;       a = COPYSIGN(isinf(a) ? 1 : 0, a); b = COPYSIGN(isinf(b) ? 1 : 0, b);
+;       x = INFINITY * (a * c + b * d); y = INFINITY * (b * c - a * d);
+;     } else if ((isinf(c) || isinf(d)) && isfinite(a) && isfinite(b)) {
+;       c = COPYSIGN(isinf(c) ? 1 : 0, c); d = COPYSIGN(isinf(d) ? 1 : 0, d);
+;       x = 0.0 * (a * c + b * d); y = 0.0 * (b * c - a * d);
+;     }
+;   }
+;   __real__ res = x; __imag__ res = y;
+;   return res;
+; }
 		mov edx, esp
 		fld tword [edx+8]  ; Argument a.
 		fld tword [edx+0x14]  ; Argument b.
