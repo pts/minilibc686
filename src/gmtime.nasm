@@ -28,7 +28,7 @@ section .bss align=4
 section .text
 mini_gmtime:  ; struct tm *mini_gmtime(const time_t *timep);
 mini_localtime:  ; struct tm *mini_localtime(const time_t *timep);  /* No concept of time zones, everything is GMT. */
-		; TODO(pts): WIth smart linking, do a fall through to mini_gmtime_r.
+		; TODO(pts): With smart linking, do a fall through to mini_gmtime_r.
 		push dword global_struct_tm
 		push dword [esp+2*4]  ; Argument timep.
 		call mini_gmtime_r
@@ -36,7 +36,7 @@ mini_localtime:  ; struct tm *mini_localtime(const time_t *timep);  /* No concep
 		ret
 
 %ifdef CONFIG_PIC
-%error Not PIC because it uses global variable mini_gmtime.
+%error Not PIC because it uses global variable global_struct_pm.
 times 1/0 nop
 %endif
 
