@@ -69,7 +69,7 @@ section .text
 __divsc3:  ; double _Complex __divsc3(double a, double b, double c, double d);
 ; Returns: the quotient of (a + ib) / (c + id).
 		push ebx
-		sub esp, byte 4
+		push ebx  ; Create variable tmp at ESP. Shorter than `sub esp, byte 4'.
 		fld dword [esp+0xc]
 		fld dword [esp+0x10]
 		fld dword [esp+0x14]
@@ -90,14 +90,14 @@ __divsc3:  ; double _Complex __divsc3(double a, double b, double c, double d);
 		fmul st0, st2
 		fadd st0, st5
 		fdiv st0, st1
-		fstp dword [esp]
+		fstp dword [esp]  ; Save __real__ res to tmp.
 		fxch st1
 		fmul st0, st4
 		fsub st0, st5
 		fdivrp st1, st0
-.1:		_fucomi st0, st0
+.1:		_fucomi st0, st0  ; isnan(x)?
 		jp .9
-		fstp st3
+		fstp st3  ; !! TODO(pts): Unify some of these pop paths.
 		fstp st0
 		fstp st0
 		fstp st1
@@ -129,10 +129,10 @@ __divsc3:  ; double _Complex __divsc3(double a, double b, double c, double d);
 		fstp st0
 		fstp st0
 		fstp st0
-.7:		mov eax, [esp]
-		fstp dword [esp]
-		mov edx, [esp]
-		add esp, byte 4
+.7:		mov eax, [esp]  ; Copy __real__ res to its final return location (EAX).
+		fstp dword [esp]  ; Save __imag__ res to tmp.
+		mov edx, [esp]  ; Copy __imag__ res to its final return location (EDX).
+		pop ebx  ; Clean up variable tmp at ESP. Shorter than `add esp, byte 4'.
 		pop ebx
 		ret
 .8:		fld st0
@@ -144,18 +144,18 @@ __divsc3:  ; double _Complex __divsc3(double a, double b, double c, double d);
 		fmul st0, st5
 		fadd st0, st6
 		fdiv st0, st1
-		fstp dword [esp]
+		fstp dword [esp]  ; Save __real__ res to tmp.
 		fxch st1
 		fmul st0, st5
 		fsubr st0, st4
 		fdivrp st1, st0
 		jmp short .1
-.9:		fld dword [esp]
-		_fucomip st0, st0
-		jpo .2
+.9:		fld dword [esp]  ; Push tmp containing __real__ res (to st0). TODO(pts): Don't truncate.
+		_fucomip st0, st0  ; isnan(y)?
+		jpo .2  ; if (!(isnan(x) && isnan(y))) goto .2;
 		fxch st4
 		_fucomi st0, st0
-		mov ebx, 0
+		mov ebx, 0  ; TODO(pts): `xor ebx, ebx' above, before the flags.
 		fldz
 		setpo cl
 		_fucomi st0, st3
@@ -185,18 +185,18 @@ __divsc3:  ; double _Complex __divsc3(double a, double b, double c, double d);
 .11:		fxam
 		fnstsw ax
 		fstp st0
-		push dword 0xff800000
-		fld dword [esp]
+		push dword 0xff800000  ; -inf.
+		fld dword [esp]  ; -inf.
 		pop edx
 		test ah, 2
-		push dword 0x7f800000
-		fld dword [esp]
+		push dword 0x7f800000  ; inf.
+		fld dword [esp]  ; inf.
 		pop edx
 		_fcmovne st0, st1
 		fstp st1
 		fmul st2, st0
 		fxch st2
-		fstp dword [esp]
+		fstp dword [esp]  ; Save __real__ res to tmp.
 		fmulp st1, st0
 		jmp near .7
 .12:		fstp st0
@@ -289,7 +289,7 @@ __divsc3:  ; double _Complex __divsc3(double a, double b, double c, double d);
 		fldz
 		fmul st1, st0
 		fxch st1
-		fstp dword [esp]
+		fstp dword [esp]  ; Save __real__ res to tmp.
 		fxch st4
 		fmulp st2, st0
 		fmulp st2, st0
@@ -356,12 +356,12 @@ __divsc3:  ; double _Complex __divsc3(double a, double b, double c, double d);
 		fld st2
 		fmul st0, st2
 		faddp st1, st0
-		push dword 0x7f800000
-		fld dword [esp]
+		push dword 0x7f800000  ; inf.
+		fld dword [esp]  ; inf.
 		pop edx
 		fmul st1, st0
 		fxch st1
-		fstp dword [esp]
+		fstp dword [esp]  ; Save __real__ res to tmp.
 		fxch st3
 		fmulp st1, st0
 		fxch st3
