@@ -62,7 +62,6 @@ __divxc3:  ; long double _Complex __divxc3(long double a, long double b, long do
 		push esi
 		push ebx
 		fld tword [esp+0x10]
-		mov edx, [esp+0xc]
 		fld tword [esp+0x1c]
 		fld tword [esp+0x28]
 		fld tword [esp+0x34]
@@ -124,9 +123,9 @@ __divxc3:  ; long double _Complex __divxc3(long double a, long double b, long do
 		fstp st0
 		fstp st0
 		fxch st1
-.7:		fstp tword [edx]
-		mov eax, edx
-		fstp tword [edx+0xc]
+.7:		mov eax, [esp+0xc]  ; Struct return pointer. We return it in EAX according to the ABI.
+		fstp tword [eax]
+		fstp tword [eax+0xc]
 		pop ebx
 		pop esi
 		ret 4

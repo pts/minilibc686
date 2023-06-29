@@ -109,7 +109,6 @@ __divdc3:  ; double _Complex __divdc3(double a, double b, double c, double d);
 		push esi
 		push ebx
 		fld qword [esp+0x10]
-		mov edx, [esp+0xc]
 		fld qword [esp+0x18]
 		fld qword [esp+0x20]
 		fld qword [esp+0x28]
@@ -171,9 +170,9 @@ __divdc3:  ; double _Complex __divdc3(double a, double b, double c, double d);
 		fstp st0
 		fstp st0
 		fxch st1
-.7:		fstp qword [edx]
-		mov eax, edx
-		fstp qword [edx+8]
+.7:		mov eax, [esp+0xc]  ; Struct return pointer. We return it in EAX according to the ABI.
+		fstp qword [eax]
+		fstp qword [eax+8]
 		pop ebx
 		pop esi
 		ret 4

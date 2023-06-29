@@ -110,7 +110,6 @@ __muldc3:  ; double _Complex __muldc3(double a, double b, double c, double d);
 		push ebx
 		sub esp, byte 0x44
 		fld qword [esp+0x54]
-		mov ecx, [esp+0x50]
 		fld qword [esp+0x5c]
 		fld qword [esp+0x64]
 		fld qword [esp+0x6c]
@@ -159,9 +158,9 @@ __muldc3:  ; double _Complex __muldc3(double a, double b, double c, double d);
 		fstp st0
 		fstp st0
 		fstp st0
-.3:		fstp qword [ecx]
-		mov eax, ecx
-		fstp qword [ecx+8]
+.3:		mov eax, [esp+0x50]  ; Struct return pointer. We return it in EAX according to the ABI.
+		fstp qword [eax]
+		fstp qword [eax+8]
 		add esp, byte 0x44
 		pop ebx
 		pop esi
