@@ -35,12 +35,12 @@ section .bss align=1
 %endif
 
 %ifdef CONFIG_I386  ; Emulate the missing i686 instructions using i386 instructions.
-  %macro _fucomip 2
+  %macro _fucomip 2  ; The emulation is not perfect, it runs AX.
     fucomp %1, %2
     fnstsw ax
     sahf
   %endmacro
-  %macro _fucomi 2
+  %macro _fucomi 2  ; The emulation is not perfect, it runs AX.
     fucom %1, %2
     fnstsw ax
     sahf
@@ -218,8 +218,8 @@ __divxc3_sub:	fld st1
 .14:		fld st0
 		fsub st0, st1
 		_fucomi st0, st0
-		setp al
-		and cl, al
+		setp ch
+		and cl, ch
 		jnz near .30
 .15:		fld st5
 		fsub st0, st6
@@ -238,10 +238,10 @@ __divxc3_sub:	fld st1
 .18:		fxch st5
 .19:		_fucomi st0, st0
 		fxch st5
-		setpo al
+		setpo ch
 		_fucomip st0, st0
 		setp cl
-		and al, cl
+		and ch, cl
 		jne .22
 		fld st3
 		fsub st0, st4
@@ -253,7 +253,7 @@ __divxc3_sub:	fld st1
 		fxch st4
 		_fucomip st0, st0
 		jpo .4
-		xor eax, eax
+		mov ch, 0
 .22:		_fucomip st0, st0
 		jp .5
 		fld st4
@@ -265,7 +265,7 @@ __divxc3_sub:	fld st1
 		fxch st1
 		fxch st2
 		fxch st3
-		test al, al
+		test ch, ch
 		jne near .37
 		fldz
 		fxch st3

@@ -34,12 +34,12 @@ section .bss align=1
 %endif
 
 %ifdef CONFIG_I386  ; Emulate the missing i686 instructions using i386 instructions.
-  %macro _fucomip 2
+  %macro _fucomip 2  ; The emulation is not perfect, it runs AX.
     fucomp %1, %2
-    fnstsw ax  ; !! Save/restore EAX. Needed at some places.
+    fnstsw ax
     sahf
   %endmacro
-  %macro _fucomi 2
+  %macro _fucomi 2  ; The emulation is not perfect, it runs AX.
     fucom %1, %2
     fnstsw ax
     sahf
@@ -78,8 +78,8 @@ __mulxc3:  ; long double _Complex __muldc3(long double a, long double b, long do
 		fxch st2
 		setp dl
 		_fucomi st0, st0
-		setp al
-		and dl, al
+		setp ch
+		and dl, ch
 		jne .4
 		fstp st4
 		fstp st0
@@ -101,11 +101,11 @@ __mulxc3:  ; long double _Complex __muldc3(long double a, long double b, long do
 		fld tword [esp+0x38]  ; Argument b.
 		_fucomi st0, st0
 		fsub st0, st0
-		setpo al
+		setpo ch
 		_fucomip st0, st0
 		fxch st5
 		setp cl
-		and ecx, eax
+		and cl, ch
 		_fucomi st0, st0
 		jp .5
 		fld tword [esp+0x18]
@@ -123,8 +123,8 @@ __mulxc3:  ; long double _Complex __muldc3(long double a, long double b, long do
 		fsubrp st1, st0
 		_fucomip st0, st0
 		fxch st4
-		setp al
-		and edx, eax
+		setp ch
+		and dl, ch
 		_fucomi st0, st0
 		jp .7
 		fld tword [esp+0x18]
@@ -240,7 +240,7 @@ __mulxc3:  ; long double _Complex __muldc3(long double a, long double b, long do
 		_fucomip st0, st0
 		jp near .36
 		fxch st4
-		mov ecx, edx
+		mov cl, dl
 		jmp near .6
 .29:		fstp st5
 		fstp st0
@@ -306,7 +306,7 @@ __mulxc3:  ; long double _Complex __muldc3(long double a, long double b, long do
 		fchs
 .37:		fstp tword [esp+0x50]  ; Argument d.
 		fxch st4
-		mov ecx, edx
+		mov cl, dl
 		jmp near .6
 .38:		fxam
 		fnstsw ax
