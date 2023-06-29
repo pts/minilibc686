@@ -131,7 +131,13 @@ __divxc3:  ; long double _Complex __divxc3(long double a, long double b, long do
 		_fucomi st0, st0
 		jnp .10  ; if (!isnan(b)) goto .10;  Jump on PF=1, indicating unordered==nan (C2=1).
 		test bl, bl
-		jz near .10b  ; if (isnan(a)) goto .10b;
+		jnz .10  ; if (!isnan(a)) goto .10;
+		fld st4
+		fsub st0, st5
+		fxch st1
+		fxch st5
+		fxch st1
+		jmp short .15
 .10:
 ; x = COPYSIGN(INFINITY, c) * a; y = COPYSIGN(INFINITY, c) * b;
 		fstp st5
@@ -159,7 +165,7 @@ __divxc3:  ; long double _Complex __divxc3(long double a, long double b, long do
 		_fucomi st0, st0
 		setp al
 		and bl, al
-		jne near .30
+		jnz near .30
 .15:		fld st5
 		fsub st0, st6
 		fxch st6
@@ -251,13 +257,6 @@ __divxc3:  ; long double _Complex __divxc3(long double a, long double b, long do
 		fsubp st1, st0
 		fmulp st2, st0
 		jmp near .7
-.10b:		fld st4
-		xor ebx, ebx
-		fsub st0, st5
-		fxch st1
-		fxch st5
-		fxch st1
-		jmp near .15
 .30:		fld st4
 		fsub st0, st5
 		_fucomi st0, st0
@@ -275,7 +274,7 @@ __divxc3:  ; long double _Complex __divxc3(long double a, long double b, long do
 		fxch st2
 		fxch st3
 		test bl, bl
-		jne .38
+		jnz .38
 		fldz
 		fxch st1
 .31:		fxam
