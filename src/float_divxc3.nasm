@@ -1,5 +1,5 @@
 ;
-; based on disassemby from libgcc.a of GCC 7.5.0
+; a bit manually optimized disassembly from libgcc.a of GCC 7.5.0
 ; Compile to i386 ELF .o object: nasm -O999999999 -w+orphan-labels -f elf -o float_chp.o float_chp.nasm
 ;
 ; The following libgcc.a versions were tried, and the shortest code was
@@ -53,11 +53,10 @@ section .text
 ; For PCC and GCC >= 4.3.
 __divxc3:  ; long double _Complex __divxc3(long double a, long double b, long double c, long double d);
 ; Returns: the quotient of (a + ib) / (c + id).
-		push ebx
-		fld tword [esp+0xc]
-		fld tword [esp+0x18]
-		fld tword [esp+0x24]
-		fld tword [esp+0x30]
+		fld tword [esp+8]  ; Argument a.
+		fld tword [esp+0x14]  ; Argument b.
+		fld tword [esp+0x20]  ; Argument c.
+		fld tword [esp+0x2c]  ; Argument d.
 		fld st1
 		fabs
 		fld st1
@@ -95,10 +94,9 @@ __divxc3:  ; long double _Complex __divxc3(long double a, long double b, long do
 		fstp st0
 		fstp st0
 		fxch st1
-.7:		mov eax, [esp+8]  ; Struct return pointer. We return it in EAX according to the ABI.
+.7:		mov eax, [esp+4]  ; Struct return pointer. We return it in EAX according to the ABI.
 		fstp tword [eax]
 		fstp tword [eax+0xc]
-		pop ebx
 		ret 4
 .8:		fld st0
 		fdiv st0, st2
@@ -120,7 +118,7 @@ __divxc3:  ; long double _Complex __divxc3(long double a, long double b, long do
 		fxch st5
 		_fucomi st0, st0
 		fldz
-		setpo bl
+		setpo cl
 		_fucomi st0, st4
 		jp .13
 		jne .13
@@ -130,7 +128,7 @@ __divxc3:  ; long double _Complex __divxc3(long double a, long double b, long do
 		fxch st4
 		_fucomi st0, st0
 		jnp .10  ; if (!isnan(b)) goto .10;  Jump on PF=1, indicating unordered==nan (C2=1).
-		test bl, bl
+		test cl, cl
 		jnz .10  ; if (!isnan(a)) goto .10;
 		fld st4
 		fsub st0, st5
@@ -164,7 +162,7 @@ __divxc3:  ; long double _Complex __divxc3(long double a, long double b, long do
 		fsub st0, st1
 		_fucomi st0, st0
 		setp al
-		and bl, al
+		and cl, al
 		jnz near .30
 .15:		fld st5
 		fsub st0, st6
@@ -185,8 +183,8 @@ __divxc3:  ; long double _Complex __divxc3(long double a, long double b, long do
 		fxch st5
 		setpo al
 		_fucomip st0, st0
-		setp bl
-		and al, bl
+		setp cl
+		and al, cl
 		jne .22
 		fld st3
 		fsub st0, st4
@@ -273,7 +271,7 @@ __divxc3:  ; long double _Complex __divxc3(long double a, long double b, long do
 		fxch st1
 		fxch st2
 		fxch st3
-		test bl, bl
+		test cl, cl
 		jnz .38
 		fldz
 		fxch st1
@@ -311,7 +309,7 @@ __divxc3:  ; long double _Complex __divxc3(long double a, long double b, long do
 		faddp st1, st0
 		push dword 0x7f800000
 		fld dword [esp]
-		pop ecx
+		pop eax
 		fmul st1, st0
 		fxch st4
 		fmulp st2, st0

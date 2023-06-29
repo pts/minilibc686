@@ -1,5 +1,5 @@
 ;
-; based on disassemby from libgcc.a of GCC 7.5.0
+; a bit manually optimized disassembly from libgcc.a of GCC 7.5.0
 ; Compile to i386 ELF .o object: nasm -O999999999 -w+orphan-labels -f elf -o float_chp.o float_chp.nasm
 ;
 ; The following libgcc.a versions were tried, and the shortest code was
@@ -54,21 +54,20 @@ section .text
 __mulxc3:  ; long double _Complex __muldc3(long double a, long double b, long double c, long double d);
 ; Returns: the product of a + ib and c + id.
 		push esi
-		push ebx
 		sub esp, byte 0x24
-		fld tword [esp+0x34]
-		fld tword [esp+0x4c]
+		fld tword [esp+0x30]
+		fld tword [esp+0x48]
 		fld st1
 		fmul st0, st1
-		fld tword [esp+0x40]
-		fld tword [esp+0x58]
+		fld tword [esp+0x3c]
+		fld tword [esp+0x54]
 		fmul st1, st0
 		fxch st1
 		fld st0
 		fstp tword [esp]
 		fxch st1
 		fmul st0, st4
-		fld tword [esp+0x40]
+		fld tword [esp+0x3c]
 		fmul st0, st4
 		fld st0
 		fstp tword [esp+0xc]
@@ -92,17 +91,16 @@ __mulxc3:  ; long double _Complex __muldc3(long double a, long double b, long do
 .2:		fstp st2
 		fstp st0
 		fxch st1
-.3:		mov eax, [esp+0x30]  ; Struct return pointer. We return it in EAX according to the ABI.
+.3:		mov eax, [esp+0x2c]  ; Struct return pointer. We return it in EAX according to the ABI.
 		fstp tword [eax]
 		fstp tword [eax+0xc]
 		add esp, byte 0x24
-		pop ebx
 		pop esi
 		ret 4
 .4:		fld st5
 		fsub st0, st6
 		fstp tword [esp+0x18]
-		fld tword [esp+0x40]
+		fld tword [esp+0x3c]
 		_fucomi st0, st0
 		fsub st0, st0
 		setpo al
@@ -122,7 +120,7 @@ __mulxc3:  ; long double _Complex __muldc3(long double a, long double b, long do
 .6:		fld st4
 		fsub st0, st5
 		fstp tword [esp+0x18]
-		fld tword [esp+0x58]
+		fld tword [esp+0x54]
 		_fucomi st0, st0
 		fld st0
 		setpo dl
@@ -184,14 +182,14 @@ __mulxc3:  ; long double _Complex __muldc3(long double a, long double b, long do
 		fstp st2
 .17:		_fucomi st0, st0
 		jp near .45
-.18:		fld tword [esp+0x40]
+.18:		fld tword [esp+0x3c]
 		_fucomi st0, st0
 		jp near .43
 		fstp st0
 		fxch st1
 .19:		_fucomi st0, st0
 		jp near .41
-.20:		fld tword [esp+0x58]
+.20:		fld tword [esp+0x54]
 		_fucomi st0, st0
 		jp near .39
 		fstp st0
@@ -203,18 +201,18 @@ __mulxc3:  ; long double _Complex __muldc3(long double a, long double b, long do
 		fxch st1
 .23:		fld st1
 		fmul st0, st1
-		fld tword [esp+0x40]
-		fld tword [esp+0x58]
+		fld tword [esp+0x3c]
+		fld tword [esp+0x54]
 		fmul st1, st0
 		fxch st2
 		fsubrp st1, st0
-		push dword 0x7f800000
+		push dword 0x7f800000  ; inf.
 		fld dword [esp]
-		pop ebx  ; TODO(pts): Can we use another register so that we don't have to save ebx?
+		pop eax
 		fmul st1, st0
 		fxch st2
 		fmulp st4, st0
-		fld tword [esp+0x40]
+		fld tword [esp+0x3c]
 		fmulp st3, st0
 		fxch st3
 		faddp st2, st0
@@ -231,7 +229,7 @@ __mulxc3:  ; long double _Complex __muldc3(long double a, long double b, long do
 		fldz
 		fchs
 .25:		fld1
-.26:		fld tword [esp+0x40]
+.26:		fld tword [esp+0x3c]
 		fxam
 		fnstsw ax
 		fstp st0
@@ -239,11 +237,11 @@ __mulxc3:  ; long double _Complex __muldc3(long double a, long double b, long do
 		fabs
 		je .27
 		fchs
-.27:		fstp tword [esp+0x40]
+.27:		fstp tword [esp+0x3c]
 		fxch st4
 		_fucomi st0, st0
 		jp near .38
-.28:		fld tword [esp+0x58]
+.28:		fld tword [esp+0x54]
 		_fucomip st0, st0
 		jp near .36
 		fxch st4
@@ -264,7 +262,7 @@ __mulxc3:  ; long double _Complex __muldc3(long double a, long double b, long do
 		fldz
 		fchs
 .30:		fld1
-.31:		fld tword [esp+0x58]
+.31:		fld tword [esp+0x54]
 		fxam
 		fnstsw ax
 		fstp st0
@@ -272,11 +270,11 @@ __mulxc3:  ; long double _Complex __muldc3(long double a, long double b, long do
 		fabs
 		je .32
 		fchs
-.32:		fstp tword [esp+0x58]
+.32:		fstp tword [esp+0x54]
 		fxch st1
 		_fucomi st0, st0
 		jp .35
-.33:		fld tword [esp+0x40]
+.33:		fld tword [esp+0x3c]
 		_fucomi st0, st0
 		jpo .22
 		fxam
@@ -288,7 +286,7 @@ __mulxc3:  ; long double _Complex __muldc3(long double a, long double b, long do
 		fstp st0
 		fldz
 		fchs
-.34:		fstp tword [esp+0x40]
+.34:		fstp tword [esp+0x3c]
 		fxch st1
 		jmp near .23
 .35:		fxam
@@ -301,7 +299,7 @@ __mulxc3:  ; long double _Complex __muldc3(long double a, long double b, long do
 		fldz
 		fchs
 		jmp short .33
-.36:		fld tword [esp+0x58]
+.36:		fld tword [esp+0x54]
 		fxam
 		fnstsw ax
 		fstp st0
@@ -311,7 +309,7 @@ __mulxc3:  ; long double _Complex __muldc3(long double a, long double b, long do
 		fstp st0
 		fldz
 		fchs
-.37:		fstp tword [esp+0x58]
+.37:		fstp tword [esp+0x54]
 		fxch st4
 		mov esi, edx
 		jmp near .6
@@ -334,7 +332,7 @@ __mulxc3:  ; long double _Complex __muldc3(long double a, long double b, long do
 		fstp st0
 		fldz
 		fchs
-.40:		fstp tword [esp+0x58]
+.40:		fstp tword [esp+0x54]
 		jmp near .23
 .41:		fxam
 		fnstsw ax
@@ -355,7 +353,7 @@ __mulxc3:  ; long double _Complex __muldc3(long double a, long double b, long do
 		fstp st0
 		fldz
 		fchs
-.44:		fstp tword [esp+0x40]
+.44:		fstp tword [esp+0x3c]
 		fxch st1
 		jmp near .19
 .45:		fxam

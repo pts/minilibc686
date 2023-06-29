@@ -1,5 +1,5 @@
 ;
-; based on disassemby from libgcc.a of GCC 7.5.0
+; a bit manually optimized disassembly from libgcc.a of GCC 7.5.0
 ; Compile to i386 ELF .o object: nasm -O999999999 -w+orphan-labels -f elf -o float_chp.o float_chp.nasm
 ;
 ; The following libgcc.a versions were tried, and the shortest code was
@@ -107,12 +107,11 @@ __muldc3:  ; double _Complex __muldc3(double a, double b, double c, double d);
 ;   return res;
 ; }
 		push esi
-		push ebx
 		sub esp, byte 0x44
-		fld qword [esp+0x54]
-		fld qword [esp+0x5c]
-		fld qword [esp+0x64]
-		fld qword [esp+0x6c]
+		fld qword [esp+0x50]
+		fld qword [esp+0x58]
+		fld qword [esp+0x60]
+		fld qword [esp+0x68]
 		fld st3
 		fmul st0, st2
 		fstp qword [esp+0x20]
@@ -132,7 +131,7 @@ __muldc3:  ; double _Complex __muldc3(double a, double b, double c, double d);
 		fsubrp st1, st0
 		fld qword [esp+0x30]
 		fst qword [esp+8]
-		fld qword [esp+0x38]
+		fld qword [esp+0x38]  ; !! TODO(pts): [esp+0x38] and [esp+0x10] (etc.) store the same value.
 		fst qword [esp+0x10]
 		faddp st1, st0
 		_fucomi st0, st0
@@ -149,11 +148,10 @@ __muldc3:  ; double _Complex __muldc3(double a, double b, double c, double d);
 		fstp st0
 		fstp st0
 		fstp st0
-.3:		mov eax, [esp+0x50]  ; Struct return pointer. We return it in EAX according to the ABI.
+.3:		mov eax, [esp+0x4c]  ; Struct return pointer. We return it in EAX according to the ABI.
 		fstp qword [eax]
 		fstp qword [eax+8]
 		add esp, byte 0x44
-		pop ebx
 		pop esi
 		ret 4
 .4:		fld st6
@@ -277,9 +275,9 @@ __muldc3:  ; double _Complex __muldc3(double a, double b, double c, double d);
 		fld st4
 		fmul st0, st4
 		fsubp st1, st0
-		push dword 0x7f800000
+		push dword 0x7f800000  ; inf.
 		fld dword [esp]
-		pop ebx  ; TODO(pts): Can we use another register so that we don't have to save ebx?
+		pop eax
 		fmul st1, st0
 		fxch st3
 		fmulp st4, st0

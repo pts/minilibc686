@@ -1,5 +1,5 @@
 ;
-; based on disassemby from libgcc.a of GCC 7.5.0
+; a bit manually optimized disassembly from libgcc.a of GCC 7.5.0
 ; Compile to i386 ELF .o object: nasm -O999999999 -w+orphan-labels -f elf -o float_chp.o float_chp.nasm
 ;
 ; The following libgcc.a versions were tried, and the shortest code was
@@ -110,7 +110,7 @@ __divsc3:  ; double _Complex __divsc3(double a, double b, double c, double d);
 		fsubr st0, st4
 		fdivrp st1, st0
 		jmp short .1
-.9:		fld dword [esp]  ; Push tmp containing __real__ res (to st0). TODO(pts): Don't truncate.
+.9:		fld dword [esp]  ; Push tmp containing __real__ res (to st0). !! TODO(pts): Don't truncate, fix it everywhere.
 		_fucomip st0, st0  ; isnan(y)?
 		jpo .1  ; if (!(isnan(x) && isnan(y))) goto .1;
 		fxch st4

@@ -1,5 +1,5 @@
 ;
-; based on disassemby from libgcc.a of GCC 7.5.0
+; a bit manually optimized disassembly from libgcc.a of GCC 7.5.0
 ; Compile to i386 ELF .o object: nasm -O999999999 -w+orphan-labels -f elf -o float_chp.o float_chp.nasm
 ;
 ; The following libgcc.a versions were tried, and the shortest code was
@@ -51,12 +51,11 @@ section .text
 ; For PCC and GCC >= 4.3.
 __mulsc3:  ; float _Complex __muldc3(float a, float b, float c, float d);
 ; Returns: the product of a + ib and c + id.
-		push ebx
 		sub esp, byte 0x20
+		fld dword [esp+0x24]
 		fld dword [esp+0x28]
 		fld dword [esp+0x2c]
 		fld dword [esp+0x30]
-		fld dword [esp+0x34]
 		fld st3
 		fmul st0, st2
 		fstp dword [esp+0x10]
@@ -76,7 +75,7 @@ __mulsc3:  ; float _Complex __muldc3(float a, float b, float c, float d);
 		fsubrp st1, st0
 		fld dword [esp+0x18]
 		fst dword [esp+4]
-		fld dword [esp+0x1c]
+		fld dword [esp+0x1c]  ; !! TODO(pts): [esp+0x1c] and [esp+8] (etc.) store the same value.
 		fst dword [esp+8]
 		faddp st1, st0
 		_fucomi st0, st0
@@ -98,7 +97,6 @@ __mulsc3:  ; float _Complex __muldc3(float a, float b, float c, float d);
 		fstp dword [esp]
 		mov edx, [esp]
 		add esp, byte 0x20
-		pop ebx
 		ret
 .4:		fld st6
 		fsub st0, st7
@@ -106,19 +104,19 @@ __mulsc3:  ; float _Complex __muldc3(float a, float b, float c, float d);
 		fxch st5
 		_fucomi st0, st0
 		fld st0
-		setpo bl
+		setpo cl
 		fsub st0, st1
 		_fucomip st0, st0
 		fxch st6
 		setp al
-		and ebx, eax
+		and ecx, eax
 		_fucomi st0, st0
 		jp .5
 		fld dword [esp+0xc]
 		_fucomip st0, st0
 		jp near .51
-.5:		test bl, bl
-		jne near .29
+.5:		test cl, cl
+		jnz near .29
 .6:		fld st4
 		fsub st0, st5
 		fstp dword [esp+0xc]
@@ -138,8 +136,8 @@ __mulsc3:  ; float _Complex __muldc3(float a, float b, float c, float d);
 		jp near .53
 .7:		test dl, dl
 		jne near .37
-		test bl, bl
-		jne near .24
+		test cl, cl
+		jnz near .24
 		fld st2
 		fsub st0, st3
 		fxch st3
@@ -218,9 +216,9 @@ __mulsc3:  ; float _Complex __muldc3(float a, float b, float c, float d);
 		fld st4
 		fmul st0, st4
 		fsubp st1, st0
-		push dword 0x7f800000
+		push dword 0x7f800000  ; inf.
 		fld dword [esp]
-		pop ecx
+		pop eax
 		fmul st1, st0
 		fxch st3
 		fmulp st4, st0
@@ -266,7 +264,7 @@ __mulsc3:  ; float _Complex __muldc3(float a, float b, float c, float d);
 .36:		fxch st3
 		fxch st4
 		fxch st6
-		mov ebx, edx
+		mov ecx, edx
 		jmp near .6
 .37:		fstp st5
 		fstp st0
@@ -323,7 +321,7 @@ __mulsc3:  ; float _Complex __muldc3(float a, float b, float c, float d);
 		je .36
 		fstp st0
 		fldz
-		mov ebx, edx
+		mov ecx, edx
 		fchs
 		fxch st3
 		fxch st4
@@ -407,8 +405,8 @@ __mulsc3:  ; float _Complex __muldc3(float a, float b, float c, float d);
 		fstp st0
 		fld1
 		fchs
-.52:		test bl, bl
-		jne .30
+.52:		test cl, cl
+		jnz .30
 		fldz
 		fxch st7
 		jmp near .31
