@@ -307,7 +307,7 @@ __divxc3:  ; long double _Complex __divxc3(long double a, long double b, long do
 		fld st2
 		fmul st0, st2
 		faddp st1, st0
-		push dword 0x7f800000
+		push dword 0x7f800000  ; inf.
 		fld dword [esp]
 		pop eax
 		fmul st1, st0

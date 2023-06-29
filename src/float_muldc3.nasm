@@ -106,12 +106,11 @@ __muldc3:  ; double _Complex __muldc3(double a, double b, double c, double d);
 ;   __real__ res = x; __imag__ res = y;
 ;   return res;
 ; }
-		push esi
 		sub esp, byte 0x44
-		fld qword [esp+0x50]
-		fld qword [esp+0x58]
-		fld qword [esp+0x60]
-		fld qword [esp+0x68]
+		fld qword [esp+0x4c]
+		fld qword [esp+0x54]
+		fld qword [esp+0x5c]
+		fld qword [esp+0x64]
 		fld st3
 		fmul st0, st2
 		fstp qword [esp+0x20]
@@ -148,11 +147,10 @@ __muldc3:  ; double _Complex __muldc3(double a, double b, double c, double d);
 		fstp st0
 		fstp st0
 		fstp st0
-.3:		mov eax, [esp+0x4c]  ; Struct return pointer. We return it in EAX according to the ABI.
+.3:		mov eax, [esp+0x48]  ; Struct return pointer. We return it in EAX according to the ABI.
 		fstp qword [eax]
 		fstp qword [eax+8]
 		add esp, byte 0x44
-		pop esi
 		ret 4
 .4:		fld st6
 		fsub st0, st7
@@ -161,18 +159,18 @@ __muldc3:  ; double _Complex __muldc3(double a, double b, double c, double d);
 		_fucomi st0, st0
 		fld st0
 		setpo al
-		mov esi, eax
+		mov ecx, eax
 		fsub st0, st1
 		_fucomip st0, st0
 		fxch st6
 		setp al
-		and esi, eax
+		and ecx, eax
 		_fucomi st0, st0
 		jp .5
 		fld qword [esp+0x18]
 		_fucomip st0, st0
 		jp near .51
-.5:		mov eax, esi
+.5:		mov eax, ecx
 		test al, al
 		jne near .29
 .6:		fld st4
@@ -194,7 +192,7 @@ __muldc3:  ; double _Complex __muldc3(double a, double b, double c, double d);
 		jp near .53
 .7:		test dl, dl
 		jne near .37
-		mov eax, esi
+		mov eax, ecx
 		test al, al
 		jne near .24
 		fld st2
@@ -323,7 +321,7 @@ __muldc3:  ; double _Complex __muldc3(double a, double b, double c, double d);
 .36:		fxch st3
 		fxch st4
 		fxch st6
-		mov esi, edx
+		mov ecx, edx
 		jmp near .6
 .37:		fstp st5
 		fstp st0
@@ -380,7 +378,7 @@ __muldc3:  ; double _Complex __muldc3(double a, double b, double c, double d);
 		je .36
 		fstp st0
 		fldz
-		mov esi, edx
+		mov ecx, edx
 		fchs
 		fxch st3
 		fxch st4
@@ -464,7 +462,7 @@ __muldc3:  ; double _Complex __muldc3(double a, double b, double c, double d);
 		fstp st0
 		fld1
 		fchs
-.52:		mov eax, esi
+.52:		mov eax, ecx  ; !! TODO(pts): Can we do xchg instead of mov sometimes?
 		test al, al
 		jne .30
 		fldz
