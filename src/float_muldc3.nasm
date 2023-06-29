@@ -137,23 +137,14 @@ __muldc3:  ; double _Complex __muldc3(double a, double b, double c, double d);
 		faddp st1, st0
 		_fucomi st0, st0
 		fxch st1
-		setp dl
+		setp dl  ; isnan(x)?
 		_fucomi st0, st0
-		setp al
+		setp al  ; isnan(y)?
 		and dl, al
 		jne .4
 		fstp st5
-		fstp st5
-		fstp st0
-		fstp st0
-		fstp st0
-		jmp short .3
+		jmp short .2
 .1:		fstp st0
-		fstp st5
-		fstp st0
-		fstp st0
-		fstp st0
-		jmp short .3
 .2:		fstp st5
 		fstp st0
 		fstp st0
@@ -225,7 +216,7 @@ __muldc3:  ; double _Complex __muldc3(double a, double b, double c, double d);
 		_fucomip st0, st0
 		jp .10
 		_fucomip st0, st0
-		jp .15
+		jp .14
 		jmp short .11
 .10:		fstp st0
 .11:		fld qword [esp+8]
@@ -235,7 +226,7 @@ __muldc3:  ; double _Complex __muldc3(double a, double b, double c, double d);
 		_fucomip st0, st0
 		jp .12
 		_fucomip st0, st0
-		jp .16
+		jp .14
 		jmp short .13
 .12:		fstp st0
 .13:		fld qword [esp+0x10]
@@ -246,25 +237,7 @@ __muldc3:  ; double _Complex __muldc3(double a, double b, double c, double d);
 		jp .1
 		_fucomip st0, st0
 		jpo .2
-		fstp st0
-		fstp st3
-		fxch st1
-		fxch st2
-		fxch st1
-		jmp short .17
 .14:		fstp st0
-		fstp st3
-		fxch st1
-		fxch st2
-		fxch st1
-		jmp short .17
-.15:		fstp st0
-		fstp st3
-		fxch st1
-		fxch st2
-		fxch st1
-		jmp short .17
-.16:		fstp st0
 		fstp st3
 		fxch st1
 		fxch st2
@@ -286,23 +259,13 @@ __muldc3:  ; double _Complex __muldc3(double a, double b, double c, double d);
 .22:		fxch st2
 .23:		_fucomi st0, st0
 		jp near .45
-		fxch st2
-		fxch st1
-		fxch st3
-		fxch st1
-		jmp short .28
+		jmp short .27
 .24:		fstp st5
 		fstp st0
 		fstp st0
-		fxch st1
-		fxch st2
-		jmp short .28
+		jmp short .25b
 .25:		fxch st3
-		fxch st1
-		fxch st2
-		jmp short .28
-.26:		fxch st3
-		fxch st1
+.25b:		fxch st1
 		fxch st2
 		jmp short .28
 .27:		fxch st2
@@ -403,7 +366,7 @@ __muldc3:  ; double _Complex __muldc3(double a, double b, double c, double d);
 		fstp st0
 		test ah, 2
 		fldz
-		je .26
+		je .25
 		fstp st0
 		fldz
 		fchs

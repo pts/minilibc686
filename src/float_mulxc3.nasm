@@ -89,10 +89,6 @@ __mulxc3:  ; long double _Complex __muldc3(long double a, long double b, long do
 		fstp st0
 		jmp short .3
 .1:		fstp st0
-		fstp st2
-		fstp st0
-		fxch st1
-		jmp short .3
 .2:		fstp st2
 		fstp st0
 		fxch st1
@@ -162,7 +158,7 @@ __mulxc3:  ; long double _Complex __muldc3(long double a, long double b, long do
 		_fucomip st0, st0
 		jp .10
 		_fucomip st0, st0
-		jp .15
+		jp .14
 		jmp short .11
 .10:		fstp st0
 .11:		fld st0
@@ -171,7 +167,7 @@ __mulxc3:  ; long double _Complex __muldc3(long double a, long double b, long do
 		_fucomip st0, st0
 		jp .12
 		_fucomip st0, st0
-		jp .16
+		jp .15
 		jmp short .13
 .12:		fstp st0
 .13:		fld tword [esp+0xc]
@@ -182,18 +178,9 @@ __mulxc3:  ; long double _Complex __muldc3(long double a, long double b, long do
 		jp .1
 		_fucomip st0, st0
 		jpo .2
-		fstp st0
-		fstp st2
-		jmp short .17
+		jmp short .15
 .14:		fstp st0
-		fstp st0
-		fstp st2
-		jmp short .17
 .15:		fstp st0
-		fstp st0
-		fstp st2
-		jmp short .17
-.16:		fstp st0
 		fstp st2
 .17:		_fucomi st0, st0
 		jp near .45
@@ -212,9 +199,6 @@ __mulxc3:  ; long double _Complex __muldc3(long double a, long double b, long do
 .21:		fstp st5
 		fstp st0
 		fstp st0
-		fstp st0
-		fxch st1
-		jmp short .23
 .22:		fstp st0
 		fxch st1
 .23:		fld st1

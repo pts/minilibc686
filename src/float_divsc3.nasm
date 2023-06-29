@@ -97,35 +97,14 @@ __divsc3:  ; double _Complex __divsc3(double a, double b, double c, double d);
 		fdivrp st1, st0
 .1:		_fucomi st0, st0  ; isnan(x)?
 		jp .9
-		fstp st3  ; !! TODO(pts): Unify some of these pop paths.
-		fstp st0
-		fstp st0
-		fstp st1
-		jmp short .7
-.2:		fstp st3
+		fstp st3
 		fstp st0
 		fstp st0
 		fstp st1
 		jmp short .7
 .3:		fstp st0
-		fstp st0
-		fstp st0
-		fstp st0
-		fstp st0
-		fstp st0
-		jmp short .7
 .4:		fstp st0
-		fstp st0
-		fstp st0
-		fstp st0
-		fstp st0
-		jmp short .7
 .5:		fstp st0
-		fstp st0
-		fstp st0
-		fstp st0
-		jmp short .7
-.6:		fstp st0
 		fstp st0
 		fstp st0
 		fstp st0
@@ -152,7 +131,7 @@ __divsc3:  ; double _Complex __divsc3(double a, double b, double c, double d);
 		jmp short .1
 .9:		fld dword [esp]  ; Push tmp containing __real__ res (to st0). TODO(pts): Don't truncate.
 		_fucomip st0, st0  ; isnan(y)?
-		jpo .2  ; if (!(isnan(x) && isnan(y))) goto .2;
+		jpo .1  ; if (!(isnan(x) && isnan(y))) goto .1;
 		fxch st4
 		_fucomi st0, st0
 		mov ebx, 0  ; TODO(pts): `xor ebx, ebx' above, before the flags.
@@ -171,12 +150,6 @@ __divsc3:  ; double _Complex __divsc3(double a, double b, double c, double d);
 		fxch st3
 		_fucomi st0, st0
 		jp near .28
-		fstp st4
-		fstp st0
-		fxch st1
-		fxch st2
-		fxch st1
-		jmp short .11
 .10:		fstp st4
 		fstp st0
 		fxch st1
@@ -244,7 +217,7 @@ __divsc3:  ; double _Complex __divsc3(double a, double b, double c, double d);
 		fld st3
 		fsub st0, st4
 		_fucomip st0, st0
-		jp .6
+		jp .5
 		fstp st4
 		fxch st1
 		fxch st2

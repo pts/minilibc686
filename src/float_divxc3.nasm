@@ -89,36 +89,15 @@ __divxc3:  ; long double _Complex __divxc3(long double a, long double b, long do
 		jp .9
 		fstp st5
 		fstp st3
-		fstp st0
-		fstp st0
-		jmp short .7
+		jmp short .2b
 .2:		fstp st4
 		fstp st4
-		fstp st0
+.2b:		fstp st0
 		fstp st0
 		jmp short .7
 .3:		fstp st0
-		fstp st0
-		fstp st0
-		fstp st3
-		fstp st0
-		fstp st0
-		fxch st1
-		jmp short .7
 .4:		fstp st0
-		fstp st0
-		fstp st3
-		fstp st0
-		fstp st0
-		fxch st1
-		jmp short .7
 .5:		fstp st0
-		fstp st3
-		fstp st0
-		fstp st0
-		fxch st1
-		jmp short .7
-.6:		fstp st0
 		fstp st3
 		fstp st0
 		fstp st0
@@ -238,7 +217,7 @@ __divxc3:  ; long double _Complex __divxc3(long double a, long double b, long do
 		fld st4
 		fsub st0, st5
 		_fucomip st0, st0
-		jp .6
+		jp .5
 		fstp st5
 		fstp st0
 		fxch st1
