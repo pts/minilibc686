@@ -576,6 +576,20 @@ sub as2nasm($$$$$$$$$$) {
         if ($label =~ m@\AL_@) {
           ++$errc;
           print STDERR "error: local-prefix label cannot be declared .global ($lc): $label\n";
+        } elsif ($label =~ m@\AS_@ and exists($used_labels->{$label}) and ($local_labels{$label} or 0) == 1) {
+          # Clang 6.0.0 defines label as .local after referring to it.
+          my $label2 = $label;
+          die if $label2 !~ s@\AS_@F_@;
+          $define_when_defined->{$label2} = $label;
+          if (exists($defined_labels{$label2})) {
+            print $outfh "$label equ $label2\n";
+            $defined_labels{$label} = 1;
+          } else {
+            # TODO(pts): Do an initial scanning pass to avoid this workaround. The workaround won't work for multiple input files with conflicting local labels.
+            $define_when_defined->{$label2} = $label;
+          }
+          delete $local_labels{$label2};
+          $used_labels->{$label2} = 1;
         } elsif ($label =~ m@\AS_@) {
           ++$errc;
           print STDERR "error: label already .local before .global ($lc): $label\n";
@@ -617,7 +631,7 @@ sub as2nasm($$$$$$$$$$) {
           $used_labels->{$label2} = 1;
         } else {
           die "fatal: assert: bad .local label: $label\n" if $label !~ s@\A[FS]_@S_@;
-          $local_labels{$label} = 1;
+          $local_labels{$label} = 2;
         }
         print $outfh ";local $label\n";  # NASM doesn't need it.
       } elsif (m@\A[.]section [.]text[.](?:unlikely|startup) *(?:,|\Z)@) {
