@@ -100,7 +100,6 @@ __muldc3:  ; double _Complex __muldc3(double a, double b, double c, double d);
 		fstp st0
 		fstp st0
 		jmp short .3
-		lea esi, [esi]
 .2:		fstp st5
 		fstp st0
 		fstp st0

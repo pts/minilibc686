@@ -94,7 +94,6 @@ __mulxc3:  ; long double _Complex __muldc3(long double a, long double b, long do
 		fstp st0
 		fxch st1
 		jmp short .3
-		lea esi, [esi]
 .2:		fstp st2
 		fstp st0
 		fxch st1

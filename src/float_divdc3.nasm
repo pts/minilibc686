@@ -104,7 +104,6 @@ __divdc3:  ; double _Complex __divdc3(double a, double b, double c, double d);
 		fstp st0
 		fxch st1
 		jmp short .7
-		lea esi, [esi]
 .4:		fstp st0
 		fstp st0
 		fstp st3
@@ -129,8 +128,6 @@ __divdc3:  ; double _Complex __divdc3(double a, double b, double c, double d);
 		pop ebx
 		pop esi
 		ret 4
-		nop
-		lea esi, [esi]
 .8:		fld st0
 		fdiv st0, st2
 		fld st1

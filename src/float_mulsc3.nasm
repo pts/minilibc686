@@ -98,8 +98,6 @@ __mulsc3:  ; float _Complex __muldc3(float a, float b, float c, float d);
 		fstp st0
 		fstp st0
 		jmp short .3
-		nop
-		lea esi, [esi]
 .2:		fstp st5
 		fstp st0
 		fstp st0

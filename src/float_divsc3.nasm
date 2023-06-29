@@ -135,7 +135,6 @@ __divsc3:  ; double _Complex __divsc3(double a, double b, double c, double d);
 		add esp, byte 4
 		pop ebx
 		ret
-		lea esi, [esi]
 .8:		fld st0
 		fdiv st0, st2
 		fld st1

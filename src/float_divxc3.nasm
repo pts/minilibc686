@@ -106,7 +106,6 @@ __divxc3:  ; long double _Complex __divxc3(long double a, long double b, long do
 		fstp st0
 		fxch st1
 		jmp short .7
-		lea esi, [esi]
 .4:		fstp st0
 		fstp st0
 		fstp st3
@@ -131,8 +130,6 @@ __divxc3:  ; long double _Complex __divxc3(long double a, long double b, long do
 		pop ebx
 		pop esi
 		ret 4
-		nop
-		lea esi, [esi]
 .8:		fld st0
 		fdiv st0, st2
 		fld st1
