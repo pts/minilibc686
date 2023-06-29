@@ -54,16 +54,20 @@ section .text
 ; For PCC and GCC >= 4.3.
 __divxc3:  ; long double _Complex __divxc3(long double a, long double b, long double c, long double d);
 ; Returns: the quotient of (a + ib) / (c + id).
-		fld tword [esp+8]  ; Argument a.
-		fld tword [esp+0x14]  ; Argument b.
-		fld tword [esp+0x20]  ; Argument c.
-		fld tword [esp+0x2c]  ; Argument d.
-		call __divxc3_sub
-		mov eax, [esp+4]  ; Struct return pointer. We return it in EAX according to the ABI.
+		mov edx, esp
+		fld tword [edx+8]  ; Argument a.
+		fld tword [edx+0x14]  ; Argument b.
+		fld tword [edx+0x20]  ; Argument c.
+		fld tword [edx+0x2c]  ; Argument d.
+		call __divxc3_sub  ; Keeps EDX intact.
+		mov eax, [edx+4]  ; Struct return pointer. We return it in EAX according to the ABI.
 		fstp tword [eax]
 		fstp tword [eax+0xc]
 		ret 4
 
+; Input: a in ST3, b in ST2, c in ST1, d in ST0, all pushed to the FPU stack.
+; Output: x in ST1, y in ST0, both pushed to the FPU stack.
+; Side effect: Ruins AX, CL and EFLAGS, keeps other registers (other parts of EAX, EBX, other parts of ECX, EDX, ESI, EDI, EBP, ESP) intact.
 __divxc3_sub:	fld st1
 		fabs
 		fld st1
