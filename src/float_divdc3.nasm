@@ -7,15 +7,10 @@
 ; pcc-libs-1.1.0.tgz was also tried with soptcc.pl.
 ;
 ; Uses: %ifdef CONFIG_PIC
-; Uses: %ifdef CONFIG_I386
 ;
 
 bits 32
-%ifdef CONFIG_I386
 cpu 386
-%else
-cpu 686
-%endif
 
 global __divdc3
 %ifdef CONFIG_SECTIONS_DEFINED
@@ -32,22 +27,6 @@ section .rodata align=1
 section .data align=1
 section .bss align=1
 %endif
-
-%ifdef CONFIG_I386  ; Emulate the missing i686 instructions using i386 instructions.
-  %macro _fucomip 2
-    fucomp %1, %2
-    fnstsw ax
-    sahf
-  %endmacro
-  %macro _fucomi 2
-    fucom %1, %2
-    fnstsw ax
-    sahf
-  %endmacro
-%else
-  %define _fucomip fucomip
-  %define _fucomi fucomi
-%endif  ; CONFIG_I386
 
 section .text
 ; For PCC and GCC >= 4.3.
