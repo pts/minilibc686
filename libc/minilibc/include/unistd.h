@@ -49,6 +49,18 @@ __LIBC_FUNC(ssize_t, readlink, (const char *pathname, char *buf, size_t bufsiz),
 __LIBC_FUNC(char *, getcwd, (char *buf, size_t size), __LIBC_NOATTR);  /* Limitation: if argument buf is NULL, then it returns NULL, it doesn't allocate memory dynamically. */
 __LIBC_FUNC(int, access, (const char *name, int type), __LIBC_NOATTR);
 
+__LIBC_VAR(extern int, optind);
+__LIBC_VAR(extern int, opterr);
+__LIBC_VAR(extern int, optopt);
+__LIBC_VAR(extern char *, optarg);
+#ifdef __WATCOMC__  /* There is no other way with `wcc386 -za'. */
+#  pragma aux optind "_mini_*"
+#  pragma aux opterr "_mini_*"
+#  pragma aux optopt "_mini_*"
+#  pragma aux optarg "_mini_*"
+#endif
+__LIBC_FUNC(int, getopt, (int argc, char *const argv[], const char *options), __LIBC_NOATTR);
+
 static __inline__ int getpagesize(void) { return 0x1000; }  /* The .a file also contains mini_getpagesize(...), for binary compatibility. */
 #ifdef __MINILIBC686__
   /* Returns 0 on success, anything else (and sets errno) on error. The

@@ -265,6 +265,7 @@ _need mini_fopen, mini_open
 _need mini_fclose, mini_close
 _need mini_mq_getattr, mini_syscall3_RP1
 _need mini_getenv, mini_environ  ; Without this, the linker failes with duplicate symbols in *.smart.o and src/stdio_medium_linux.o. (It's a misleading error message, it doesn't mention mini_getenv or mini_environ). TODO(pts): Document this.
+_need mini_getopt, mini_write
 _need mini_errno, .bss
 _need mini_environ, .bss
 _need mini_stdout, .data
@@ -1232,6 +1233,13 @@ mini_putchar_RP3:  ; int REGPARM3 mini_putchar_RP3(int c);
       %define CONFIG_MULXC3_INLINE  ; Use the shorter, inline implementation of __mulxc3 if __mulc3 and __mulsc3 are not used.
       %include "src/float_mulxc3.nasm"
     %endif
+  %endif
+%endif
+
+%ifdef __NEED_getopt
+  %ifndef __NEED_opterr
+    %define CONFIG_GETOPT_ASSUME_OPTERR_TRUE  ; Makes the implementation shorter by omitting a `dd 1' and a `cmp'.
+    %include "src/getopt.nasm"
   %endif
 %endif
 
