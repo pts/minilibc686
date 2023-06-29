@@ -50,6 +50,7 @@ section .bss align=1
 %endif  ; CONFIG_I386
 
 section .text
+
 ; For PCC and GCC >= 4.3.
 __divxc3:  ; long double _Complex __divxc3(long double a, long double b, long double c, long double d);
 ; Returns: the quotient of (a + ib) / (c + id).
@@ -57,7 +58,13 @@ __divxc3:  ; long double _Complex __divxc3(long double a, long double b, long do
 		fld tword [esp+0x14]  ; Argument b.
 		fld tword [esp+0x20]  ; Argument c.
 		fld tword [esp+0x2c]  ; Argument d.
-		fld st1
+		call __divxc3_sub
+		mov eax, [esp+4]  ; Struct return pointer. We return it in EAX according to the ABI.
+		fstp tword [eax]
+		fstp tword [eax+0xc]
+		ret 4
+
+__divxc3_sub:	fld st1
 		fabs
 		fld st1
 		fabs
@@ -86,7 +93,7 @@ __divxc3:  ; long double _Complex __divxc3(long double a, long double b, long do
 		fstp st4
 .2b:		fstp st0
 		fstp st0
-		jmp short .7
+		ret
 .3:		fstp st0
 .4:		fstp st0
 .5:		fstp st0
@@ -94,10 +101,6 @@ __divxc3:  ; long double _Complex __divxc3(long double a, long double b, long do
 		fstp st0
 		fstp st0
 		fxch st1
-.7:		mov eax, [esp+4]  ; Struct return pointer. We return it in EAX according to the ABI.
-		fstp tword [eax]
-		fstp tword [eax+0xc]
-		ret 4
 .8:		fld st0
 		fdiv st0, st2
 		fld st1
@@ -156,7 +159,7 @@ __divxc3:  ; long double _Complex __divxc3(long double a, long double b, long do
 		fmul st2, st0
 		fmulp st1, st0
 		fxch st1
-		jmp near .7
+		ret
 .13:		fstp st0
 .14:		fld st0
 		fsub st0, st1
@@ -254,7 +257,7 @@ __divxc3:  ; long double _Complex __divxc3(long double a, long double b, long do
 		fxch st2
 		fsubp st1, st0
 		fmulp st2, st0
-		jmp near .7
+		ret
 .30:		fld st4
 		fsub st0, st5
 		_fucomi st0, st0
@@ -318,7 +321,7 @@ __divxc3:  ; long double _Complex __divxc3(long double a, long double b, long do
 		fsubrp st1, st0
 		fmulp st1, st0
 		fxch st1
-		jmp near .7
+		ret
 .37:		fld1
 		fxch st3
 		jmp near .23
