@@ -33,28 +33,31 @@ def gmtime(ts):
   if -0x80000000 <= ts <= 0x7fffffff:
     assert -24856 <= t <= 24855
     assert 2608 <= t * 4 + 102032 <= 201452
-  # !! Something below this is broken, see the test BROKEN2.
   f = (t * 4 + 102032) // 146097 - 1  # int32_t only if ts is 64 bits.
   if -0x80000000 <= ts <= 0x7fffffff:
     assert -1 <= f <= 0
     assert f - (f >> 2) == 0
-  b = t  # Just for the `assert'.
-  t += f - (f >> 2)  # int16_t.
+  f -= f >> 2
+  b = t
+  if f:
+    b += f
   if -0x80000000 <= ts <= 0x7fffffff:
     assert b == t
     assert -24856 <= t <= 24855
     assert 13058 <= t * 20 + 510178 <= 1007278
-  c = (t * 20 + 510178) // 7305  # uint8_t.
-  if -0x80000000 <= ts <= 0x7fffffff:
-    assert 1 <= c <= 137
-  yday = t - 365 * c - (c >> 2) + 25569  # uint16_t.
-  assert 1 <= yday <= 426
-  a = yday * 100 + 3139  # uint16_t.
-  assert 3239 <= a <= 45739
-  m, g = divmod(a, 3061)  # uint8_t m; uint16_t g;
-  assert 3 <= m <= 14
-  assert 0 <= g <= 3060
-  d = 1 + g // 100  # uint8_t.
+
+  if 1: # Something in this block is broken, see the test BROKEN2.
+    c = (b * 20 + 510178) // 7305  # uint8_t.
+    if -0x80000000 <= ts <= 0x7fffffff:
+      assert 1 <= c <= 137
+    yday = b - 365 * c - (c >> 2) + 25569  # uint16_t.
+    a = yday * 100 + 3139  # uint16_t.
+    assert 3239 <= a <= 45739
+    m, g = divmod(a, 3061)  # uint8_t m; uint16_t g;
+    assert 3 <= m <= 14
+    assert 0 <= g <= 3060
+    d = 1 + g // 100  # uint8_t.
+
   assert 1 <= d <= 31
   y = c + 1900  # uint16_t.
   if -0x80000000 <= ts <= 0x7fffffff:
@@ -65,7 +68,7 @@ def gmtime(ts):
     m -= 12
     y += 1
     yday -= 366
-  elif y & 3 or ((y >> 2) % 100) in (25, 50, 75):
+  elif y & 3 or ((y >> 2) % 100) in (25, 50, 75):  # not isleap(y).
     yday -= 1
   if -0x80000000 <= ts <= 0x7fffffff:
     assert 1901 <= y <= 2038
@@ -79,25 +82,32 @@ def gmtime_impl1(ts):
   # Based on: http://ptspts.blogspot.com/2009/11/how-to-convert-unix-timestamp-to-civil.html
   # Python (-10)//7==-2,  Ruby (-10)//7==-2,  Perl (-10)//7==-1,  C (-10)//7==-1.
   # We require the Python/Ruby behavior here.
-  t, s = divmod(ts, 86400)
-  hh = s // 3600
-  mm = s // 60 % 60
-  ss = s % 60
+  t, hms = divmod(ts, 86400)
+  hms, ss = divmod(hms, 60)  # uint8_t ss;  Use hms as uint32_t.
+  hh, mm = divmod(hms, 60)  # uint8_t mm; uint8_t hh; Use hms as uint32_t.
   wday = (t + 3) % 7
-  x = (t * 4 + 102032) // 146097 + 15
-  b = t + 2442113 + x - (x >> 2)
-  c = (b * 20 - 2442) // 7305
-  yday = b - 365 * c - (c >> 2)
-  e = yday * 100 // 3061
-  d = yday - e * 30 - e * 601 // 1000
-  if e < 14:
-    y, m = c - 4716, e - 1
-    yday -= 63
-    if (y & 3) == 0 and (y % 100 != 0 or y % 400 == 0):  # isleap(y).
-      yday += 1
-  else:
-    y, m = c - 4715, e - 13
-    yday -= 428
+  assert 0 <= wday <= 6
+  f = (t * 4 + 102032) // 146097 - 1
+  f -= f >> 2
+  b = t
+  if f:
+    b += f
+
+  if 1:  # This part is different from gmtime(...).
+    c = ((b + 2442125) * 20 - 2442) // 7305 - 6616
+    yday = b - 365 * (c + 6616) - ((c + 6616) >> 2) - 62 + 2442125
+    assert 1 <= yday <= 426
+    m = ((yday + 62) * 100 // 3061) - 1
+    assert 3 <= m <= 14
+    d = yday + 62 - (m + 1) * 30 - (m + 1) * 601 // 1000
+
+  y = c + 1900
+  if m > 12:
+    m -= 12
+    y += 1
+    yday -= 366
+  elif y & 3 or ((y >> 2) % 100) in (25, 50, 75):  # not isleap(y).
+    yday -= 1
   return y, m, d, hh, mm, ss, wday, yday
 
 
