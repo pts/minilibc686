@@ -1,5 +1,6 @@
 # by pts@fazekas.hu at Sat Jun 30 01:19:14 CEST 2012
 
+import calendar
 import time
 
 try:
@@ -13,7 +14,8 @@ except NameError:
   xrange = range  # For Python 3 compatibility.
 
 def gmtime(ts):
-  # Python (-10)/7==-2,  Ruby (-10)/7==-2,  Perl (-10)/7==-1
+  # Python (-10)//7==-2,  Ruby (-10)//7==-2,  Perl (-10)//7==-1,  C (-10)//7==-1
+  # We require the Python behavior here.
   # See also http://ptspts.blogspot.com/2009/11/how-to-convert-unix-timestamp-to-civil.html
   assert isinstance(ts, (int, long))
   # The int... types below work without overflow if ts is int32_t.
@@ -69,7 +71,10 @@ def gmtime(ts):
   # In C, we have to return m-1, yday-1.
   return y, m, d, hh, mm, ss, wday, yday
 
+
 #def timestamp_to_gmt_civil(ts)
+#  # Python (-10)//7==-2,  Ruby (-10)//7==-2,  Perl (-10)//7==-1,  C (-10)//7==-1
+#  # We require the Ruby behavior here.
 #  s = ts%86400
 #  ts /= 86400
 #  h = s/3600
@@ -84,47 +89,80 @@ def gmtime(ts):
 #  (e < 14 ? [c-4716,e-1,f,h,m,s] : [c-4715,e-13,f,h,m,s])
 #end
 
-def good(ts):
-  # This needs a 64-bit system for high values of ts.
+
+def timegm(y, m, d, h, mi, s):
+  # Python (-10)//7==-2,  Ruby (-10)//7==-2,  Perl (-10)//7==-1,  C (-10)//7==-1
+  # We require the Python behavior here.
+  # See also http://ptspts.blogspot.com/2009/11/how-to-convert-unix-timestamp-to-civil.html
+  if m <= 2:
+    y -= 1
+    m += 12
+  y4 = y >> 2
+  y100 = y4 // 25
+  return (365 * y + y4 - y100 + (y100 >> 2) + 3 * (m + 1) // 5 + 30 * m + d - 719561) * 86400 + 3600 * h + 60 * mi + s
+
+
+def timegm_posix(y, m, unused_d, h, mi, s, unused_wday, yday):
+  # https://stackoverflow.com/questions/9745255/minimal-implementation-of-gmtime-algorithm
+  # https://stackoverflow.com/a/9745438
+  y -= 1900
+  return ((y - 70) * 365 + ((y - 69) >> 2) - ((y - 1) // 100) + ((y + 299) // 400) + (yday - 1)) * 86400 + 3600 * h + 60 * mi + s
+
+
+def expect(ts, expected_tm=None):
+  tm1 = gmtime(ts)
   t = time.gmtime(ts)
-  # !! t.tm_yday
-  return (t.tm_year, t.tm_mon, t.tm_mday, t.tm_hour, t.tm_min, t.tm_sec, t.tm_wday, t.tm_yday)
+  # This needs a 64-bit system for high values of ts.
+  tm2 = (t.tm_year, t.tm_mon, t.tm_mday, t.tm_hour, t.tm_min, t.tm_sec, t.tm_wday, t.tm_yday)
+  if expected_tm is None:
+    expected_tm = tm2
+  assert tm1 == tm2 == expected_tm, (ts, tm1, tm2, expected_tm)
+  tm = tm1[:6]
+  ts1 = timegm(*tm)
+  try:
+    ts2 = calendar.timegm(tm)
+  except ValueError:  # It fails for very small and very large years.
+    tm_fixed = list(tm)
+    year = tm_fixed[0]
+    tm_fixed[0] = 2000 + year % 400
+    ts2 = calendar.timegm(tm_fixed)
+    ts2 += (year - tm_fixed[0]) * (146097 * 86400 // 400)
+  ts3 = timegm_posix(*tm1)
+  assert ts1 == ts2 == ts3 == ts, (ts, tm, ts1, ts2, ts3, ts)
+
+
+def do_test():
+  expect(0, (1970, 1, 1, 0, 0, 0, 3, 1))
+  expect(15398 * 86400, (2012, 2, 28, 0, 0, 0, 1, 59))
+  expect(15399 * 86400, (2012, 2, 29, 0, 0, 0, 2, 60))
+  expect(15400 * 86400, (2012, 3, 1, 0, 0, 0, 3, 61))
+  expect(946684800 - 86400, (1999, 12, 31, 0, 0, 0, 4, 365))
+  expect(946684800, (2000, 1, 1, 0, 0, 0, 5, 1))
+  expect(951696000, (2000, 2, 28, 0, 0, 0, 0, 59))
+  expect(951696000 + 86400, (2000, 2, 29, 0, 0, 0, 1, 60))
+  expect(-0x80000000, (1901, 12, 13, 20, 45, 52, 4, 347))
+  expect(0x7fffffff, (2038, 1, 19, 3, 14, 7, 1, 19))
+  expect(107370570 * 86400, (295940, 8, 21, 0, 0, 0, 2, 234))
+  for ts in xrange(-0x80000000, 0x80000000, 0x1000000):  # 256 iterations.
+    expect(ts)
+  for ts in xrange(-10000 * 86400, 10000 * 86400, 86400):
+    expect(ts)
+  for ts in xrange(-110123 * 86400 + 45678, 110000 * 86400, 8640000):
+    expect(ts)
+  for ts in xrange(-1101234 * 86400 + 34567, 1100000 * 86400, 86400000):
+    expect(ts)
+  for ts in xrange(-11012345 + 86400 + 12345, 11000000 * 86400, 864000000):
+    expect(ts)
+  for ts in xrange(-11012345 + 86400 + 12345, 11000000 * 86400, 863210987):
+    expect(ts)
+  # !! Add full year range.
+  # !! There are mismatches for these extremes.
+  #!!expect(-67768100567971200, (-0x80000000, 1, 1, 0, 0, 0))  # Smallest where tm_year fits to an int32_t.
+  #!!expect(67767976233532799, (0x7fffffff, 12, 31, 23, 59, 59))  # Largest where tm_year fits to an int32_t.
+  #!!print timegm(-0x80000000 + 1900, 1, 1, 0, 0, 0)  # Smallest where tm_year-1900 fits to an int32_t.
+  #!!print timegm(0x7fffffff + 1900, 12, 31, 23, 59, 59)  # Largest where tm_year-1900 fits to an int32_t.
 
 
 if __name__ == '__main__':
-  #gmtime(-0x80000000)
-  #gmtime(0x7fffffff)
-  assert gmtime(0) == good(0) == (1970, 1, 1, 0, 0, 0, 3, 1), (gmtime(0), good(0))
-  assert gmtime(15398 * 86400) == good(15398 * 86400) == (2012, 2, 28, 0, 0, 0, 1, 59)
-  assert gmtime(15399 * 86400) == good(15399 * 86400) == (2012, 2, 29, 0, 0, 0, 2, 60)
-  assert gmtime(15400 * 86400) == good(15400 * 86400) == (2012, 3, 1, 0, 0, 0, 3, 61)
-  assert gmtime(946684800 - 86400) == good(946684800 - 86400) == (1999, 12, 31, 0, 0, 0, 4, 365)
-  assert gmtime(946684800) == good(946684800) == (2000, 1, 1, 0, 0, 0, 5, 1)
-  assert gmtime(951696000) == good(951696000) == (2000, 2, 28, 0, 0, 0, 0, 59)
-  assert gmtime(951696000 + 86400) == good(951696000 + 86400) == (2000, 2, 29, 0, 0, 0, 1, 60)
-
-  assert gmtime(-0x80000000) == good(-0x80000000) == (1901, 12, 13, 20, 45, 52, 4, 347)
-  assert gmtime(-0x70000000) == good(-0x70000000)
-  assert gmtime(-0x60000000) == good(-0x60000000)
-  assert gmtime(-0x50000000) == good(-0x50000000)
-  assert gmtime(-0x40000000) == good(-0x40000000)
-  assert gmtime(-0x30000000) == good(-0x30000000)
-  assert gmtime(-0x20000000) == good(-0x20000000)
-  assert gmtime(-0x10000000) == good(-0x10000000)
-  assert gmtime(0) == good(0) == (1970, 1, 1, 0, 0, 0, 3, 1)
-  assert gmtime(0x10000000) == good(0x10000000)
-  assert gmtime(0x20000000) == good(0x20000000)
-  assert gmtime(0x7fffffff) == good(0x7fffffff) == (2038, 1, 19, 3, 14, 7, 1, 19)
-  assert gmtime(107370570 * 86400) == good(107370570 * 86400) == (
-      295940, 8, 21, 0, 0, 0, 2, 234)
-  for i in xrange(-10000 * 86400, 10000 * 86400, 86400):
-    assert gmtime(i) == good(i)
-  for i in xrange(-110123 * 86400 + 45678, 110000 * 86400, 8640000):
-    assert gmtime(i) == good(i)
-  for i in xrange(-1101234 * 86400 + 34567, 1100000 * 86400, 86400000):
-    assert gmtime(i) == good(i)
-  for i in xrange(-11012345 + 86400 + 12345, 11000000 * 86400, 864000000):
-    assert gmtime(i) == good(i)
-  for i in xrange(-11012345 + 86400 + 12345, 11000000 * 86400, 863210987):
-    assert gmtime(i) == good(i)
+  do_test()
   print('OK')
