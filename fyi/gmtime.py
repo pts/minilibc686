@@ -45,20 +45,27 @@ def gmtime(ts):
     assert b == t
     assert -24856 <= t <= 24855
     assert 13058 <= t * 20 + 510178 <= 1007278
-
-  if 1: # Something in this block is broken, see the test BROKEN2.
-    c = (b * 20 + 510178) // 7305  # uint8_t.
-    if -0x80000000 <= ts <= 0x7fffffff:
-      assert 1 <= c <= 137
-    yday = b - 365 * c - (c >> 2) + 25569  # uint16_t.
-    a = yday * 100 + 3139  # uint16_t.
-    assert 3239 <= a <= 45739
-    m, g = divmod(a, 3061)  # uint8_t m; uint16_t g;
-    assert 3 <= m <= 14
-    assert 0 <= g <= 3060
-    d = 1 + g // 100  # uint8_t.
-
+  c = (b * 20 + 510178) // 7305  # uint8_t.
+  if -0x80000000 <= ts <= 0x7fffffff:
+    assert 1 <= c <= 137
+  yday = b - 365 * c - (c >> 2) + 25569  # uint16_t.
+  assert 1 <= yday <= 426
+  a = yday * 100 + 3139  # uint16_t.
+  assert 3239 <= a <= 45739
+  m, g = divmod(a, 3061)  # uint8_t m; uint16_t g;
+  assert 3 <= m <= 14
+  assert 0 <= g <= 3060
+  assert m == (yday + 123) * 5 // 153 - 3
+  d = 1 + g // 100  # uint8_t.
   assert 1 <= d <= 31
+  assert d == yday + 62 - (m + 1) * 30 - (m + 1) * 601 // 1000
+  assert d == yday + 32 - m * 30 - (m + 1) * 601 // 1000
+  assert d == yday + 32 - m * 30 - (m + 1) * 61 // 100
+  assert d == yday + 32 - m * 30 - (m + 1) * 3 // 5
+  assert d == yday + 32 - ((m * 979 + 25) >> 5)
+  assert d == yday - ((m * 979 - 999) >> 5)
+  assert d == 1 + ((yday + 123) * 5 % 153) // 5
+  assert m == ((yday + 123) * 5 // 153) - 3
   y = c + 1900  # uint16_t.
   if -0x80000000 <= ts <= 0x7fffffff:
     assert 1901 <= y <= 2038
@@ -90,17 +97,16 @@ def gmtime_impl1(ts):
   f = (t * 4 + 102032) // 146097 - 1
   f -= f >> 2
   b = t
-  if f:
+  if f:  # Always false if ts is int32_t.
     b += f
-
-  if 1:  # This part is different from gmtime(...).
-    c = ((b + 2442125) * 20 - 2442) // 7305 - 6616
-    yday = b - 365 * (c + 6616) - ((c + 6616) >> 2) - 62 + 2442125
-    assert 1 <= yday <= 426
-    m = ((yday + 62) * 100 // 3061) - 1
-    assert 3 <= m <= 14
-    d = yday + 62 - (m + 1) * 30 - (m + 1) * 601 // 1000
-
+  c = (b * 20 + 510178) // 7305
+  yday = b - 365 * c - (c >> 2) + 25569
+  assert 1 <= yday <= 426
+  m, g = divmod((yday + 123) * 5, 153)  # !! TODO(pts): Apply this code to gmtime_r.nasm.
+  d = 1 + g // 5
+  assert 1 <= d <= 31
+  m -= 3
+  assert 3 <= m <= 14
   y = c + 1900
   if m > 12:
     m -= 12
@@ -157,7 +163,7 @@ def gmtime_newlib(ts):
   #if days < 0:
   #  era -= 146097 - 1  # !! Why this behavior with negative days? For rounding? This breaks compatibility.
   era //= 146097
-  eraday = days - era * 146097  #!!  TODO(pts): Use divmod.
+  eraday = days - era * 146097  # !!  TODO(pts): Use divmod.
   erayear = (eraday - eraday // ((3 * 365 + 366) - 1) + eraday // 36524 - eraday // (146097 - 1)) // 365
   yearday = eraday - (365 * erayear + erayear // 4 - erayear // 100)
   month = (5 * yearday + 2) // 153
@@ -194,22 +200,27 @@ def timegm_posix(y, m, unused_d, h, mi, s, unused_wday, yday):
   # Python (-10)//7==-2,  Ruby (-10)//7==-2,  Perl (-10)//7==-1,  C (-10)//7==-1.
   # We require the Python/Ruby behavior here.
   y -= 1900
+  # !! Use d and y if yday is not available.
+  # !! Calculate yday from (y, d, m), use it in gmtime.
   return ((y - 70) * 365 + ((y - 69) >> 2) - ((y - 1) // 100) + ((y + 299) // 400) + (yday - 1)) * 86400 + 3600 * h + 60 * mi + s
 
 
-def expect(ts, expected_tm=None):
+def expect(ts, expected_tm=None, is_time_gmtime_buggy=False):
   tm1 = gmtime(ts)
   tm3 = gmtime_newlib(ts)
   tm4 = gmtime_impl0(ts)
   tm5 = gmtime_impl1(ts)
-  try:
-    t = time.gmtime(ts)
-    # This needs a 64-bit system for high values of ts.
-    tm2 = (t.tm_year, t.tm_mon, t.tm_mday, t.tm_hour, t.tm_min, t.tm_sec, t.tm_wday, t.tm_yday)
-  except (ValueError, OSError, OverflowError):
-    if ts >> 55 in (0, -1):  # Not an overflow in time.gmtime(...).
-      raise
+  if is_time_gmtime_buggy:
     tm2 = tm3
+  else:
+    try:
+      t = time.gmtime(ts)
+      # This needs a 64-bit system for high values of ts.
+      tm2 = (t.tm_year, t.tm_mon, t.tm_mday, t.tm_hour, t.tm_min, t.tm_sec, t.tm_wday, t.tm_yday)
+    except (ValueError, OSError, OverflowError):
+      if ts >> 55 in (0, -1):  # Not an overflow in time.gmtime(...).
+        raise
+      tm2 = tm3
   t = None
   if expected_tm is None:
     expected_tm = tm3
@@ -245,9 +256,11 @@ def do_test():
   expect(0x7fffffff, (2038, 1, 19, 3, 14, 7, 1, 19))
   expect(107370570 * 86400, (295940, 8, 21, 0, 0, 0, 2, 234))
   expect(-67768100567971200, (-0x80000000, 1, 1, 0, 0, 0, 1, 1))  # Smallest where tm_year fits to an int32_t.
-  #expect(67767976233532799, (0x7fffffff, 12, 31, 23, 59, 59, 1, 365))  # Largest where tm_year fits to an int32_t.
+  expect(67767976233532799, (0x7fffffff, 12, 31, 23, 59, 59, 1, 365), True)  # Largest where tm_year fits to an int32_t.
   expect(-67768040609740800, (-0x80000000 + 1900, 1, 1, 0, 0, 0, 3, 1))  # Smallest where tm_year-1900 fits to an int32_t.
   expect(67768036191676799, (0x7fffffff + 1900, 12, 31, 23, 59, 59, 2, 365))  # Largest where tm_year-1900 fits to an int32_t.
+  expect(9007199227497599, (285428750, 12, 31, 23, 59, 59, 6, 365))
+  expect(9007199259033599, (285428751, 12, 31, 23, 59, 59, 0, 365), True)  # Python time.gmtime (glibc 2.27) returns off-by-one day from this year.
   for ts in xrange(-0x80000000, 0x80000000, 0x1000000):  # 256 iterations.
     expect(ts)
   for ts in xrange(-10000 * 86400, 10000 * 86400, 86400):
@@ -267,7 +280,12 @@ def do_test():
     expect((-1 << i) - 1)
   expect(-1 << 63)
   expect((-1 << 63) - 1)
-  #expect(67767976233532799, (0x7fffffff, 12, 31, 23, 59, 59, 1, 365))  # Largest where tm_year fits to an int32_t.  # !! tm2 is BROKEN1.
+  #expect(4523176237161599)
+  #for dy in xrange(-1000, 10000):
+  #  ts = timegm(285428751 + dy, 12, 31, 23, 59, 59)
+  #  print dy, ts, (285428751 + dy, 12, 31, 23, 59, 59)
+  #  expect(ts)
+  #print gmtime(67767976233532799 - 2000000000 * 366 * 24 * 3600)
 
 
 if __name__ == '__main__':
