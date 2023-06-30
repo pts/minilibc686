@@ -14,8 +14,8 @@ except NameError:
   xrange = range  # For Python 3 compatibility.
 
 def gmtime(ts):
-  # Python (-10)//7==-2,  Ruby (-10)//7==-2,  Perl (-10)//7==-1,  C (-10)//7==-1
-  # We require the Python behavior here.
+  # Python (-10)//7==-2,  Ruby (-10)//7==-2,  Perl (-10)//7==-1,  C (-10)//7==-1.
+  # We accept either behavior here.
   # See also http://ptspts.blogspot.com/2009/11/how-to-convert-unix-timestamp-to-civil.html
   assert isinstance(ts, (int, long))
   # The int... types below work without overflow if ts is int32_t.
@@ -27,10 +27,13 @@ def gmtime(ts):
   hms, ss = divmod(hms, 60)  # uint8_t ss;  Use hms as uint32_t.
   hh, mm = divmod(hms, 60)  # uint8_t mm; uint8_t hh; Use hms as uint32_t.
   wday = (t + 3) % 7  # uint8_t.
+  if wday < 0:  # Can be true in Perl or C. Always false in Python and Ruby.
+    wday += 7
   assert 0 <= wday <= 6
   if -0x80000000 <= ts <= 0x7fffffff:
     assert -24856 <= t <= 24855
     assert 2608 <= t * 4 + 102032 <= 201452
+  # !! Something below this is broken, see the test BROKEN2.
   f = (t * 4 + 102032) // 146097 - 1  # int32_t only if ts is 64 bits.
   if -0x80000000 <= ts <= 0x7fffffff:
     assert -1 <= f <= 0
@@ -72,28 +75,75 @@ def gmtime(ts):
   return y, m, d, hh, mm, ss, wday, yday
 
 
-#def timestamp_to_gmt_civil(ts)
-#  # Python (-10)//7==-2,  Ruby (-10)//7==-2,  Perl (-10)//7==-1,  C (-10)//7==-1
-#  # We require the Ruby behavior here.
-#  s = ts%86400
-#  ts /= 86400
-#  h = s/3600
-#  m = s/60%60
-#  s = s%60
-#  x = (ts*4+102032)/146097+15
-#  b = ts+2442113+x-(x/4)
-#  c = (b*20-2442)/7305
-#  d = b-365*c-c/4
-#  e = d*1000/30601
-#  f = d-e*30-e*601/1000
-#  (e < 14 ? [c-4716,e-1,f,h,m,s] : [c-4715,e-13,f,h,m,s])
-#end
+def gmtime_impl0(ts):
+  # Based on: http://ptspts.blogspot.com/2009/11/how-to-convert-unix-timestamp-to-civil.html
+  # Python (-10)//7==-2,  Ruby (-10)//7==-2,  Perl (-10)//7==-1,  C (-10)//7==-1.
+  # We require the Python/Ruby behavior here.
+  t, s = divmod(ts, 86400)
+  hh = s // 3600
+  mm = s // 60 % 60
+  ss = s % 60
+  wday = (t + 3) % 7
+  x = (t * 4 + 102032) // 146097 + 15
+  b = t + 2442113 + x - (x >> 2)
+  c = (b * 20 - 2442) // 7305
+  yday = b - 365 * c - (c >> 2)
+  e = yday * 1000 // 30601
+  d = yday - e * 30 - e * 601 // 1000
+  if e < 14:
+    y, m = c - 4716, e - 1
+    yday -= 63
+    if (y & 3) == 0 and (y % 100 != 0 or y % 400 == 0):  # isleap(y).
+      yday += 1
+  else:
+    y, m = c - 4715, e - 13
+    yday -= 428
+  return y, m, d, hh, mm, ss, wday, yday
+
+
+def gmtime_newlib(ts):
+  # Based on newlib/libc/time/gmtime_r.c in Newlib 4.3.0
+  # https://sourceware.org/git/?p=newlib-cygwin.git;a=blob;f=newlib/libc/time/gmtime_r.c;h=8bf9ee52dd1e54e39d2b1516b0208375104e4415;hb=9e09d6ed83cce4777a5950412647ccc603040409
+  # Python (-10)//7==-2,  Ruby (-10)//7==-2,  Perl (-10)//7==-1,  C (-10)//7==-1.
+  # We accept either behavior here.
+  t = ts
+  t, hms = divmod(ts, 86400)  # int16_t t; int32_t hms;
+  if hms < 0:  # Can be true in Perl or C. Always false in Python and Ruby.
+    t -= 1
+    hms += 86400
+  hms, ss = divmod(hms, 60)  # uint8_t ss;  Use hms as uint32_t.
+  hh, mm = divmod(hms, 60)  # uint8_t mm; uint8_t hh; Use hms as uint32_t.
+  wday = (t + 2) % 7
+  if wday < 0:  # Not needed in Python.
+    wday += 7
+  days = t + 719468
+  era = days
+  #if days < 0:
+  #  era -= 146097 - 1  # !! Why this behavior with negative days? For rounding? This breaks compatibility.
+  era //= 146097
+  eraday = days - era * 146097  #!!  TODO(pts): Use divmod.
+  erayear = (eraday - eraday // ((3 * 365 + 366) - 1) + eraday // 36524 - eraday // (146097 - 1)) // 365
+  yearday = eraday - (365 * erayear + erayear // 4 - erayear // 100)
+  month = (5 * yearday + 2) // 153
+  day = yearday - (153 * month + 2) // 5 + 1
+  if month < 10:
+    month += 2
+  else:
+    month -= 10
+  year = erayear + era * 400 + (month <= 1)
+  if yearday >= 365 - 31 - 28:
+    yday = yearday - (365 - 31 - 28)
+  else:
+    yday = yearday + 31 + 28
+    if (erayear & 3) == 0 and (erayear % 100 != 0 or erayear % 400 == 0):  # isleap(erayear).
+      yday += 1
+  return year, month + 1, day, hh, mm, ss, (wday + 1) % 7, yday + 1
 
 
 def timegm(y, m, d, h, mi, s):
-  # Python (-10)//7==-2,  Ruby (-10)//7==-2,  Perl (-10)//7==-1,  C (-10)//7==-1
-  # We require the Python behavior here.
-  # See also http://ptspts.blogspot.com/2009/11/how-to-convert-unix-timestamp-to-civil.html
+  # Based on: http://ptspts.blogspot.com/2009/11/how-to-convert-unix-timestamp-to-civil.html
+  # Python (-10)//7==-2,  Ruby (-10)//7==-2,  Perl (-10)//7==-1,  C (-10)//7==-1.
+  # We require the Python/Ruby behavior here.
   if m <= 2:
     y -= 1
     m += 12
@@ -105,23 +155,37 @@ def timegm(y, m, d, h, mi, s):
 def timegm_posix(y, m, unused_d, h, mi, s, unused_wday, yday):
   # https://stackoverflow.com/questions/9745255/minimal-implementation-of-gmtime-algorithm
   # https://stackoverflow.com/a/9745438
+  # Python (-10)//7==-2,  Ruby (-10)//7==-2,  Perl (-10)//7==-1,  C (-10)//7==-1.
+  # We require the Python/Ruby behavior here.
   y -= 1900
   return ((y - 70) * 365 + ((y - 69) >> 2) - ((y - 1) // 100) + ((y + 299) // 400) + (yday - 1)) * 86400 + 3600 * h + 60 * mi + s
 
 
 def expect(ts, expected_tm=None):
   tm1 = gmtime(ts)
-  t = time.gmtime(ts)
-  # This needs a 64-bit system for high values of ts.
-  tm2 = (t.tm_year, t.tm_mon, t.tm_mday, t.tm_hour, t.tm_min, t.tm_sec, t.tm_wday, t.tm_yday)
+  tm3 = gmtime_newlib(ts)
+  tm4 = gmtime_impl0(ts)
+  try:
+    t = time.gmtime(ts)
+    # This needs a 64-bit system for high values of ts.
+    tm2 = (t.tm_year, t.tm_mon, t.tm_mday, t.tm_hour, t.tm_min, t.tm_sec, t.tm_wday, t.tm_yday)
+  except (ValueError, OSError, OverflowError):
+    if ts >> 55 in (0, -1):  # Not an overflow in time.gmtime(...).
+      raise
+    tm2 = tm3
+  t = None
   if expected_tm is None:
-    expected_tm = tm2
-  assert tm1 == tm2 == expected_tm, (ts, tm1, tm2, expected_tm)
+    expected_tm = tm3
+  if not (tm1 == tm2 == tm3 == tm4 == expected_tm):
+    if tm1 == tm3 == tm4 == expected_tm:
+      assert 0, ('bad_tm2', ts, tm1, tm2, tm3, tm4, expected_tm)
+    else:
+      assert 0, ('bad_tms', ts, tm1, tm2, tm3, tm4, expected_tm)
   tm = tm1[:6]
   ts1 = timegm(*tm)
   try:
     ts2 = calendar.timegm(tm)
-  except ValueError:  # It fails for very small and very large years.
+  except (ValueError, OverflowError):  # It fails for very small and very large years.
     tm_fixed = list(tm)
     year = tm_fixed[0]
     tm_fixed[0] = 2000 + year % 400
@@ -143,6 +207,10 @@ def do_test():
   expect(-0x80000000, (1901, 12, 13, 20, 45, 52, 4, 347))
   expect(0x7fffffff, (2038, 1, 19, 3, 14, 7, 1, 19))
   expect(107370570 * 86400, (295940, 8, 21, 0, 0, 0, 2, 234))
+  expect(-67768100567971200, (-0x80000000, 1, 1, 0, 0, 0, 1, 1))  # Smallest where tm_year fits to an int32_t.
+  #expect(67767976233532799, (0x7fffffff, 12, 31, 23, 59, 59, 1, 365))  # Largest where tm_year fits to an int32_t.
+  expect(-67768040609740800, (-0x80000000 + 1900, 1, 1, 0, 0, 0, 3, 1))  # Smallest where tm_year-1900 fits to an int32_t.
+  expect(67768036191676799, (0x7fffffff + 1900, 12, 31, 23, 59, 59, 2, 365))  # Largest where tm_year-1900 fits to an int32_t.
   for ts in xrange(-0x80000000, 0x80000000, 0x1000000):  # 256 iterations.
     expect(ts)
   for ts in xrange(-10000 * 86400, 10000 * 86400, 86400):
@@ -155,12 +223,14 @@ def do_test():
     expect(ts)
   for ts in xrange(-11012345 + 86400 + 12345, 11000000 * 86400, 863210987):
     expect(ts)
-  # !! Add full year range.
-  # !! There are mismatches for these extremes.
-  #!!expect(-67768100567971200, (-0x80000000, 1, 1, 0, 0, 0))  # Smallest where tm_year fits to an int32_t.
-  #!!expect(67767976233532799, (0x7fffffff, 12, 31, 23, 59, 59))  # Largest where tm_year fits to an int32_t.
-  #!!print timegm(-0x80000000 + 1900, 1, 1, 0, 0, 0)  # Smallest where tm_year-1900 fits to an int32_t.
-  #!!print timegm(0x7fffffff + 1900, 12, 31, 23, 59, 59)  # Largest where tm_year-1900 fits to an int32_t.
+  for i in xrange(-62):
+    expect(1 << i)
+    expect((1 << i) - 1)
+    expect(-1 << i)
+    expect((-1 << i) - 1)
+  expect(-1 << 63)
+  expect((-1 << 63) - 1)
+  #expect(67767976233532799, (0x7fffffff, 12, 31, 23, 59, 59, 1, 365))  # Largest where tm_year fits to an int32_t.  # !! tm2 is BROKEN1.
 
 
 if __name__ == '__main__':
