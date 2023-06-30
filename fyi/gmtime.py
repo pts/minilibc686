@@ -88,7 +88,7 @@ def gmtime_impl1(ts):
   b = t + 2442113 + x - (x >> 2)
   c = (b * 20 - 2442) // 7305
   yday = b - 365 * c - (c >> 2)
-  e = yday * 1000 // 30601
+  e = yday * 100 // 3061
   d = yday - e * 30 - e * 601 // 1000
   if e < 14:
     y, m = c - 4716, e - 1
