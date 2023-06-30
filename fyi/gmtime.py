@@ -66,6 +66,8 @@ def gmtime(ts):
   assert d == yday - ((m * 979 - 999) >> 5)
   assert d == 1 + ((yday + 123) * 5 % 153) // 5
   assert m == ((yday + 123) * 5 // 153) - 3
+  assert yday == 3 * (m + 1) // 5 + 30 * m + d - 32
+  assert yday == (153 * m - 157) // 5 + d
   y = c + 1900  # uint16_t.
   if -0x80000000 <= ts <= 0x7fffffff:
     assert 1901 <= y <= 2038
@@ -81,6 +83,7 @@ def gmtime(ts):
     assert 1901 <= y <= 2038
   assert 1 <= m <= 12
   assert 1 <= yday <= 366
+  assert yday == t - 365 * y - ((y - 1) >> 2) + ((y - 1) // 100) - ((y - 1) // 400) + 719528
   # In C, we have to return m-1, yday-1.
   return y, m, d, hh, mm, ss, wday, yday
 
@@ -107,6 +110,8 @@ def gmtime_impl1(ts):
   assert 1 <= d <= 31
   m -= 3
   assert 3 <= m <= 14
+  assert yday == 3 * (m + 1) // 5 + 30 * m + d - 32
+  assert yday == (153 * m - 157) // 5 + d
   y = c + 1900
   if m > 12:
     m -= 12
@@ -114,6 +119,7 @@ def gmtime_impl1(ts):
     yday -= 366
   elif y & 3 or ((y >> 2) % 100) in (25, 50, 75):  # not isleap(y).
     yday -= 1
+  assert yday == t - 365 * y - ((y - 1) >> 2) + ((y - 1) // 100) - ((y - 1) // 400) + 719528
   return y, m, d, hh, mm, ss, wday, yday
 
 
@@ -191,10 +197,41 @@ def timegm(y, m, d, h, mi, s):
     m += 12
   y4 = y >> 2
   y100 = y4 // 25
-  return (365 * y + y4 - y100 + (y100 >> 2) + 3 * (m + 1) // 5 + 30 * m + d - 719561) * 86400 + 3600 * h + 60 * mi + s
+  t = 365 * y + y4 - y100 + (y100 >> 2) + (153 * m + 3) // 5 + d - (398 + 719163)
+  return t * 86400 + 3600 * h + 60 * mi + s
+
+
+def timegm_smart(y, m, d, h, mi, s, wday=None, yday=None):
+  # It doesn't use wday.
+  # Based on POSIX : https://stackoverflow.com/questions/9745255/minimal-implementation-of-gmtime-algorithm
+  # https://stackoverflow.com/a/9745438
+  # Python (-10)//7==-2,  Ruby (-10)//7==-2,  Perl (-10)//7==-1,  C (-10)//7==-1.
+  # We require the Python/Ruby behavior here.
+  yday0 = yday  # Just for the assert.
+  if yday is None:
+    if m <= 2:
+      y -= 1
+      m += 12
+    yday = (153 * m + 3) // 5 + d - 398
+  else:
+    y -= 1
+  y4 = y >> 2
+  y100 = y4 // 25
+  t = 365 * y + y4 - y100 + (y100 >> 2) + yday - 719163
+  if yday0 is not None and m is not None and d is not None:  # Just the assert checking that (y, yday) matches (y, m, d).
+    y += 1
+    if m <= 2:
+      y -= 1
+      m += 12
+    yday = (153 * m + 3) // 5 + d - 398
+    y4 = y >> 2
+    y100 = y4 // 25
+    assert t == 365 * y + y4 - y100 + (y100 >> 2) + yday - 719163
+  return t * 86400 + 3600 * h + 60 * mi + s
 
 
 def timegm_posix(y, m, unused_d, h, mi, s, unused_wday, yday):
+  # POSIX: http://pubs.opengroup.org/onlinepubs/9699919799/basedefs/V1_chap04.html#tag_04_15
   # https://stackoverflow.com/questions/9745255/minimal-implementation-of-gmtime-algorithm
   # https://stackoverflow.com/a/9745438
   # Python (-10)//7==-2,  Ruby (-10)//7==-2,  Perl (-10)//7==-1,  C (-10)//7==-1.
@@ -240,7 +277,9 @@ def expect(ts, expected_tm=None, is_time_gmtime_buggy=False):
     ts2 = calendar.timegm(tm_fixed)
     ts2 += (year - tm_fixed[0]) * (146097 * 86400 // 400)
   ts3 = timegm_posix(*tm1)
-  assert ts1 == ts2 == ts3 == ts, (ts, tm, ts1, ts2, ts3, ts)
+  ts4 = timegm_smart(*tm1)
+  ts4 = timegm_smart(*tm1[:6])
+  assert ts1 == ts2 == ts3 == ts4 == ts, (ts, tm, ts1, ts2, ts3, ts4, ts)
 
 
 def do_test():
@@ -278,8 +317,8 @@ def do_test():
     expect((1 << i) - 1)
     expect(-1 << i)
     expect((-1 << i) - 1)
-  expect(-1 << 63)
-  expect((-1 << 63) - 1)
+  expect(1 << 63)
+  expect((1 << 63) - 1)
   #expect(4523176237161599)
   #for dy in xrange(-1000, 10000):
   #  ts = timegm(285428751 + dy, 12, 31, 23, 59, 59)
