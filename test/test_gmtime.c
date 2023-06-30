@@ -42,7 +42,7 @@ int main(int argc, char **argv) {
   if (!expect(-0x20000000, 1)) exit_code |= 1;
   if (!expect(-0x10000000, 1)) exit_code |= 1;
   if (!expect(0x10000000, 1)) exit_code |= 1;
-  if (!expect(0x10000000, 1)) exit_code |= 1;
+  if (!expect(0x20000000, 1)) exit_code |= 1;
   if (!expect(0x7fffffff, 1)) exit_code |= 1;
   for (ts = -10000 * 86400; ts < 10000 * 86400; ts += 86400) {
     if (!expect(ts, 0)) exit_code |= 2;
