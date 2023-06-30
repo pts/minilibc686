@@ -75,7 +75,7 @@ def gmtime(ts):
   return y, m, d, hh, mm, ss, wday, yday
 
 
-def gmtime_impl0(ts):
+def gmtime_impl1(ts):
   # Based on: http://ptspts.blogspot.com/2009/11/how-to-convert-unix-timestamp-to-civil.html
   # Python (-10)//7==-2,  Ruby (-10)//7==-2,  Perl (-10)//7==-1,  C (-10)//7==-1.
   # We require the Python/Ruby behavior here.
@@ -88,7 +88,33 @@ def gmtime_impl0(ts):
   b = t + 2442113 + x - (x >> 2)
   c = (b * 20 - 2442) // 7305
   yday = b - 365 * c - (c >> 2)
-  e = yday * 100 // 3061
+  e = yday * 1000 // 30601
+  d = yday - e * 30 - e * 601 // 1000
+  if e < 14:
+    y, m = c - 4716, e - 1
+    yday -= 63
+    if (y & 3) == 0 and (y % 100 != 0 or y % 400 == 0):  # isleap(y).
+      yday += 1
+  else:
+    y, m = c - 4715, e - 13
+    yday -= 428
+  return y, m, d, hh, mm, ss, wday, yday
+
+
+def gmtime_impl0(ts):
+  # Directly based on: http://ptspts.blogspot.com/2009/11/how-to-convert-unix-timestamp-to-civil.html
+  # Python (-10)//7==-2,  Ruby (-10)//7==-2,  Perl (-10)//7==-1,  C (-10)//7==-1.
+  # We require the Python/Ruby behavior here.
+  t, s = divmod(ts, 86400)
+  hh = s // 3600
+  mm = s // 60 % 60
+  ss = s % 60
+  wday = (t + 3) % 7
+  x = (t * 4 + 102032) // 146097 + 15
+  b = t + 2442113 + x - (x >> 2)
+  c = (b * 20 - 2442) // 7305
+  yday = b - 365 * c - (c >> 2)
+  e = yday * 1000 // 30601
   d = yday - e * 30 - e * 601 // 1000
   if e < 14:
     y, m = c - 4716, e - 1
@@ -165,6 +191,7 @@ def expect(ts, expected_tm=None):
   tm1 = gmtime(ts)
   tm3 = gmtime_newlib(ts)
   tm4 = gmtime_impl0(ts)
+  tm5 = gmtime_impl1(ts)
   try:
     t = time.gmtime(ts)
     # This needs a 64-bit system for high values of ts.
@@ -176,11 +203,11 @@ def expect(ts, expected_tm=None):
   t = None
   if expected_tm is None:
     expected_tm = tm3
-  if not (tm1 == tm2 == tm3 == tm4 == expected_tm):
-    if tm1 == tm3 == tm4 == expected_tm:
-      assert 0, ('bad_tm2', ts, tm1, tm2, tm3, tm4, expected_tm)
+  if not (tm1 == tm2 == tm3 == tm4 == tm5 == expected_tm):
+    if tm1 == tm3 == tm4 == tm5 == expected_tm:
+      assert 0, ('bad_tm2', ts, tm1, tm2, tm3, tm4, tm5, expected_tm)
     else:
-      assert 0, ('bad_tms', ts, tm1, tm2, tm3, tm4, expected_tm)
+      assert 0, ('bad_tms', ts, tm1, tm2, tm3, tm4, tm5, expected_tm)
   tm = tm1[:6]
   ts1 = timegm(*tm)
   try:
