@@ -1,0 +1,5 @@
+OBJS='asctime.o ctime_buf.o asctime_r.o gmtime.o gmtime_r.o'
+_nasm $OBJS
+_nasm2 ctime_r.o
+_utcc_nasm2 ctime.nasm -o test_ctime.prog "$TESTDIR"/test_ctime.c $OBJS ctime_r.o
+./test_ctime.prog

@@ -37,5 +37,7 @@ __LIBC_FUNC(struct tm *, gmtime, (const time_t *timep), __LIBC_NOATTR);
 __LIBC_FUNC(struct tm *, localtime, (const time_t *timep), __LIBC_NOATTR);  /* No concept of time zones, everything is GMT, same as gmtime_r(...). */
 __LIBC_FUNC(char *, asctime, (const struct tm *tm), __LIBC_NOATTR);  /* Limitation: No overflow checking, may segfault or print invalid digits if any of the struct tm fields is too large. */
 __LIBC_FUNC(char *, asctime_r, (const struct tm *tm, char *buf), __LIBC_NOATTR);  /* Limitation: No overflow checking, may segfault or print invalid digits if any of the struct tm fields is too large. */
+__LIBC_FUNC(char *, ctime, (const time_t *timep), __LIBC_NOATTR);
+__LIBC_FUNC(char *, ctime_r, (const time_t *timep, char *buf), __LIBC_NOATTR);
 
 #endif  /* _SYS_TIME_H */
