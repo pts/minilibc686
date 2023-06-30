@@ -3,7 +3,7 @@
 ; inspired by dietlibc-0.34/libugly/asctime_r.c
 ; Compile to i386 ELF .o object: nasm -O999999999 -w+orphan-labels -f elf -o asctime_r.o asctime_r.nasm
 ;
-; Code+data size: 0xd3 bytes.
+; Code+data size: 0xcf bytes.
 ;
 ; Limitation: No overflow checking, may segfault or print invalid digits if any of the struct tm fields is too large.
 ;
@@ -44,11 +44,19 @@ mini_asctime_r:  ; char *mini_asctime_r(const struct tm *tm, char *buf);
 		mov edx, [esp+2*4]  ; Argument tm.
 		mov edi, [esp+3*4]  ; Argument buf.
 		push edi
+		xor ecx, ecx  ; Top 24 bits will remain 0.
+		mov cl, 8
 		mov eax, [edx+TM_wday]
-		mov eax, [asctime_wdays+eax*4]
+		mov eax, [asctime_wdays+eax+eax*2]
+		rol eax, cl
+		mov al, ' '
+		ror eax, cl
 		stosd
 		mov eax, [edx+TM_mon]
-		mov eax, [asctime_months+eax*4]
+		mov eax, [asctime_months+eax+eax*2]
+		rol eax, cl
+		mov al, ' '
+		ror eax, cl
 		stosd
 		mov eax, [edx+TM_mday]
 		call num2str
@@ -71,7 +79,6 @@ mini_asctime_r:  ; char *mini_asctime_r(const struct tm *tm, char *buf);
 		stosb
 		mov eax, [edx+TM_year]
 		add ax, 1900
-		xor ecx, ecx
 		mov cl, 100
 		cdq
 		div ecx
@@ -88,7 +95,6 @@ mini_asctime_r:  ; char *mini_asctime_r(const struct tm *tm, char *buf);
 
 num2str:  ; Writes 2 decimal digits from EAX to 2 bytes at EDI, advances EDI. Ruins ECX and EAX.
 		push edx
-		xor ecx, ecx
 		mov cl, 10
 		cdq  ; Sign-exted EAX to EDX. Zero-extension would be more accurate, but the values are small.
 		div ecx
@@ -100,8 +106,8 @@ num2str:  ; Writes 2 decimal digits from EAX to 2 bytes at EDI, advances EDI. Ru
 
 section .rodata
 ; TODO(pts): Does removing the spaces make the code+data shorter?
-asctime_wdays:	db 'Sun Mon Tue Wed Thu Fri Sat '
-asctime_months: db 'Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec '
+asctime_wdays:	db 'SunMonTueWedThuFriSat'  ; Fall throuh.
+asctime_months: db 'JanFebMarAprMayJunJulAugSepOctNovDec ' ; We need the final space to avoid loading past the end of .rodata.
 
 %ifdef CONFIG_PIC  ; TODO(pts): Make it PIC by moving the asctime_days and asctime_months constants.
 %error Not PIC because it uses global constants asctime_wdays and asctime_months.
