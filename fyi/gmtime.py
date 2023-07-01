@@ -18,6 +18,8 @@ def gmtime(ts):
   # We accept either behavior here.
   # See also http://ptspts.blogspot.com/2009/11/how-to-convert-unix-timestamp-to-civil.html
   assert isinstance(ts, (int, long))
+  is_i32 = ts >> 31 in (0, -1)
+  is_i64 = ts >> 63 in (0, -1)
   # The int... types below work without overflow if ts is int32_t.
   t = ts
   t, hms = divmod(ts, 86400)  # int16_t t; int32_t hms;
@@ -30,33 +32,54 @@ def gmtime(ts):
   if wday < 0:  # Can be true in Perl or C. Always false in Python and Ruby.
     wday += 7
   assert 0 <= wday <= 6
-  if -0x80000000 <= ts <= 0x7fffffff:
+  if is_i32:
     assert -24856 <= t <= 24855
     assert 2608 <= t * 4 + 102032 <= 201452
-  f = (t * 4 + 102032) // 146097 - 1  # int32_t only if ts is 64 bits.
-  if -0x80000000 <= ts <= 0x7fffffff:
+  elif is_i64:
+    assert -106751991167301 <= t <= 106751991167300
+  f, fm = divmod((t * 4 + 102032), 146097)
+  if fm < 0:  # Always false if is_i32.
+    f -= 1
+    #fm += 102032  # We don't care about fm.
+  f -= 1  # int32_t only if ts is 64 bits.
+  if is_i32:
     assert -1 <= f <= 0
     assert f - (f >> 2) == 0
-  f -= f >> 2
-  b = t
-  if f:
-    b += f
-  if -0x80000000 <= ts <= 0x7fffffff:
+    b = t
+  else:
+    if is_i64:
+      assert -2922770247 <= f <= 2922770245
+      assert -2192077685 <= f - (f >> 2) <= 2192077684
+    f -= f >> 2
+    b = t
+    if f:  # Always false if is_i32.
+      b += f
+  if is_i32:
     assert b == t
     assert -24856 <= t <= 24855
     assert 13058 <= t * 20 + 510178 <= 1007278
-  c = (b * 20 + 510178) // 7305  # uint8_t.
-  if -0x80000000 <= ts <= 0x7fffffff:
+    c = (b * 20 + 510178) // 7305  # uint8_t.
+  else:
+    if is_i64:
+      assert -106754183244986 <= b <= 106754183244984
+      assert -2135083664389542 <= b * 20 + 510178 <= 2135083665409858
+    c, cm = divmod(b * 20 + 510178, 7305)  # c is still uint64_t.
+    if cm < 0:
+      c -= 1
+      #cm += 7305  # We don't care about cm.
+  if is_i32:
     assert 1 <= c <= 137
+  elif is_i64:
+    assert -292277024558 <= c <= 292277024696
   yday = b - 365 * c - (c >> 2) + 25569  # uint16_t.
   assert 1 <= yday <= 426
   a = yday * 100 + 3139  # uint16_t.
   assert 3239 <= a <= 45739
-  m, g = divmod(a, 3061)  # uint8_t m; uint16_t g;
+  m, g = divmod(a, 3061)  # uint8_t m; uint16_t g; This is a nonnegative division (a >= 0).
   assert 3 <= m <= 14
   assert 0 <= g <= 3060
   assert m == (yday + 123) * 5 // 153 - 3
-  d = 1 + g // 100  # uint8_t.
+  d = 1 + g // 100  # uint8_t. This is a nonnegative division (g >= 100).
   assert 1 <= d <= 31
   assert d == yday + 62 - (m + 1) * 30 - (m + 1) * 601 // 1000
   assert d == yday + 32 - m * 30 - (m + 1) * 601 // 1000
@@ -69,7 +92,7 @@ def gmtime(ts):
   assert yday == 3 * (m + 1) // 5 + 30 * m + d - 32
   assert yday == (153 * m - 157) // 5 + d
   y = c + 1900  # uint16_t.
-  if -0x80000000 <= ts <= 0x7fffffff:
+  if is_i32:
     assert 1901 <= y <= 2038
     if not (y & 3):
       assert ((y >> 2) % 100) not in (25, 50, 75)
@@ -77,9 +100,12 @@ def gmtime(ts):
     m -= 12
     y += 1
     yday -= 366
-  elif y & 3 or ((y >> 2) % 100) in (25, 50, 75):  # not isleap(y).
+  elif y & 3:
     yday -= 1
-  if -0x80000000 <= ts <= 0x7fffffff:
+  elif ((y >> 2) % 100) in (25, 50, 75, -25, -50, -75):  # not isleap(y).
+    assert not is_i32
+    yday -= 1
+  if is_i32:
     assert 1901 <= y <= 2038
   assert 1 <= m <= 12
   assert 1 <= yday <= 366
@@ -105,7 +131,8 @@ def gmtime_impl1(ts):
   c = (b * 20 + 510178) // 7305
   yday = b - 365 * c - (c >> 2) + 25569
   assert 1 <= yday <= 426
-  m, g = divmod((yday + 123) * 5, 153)  # !! TODO(pts): Apply this code to gmtime_r.nasm.
+  a = (yday + 123) * 5
+  m, g = divmod(a, 153)  # !! TODO(pts): Apply this code to gmtime_r.nasm.
   d = 1 + g // 5
   assert 1 <= d <= 31
   m -= 3
