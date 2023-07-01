@@ -73,13 +73,34 @@ def gmtime(ts):
     assert -292277024558 <= c <= 292277024696
   yday = b - 365 * c - (c >> 2) + 25569  # uint16_t.
   assert 1 <= yday <= 426
-  a = yday * 100 + 3139  # uint16_t.
-  assert 3239 <= a <= 45739
-  m, g = divmod(a, 3061)  # uint8_t m; uint16_t g; This is a nonnegative division (a >= 0).
+  if 0:
+    a = yday * 100 + 3139  # uint16_t.
+    assert 3239 <= a <= 45739
+    m, g = divmod(a, 3061)  # uint8_t m; uint16_t g; This is a nonnegative division (a >= 0).
+    assert 0 <= g <= 3060
+    d = 1 + g // 100  # uint8_t. This is a nonnegative division (g >= 100).
+  elif 0:  # This is better suited for C code, where `struct tm' has `yday - 1' and `m - 1'.
+    a = (yday - 1) * 100 + 178  # uint32_t.
+    assert 0 <= a <= 42678
+    m, g = divmod(a, 3061)  # uint8_t m; uint16_t g; This is a nonnegative division (a >= 0).
+    assert 0 <= g <= 3060
+    m += 1
+    d = 1 + g // 100  # uint8_t. This is a nonnegative division (g >= 100).
+  elif 1:
+    a = yday * 5 + 156
+    assert 161 <= a <= 2286
+    m, g = divmod(a, 153)
+    assert 0 <= g <= 153
+    d = 1 + g // 5
+  else:  # This is better suited for C code, where `struct tm' has `yday - 1' and `m - 1'.
+    a = (yday - 1) * 5 + 8
+    assert 8 <= a <= 2133
+    m, g = divmod(a, 153)
+    assert 0 <= g <= 153
+    m += 1
+    d = 1 + g // 5
   assert 3 <= m <= 14
-  assert 0 <= g <= 3060
   assert m == (yday + 123) * 5 // 153 - 3
-  d = 1 + g // 100  # uint8_t. This is a nonnegative division (g >= 100).
   assert 1 <= d <= 31
   assert d == yday + 62 - (m + 1) * 30 - (m + 1) * 601 // 1000
   assert d == yday + 32 - m * 30 - (m + 1) * 601 // 1000
@@ -132,7 +153,7 @@ def gmtime_impl1(ts):
   yday = b - 365 * c - (c >> 2) + 25569
   assert 1 <= yday <= 426
   a = (yday + 123) * 5
-  m, g = divmod(a, 153)  # !! TODO(pts): Apply this code to gmtime_r.nasm.
+  m, g = divmod(a, 153)
   d = 1 + g // 5
   assert 1 <= d <= 31
   m -= 3

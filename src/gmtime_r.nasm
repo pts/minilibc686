@@ -2,7 +2,7 @@
 ; written by pts@fazekas.hu at Thu Jun 22 17:23:12 CEST 2023
 ; Compile to i386 ELF .o object: nasm -O999999999 -w+orphan-labels -f elf -o gmtime_r.o gmtime_r.nasm
 ;
-; Code size: 0xaa bytes.
+; Code size: 0xa4 bytes.
 ;
 ; Uses: %ifdef CONFIG_PIC
 ;
@@ -98,21 +98,21 @@ mini_localtime_r:  ; struct tm *mini_localtime_r(const time_t *timep, struct tm 
 		sub eax, edx  ; EAX (yday) := t - 365 * c - (c >> 2) + 25568.
 		; Now: 0 <= yday <= 425.
 		push eax  ; Save yday.
-		imul eax, eax, byte 100
-		add eax, 178  ; EAX (a) := yday * 100 + 178.
-		; Now: 178 <= EAX (a) <= 32678.
+		lea eax, [eax+eax*4+8]  ; EAX (a) := yday * 5 + 8.
+		; Now: 8 <= EAX (a) <= 2133.
 		cdq
-		mov cx, 3061  ; Highest 16 bits of ECX were already 0.
+		mov cx, 153  ; Highest 16 bits of ECX were already 0.
 		div ecx
-		push eax  ; tm->tm_mon = a / 3061;  Save tm->tm_mon to the stack, will be restored to EAX.
+		push eax  ; tm->tm_mon = a / 153;  Save tm->tm_mon to the stack, will be restored to EAX.
 		; Now: 2 <= EAX (tm->tm_mon) <= 13.
-		xchg eax, edx  ; EAX (a) := a % 3061; EDX := junk.
-		; Now: 0 <= EAX (a) <= 3060.
+		xchg eax, edx  ; EAX (a) := a % 153; EDX := junk.
+		; Now: 0 <= EAX (a) <= 152.
 		cdq
-		mov cx, 100  ; Highest 16 bits of ECX were already 0.
+		mov cl, 5  ; Highest 24 bits of ECX were already 0.
 		div ecx
 		inc eax
-		mov [ebp+TM_mday], eax  ; tm->tm_mday = 1 + a / 100;
+		mov [ebp+TM_mday], eax  ; tm->tm_mday = 1 + a / 5;
+
 		; Now: 1 <= tm->tm_mday <= 31.
 		pop eax  ; EAX ;= tm->tm_mon.
 		pop ecx  ; ECX := yday.
