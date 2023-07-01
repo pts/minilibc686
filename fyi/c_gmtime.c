@@ -34,7 +34,8 @@ struct tm *mini_gmtime_r(const time_t *timep, struct tm *tm) {
   int16_t t = ts / 86400;
   uint32_t hms = ts % 86400;
   uint8_t c;
-  uint16_t yday, a;
+  uint16_t yday;
+  uint32_t a;
   if ((int32_t)hms < 0) { --t; hms += 86400; }
   tm->tm_sec = hms % 60;
   hms /= 60;
@@ -49,7 +50,7 @@ struct tm *mini_gmtime_r(const time_t *timep, struct tm *tm) {
   yday = t - 365 * c - (c >> 2) + 25568;
   /* Now: 0 <= yday <= 425. */
   a = yday * 100 + 178;
-  /* Now: 178 <= a <= 32678. */
+  /* Now: 178 <= a <= 42678. */
   tm->tm_mon = a / 3061;
   a %= 3061;
   /* Now: 3 <= m <= 14. */
