@@ -1487,29 +1487,30 @@ sub run_cmd($$) {
 
 # Most of these flags instruct GCC and other compilers to generate shorter (smaller) code.
 # -fsigned-char is the default for gcc, but not for owcc. We make it explicit for both.
+my @cflags = qw(-D__SOPTCC__);
 my @gcc_flags = qw(-m32 -fno-pic -Os -W -Wall -Werror -U_FORTIFY_SOURCE -fno-stack-protector -fno-unwind-tables -fno-asynchronous-unwind-tables -falign-functions=1 -falign-jumps=1 -falign-loops=1 -mpreferred-stack-boundary=2 -fno-builtin -fno-ident -fsigned-char -ffreestanding);
 my @clang_flags = qw(-m32 -fno-pic -Os -W -Wall -Werror -U_FORTIFY_SOURCE -fno-stack-protector -fno-unwind-tables -fno-asynchronous-unwind-tables -mstack-alignment=4 -fno-builtin -fno-ident -fsigned-char -ffreestanding);
 my @gcc_cmds = (  # GCC and Clang C compilers.
-    ["gcc", "-march=i386", "-fno-omit-frame-pointer", @gcc_flags],
-    ["gcc", "-march=i686", "-fno-omit-frame-pointer", @gcc_flags],
-    ["gcc", "-march=i386", "-fomit-frame-pointer", @gcc_flags],
-    ["gcc", "-march=i686", "-fomit-frame-pointer", @gcc_flags],
-    ["qq", "gcc-4.8", "-march=i386", "-fno-omit-frame-pointer", @gcc_flags],  # `gcc-4.8' generates shorter code than newer GCCs.
-    ["qq", "gcc-4.8", "-march=i686", "-fno-omit-frame-pointer", @gcc_flags],
-    ["qq", "gcc-4.8", "-march=i386", "-fomit-frame-pointer", @gcc_flags],
-    ["qq", "gcc-4.8", "-march=i686", "-fomit-frame-pointer", @gcc_flags],
-    ["clang", "-march=i386", "-fno-omit-frame-pointer", @clang_flags],
-    ["clang", "-march=i686", "-fno-omit-frame-pointer", @clang_flags],
-    ["clang", "-march=i386", "-fomit-frame-pointer", @clang_flags],
-    ["clang", "-march=i686", "-fomit-frame-pointer", @clang_flags],
+    ["gcc", "-march=i386", "-fno-omit-frame-pointer", @gcc_flags, @cflags],
+    ["gcc", "-march=i686", "-fno-omit-frame-pointer", @gcc_flags, @cflags],
+    ["gcc", "-march=i386", "-fomit-frame-pointer", @gcc_flags, @cflags],
+    ["gcc", "-march=i686", "-fomit-frame-pointer", @gcc_flags, @cflags],
+    ["qq", "gcc-4.8", "-march=i386", "-fno-omit-frame-pointer", @gcc_flags, @cflags],  # `gcc-4.8' generates shorter code than newer GCCs.
+    ["qq", "gcc-4.8", "-march=i686", "-fno-omit-frame-pointer", @gcc_flags, @cflags],
+    ["qq", "gcc-4.8", "-march=i386", "-fomit-frame-pointer", @gcc_flags, @cflags],
+    ["qq", "gcc-4.8", "-march=i686", "-fomit-frame-pointer", @gcc_flags, @cflags],
+    ["clang", "-march=i386", "-fno-omit-frame-pointer", @clang_flags, @cflags],
+    ["clang", "-march=i686", "-fno-omit-frame-pointer", @clang_flags, @cflags],
+    ["clang", "-march=i386", "-fomit-frame-pointer", @clang_flags, @cflags],
+    ["clang", "-march=i686", "-fomit-frame-pointer", @clang_flags, @cflags],
 );
 @gcc_cmds = grep { !grep { $_ eq "-march=i686" } @$_ } @gcc_cmds if !$is_i686_enabled;
 my @owcc_flags = qw(-blinux -Os -fno-stack-check -fsigned-char -march=i386 -mabi=cdecl -W -Wall -Wextra -Werror);
 my @owcc_cmds = (  # OpenWatcom C compiler. Good or optimizing for size.
-    ["owcc", @owcc_flags],
-    ["owcc", "-frerun-optimizer", @owcc_flags],
-    ["owcc", "-floop-optimize", @owcc_flags],
-    ["owcc", "-floop-optimize", "-frerun-optimizer", @owcc_flags],
+    ["owcc", @owcc_flags, @cflags],
+    ["owcc", "-frerun-optimizer", @owcc_flags, @cflags],
+    ["owcc", "-floop-optimize", @owcc_flags, @cflags],
+    ["owcc", "-floop-optimize", "-frerun-optimizer", @owcc_flags, @cflags],
 );
 
 $best_code_size = $best_cmd_ary = $best_cmd_type = undef;
