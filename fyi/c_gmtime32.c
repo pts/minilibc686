@@ -25,11 +25,18 @@ typedef unsigned char uint8_t;
 typedef unsigned short uint16_t;
 typedef unsigned int uint32_t;
 
+/* We assume that time_t is int32_t. If that breaks, not only the int sizes
+ * change, but also the algorithm, because the `t' becomes incorrect in
+ * `yday = t - ...'. See fyi/c_gmtime.c for an implementation without a
+ * constraint on sizeof(time_t).
+ *
+ * This implements the inverse of the POSIX formula
+ * (http://pubs.opengroup.org/onlinepubs/9699919799/basedefs/V1_chap04.html#tag_04_15)
+ * for 32-bit signed time_t values. The formula is: tm_sec + tm_min*60 + tm_hour*3600
+ * + tm_yday*86400 + (tm_year-70)*31536000 + ((tm_year-69)/4)*86400 -
+ * ((tm_year-1)/100)*86400 + ((tm_year+299)/400)*86400.
+ */
 struct tm *mini_gmtime_r(const time_t *timep, struct tm *tm) {
-  /* We assume that time_t is int32_t. If that breaks, not only the int
-   * sizes change, but also the algorithm, because the `t' becomes incorrect
-   * in `yday = t - ...'.
-   */
   const int ts = *timep;
   int16_t t = ts / 86400;
   uint32_t hms = ts % 86400;
@@ -52,10 +59,10 @@ struct tm *mini_gmtime_r(const time_t *timep, struct tm *tm) {
   a = yday * 5 + 8;
   /* Now: 8 <= a <= 2133. */
   tm->tm_mon = a / 153;
-  a %= 153;
+  a %= 153;  /* No need to fix if a < 0, because a cannot be negative here. */
   /* Now: 2 <= tm->tm_mon <= 13. */
-  /* Now: 0 <= a <= 3060. */
-  tm->tm_mday = 1 + a / 5;
+  /* Now: 0 <= a <= 152. */
+  tm->tm_mday = 1 + a / 5;  /* No need to fix if a < 0, because a cannot be negative here. */
   /* Now: 1 <= tm->tm_mday <= 31. */
   if (tm->tm_mon >= 12) {
     tm->tm_mon -= 12;

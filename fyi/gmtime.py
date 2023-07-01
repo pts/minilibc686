@@ -38,7 +38,7 @@ def gmtime(ts):
   elif is_i64:
     assert -106751991167301 <= t <= 106751991167300
   f, fm = divmod(((t << 2) + 102032), 146097)
-  if fm < 0:  # Always false if is_i32.
+  if fm < 0:  # Can be true in Perl or C. Always false in Python and Ruby. Always false if is_i32.
     f -= 1
     #fm += 102032  # We don't care about fm.
   f -= 1  # int32_t only if ts is 64 bits.
@@ -209,7 +209,7 @@ def gmtime_newlib(ts):
     hms += 86400
   hms, ss = divmod(hms, 60)  # uint8_t ss;  Use hms as uint32_t.
   hh, mm = divmod(hms, 60)  # uint8_t mm; uint8_t hh; Use hms as uint32_t.
-  wday = (t + 2) % 7
+  wday = (t + 4) % 7
   if wday < 0:  # Not needed in Python.
     wday += 7
   days = t + 719468
@@ -241,7 +241,7 @@ def gmtime_newlib(ts):
     yday = yearday + 31 + 28
     if (erayear & 3) == 0 and (erayear % 100 != 0 or erayear % 400 == 0):  # isleap(erayear).
       yday += 1
-  return year, month + 1, day, hh, mm, ss, (wday + 1) % 7, yday + 1
+  return year, month + 1, day, hh, mm, ss, (wday + 6) % 7, yday + 1
 
 
 def timegm(y, m, d, h, mi, s):
@@ -293,8 +293,6 @@ def timegm_posix(y, m, unused_d, h, mi, s, unused_wday, yday):
   # Python (-10)//7==-2,  Ruby (-10)//7==-2,  Perl (-10)//7==-1,  C (-10)//7==-1.
   # We require the Python/Ruby behavior here.
   y -= 1900
-  # !! Use d and y if yday is not available.
-  # !! Calculate yday from (y, d, m), use it in gmtime.
   return ((y - 70) * 365 + ((y - 69) >> 2) - ((y - 1) // 100) + ((y + 299) // 400) + (yday - 1)) * 86400 + 3600 * h + 60 * mi + s
 
 
