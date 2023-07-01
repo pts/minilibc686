@@ -28,15 +28,15 @@ section .bss align=1
 %endif
 
 ; struct tm {...}. Each field is a signed 32-bit integer.
-TM_sec   equ 0*4  ; Seconds.	[0-60]  (1 leap second =60, mini_gmtime(...) never generates it)
-TM_min   equ 1*4  ; Minutes.	[0-59]
-TM_hour  equ 2*4  ; Hours.	[0-23]
-TM_mday  equ 3*4  ; Day.	[1-31]
-TM_mon   equ 4*4  ; Month.	[0-11]
+TM_sec   equ 0*4  ; Seconds.    [0-60]  (1 leap second =60, mini_gmtime(...) never generates it)
+TM_min   equ 1*4  ; Minutes.    [0-59]
+TM_hour  equ 2*4  ; Hours.      [0-23]
+TM_mday  equ 3*4  ; Day.        [1-31]
+TM_mon   equ 4*4  ; Month.      [0-11]
 TM_year  equ 5*4  ; Year - 1900.
 TM_wday  equ 6*4  ; Day of week. [0-6, Sunday==0]
 TM_yday  equ 7*4  ; Days in year. [0-365]
-TM_isdst equ 8*4  ; DST.	[-1/0/1]
+TM_isdst equ 8*4  ; DST.        [-1/0/1]
 
 section .text
 mini_asctime_r:  ; char *mini_asctime_r(const struct tm *tm, char *buf);
