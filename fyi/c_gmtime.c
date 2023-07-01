@@ -20,6 +20,7 @@
 #  include <sys/time.h>
 #endif
 
+typedef char static_assert_int_is_at_least_32_bits[sizeof(int) >= 4];
 typedef char static_assert_time_t_is_signed[(time_t)-1 < 0 ? 1 : -1];
 
 #ifdef __WATCOMC__
@@ -41,7 +42,7 @@ typedef char static_assert_time_t_is_signed[(time_t)-1 < 0 ? 1 : -1];
 struct tm *mini_gmtime_r(const time_t *timep, struct tm *tm) {
   const time_t ts = *timep;
   time_t t = ts / 86400;
-  unsigned hms = ts % 86400;  /* -86399 <= hms <= 86399. */
+  unsigned hms = ts % 86400;  /* -86399 <= hms <= 86399. This needs sizeof(int) >= 4. */
   time_t c, f;
   unsigned yday;  /* 0 <= yday <= 426. Also fits to an `unsigned short', but `int' is faster. */
   unsigned a;  /* 0 <= a <= 2133. Also fits to an `unsigned short', but `int' is faster. */

@@ -1,29 +1,28 @@
-struct tm {
-  int tm_sec;		/* Seconds.	[0-60] (1 leap second) */
-  int tm_min;		/* Minutes.	[0-59] */
-  int tm_hour;		/* Hours.	[0-23] */
-  int tm_mday;		/* Day.		[1-31] */
-  int tm_mon;		/* Month.	[0-11] */
-  int tm_year;		/* Year - 1900. */
-  int tm_wday;		/* Day of week.	[0-6, Sunday==0] */
-  int tm_yday;		/* Days in year.[0-365]	*/
-  int tm_isdst;		/* DST.		[-1/0/1]*/
-#if 0
-  long int tm_gmtoff;	/* Seconds east of UTC.  */
-  const char *tm_zone;	/* Timezone abbreviation.  */
+#ifdef __SOPTCC__
+  struct tm {
+    int tm_sec;   /* Seconds. [0-60] (1 leap second). */
+    int tm_min;   /* Minutes. [0-59]. */
+    int tm_hour;  /* Hours. [0-23]. */
+    int tm_mday;  /* Day.  [1-31]. */
+    int tm_mon;   /* Month. [0-11]. */
+    int tm_year;  /* Year - 1900. */
+    int tm_wday;  /* Day of week. [0-6, Sunday==0]. */
+    int tm_yday;  /* Days in year.[0-365]. */
+    int tm_isdst; /* DST. [-1/0/1]. */
+#  if 0
+    long tm_gmtoff; /* Seconds east of UTC.  */
+    const char *tm_zone; /* Timezone abbreviation. */
+#  endif
+  };
+  typedef long time_t;
+#else
+#  include <time.h>  /* time_t, struct tm. */
+#  include <sys/time.h>
 #endif
-};
 
-typedef long time_t;
-
-typedef char static_assert_time_size[sizeof(time_t) == 4 ? 1 : -1];
-
-typedef signed char int8_t;
-typedef short int16_t;
-typedef int int32_t;
-typedef unsigned char uint8_t;
-typedef unsigned short uint16_t;
-typedef unsigned int uint32_t;
+typedef char static_assert_int_is_at_least_32_bits[sizeof(int) >= 4];
+typedef char static_assert_time_t_is_32_bits[sizeof(time_t) == 4];
+typedef char static_assert_time_t_is_signed[(time_t)-1 < 0 ? 1 : -1];
 
 /* We assume that time_t is int32_t. If that breaks, not only the int sizes
  * change, but also the algorithm, because the `t' becomes incorrect in
@@ -38,17 +37,17 @@ typedef unsigned int uint32_t;
  */
 struct tm *mini_gmtime_r(const time_t *timep, struct tm *tm) {
   const int ts = *timep;
-  int16_t t = ts / 86400;
-  uint32_t hms = ts % 86400;
-  uint8_t c;
-  uint16_t yday;
-  uint16_t a;
-  if ((int32_t)hms < 0) { --t; hms += 86400; }
+  time_t t = ts / 86400;  /* Smaller code than uint16_t. Declaring it `unsigned' would make it 2 bytes larger. */
+  unsigned hms = ts % 86400;  /* This needs sizeof(int) >= 4. */
+  time_t c;  /* Smaller code than uint8_t. */
+  unsigned yday;  /* Smaller code than uint16_t. */
+  unsigned a;  /* Smaller code than uint16_t. */
+  if ((int)hms < 0) { --t; hms += 86400; }
   tm->tm_sec = hms % 60;
   hms /= 60;
   tm->tm_min = hms % 60;
   tm->tm_hour = hms / 60;
-  tm->tm_wday = (uint16_t)(t + 24861) % 7;  /* t + 24861 >= 0. */
+  tm->tm_wday = (t + 24861) % 7;  /* t + 24861 >= 0. */
   /* Now: -24856 <= t <= 24855. */
   /*int32_t f = (t * 4 + 102032) // 146097 - 1;*/  /* Only if ts is 64 bits. */
   /*t += f - (f >> 2);*/  /* Only if ts is 64 bits. */

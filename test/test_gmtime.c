@@ -7,6 +7,7 @@ struct tm *gmtime(const time_t *timep);
 extern struct tm *mini_gmtime_r(const time_t *timep, struct tm *tm);  /* Function under test. */
 extern struct tm *mini_gmtime(const time_t *timep);
 
+typedef char static_assert_int_is_at_least_32_bits[sizeof(int) >= 4];
 typedef char static_assert_time_t_is_signed[(time_t)-1 < 0 ? 1 : -1];
 
 /* This is the reference implementation (without optimizations) works, and
