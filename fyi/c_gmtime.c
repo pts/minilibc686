@@ -45,7 +45,7 @@ struct tm *mini_gmtime_r(const time_t *timep, struct tm *tm) {
   /* Now: -24856 <= t <= 24855. */
   /*int32_t f = (t * 4 + 102032) // 146097 - 1;*/  /* Only if ts is 64 bits. */
   /*t += f - (f >> 2);*/  /* Only if ts is 64 bits. */
-  c = (t * 20 + 510178) / 7305;
+  c = ((t << 2) + 102035) / 1461;
   /* Now: 1 <= c <= 137. */
   yday = t - 365 * c - (c >> 2) + 25568;
   /* Now: 0 <= yday <= 425. */

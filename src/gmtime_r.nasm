@@ -2,7 +2,7 @@
 ; written by pts@fazekas.hu at Thu Jun 22 17:23:12 CEST 2023
 ; Compile to i386 ELF .o object: nasm -O999999999 -w+orphan-labels -f elf -o gmtime_r.o gmtime_r.nasm
 ;
-; Code size: 0xa4 bytes.
+; Code size: 0xa3 bytes.
 ;
 ; Uses: %ifdef CONFIG_PIC
 ;
@@ -80,11 +80,10 @@ mini_localtime_r:  ; struct tm *mini_localtime_r(const time_t *timep, struct tm 
 
 		pop eax  ; EAX (t) := ts / 86400.
 		push eax
-		imul eax, eax, byte 20
-		add eax, 510178
+		lea eax, [eax*4+102035]
 		cdq
-		mov cx, 7305  ; Higher bits of ECX are already 0.
-		div ecx  ; EAX (c) := (t * 20 + 510178) / 7305; EDX := junk.
+		mov cx, 1461  ; Higher bits of ECX are already 0.
+		div ecx  ; EAX (c) := (t * 4 + 102035) / 1461; EDX := junk.
 		; Now: 1 <= c <= 137.
 		xchg eax, edx  ; EDX (c) := EAX; EAX := junk.
 		pop eax  ; EAX (t) := ts / 86400.
