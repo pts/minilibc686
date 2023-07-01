@@ -15,7 +15,7 @@ except NameError:
 
 def gmtime(ts):
   # Python (-10)//7==-2,  Ruby (-10)//7==-2,  Perl (-10)//7==-1,  C (-10)//7==-1.
-  # We accept either behavior here.
+  # We accept either behavior here. All divisions (/, % and divmod) are done properly even for negative dividend.
   # See also http://ptspts.blogspot.com/2009/11/how-to-convert-unix-timestamp-to-civil.html
   assert isinstance(ts, (int, long))
   is_i32 = ts >> 31 in (0, -1)
@@ -201,7 +201,7 @@ def gmtime_newlib(ts):
   # Based on newlib/libc/time/gmtime_r.c in Newlib 4.3.0
   # https://sourceware.org/git/?p=newlib-cygwin.git;a=blob;f=newlib/libc/time/gmtime_r.c;h=8bf9ee52dd1e54e39d2b1516b0208375104e4415;hb=9e09d6ed83cce4777a5950412647ccc603040409
   # Python (-10)//7==-2,  Ruby (-10)//7==-2,  Perl (-10)//7==-1,  C (-10)//7==-1.
-  # We accept either behavior here.
+  # We accept either behavior here. All divisions (/, % and divmod) are done properly even for negative dividend.
   t = ts
   t, hms = divmod(ts, 86400)  # int16_t t; int32_t hms;
   if hms < 0:  # Can be true in Perl or C. Always false in Python and Ruby.
@@ -216,17 +216,25 @@ def gmtime_newlib(ts):
   era = days
   #if days < 0:
   #  era -= 146097 - 1  # !! Why this behavior with negative days? For rounding? This breaks compatibility.
-  era //= 146097
-  eraday = days - era * 146097  # !!  TODO(pts): Use divmod.
+  era, eraday = divmod(days, 146097)
+  if eraday < 0:  # Can be true in Perl or C. Always false in Python and Ruby.
+    era -= 1
+    eraday += 146097
+  assert 0 <= eraday <= 146097
   erayear = (eraday - eraday // ((3 * 365 + 366) - 1) + eraday // 36524 - eraday // (146097 - 1)) // 365
+  assert 0 <= erayear <= 399
   yearday = eraday - (365 * erayear + erayear // 4 - erayear // 100)
+  assert 0 <= yearday <= 365
   month = (5 * yearday + 2) // 153
+  assert 0 <= month <= 11
   day = yearday - (153 * month + 2) // 5 + 1
+  assert 1 <= day <= 31
+  year = erayear + era * 400
   if month < 10:
     month += 2
   else:
     month -= 10
-  year = erayear + era * 400 + (month <= 1)
+    year += 1
   if yearday >= 365 - 31 - 28:
     yday = yearday - (365 - 31 - 28)
   else:
