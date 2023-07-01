@@ -1,3 +1,5 @@
+/* by pts@fazekas.hu at Sat Jun 30 01:19:14 CEST 2012, revised on 2022-06-23 */
+
 #ifdef __SOPTCC__
   struct tm {
     int tm_sec;   /* Seconds. [0-60] (1 leap second). */
@@ -27,14 +29,19 @@ typedef char static_assert_time_t_is_signed[(time_t)-1 < 0 ? 1 : -1];
 #  pragma warning 201 5  /* Disable the ``unreachable code'' warning. */
 #endif
 
-/* This implementation works, and doesn't overflow for any sizeof(time_t).
+/* Converts a Unix timestamp (number of seconds since the beginning of 1970
+ * CE) to a Gregorian civil date-time tuple in GMT (UTC) time zone.
+ *
+ * This conforms to C89 (and C99...) and POSIX.
+ *
+ * This implementation works, and doesn't overflow for any sizeof(time_t).
  * It doesn't check for overflow/underflow in tm->tm_year output. Other than
  * that, it never overflows or underflows. It assumes that that time_t is
  * signed.
  *
  * This implements the inverse of the POSIX formula
  * (http://pubs.opengroup.org/onlinepubs/9699919799/basedefs/V1_chap04.html#tag_04_15)
- * for all time_t values, no matter the size, as long as tm->tm_year dowsn't
+ * for all time_t values, no matter the size, as long as tm->tm_year doesn't
  * overflow or underflow. The formula is: tm_sec + tm_min*60 + tm_hour*3600
  * + tm_yday*86400 + (tm_year-70)*31536000 + ((tm_year-69)/4)*86400 -
  * ((tm_year-1)/100)*86400 + ((tm_year+299)/400)*86400.

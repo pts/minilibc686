@@ -1,4 +1,4 @@
-# by pts@fazekas.hu at Sat Jun 30 01:19:14 CEST 2012
+# by pts@fazekas.hu at Sat Jun 30 01:19:14 CEST 2012, revised on 2022-06-23
 
 import calendar
 import time

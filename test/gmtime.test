@@ -1,3 +1,4 @@
 _nasm gmtime.o
-_utcc_nasm2 gmtime_r.nasm -o test_gmtime.prog "$TESTDIR"/test_gmtime.c gmtime.o
+_nasm2 timegm.o
+_utcc_nasm2 gmtime_r.nasm -o test_gmtime.prog "$TESTDIR"/test_gmtime.c gmtime.o timegm.o
 ./test_gmtime.prog

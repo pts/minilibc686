@@ -3,14 +3,16 @@
 #include <sys/time.h>
 #include <string.h>
 
-struct tm *gmtime(const time_t *timep);
+struct tm *gmtime(const time_t *timep);  /* Another reference implementation (similar to reference_gmtime_r below), in uClibc. */
+
 extern struct tm *mini_gmtime_r(const time_t *timep, struct tm *tm);  /* Function under test. */
-extern struct tm *mini_gmtime(const time_t *timep);
+extern struct tm *mini_gmtime(const time_t *timep);  /* Function under test. */
+extern time_t mini_timegm(const struct tm *tm);  /* Function under test. */
 
 typedef char static_assert_int_is_at_least_32_bits[sizeof(int) >= 4];
 typedef char static_assert_time_t_is_signed[(time_t)-1 < 0 ? 1 : -1];
 
-/* This is the reference implementation (without optimizations) works, and
+/* This is reference implementation (without optimizations) works, and
  * doesn't overflow for any sizeof(time_t). It checks for overflow/underflow
  * in tm->tm_year output. Other than that, it never overflows or underflows.
  * It assumes that that time_t is signed.
@@ -19,7 +21,7 @@ typedef char static_assert_time_t_is_signed[(time_t)-1 < 0 ? 1 : -1];
  *
  * This implements the inverse of the POSIX formula
  * (http://pubs.opengroup.org/onlinepubs/9699919799/basedefs/V1_chap04.html#tag_04_15)
- * for all time_t values, no matter the size, as long as tm->tm_year dowsn't
+ * for all time_t values, no matter the size, as long as tm->tm_year doesn't
  * overflow or underflow. The formula is: tm_sec + tm_min*60 + tm_hour*3600
  * + tm_yday*86400 + (tm_year-70)*31536000 + ((tm_year-69)/4)*86400 -
  * ((tm_year-1)/100)*86400 + ((tm_year+299)/400)*86400.
@@ -81,16 +83,47 @@ struct tm *reference_gmtime_r(const time_t *timep, struct tm *tm) {
   return tm;
 }
 
-struct tm *mini_gmtime(const time_t *timep) {
-  static struct tm tm;
-  return mini_gmtime_r(timep, &tm);
+/* Converts a Gregorian civil date-time tuple in GMT (UTC) time zone to a
+ * Unix timestamp (number of seconds since the beginning of 1970 CE).
+ *
+ * This is not a standard C or POSIX function.
+ *
+ * This is reference implementation (without optimizations)
+ * works, and doesn't overflow for any sizeof(time_t),
+ * as long as the result fits. It doesn't check for overflow/underflow.
+ * It assumes that that time_t is signed.
+ *
+ * If tm->yday >= 0, this implements the POSIX formula
+ * (http://pubs.opengroup.org/onlinepubs/9699919799/basedefs/V1_chap04.html#tag_04_15)
+ * for all time_t values, no matter the size, as long as it
+ * overflow or underflow. The formula is: tm_sec + tm_min*60 + tm_hour*3600
+ * + tm_yday*86400 + (tm_year-70)*31536000 + ((tm_year-69)/4)*86400 -
+ * ((tm_year-1)/100)*86400 + ((tm_year+299)/400)*86400.
+ *
+ * It uses tm->tm_mon and tm->tm_mday iff tm->tm_yday < 0.
+ */
+time_t reference_timegm(const struct tm *tm) {
+  int year = tm->tm_year + 1900;
+  int yday = tm->tm_yday;
+  int month;
+  time_t y4, y100;
+  if (yday < 0) {
+    month = tm->tm_mon + 1;
+    if (month <= 2) {
+      --year;
+      month += 12;
+    }
+    yday = (153 * month + 3) / 5 + tm->tm_mday - 398;
+  } else {
+    --year;
+    ++yday;
+  }
+  y4 = year >> 2;
+  y100 = y4 / 25;
+  if (y4 % 25 < 0) --y100;  /* Fix quotient if y4 was negative. */
+  return (365 * (time_t)year + y4 - y100 + (y100 >> 2) + (yday - 719163)) * 86400 +
+      (tm->tm_hour * 60 + tm->tm_min) * 60 + tm->tm_sec;
 }
-
-#ifndef __WATCOMC__
-  struct tm *mini_localtime_r(const time_t *timep, struct tm *tm) __asm__("mini_localtime");
-  struct tm *mini_localtime(const time_t *timep) __asm__("mini_gmtime");
-#endif
-
 
 static char is_tm_equal(const struct tm *a, const struct tm *b) {
   return a->tm_sec == b->tm_sec && a->tm_min == b->tm_min && a->tm_hour == b->tm_hour &&
@@ -101,11 +134,19 @@ static char is_tm_equal(const struct tm *a, const struct tm *b) {
 static char expect(time_t ts, char is_verbose) {
   const struct tm expected = *gmtime(&ts);
   const struct tm value = *mini_gmtime(&ts);
+  const time_t ts2 = reference_timegm(&expected);
+  const time_t ts3 = mini_timegm(&expected);
+  struct tm expected4;
+  time_t ts4, ts5;
   struct tm value2;
   char is_ok;
   reference_gmtime_r(&ts, &value2);
-  is_ok = (is_tm_equal(&expected, &value) && is_tm_equal(&expected, &value2));
-  if (is_verbose || !is_ok) printf("is_ok=%d ts=(%d)\n", is_ok, (int)ts);
+  expected4 = expected;
+  expected4.tm_yday = -1;  /* Force tm->tm_mon and tm->tm_mday to be used in mini_timegm(...). */
+  ts4 = reference_timegm(&expected4);
+  ts5 = mini_timegm(&expected4);
+  is_ok = (is_tm_equal(&expected, &value) && is_tm_equal(&expected, &value2) && ts2 == ts && ts3 == ts && ts4 == ts && ts5 == ts);
+  if (is_verbose || !is_ok) printf("is_ok=%d ts=%d ts2=%d ts3=%d ts4=%d ts5=%d\n", is_ok, (int)ts, (int)ts2, (int)ts3, (int)ts4, (int)ts5);
   if (!is_ok) {
     printf("  < %04d-%02d/%02d %02d:%02d:%02d %d+%d+%d\n", expected.tm_year + 1900, expected.tm_mon + 1, expected.tm_mday, expected.tm_hour, expected.tm_min, expected.tm_sec, (expected.tm_wday + 6) & 7, expected.tm_yday + 1, expected.tm_isdst);
     printf("  | %04d-%02d/%02d %02d:%02d:%02d %d+%d+%d\n", value2.tm_year + 1900,   value2.tm_mon + 1,   value2.tm_mday,   value2.tm_hour,   value2.tm_min,   value2.tm_sec,   (value2.tm_wday   + 6) & 7, value2.tm_yday + 1,   value2.tm_isdst);
