@@ -53,15 +53,17 @@ struct tm *mini_gmtime_r(const time_t *timep, struct tm *tm) {
   /* Now: 178 <= a <= 42678. */
   tm->tm_mon = a / 3061;
   a %= 3061;
-  /* Now: 3 <= m <= 14. */
+  /* Now: 2 <= tm->tm_mon <= 13. */
   /* Now: 0 <= a <= 3060. */
   tm->tm_mday = 1 + a / 100;
   /* Now: 1 <= tm->tm_mday <= 31. */
   if (tm->tm_mon >= 12) {
     tm->tm_mon -= 12;
+    /* Now: 0 <= tm->tm_mon <= 1. */
     ++c;
     yday -= 366;
   } else {  /* Check for leap year (in c). */
+    /* Now: 2 <= tm->tm_mon <= 11. */
     /* 1903: not leap; 1904: leap, 1900: not leap; 2000: leap */
     /*if ((c & 3) != 0 || (h = (c >> 2) % 100) == 25 || h == 50 || h == 75) --yday;*/  /* Use this instead of the next line if ts is 64 bits. */
     /* In the year range 1901 <= year <= 2038, only 2000 is divisble by 100, and that's a leap year, no special treatment needed. */

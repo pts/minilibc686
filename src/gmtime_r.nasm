@@ -105,7 +105,7 @@ mini_localtime_r:  ; struct tm *mini_localtime_r(const time_t *timep, struct tm 
 		mov cx, 3061  ; Highest 16 bits of ECX were already 0.
 		div ecx
 		push eax  ; tm->tm_mon = a / 3061;  Save tm->tm_mon to the stack, will be restored to EAX.
-		; Now: 3 <= EAX (tm->tm_mon) <= 14.
+		; Now: 2 <= EAX (tm->tm_mon) <= 13.
 		xchg eax, edx  ; EAX (a) := a % 3061; EDX := junk.
 		; Now: 0 <= EAX (a) <= 3060.
 		cdq
@@ -121,11 +121,13 @@ mini_localtime_r:  ; struct tm *mini_localtime_r(const time_t *timep, struct tm 
 		cmp al, 12
 		jb .month_else  ; if (tm->tm_mon >= 12) {
 		sub al, 12  ; tm->tm_mon -= 12;
+		; Now: 0 <= EAX (tm->tm_mon) <= 1.
 		inc edx  ; ++c;
 		; Now 366 <= EAX (yday) <= 366 + 59 == 425.
 		sub cx, 366  ; EAX (yday) -= 366. Highest 16 bits of EAX are already 0.
 		jmp short .month_fi  ; } else {
-.month_else:	test dl, 3  ; if ((c & 3) != 0) ...
+.month_else:	; Now: 2 <= EAX (tm->tm_mon) <= 11.
+		test dl, 3  ; if ((c & 3) != 0) ...
 		jz .month_fi
 		dec ecx  ; --yday;
 .month_fi:	mov [ebp+TM_mon], eax
