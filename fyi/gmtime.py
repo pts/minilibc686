@@ -34,10 +34,10 @@ def gmtime(ts):
   assert 0 <= wday <= 6
   if is_i32:
     assert -24856 <= t <= 24855
-    assert 2608 <= t * 4 + 102032 <= 201452
+    assert 2608 <= (t << 2) + 102032 <= 201452
   elif is_i64:
     assert -106751991167301 <= t <= 106751991167300
-  f, fm = divmod((t * 4 + 102032), 146097)
+  f, fm = divmod(((t << 2) + 102032), 146097)
   if fm < 0:  # Always false if is_i32.
     f -= 1
     #fm += 102032  # We don't care about fm.
@@ -58,12 +58,12 @@ def gmtime(ts):
     assert b == t
     assert -24856 <= t <= 24855
     assert 13058 <= t * 20 + 510178 <= 1007278
-    c = (b * 4 + 102035) // 1461  # uint8_t.
+    c = ((b << 2) + 102035) // 1461  # uint8_t.
   else:
     if is_i64:
       assert -106754183244986 <= b <= 106754183244984
       assert -2135083664389542 <= b * 20 + 510178 <= 2135083665409858
-    c, cm = divmod(b * 4 + 102035, 1461)  # c is still uint64_t.
+    c, cm = divmod((b << 2) + 102035, 1461)  # c is still uint64_t.
     if cm < 0:
       c -= 1
       #cm += 1461  # We don't care about cm.
@@ -144,12 +144,12 @@ def gmtime_impl1(ts):
   hh, mm = divmod(hms, 60)  # uint8_t mm; uint8_t hh; Use hms as uint32_t.
   wday = (t + 3) % 7
   assert 0 <= wday <= 6
-  f = (t * 4 + 102032) // 146097 - 1
+  f = ((t << 2) + 102032) // 146097 - 1
   f -= f >> 2
   b = t
   if f:  # Always false if ts is int32_t.
     b += f
-  c = (b * 4 + 102035) // 1461
+  c = ((b << 2) + 102035) // 1461
   yday = b - 365 * c - (c >> 2) + 25569
   assert 1 <= yday <= 426
   a = (yday + 123) * 5
