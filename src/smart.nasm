@@ -660,7 +660,7 @@ _syscall sys_set_zone_reclaim, 251
 _syscall exit_group, 252
 _syscall lookup_dcookie, 253
 _syscall kexec_load, 283
-_syscall waitid, 284
+_syscall sys_waitid, 284
 _syscall ioprio_set, 289
 _syscall ioprio_get, 290
 _syscall migrate_pages, 294
@@ -749,6 +749,7 @@ _syscall process_mrelease, 448
 _syscall futex_waitv, 449
 _syscall set_mempolicy_home_node, 450
 ;
+_need mini___M_jmp_syscall_pop_ebx_return, mini_syscall3_RP1
 _need mini_syscall, mini___M_jmp_pop_ebp_edi_esi_ebx_syscall_return
 _need mini_syscall3_AL, mini_syscall3_RP1
 _need mini_syscall6_AL, mini_syscall6_RP1
@@ -949,40 +950,48 @@ start.mini___M_start_flush_stdout:
 		int 0x80  ; Linux i386 syscall. _exit(2) doesn't return.
 %endif
 %ifdef __NEED_mini_syscall6_AL
-global mini_syscall6_AL
-mini_syscall6_AL:  ; Useful from assembly language.
-		; Fall through to mini_syscall3_AL.
-; Calls syscall(number, arg1, arg2, arg3, arg4, arg5, arg6).
-;
-; It takes the syscall number from AL (8 bits only!), arg1 (optional) from
-; [esp+4], arg2 (optional) from [esp+8], arg3 (optional) from [esp+0xc],
-; arg4 (optional) from [esp+0x10], arg5 (optional) from [esp+0x14], arg6
-; (optional) from [esp+0x18]. It keeps these args on the stack. It can use
-; EAX, EDX and ECX as scratch. It returns result (or -1 as error) in EAX.
+  global mini_syscall6_AL
+  mini_syscall6_AL:  ; Useful from assembly language.
+                  ; Fall through to mini_syscall3_AL.
+  ; Calls syscall(number, arg1, arg2, arg3, arg4, arg5, arg6).
+  ;
+  ; It takes the syscall number from AL (8 bits only!), arg1 (optional) from
+  ; [esp+4], arg2 (optional) from [esp+8], arg3 (optional) from [esp+0xc],
+  ; arg4 (optional) from [esp+0x10], arg5 (optional) from [esp+0x14], arg6
+  ; (optional) from [esp+0x18]. It keeps these args on the stack. It can use
+  ; EAX, EDX and ECX as scratch. It returns result (or -1 as error) in EAX.
+  %ifndef __NEED_mini_syscall3_AL
+    %assign LAST_SC36AL $-$$
+		movzx eax, al  ; Syscall number.
+		; Fall through to mini_syscall3_RP1 or mini_syscall6_RP1.
+  %endif
 %endif
 %ifdef __NEED_mini_syscall3_AL
-global mini_syscall3_AL
-mini_syscall3_AL:  ; Useful from assembly language.
-syscall36_AL:
-; Calls syscall(number, arg1, arg2, arg3).
-;
-; It takes the syscall number from AL (8 bits only!), arg1 (optional) from
-; [esp+4], arg2 (optional) from [esp+8], arg3 (optional) from [esp+0xc]. It
-; keeps these args on the stack. It can use EAX, EDX and ECX as scratch. It
-; returns result (or -1 as error) in EAX.
-%assign LAST_SC36AL $-$$
+  global mini_syscall3_AL
+  mini_syscall3_AL:  ; Useful from assembly language.
+  syscall36_AL:
+  ; Calls syscall(number, arg1, arg2, arg3).
+  ;
+  ; It takes the syscall number from AL (8 bits only!), arg1 (optional) from
+  ; [esp+4], arg2 (optional) from [esp+8], arg3 (optional) from [esp+0xc]. It
+  ; keeps these args on the stack. It can use EAX, EDX and ECX as scratch. It
+  ; returns result (or -1 as error) in EAX.
+  %assign LAST_SC36AL $-$$
 		movzx eax, al  ; Syscall number.
 		; Fall through to mini_syscall3_RP1 or mini_syscall6_RP1.
 %endif
 %ifdef __NEED_mini_syscall6_RP1
-global mini_syscall6_RP1
-mini_syscall6_RP1:  ; void *mini_syscall6(long number, int arg1, int arg2, int arg3, int arg4, int arg5, int arg6);
+  global mini_syscall6_RP1
+  mini_syscall6_RP1:  ; void *mini_syscall6(long number, int arg1, int arg2, int arg3, int arg4, int arg5, int arg6);
+  %ifndef __NEED_mini_syscall3_RP1
+    %assign LAST_SC36EAX $-$$
+  %endif
 %endif
 %ifdef __NEED_mini_syscall3_RP1
-global mini_syscall3_RP1
-mini_syscall3_RP1:
-syscall36_EAX:
-%assign LAST_SC36EAX $-$$
+  global mini_syscall3_RP1
+  mini_syscall3_RP1:
+  syscall36_EAX:
+  %assign LAST_SC36EAX $-$$
 %endif
 %ifdef NEED_syscall6_both
 		clc
@@ -1037,6 +1046,8 @@ mini_syscall:  ; long mini_syscall(long nr, ...);  /* Supports up to 6 arguments
 		mov ebx, [esp+2*4]  ; arg1.
 		mov ecx, [esp+3*4]  ; arg2.
 		mov edx, [esp+4*4]  ; arg3.
+  global mini___M_jmp_syscall_pop_ebx_return
+  mini___M_jmp_syscall_pop_ebx_return:
 		int 0x80  ; Linux i386 syscall.
   %ifdef __NEED_mini___M_jmp_pop_ebp_edi_esi_ebx_syscall_return  ; Rarely happens here.
 		jmp strict short mini___M_jmp_pop_ebx_syscall_return
@@ -1071,6 +1082,14 @@ mini_syscall:  ; long mini_syscall(long nr, ...);  /* Supports up to 6 arguments
 		or eax, byte -1  ; EAX := -1 (error).
   .final_result: ret
 %endif  ; __NEED_mini___M_jmp_syscall_return
+%ifdef __NEED_syscall6_any
+  %ifdef __NEED_mini___M_jmp_syscall_pop_ebx_return
+    global mini___M_jmp_syscall_pop_ebx_return
+    mini___M_jmp_syscall_pop_ebx_return:
+                  int 0x80  ; Linux i386 syscall.
+                  jmp strict short mini___M_jmp_pop_ebx_syscall_return
+  %endif
+%endif
 
 _emit_syscalls SYSCALLS
 _define_alias_syms ALIASES  ; Must be called after alias targets have been defined.

@@ -12,6 +12,7 @@ typedef int ptrdiff_t;
 typedef unsigned uid_t;
 typedef unsigned gid_t;
 typedef int pid_t;
+typedef int id_t;
 __extension__ typedef long long quad_t;  /* Always 64-bit. */
 __extension__ typedef unsigned long long u_quad_t;  /* Always 64-bit. */
 

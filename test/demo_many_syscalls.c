@@ -5,6 +5,7 @@
 #include <sys/stat.h>
 #include <sys/syscall.h>
 #include <sys/time.h>
+#include <sys/wait.h>
 #include <time.h>
 #include <unistd.h>
 
@@ -95,6 +96,12 @@ int main(int argc, char **argv) {
     symlink("", "");
     umask(0);
     utimes("", 0);
+    wait(0);
+    waitpid(0, 0, 0);
+    wait3(0, 0, 0);
+    wait4(0, 0, 0, 0);
+    waitid(0, 0, 0, 0);
+    sys_waitid(0, 0, 0, 0, 0);
   }
   return 0;
 }
