@@ -14,8 +14,8 @@ bits 32
 cpu 386
 
 global mini_strcasecmp
-global mini_strncasecmp
-%ifidn __OUTPUT_FORMAT__, bin
+%ifdef CONFIG_SECTIONS_DEFINED
+%elifidn __OUTPUT_FORMAT__, bin
 section .text align=1
 section .rodata align=1
 section .data align=1

@@ -76,7 +76,6 @@ for F in src/[a-zA-Z0-9_]*.nasm; do
      stdio_file_simple_buffered.nasm) ;;  # The libc uses stdio_medium instead.
      isatty_linux_syscall.nasm) ;;  # The libc uses isatty_linux.nasm instead.
      vfprintf_*.nasm) ;;  # The libc uses stdio_medium_vfprintf.nasm instead.
-     strcasecmp.nasm) ;;  # TODO(pts): How to link strcasecmp.nasm if only strcasecmp(3) is needed, and strncasecmp_both.nasm if both strcasecmp(3) and strncasecmp(3) are needed?
      strtok_sep1.nasm) ;;  # TODO(pts): Link it with the symbol name strtok_sep.
      write_linux.nasm) ;;  # start_stdio_medium_linux.nasm provides it.
      stdio_medium_stdout_in_data.nasm) ;; # src/stdio_medium_stdout.nasm %include()s it.

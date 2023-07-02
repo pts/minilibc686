@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 
-extern int mini_strcasecmp(const char *_l, const char *_r);  /* Function under test. */
+extern int mini_strcasecmp(const char *_l, const char *_r, size_t n_missing);  /* Function under test. Purposefully incorrect declaration (to detect stack use), last argument doesn't exist. */
 #if !DO_IGNORE_STRNCASECMP
 extern int mini_strncasecmp(const char *_l, const char *_r, size_t n);  /* Function under test. */
 #endif
@@ -18,7 +18,7 @@ static char expect(const char *l, const char *r, size_t n) {
 #else
   int value = mini_strncasecmp(l, r, n);
 #endif
-  int value2 = mini_strcasecmp(l, r);
+  int value2 = mini_strcasecmp(l, r, 0);
   char is_ok = (value == expected_value && value2 == expected_value2);
   printf("is_ok=%d lstr=(%s) rstr=(%s) n=%u exp=%d value=%d exp2=%d value2=%d\n", is_ok, l, r, (unsigned)n, expected_value, value, expected_value2, value2);
   return is_ok;

@@ -5,37 +5,47 @@
 ; Code size: 0x4e == 0x4a + 5 bytes.
 
 ; Uses: %ifdef CONFIG_PIC
+; Uses: %ifdef CONFIG_STRNCASECMP_BOTH
 ;
 
 bits 32
 cpu 386
 
+%ifdef CONFIG_STRNCASECMP_BOTH
 global mini_strcasecmp
+%endif
 global mini_strncasecmp
-%ifidn __OUTPUT_FORMAT__, bin
+%ifdef CONFIG_SECTIONS_DEFINED
+%elifidn __OUTPUT_FORMAT__, bin
 section .text align=1
 section .rodata align=1
 section .data align=1
 section .bss align=1
 %else
 section .text align=1
-section .rodata align=4
-section .data align=4
-section .bss align=4
+section .rodata align=1
+section .data align=1
+section .bss align=1
 %endif
 
 section .text
-; TODO(pts): Do this with smart linking.
-;
+
+%ifdef CONFIG_STRNCASECMP_BOTH  ; Used by smart linking (src/smart.nasm).
 ; This only adds 5 bytes to the existing mini_strncasecmp(...) implementation.
 mini_strcasecmp:  ; int mini_strcasecmp(const char *l, const char *r);
 		or ecx, byte -1  ; ECX := -1.
-		jmp strict short mini_strncasecmp.have_ecx
+		db 0xba  ; First byte of `mov edx, ...'. Skip the next instruction.
+		;jmp strict short mini_strncasecmp.have_ecx
+		; Fall through to mini_strncasecmp.have_ecx.
+%endif
 
 ; Manually written, 0x4a bytes.
 mini_strncasecmp:  ; int mini_strncasecmp(const char *l, const char *r, size_t n);
 		mov ecx, [esp+3*4]  ; n (maximum number of bytes to scan).
-.have_ecx:	push esi
+.have_ecx:
+times (+($-mini_strncasecmp)-4) times 0 nop  ; Assert on instruction size.
+times (-($-mini_strncasecmp)+4) times 0 nop  ; Assert on instruction size.
+		push esi
 		push edi
 		push ebx
 		mov esi, [esp+4*4]  ; Start of string l.

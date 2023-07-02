@@ -1243,6 +1243,13 @@ mini_putchar_RP3:  ; int REGPARM3 mini_putchar_RP3(int c);
   %endif
 %endif
 
+%ifdef __NEED_mini_strcasecmp
+  %ifdef __NEED_mini_strncasecmp
+    %define CONFIG_STRNCASECMP_BOTH  ; Define both mini_strcasecmp(...) and mini_strncasecmp(...), the former calling the latter.
+    %include "src/strncasecmp_both.nasm"
+  %endif
+%endif
+
 ; Helpfully %include some needed minilibc686 source files.
 ; demo_hello_linux_printf.nasm relies on this.
 %ifidn __OUTPUT_FORMAT__, bin
