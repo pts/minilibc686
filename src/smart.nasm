@@ -268,9 +268,11 @@ _need mini_malloc_simple_unaligned, mini_syscall3_AL
 _need mini_munmap, mini_syscall3_AL
 _need mini_mmap, mini___M_jmp_pop_ebx_syscall_return
 _need mini_lseek64_set_RP3, mini___M_jmp_pop_ebx_syscall_return
+_need mini_bsd_signal, mini_syscall3_AL
 _need mini_wait, mini___M_jmp_pop_ebx_syscall_return
 _need mini_wait3, mini___M_jmp_pop_ebx_syscall_return
 _need mini_waitid, mini___M_jmp_pop_ebx_syscall_return
+_need mini_raise, mini___M_jmp_syscall_pop_ebx_return
 _need mini_getenv, mini_environ  ; Without this, the linker failes with duplicate symbols in *.smart.o and src/stdio_medium_linux.o. (It's a misleading error message, it doesn't mention mini_getenv or mini_environ). TODO(pts): Document this.
 _need mini_getopt, mini_write
 _need mini_errno, .bss
