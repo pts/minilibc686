@@ -44,7 +44,7 @@ mini_fopen:  ; FILE *fopen(const char *pathname, const char *mode);
 		mov eax, [esp+0x14]
 		mov dl, [eax]
 		cmp dl, 'w'
-		sete bl
+		sete bl  ; is_write?
 		cmp dl, 'a'
 		sete cl
 		or bl, cl
@@ -64,19 +64,22 @@ mini_fopen:  ; FILE *fopen(const char *pathname, const char *mode);
 .14:		xor eax, eax  ; EAX := O_RDONLY.
 .2:		mov edi, mini___M_global_file_bufs
 		mov esi, mini___M_global_files
-.3:		cmp esi, mini___M_global_files_end
-		je .9
-		cmp byte [esi+0x14], 0x0
-		jne .4
-		push dword 666o
+.next:		cmp esi, mini___M_global_files_end
+		je .error
+		cmp byte [esi+0x14], 0x0  ; FD_CLOSED.
+		je .skip4
+		add esi, byte 0x24
+		add edi, 0x1000
+		jmp short .next
+.skip4:		push dword 666o
 		push eax
 		push dword [esp+0x18]
 		call mini_open
 		add esp, byte 0xc
 		test eax, eax
 		jns .5
-.9:		xor esi, esi
-		jmp short .1
+.error:		xor eax, eax  ; EAX := NULL (return value, indicating error).
+		jmp short .done
 .5:		cmp bl, 0x1
 		sbb edx, edx
 		and dl, -0x3
@@ -90,13 +93,9 @@ mini_fopen:  ; FILE *fopen(const char *pathname, const char *mode);
 		mov [esi+0x1c], edi
 		push esi
 		call mini___M_discard_buf
-		pop eax
-		jmp short .1
-.4:		add esi, byte 0x24
-		add edi, 0x1000
-		jmp short .3
-.1:		pop ebx
+		pop eax  ; Clean up argument of mini___M_discard_buf from the stack.
 		xchg eax, esi  ; EAX := ESI (return value); ESI := junk.
+.done:		pop ebx
 		pop esi
 		pop edi
 		ret
