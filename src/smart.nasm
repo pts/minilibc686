@@ -797,6 +797,9 @@ _need mini_sys_exit, mini___LM_push_exit_args
   %ifdef __NEED_mini_syscall6_RP1
     %define NEED_syscall6_RP1_only
     %define NEED_syscall6_any
+  %elifdef __NEED_mini___M_jmp_syscall_pop_ebp_edi_esi_ebx_return
+    %define NEED_syscall6_int80_only
+    %define NEED_syscall6_any
   %endif
 %endif
 
@@ -1026,6 +1029,7 @@ mini_syscall:  ; long mini_syscall(long nr, ...);  /* Supports up to 6 arguments
 		push ebp
 		lea esi, [esp+5*4]
 		lodsd  ; EAX := syscall number (nr).
+%elifdef NEED_syscall6_int80_only
 %elifdef __NEED_mini_syscall3_RP1
 		push ebx  ; Save it, it's not a scratch register.
 %endif
@@ -1040,6 +1044,8 @@ mini_syscall:  ; long mini_syscall(long nr, ...);  /* Supports up to 6 arguments
 		mov edi, [esi+1*4]
 		mov ebp, [esi+2*4]
 		mov esi, [esi]  ; This is the last one, it ruins the index in ESI.
+  global mini___M_jmp_syscall_pop_ebp_edi_esi_ebx_return
+  mini___M_jmp_syscall_pop_ebp_edi_esi_ebx_return:
 		int 0x80  ; Linux i386 syscall.
 		; Fall through to mini___M_jmp_pop_ebp_edi_esi_ebx_syscall_return.
 %elifdef __NEED_mini_syscall3_RP1  ; Load 3 syscall arguments from the stack (starting at ESP+8) to EBX, ECX, EDX.

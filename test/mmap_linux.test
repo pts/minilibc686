@@ -4,6 +4,7 @@ _nasm memcmp.nasm
 _nasm munmap_linux.nasm
 _nasm mremap_linux.nasm
 _nasm syscall6_linux.nasm
+_nasm jmp_mov_syscall.nasm
 _nasm2 mmap_linux.nasm
-_mtcc -o test_mmap_linux.prog "$TESTDIR"/test_mmap.c start_stdio_file_linux.o m_flushall_dummy.o memcmp.o mmap_linux.o mremap_linux.o munmap_linux.o syscall6_linux.o
+_mtcc -o test_mmap_linux.prog "$TESTDIR"/test_mmap.c start_stdio_file_linux.o m_flushall_dummy.o memcmp.o mmap_linux.o mremap_linux.o munmap_linux.o syscall6_linux.o jmp_mov_syscall.o
 ./test_mmap_linux.prog

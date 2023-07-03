@@ -14,12 +14,12 @@ global mini_syscall
 %ifdef CONFIG_SECTIONS_DEFINED
 %elifidn __OUTPUT_FORMAT__, bin
 section .text align=1
-section .rodata align=4
-section .data align=4
-section .bss align=4
-mini___M_jmp_pop_ebx_syscall_return equ +0x12345678
+section .rodata align=1
+section .data align=1
+section .bss align=1
+mini___M_jmp_mov_syscall equ +0x12345678
 %else
-extern mini___M_jmp_pop_ebx_syscall_return
+extern mini___M_jmp_mov_syscall
 section .text align=1
 section .rodata align=1
 section .data align=1
@@ -35,22 +35,7 @@ mini_syscall:  ; long mini_syscall(long nr, ...);  /* Supports up to 6 arguments
 		push ebp
 		lea esi, [esp+5*4]
 		lodsd
-		xchg eax, edx  ; EDX := EAX; EAX := junk.
-		lodsd
-		xchg eax, ebx  ; EBX := EAX; EAX := junk.
-		lodsd
-		xchg eax, ecx  ; ECX := EAX; EAX := junk.
-		lodsd
-		xchg eax, edx  ; Useeful swap.
-		mov edi, [esi+1*4]
-		mov ebp, [esi+2*4]
-		mov esi, [esi]  ; This is the last one, it ruins the index in ESI.
-		int 0x80  ; Linux i386 syscall.
-		pop ebp
-		pop edi
-		pop esi
-		;pop ebx
-		jmp strict near mini___M_jmp_pop_ebx_syscall_return
+		jmp mini___M_jmp_mov_syscall
 
 %ifdef CONFIG_PIC  ; Already position-independent code.
 %endif

@@ -34,7 +34,7 @@ mini_wait:  ; pid_t mini_wait(int *status);
 		push dword [esp+2*4]  ; Argument status.
 		push byte -1
 		call mini_syscall3_AL
-		add esp, byte 3*4  ; Clean up arguments of mini_syscall3_RP1 from the stack.
+		add esp, byte 3*4  ; Clean up arguments of mini_syscall3_AL from the stack.
 		ret
 
 %ifdef CONFIG_PIC  ; Already position-independent code.
