@@ -1,0 +1,2 @@
+_utcc_nasm2 strerror_linux.nasm -o test_strerror_linux.prog "$TESTDIR"/test_strerror_linux.c
+./test_strerror_linux.prog

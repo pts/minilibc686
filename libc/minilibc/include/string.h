@@ -36,4 +36,6 @@ __LIBC_FUNC(int, ffs, (int i), __LIBC_NOATTR);
 __LIBC_FUNC(int, ffsl, (long i), __LIBC_NOATTR);
 __LIBC_FUNC(__extension__ int, ffsll, (long long i), __LIBC_NOATTR);
 
+__LIBC_FUNC(char *, strerror, (int errnum), __LIBC_NOATTR);
+
 #endif  /* _STRING_H */
