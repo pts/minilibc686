@@ -1,6 +1,7 @@
 #ifndef _SIGNAL_H
 #  define _SIGNAL_H
 #  include <_preincl.h>
+  typedef int sig_atomic_t;
   typedef void (*sighandler_t)(int);
   typedef sighandler_t sig_t;  /* For BSD. */
 
