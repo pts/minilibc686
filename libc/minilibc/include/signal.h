@@ -72,8 +72,31 @@
 #  endif  /* else i386 or amd64 */
 
   __LIBC_FUNC(int, raise, (int sig), __LIBC_NOATTR);
-  #ifdef __MINILIBC686__
-    /* Not adding signal(2), it would depend on #ifdef _BSD_SOURCE or _DEFAULT_SOURCE. Use bsd_signal(...) or sys_signal(...) instead. */
-    __LIBC_FUNC(sighandler_t, bsd_signal, (int signum, sighandler_t handler), __LIBC_NOATTR);
-  #endif
+#  ifdef __MINILIBC686__
+    /* Not adding signal(2), it would depend on #ifdef _BSD_SOURCE or _DEFAULT_SOURCE. Use bsd_signal(...) or sysv_signal(...) explicitly instead. */
+    __LIBC_FUNC(sighandler_t, bsd_signal,  (int signum, sighandler_t handler), __LIBC_NOATTR);  /* BSD semantics: .sa_flags == SA_RESTART. */
+    __LIBC_FUNC(sighandler_t, sysv_signal, (int signum, sighandler_t handler), __LIBC_NOATTR);  /* SYSV semantics: .sa_flags == SA_RESETHAND | SA_NODEFER. */
+    __LIBC_FUNC(sighandler_t, sys_signal,  (int signum, sighandler_t handler), __LIBC_NOATTR);  /* SYSV semantics: .sa_flags == SA_RESETHAND | SA_NODEFER. Linux-specific. */
+#  else
+#    include <features.h>
+#    if defined(__UCLIBC__) || defined(__GLIBC__)  /* On __dietlibc__, don't use signal(...), it's .sa_flags are unreliable. Use sigaction(...) instead with .sa_flags == SA_RESTART. */
+      __LIBC_FUNC(sighandler_t, bsd_signal,  (int signum, sighandler_t handler), __LIBC_NOATTR);  /* BSD semantics: .sa_flags == SA_RESTART. */
+      __LIBC_FUNC(sighandler_t, sysv_signal, (int signum, sighandler_t handler), __LIBC_NOATTR);  /* SYSV semantics: .sa_flags == SA_RESETHAND | SA_NODEFER. */
+#      if defined(_BSD_SOURCE) || defined(_DEFAULT_SOURCE)
+#        ifdef __WATCOMC__
+          sighandler_t signal(int signum, sighandler_t handler);
+#          pragma aux signal "_bsd_signal"
+#        else
+          sighandler_t signal(int signum, sighandler_t handler) __asm__("bsd_signal");
+#        endif
+#      else
+#        ifdef __WATCOMC__
+          sighandler_t signal(int signum, sighandler_t handler);
+#          pragma aux signal "_sysv_signal"
+#        else
+          sighandler_t signal(int signum, sighandler_t handler) __asm__("sysv_signal");
+#        endif
+#      endif
+#    endif
+#  endif
 #endif  /* _SIGNAL_H */

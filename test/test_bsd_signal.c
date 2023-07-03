@@ -10,6 +10,7 @@ extern int mini_raise(int sig);  /* Function under test. */
 extern sighandler_t mini_bsd_signal(int signum, sighandler_t handler);  /* Function under test. */
 
 int main(int argc, char **argv) {
+  (void)argc; (void)argv;
   if (mini_bsd_signal(SIGALRM, SIG_IGN) == SIG_ERR) return 101;
   if (mini_bsd_signal(SIGTERM, handler) == SIG_ERR) return 102;
   if (mini_bsd_signal(SIGALRM, SIG_DFL) != SIG_IGN) return 103;

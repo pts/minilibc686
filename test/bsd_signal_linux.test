@@ -1,7 +1,6 @@
 _nasm2 bsd_signal_linux.o
 _nasm2 raise_linux.o
-_nasm jmp_mov_syscall.o
 _nasm syscall3_linux.o
 _nasm_start start_linux.o
-_mtcc -o test_bsd_signal_linux.prog "$TESTDIR"/test_bsd_signal.c bsd_signal_linux.o raise_linux.o jmp_mov_syscall.o syscall3_linux.o start_linux.o
+_mtcc -o test_bsd_signal_linux.prog "$TESTDIR"/test_bsd_signal.c bsd_signal_linux.o raise_linux.o syscall3_linux.o start_linux.o
 ./test_bsd_signal_linux.prog

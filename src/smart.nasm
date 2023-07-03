@@ -596,7 +596,7 @@ _syscall wait4, 114
 _syscall waitpid, 7
 _syscall writev, 146
 _syscall sys_readdir, 89
-_syscall sys_signal, 48
+_syscall sysv_signal, sys_signal, 48
 _syscall sys_socketcall, 102
 _syscall sys_oldstat, 18
 _syscall sys_oldfstat, 28

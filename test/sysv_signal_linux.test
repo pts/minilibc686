@@ -1,0 +1,6 @@
+_nasm sysv_signal_linux.o
+_nasm2 raise_linux.o
+_nasm syscall3_linux.o
+_nasm_start start_linux.o
+_mtcc -o test_sysv_signal_linux.prog "$TESTDIR"/test_sysv_signal.c sysv_signal_linux.o raise_linux.o syscall3_linux.o start_linux.o
+./test_sysv_signal_linux.prog
