@@ -3,6 +3,7 @@
 ; Compile to i386 ELF .o object: nasm -O999999999 -w+orphan-labels -f elf -o strerror_linux.o strerror_linux.nasm
 ;
 ; Uses: %ifdef CONFIG_PIC
+; Uses: %ifdef CONFIG_STRERROR_SMALL  ; 0x21 bytes smaller, much slower.
 ;
 
 bits 32
@@ -25,10 +26,26 @@ section .bss align=1
 section .rodata
 unknown_error:	db 'Unknown error', 0  ; uClibc 0.9.30.1 and libc 2.27 return e.g. 'Unknown error 321'. We just return 'Unknown error'.
 
+%define ERRMSG_BATCH_SIZE_BASE 4
+%assign ERRMSG_BATCH_SIZE 1<<ERRMSG_BATCH_SIZE_BASE
+
 %assign ERRMSG_COUNT 0
+%assign ERRMSG_CURRENT_BATCH_SIZE 0
+%assign ERRMSG_CURRENT_BATCH_OFFSET 0
+%assign ERRMSG_OFFSET 0
+%assign ERRMSG_BATCH_COUNT 0
+%define ERRMSG_BATCH_OFFSETS
 %macro errmsg 2
-		db %1, 0
+  %%s:		db %1, 0
+  %assign ERRMSG_OFFSET ERRMSG_OFFSET+($-%%s)
   %assign ERRMSG_COUNT ERRMSG_COUNT+1
+  %assign ERRMSG_CURRENT_BATCH_SIZE ERRMSG_CURRENT_BATCH_SIZE+1
+  %if ERRMSG_CURRENT_BATCH_SIZE==ERRMSG_BATCH_SIZE
+    %assign ERRMSG_BATCH_COUNT ERRMSG_BATCH_COUNT+1
+    %xdefine ERRMSG_BATCH_OFFSETS ERRMSG_BATCH_OFFSETS ERRMSG_CURRENT_BATCH_OFFSET,
+    %assign ERRMSG_CURRENT_BATCH_SIZE 0
+    %assign ERRMSG_CURRENT_BATCH_OFFSET ERRMSG_OFFSET
+  %endif
 %endmacro
 
 ; Error messages copied from glibc 2.27. diet libc error message strings are a bit different.
@@ -173,6 +190,15 @@ errmsgs:	errmsg 'Success', 0
 		errmsg 'Operation not possible due to RF-kill', 132
 		errmsg 'Memory page has hardware error', 133
 
+%ifdef CONFIG_STRERROR_SMALL
+%else
+  %if ERRMSG_CURRENT_BATCH_SIZE
+    %assign ERRMSG_BATCH_COUNT ERRMSG_BATCH_COUNT+1
+    %xdefine ERRMSG_BATCH_OFFSETS ERRMSG_BATCH_OFFSETS ERRMSG_CURRENT_BATCH_OFFSET,
+  %endif
+  errmsg_batches: dw ERRMSG_BATCH_OFFSETS
+%endif
+
 section .text
 mini_strerror:  ; char *strerror(int errnum);
 		mov edx, [esp+4]  ; Argument s.
@@ -181,14 +207,21 @@ mini_strerror:  ; char *strerror(int errnum);
 		mov eax, unknown_error
 		ret
 .small:		push edi
-		or ecx, byte -1
-		xor eax, eax  ; AL := 0 for the scasb.
-		mov edi, errmsgs
 		; We don't store pointers to individual error messages, that
 		; would be at least 2*134 == 0x10c bytes of data. Instead of
-		; that, we scan forward.
-		;
-		; TODO(pts): Use an index to scan less.
+		; that, we store a 2-byte pointer for each ERRMSG_BATCH_SIZE
+		; error messages, with a total storage of 0x12 bytes.
+%ifdef CONFIG_STRERROR_SMALL
+		mov edi, errmsgs
+%else
+		mov edi, edx
+		shr edi, ERRMSG_BATCH_SIZE_BASE
+		movzx edi, word [edi+edi+errmsg_batches]
+		add edi, errmsgs
+		and edx, byte ERRMSG_BATCH_SIZE-1
+%endif
+		or ecx, byte -1  ; Unlimited, for `repne scasb'.
+		xor eax, eax  ; AL := 0 for the scasb.
 .again:		sub edx, byte 1
 		jc .done
 		repne scasb
