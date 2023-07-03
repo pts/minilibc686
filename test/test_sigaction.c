@@ -10,6 +10,7 @@ void handler(int sig) { exit_code -= (sig + 100); }
 extern int mini_raise(int sig);  /* Function under test. */
 extern int mini_sigaction(int signum, const struct sigaction *act, struct sigaction *oldact);  /* Function under test. */
 extern int mini_sigemptyset(sigset_t *set);  /* Function under test. */
+extern int mini_sigaddset(sigset_t *set, int signum);  /* Function under test. */
 
 #ifdef __WATCOMC__
 #  pragma warning 201 5  /* Disable the ``unreachable code'' warning. */
@@ -32,11 +33,15 @@ static sighandler_t my_bsd_signal(int sig, sighandler_t handler) {
     }
   }
   mini_sigemptyset(&act.sa_mask);
+  if (1) {  /* Not needed, just for checking mini_sigaddset(...) later. */
+    if (sig - 1 < sizeof(unsigned long) * 8) act.sa_mask.sig[0] |= 1 << (sig - 1);
+    if (64 - 1 >= sizeof(unsigned long) * 8) act.sa_mask.sig[1] |= 1 << ((64 - 1) - sizeof(unsigned long) * 8);
+  }
   if (mini_sigaction(sig, &act, &oact) < 0) return SIG_ERR;
   return oact.sa_handler;
 }
 
-static is_sigset_eq(const sigset_t *sa, const sigset_t *sb) {
+static char is_sigset_eq(const sigset_t *sa, const sigset_t *sb) {
   return (sa->sig[0] == sb->sig[0]) &&
          (_NSIG - 1 <     8 * sizeof(unsigned long) || sa->sig[1] == sb->sig[1]) &&
          (_NSIG - 1 < 2 * 8 * sizeof(unsigned long) || sa->sig[2] == sb->sig[2]) &&
@@ -56,7 +61,10 @@ int main(int argc, char **argv) {
   if (mini_raise(SIGTERM) != 0) return 107; /* Runs handler(SIGTERM) above. */
   if (mini_raise(SIGTERM) != 0) return 108; /* Runs handler(SIGTERM) above again. */
   if (mini_sigaction(SIGTERM, NULL, &oact) != 0) return 109;
-  mini_sigemptyset(&se);
-  if (!is_sigset_eq(&se, &oact.sa_mask)) return 110;
+  if (mini_sigemptyset(&se) != 0) return 110;
+  if (mini_sigaddset(&se, SIGTERM) != 0) return 111;
+  if (mini_sigaddset(&se, 64) != 0) return 112;
+  if (mini_sigaddset(&se, _NSIG) != -1) return 99;  /* signal number too large. */
+  if (!is_sigset_eq(&se, &oact.sa_mask)) return 113;
   return exit_code;  /* The signal handler changes it to 0. */
 }
