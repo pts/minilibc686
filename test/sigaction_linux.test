@@ -4,7 +4,8 @@ _nasm2 sigemptyset_linux.o
 _nasm2 sigfillset_linux.o
 _nasm2 sigaddset_linux.o
 _nasm2 sigdelset_linux.o
+_nasm2 sigismember_linux.o
 _nasm syscall3_linux.o
 _nasm_start start_linux.o
-_mtcc -o test_sigaction_linux.prog "$TESTDIR"/test_sigaction.c sigaction_linux.o raise_linux.o syscall3_linux.o sigemptyset_linux.o sigfillset_linux.o sigaddset_linux.o sigdelset_linux.o start_linux.o
+_mtcc -o test_sigaction_linux.prog "$TESTDIR"/test_sigaction.c sigaction_linux.o raise_linux.o syscall3_linux.o sigemptyset_linux.o sigfillset_linux.o sigaddset_linux.o sigdelset_linux.o sigismember_linux.o start_linux.o
 ./test_sigaction_linux.prog
