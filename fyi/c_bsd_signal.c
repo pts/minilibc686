@@ -4,7 +4,7 @@ typedef void (*sighandler_t)(int);
 #if 0
 #  define _SIGSET_WORDS (1024 / (8 * sizeof(unsigned long)))  /* diet libc, it's too large. */
 #else
-#  define _SIGSET_WORDS ((_NSIG - 1 + 8 * sizeof(unsigned long) + 7) / (8 * sizeof(unsigned long)))
+#  define _SIGSET_WORDS ((_NSIG - 1 + 8 * sizeof(unsigned long) + (8 * sizeof(unsigned long) - 1)) / (8 * sizeof(unsigned long)))
 #endif
 typedef struct {
   unsigned long sig[_SIGSET_WORDS];

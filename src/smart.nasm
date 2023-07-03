@@ -269,6 +269,7 @@ _need mini_munmap, mini_syscall3_AL
 _need mini_mmap, mini___M_jmp_pop_ebx_syscall_return
 _need mini_lseek64_set_RP3, mini___M_jmp_pop_ebx_syscall_return
 _need mini_bsd_signal, mini_syscall3_AL
+_need mini_sigaction, mini___M_jmp_pop_ebx_syscall_return
 _need mini_wait, mini___M_jmp_pop_ebx_syscall_return
 _need mini_wait3, mini___M_jmp_pop_ebx_syscall_return
 _need mini_waitid, mini___M_jmp_pop_ebx_syscall_return

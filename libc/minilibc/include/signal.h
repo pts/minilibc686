@@ -67,11 +67,27 @@
 #    define SIGLOST SIGPWR
 #    define SIGRTMIN 32
 #    define SIGRTMAX (_NSIG-1)
+    typedef struct sigset_t {
+      unsigned long sig[(_NSIG - 1 + 8 * sizeof(unsigned long) + (8 * sizeof(unsigned long) - 1)) / (8 * sizeof(unsigned long))];
+    } sigset_t;
+    struct siginfo_t;
+    struct sigaction {
+      union {
+        sighandler_t _sa_handler;
+        void (*_sa_sigaction)(int, struct siginfo_t*, void*);
+      } _u;
+      unsigned long sa_flags;
+      void (*sa_restorer)(void);
+      sigset_t sa_mask;
+    };
+#    define sa_handler _u._sa_handler
+#    define sa_sigaction _u._sa_sigaction
 #  else  /* else i386 or amd64 */
 #    error Unsupported architecture for <signal.h>.
 #  endif  /* else i386 or amd64 */
 
   __LIBC_FUNC(int, raise, (int sig), __LIBC_NOATTR);
+  __LIBC_FUNC(int, sigaction, (int signum, const struct sigaction *act, struct sigaction *oldact), __LIBC_NOATTR);
 #  ifdef __MINILIBC686__
     /* Not adding signal(2), it would depend on #ifdef _BSD_SOURCE or _DEFAULT_SOURCE. Use bsd_signal(...) or sysv_signal(...) explicitly instead. */
     __LIBC_FUNC(sighandler_t, bsd_signal,  (int signum, sighandler_t handler), __LIBC_NOATTR);  /* BSD semantics: .sa_flags == SA_RESTART. */
