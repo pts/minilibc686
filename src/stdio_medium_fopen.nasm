@@ -96,7 +96,7 @@ mini_fopen:  ; FILE *fopen(const char *pathname, const char *mode);
 		add edi, 0x1000
 		jmp short .3
 .1:		pop ebx
-		mov eax, esi
+		xchg eax, esi  ; EAX := ESI (return value); ESI := junk.
 		pop esi
 		pop edi
 		ret
