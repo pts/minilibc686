@@ -50,7 +50,8 @@ mini_abort:  ; void mini_abort(void) __attribute__((__noreturn__));
 		inc eax  ; EAX := __NR_exit.
 		xor ebx, ebx
 		mov bl, 127  ; _exit(127) as a fallback if kill(2) above did return.
-		int 0x80  ; Linux i386 syscall.
+		int 0x80  ; Linux i386 syscall. It never returns for __NR_exit.
+		; Not reached.
 
 %ifdef CONFIG_PIC  ; Already position-independent code.
 %endif
