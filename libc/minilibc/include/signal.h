@@ -88,6 +88,7 @@
 
   __LIBC_FUNC(int, raise, (int sig), __LIBC_NOATTR);
   __LIBC_FUNC(int, sigaction, (int signum, const struct sigaction *act, struct sigaction *oldact), __LIBC_NOATTR);
+  __LIBC_FUNC(int, sigemptyset, (sigset_t *set), __LIBC_NOATTR);
 #  ifdef __MINILIBC686__
     /* Not adding signal(2), it would depend on #ifdef _BSD_SOURCE or _DEFAULT_SOURCE. Use bsd_signal(...) or sysv_signal(...) explicitly instead. */
     __LIBC_FUNC(sighandler_t, bsd_signal,  (int signum, sighandler_t handler), __LIBC_NOATTR);  /* BSD semantics: .sa_flags == SA_RESTART. */
