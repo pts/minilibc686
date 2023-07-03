@@ -12,6 +12,7 @@ extern int mini_sigaction(int signum, const struct sigaction *act, struct sigact
 extern int mini_sigemptyset(sigset_t *set);  /* Function under test. */
 extern int mini_sigfillset(sigset_t *set);  /* Function under test. */
 extern int mini_sigaddset(sigset_t *set, int signum);  /* Function under test. */
+extern int mini_sigdelset(sigset_t *set, int signum);  /* Function under test. */
 
 #ifdef __WATCOMC__
 #  pragma warning 201 5  /* Disable the ``unreachable code'' warning. */
@@ -67,7 +68,12 @@ int main(int argc, char **argv) {
   if (mini_sigaddset(&se, 64) != 0) return 112;
   if (mini_sigaddset(&se, _NSIG) != -1) return 99;  /* signal number too large. */
   if (!is_sigset_eq(&se, &oact.sa_mask)) return 113;
-  if (mini_sigfillset(&oact.sa_mask) != 0) return 114;
+  if (mini_sigdelset(&se, 64) != 0) return 114;
+  if (mini_sigdelset(&se, _NSIG) != -1) return 98;  /* signal number too large. */
+  if (is_sigset_eq(&se, &oact.sa_mask)) return 115;
+  if (mini_sigdelset(&oact.sa_mask, 64) != 0) return 116;
+  if (!is_sigset_eq(&se, &oact.sa_mask)) return 117;
+  if (mini_sigfillset(&oact.sa_mask) != 0) return 118;
   se.sig[0] = -1UL;
   if (_NSIG - 1 >= 8 * sizeof(unsigned long)) {
     se.sig[1] = -1UL;  /* Only 4+4 bytes to clear for i386. */
@@ -78,6 +84,6 @@ int main(int argc, char **argv) {
       }
     }
   }
-  if (!is_sigset_eq(&se, &oact.sa_mask)) return 115;
+  if (!is_sigset_eq(&se, &oact.sa_mask)) return 119;
   return exit_code;  /* The signal handler changes it to 0. */
 }
