@@ -15,6 +15,7 @@ global mini__start
 global mini__exit
 global mini_syscall3_AL
 global mini_syscall3_RP1
+global mini___M_jmp_syscall_pop_ebx_return
 global mini___M_jmp_pop_ebx_syscall_return
 global mini___M_jmp_syscall_return
 global mini_exit
@@ -91,6 +92,7 @@ mini_syscall3_RP1:  ; long mini_syscall3_RP1(long nr, long arg1, long arg2, long
 		mov ebx, [esp+8]  ; arg1.
 		mov ecx, [esp+0xc]  ; arg2.
 		mov edx, [esp+0x10]  ; arg3.
+mini___M_jmp_syscall_pop_ebx_return:
 		int 0x80  ; Linux i386 syscall.
 mini___M_jmp_pop_ebx_syscall_return:
 		pop ebx

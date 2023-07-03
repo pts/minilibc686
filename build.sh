@@ -78,6 +78,7 @@ for F in src/[a-zA-Z0-9_]*.nasm; do
      vfprintf_*.nasm) ;;  # The libc uses stdio_medium_vfprintf.nasm instead.
      strtok_sep1.nasm) ;;  # TODO(pts): Link it with the symbol name strtok_sep.
      write_linux.nasm) ;;  # start_stdio_medium_linux.nasm provides it.
+     syscall3_linux.nasm) ;;  # start_stdio_file_linux.nasm provides it.
      stdio_medium_stdout_in_data.nasm) ;; # src/stdio_medium_stdout.nasm %include()s it.
      m_flushall_dummy.nasm) ;;
      start_uclibc_linux.nasm) ;;
