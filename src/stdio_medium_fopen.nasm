@@ -41,46 +41,51 @@ mini_fopen:  ; FILE *fopen(const char *pathname, const char *mode);
 		push edi
 		push esi
 		push ebx
-		mov eax, [esp+0x14]
-		mov dl, [eax]
+		mov edi, mini___M_global_file_bufs
+		mov esi, mini___M_global_files
+.next:		cmp esi, mini___M_global_files_end
+		je mini___M_jmp_freopen_low.error
+		cmp byte [esi+0x14], 0x0  ; FD_CLOSED.
+		je mini___M_jmp_freopen_low
+		add esi, byte 0x24  ; sizeof(struct _SMS_FILE).
+		add edi, 0x1000  ; BUF_SIZE.
+		jmp short .next
+
+; Input: EAX == junk, EBX == junk, ECX == junk, EDX == junk, ESI == FILE* pointer, EDI == buffer pointer (of BUF_SIZE), EBP == anything.
+; Input stack: [esp] == saved EBX, [esp+1*4]: saved ESI, [esp+2*4]: saved EDI, [esp+3*4]: return address, [esp+4*4]: argument pathname, [esp+5*5]: argument mode.
+; Output: EAX == result FILE* pointer (or NULL), EBX == restored, ECX == junk, EDX == junk, ESI == restored, EDI == restored, EBP == unchanged.
+; Output stack: poped up to and including the return address.
+mini___M_jmp_freopen_low:
+		mov edx, [esp+5*4]  ; Argument mode.
+		mov dl, [edx]
 		cmp dl, 'w'
 		sete bl  ; is_write?
+		xor eax, eax  ; EAX := O_RDONLY.
 		cmp dl, 'a'
 		sete cl
 		or bl, cl
-		je .14
+		je .have_flags
 		cmp dl, 'a'
 		; We may add O_LARGEFILE for opening files >= 2 GiB, but in a different stdio implementation. Without O_LARGEFILE, open(2) fails with EOVERFLOW.
 		mov eax, 3101o  ; EAX := O_TRUNC | O_CREAT | O_WRONLY | O_APPEND.
 		mov edx, 1101o  ; EAX := O_TRUNC | O_CREAT | O_WRONLY. 
 %ifdef CONFIG_I386
-		je .after_cmovne
+		je .have_flags
 		mov eax, edx
-.after_cmovne:
 %else
 		cmovne eax, edx
-%endif		
-		jmp short .2
-.14:		xor eax, eax  ; EAX := O_RDONLY.
-.2:		mov edi, mini___M_global_file_bufs
-		mov esi, mini___M_global_files
-.next:		cmp esi, mini___M_global_files_end
-		je .error
-		cmp byte [esi+0x14], 0x0  ; FD_CLOSED.
-		je .skip4
-		add esi, byte 0x24
-		add edi, 0x1000
-		jmp short .next
-.skip4:		push dword 666o
-		push eax
-		push dword [esp+0x18]
+%endif
+.have_flags:	; File open flags is now in EAX.
+		push dword 666o
+		push eax  ; File open flags.
+		push dword [esp+6*4]  ; Argument pathname.
 		call mini_open
-		add esp, byte 0xc
+		add esp, byte 0xc  ; Clean up arguments of mini_open(...) from the stack.
 		test eax, eax
-		jns .5
+		jns .open_ok
 .error:		xor eax, eax  ; EAX := NULL (return value, indicating error).
 		jmp short .done
-.5:		cmp bl, 0x1
+.open_ok:	cmp bl, 0x1
 		sbb edx, edx
 		and dl, -0x3
 		mov [esi+0x18], edi
