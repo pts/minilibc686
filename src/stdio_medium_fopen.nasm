@@ -68,13 +68,8 @@ mini___M_jmp_freopen_low:
 		cmp dl, 'a'
 		; We may add O_LARGEFILE for opening files >= 2 GiB, but in a different stdio implementation. Without O_LARGEFILE, open(2) fails with EOVERFLOW.
 		mov eax, 3101o  ; EAX := O_TRUNC | O_CREAT | O_WRONLY | O_APPEND.
-		mov edx, 1101o  ; EAX := O_TRUNC | O_CREAT | O_WRONLY. 
-%ifdef CONFIG_I386
 		je .have_flags
-		mov eax, edx
-%else
-		cmovne eax, edx
-%endif
+		and ah, ~4  ; ~(O_APPEND>>8). EAX := O_TRUNC | O_CREAT | O_WRONLY. 
 .have_flags:	; File open flags is now in EAX.
 		push dword 666o
 		push eax  ; File open flags.
