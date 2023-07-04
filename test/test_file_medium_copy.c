@@ -16,21 +16,31 @@ int main(int argc, char **argv) {
   (void)argc;
   /* We need exactly 2 arguments: argv[1] and argv[2]. */
   if (!argv[0] || !argv[1] || !argv[2]) return 1;
-  if (argv[3] && (mode = argv[3][0], mode == 'r' || mode == 'c' || mode == 'd' || mode == 'a' || mode == 's' || mode == 'p' || mode == 'q') && argv[3][1] == '\0') {
+  if (argv[3] && (mode = argv[3][0], mode == 'r' || mode == 'c' || mode == 'd' || mode == 'a' || mode == 's' || mode == 'p' || mode == 'q' || mode == 'f') && argv[3][1] == '\0') {
   } else if (!argv[3]) {
     mode = 'r';  /* Default. */
   } else {
     return 2;
   }
-  if ((fin = fopen(argv[1], "rb")) == NULL) return 2;
-  got = fileno(fin);
-  if (got < 3 || got > 0xff) return 16;
-  if ((fout = fopen(argv[2], "wb")) == NULL) return 3;
+  if (mode == 'f') {
+    if ((fin = fopen("/dev/null", "wb")) == NULL) return 21;
+    if ((fin = freopen(argv[1], "rb", fin)) == NULL) return 22;
+    got = fileno(fin);
+    if (got < 3 || got > 0xff) return 23;
+    if ((fout = fopen("/dev/null", "rb")) == NULL) return 24;
+    if (fclose(fout)) return 25;
+    if ((fout = freopen(argv[2], "wb", fout)) == NULL) return 26;
+  } else {
+    if ((fin = fopen(argv[1], "rb")) == NULL) return 2;
+    got = fileno(fin);
+    if (got < 3 || got > 0xff) return 16;
+    if ((fout = fopen(argv[2], "wb")) == NULL) return 3;
+  }
   got2 = fileno(fout);
   if (got2 < 3 || got2 > 0xff) return 17;
   if (got == got2) return 18;
   if (fgetc(fout) != EOF) return 19;  /* fout is only opened for reading. */
-  if (fputc('*', fin) != EOF) return 20;  /* fin is only opened for writing. */
+  if (fputc('*', fin) != EOF) return 20;  /* fin is only opened for writing. !! Make fputc fail after an flose which was opened for reading. */
   if (mode == 'c') {  /* Just to check that it works. */
     fflush(fin);
     fflush(fout);
@@ -75,7 +85,7 @@ int main(int argc, char **argv) {
   }
   if (ftell(fin) != ofs) return 10;
   if (ftell(fin) != ofs) return 11;
-  if (mode != 'a') {  /* Let autoflush at exit(3) time take care of writing unflushed data to fout. */
+  if (mode != 'a' && mode != 'f') {  /* Let autoflush at exit(3) time take care of writing unflushed data to fout. */
     if (fclose(fout)) return 4;
     if (fclose(fin)) return 4;
   }
