@@ -40,7 +40,7 @@ int main(int argc, char **argv) {
   if (got2 < 3 || got2 > 0xff) return 17;
   if (got == got2) return 18;
   if (fgetc(fout) != EOF) return 19;  /* fout is only opened for reading. */
-  if (fputc('*', fin) != EOF) return 20;  /* fin is only opened for writing. !! Make fputc fail after an flose which was opened for reading. */
+  if (fputc('*', fin) != EOF) return 20;  /* fin is only opened for writing. */
   if (mode == 'c') {  /* Just to check that it works. */
     fflush(fin);
     fflush(fout);
@@ -87,7 +87,11 @@ int main(int argc, char **argv) {
   if (ftell(fin) != ofs) return 11;
   if (mode != 'a' && mode != 'f') {  /* Let autoflush at exit(3) time take care of writing unflushed data to fout. */
     if (fclose(fout)) return 4;
-    if (fclose(fin)) return 4;
+    if (fclose(fin)) return 54;
+    if (getc(fin) != EOF) return 55;
+    if (getc(fout) != EOF) return 56;
+    if (putc('*', fin) != EOF) return 57;
+    if (putc('*', fout) != EOF) return 58;
   }
   return 0;
 }
