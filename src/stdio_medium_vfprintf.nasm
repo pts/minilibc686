@@ -4,7 +4,7 @@
 ; Based on vfprintf_plus.nasm, with stdio_medium buffering added.
 ; Compile to i386 ELF .o object: nasm -O999999999 -w+orphan-labels -f elf -o stdio_medium_vfprintf.o stdio_medium_vfprintf.nasm
 ;
-; Code+data size: 0x23c bytes; +1 bytes with CONFIG_PIC.
+; Code+data size: 0x238 bytes; +1 bytes with CONFIG_PIC.
 ;
 ; Uses: %ifdef CONFIG_PIC
 ; Uses; %ifdef CONFIG_VFPRINTF_IS_FOR_S_PRINTF_ONLY
@@ -100,7 +100,6 @@ mini_vfprintf:  ; int mini_vfprintf(FILE *filep, const char *format, va_list ap)
 		je near .done  ; !! Optimize all near jumps.
 		cmp al, '%'
 		je near .30
-		lea edx, [ebx+0x1]
 		cmp al, '-'
 		jne .2
 		mov byte [VAR_pad], PAD_RIGHT
@@ -110,7 +109,7 @@ mini_vfprintf:  ; int mini_vfprintf(FILE *filep, const char *format, va_list ap)
 		jne .4
 		mov byte [VAR_pad], PAD_PLUS
 .3:
-		mov ebx, edx
+		inc ebx
 .4:
 		cmp byte [ebx], '0'
 		jne .5
