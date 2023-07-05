@@ -682,6 +682,8 @@ you can run `./test.sh` without having to install anything.
   `-mstack-alignment=4`.
 * Floating-point values are returned in ST(0), ST(1)..ST(7) must be free
   (popped or freed) on return.
+* It's OK for the callee to modify its arguments on the stack, for example
+  test/demo_many_args.c and src/stdio_medium_vfprintf.nasm do it.
 
 ## Build system
 
