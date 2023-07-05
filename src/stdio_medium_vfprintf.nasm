@@ -4,7 +4,7 @@
 ; Based on vfprintf_plus.nasm, with stdio_medium buffering added.
 ; Compile to i386 ELF .o object: nasm -O999999999 -w+orphan-labels -f elf -o stdio_medium_vfprintf.o stdio_medium_vfprintf.nasm
 ;
-; Code+data size: 0x21c bytes; +1 bytes with CONFIG_PIC.
+; Code+data size: 0x210 bytes; +1 bytes with CONFIG_PIC.
 ;
 ; Uses: %ifdef CONFIG_PIC
 ; Uses; %ifdef CONFIG_VFPRINTF_IS_FOR_S_PRINTF_ONLY
@@ -94,14 +94,14 @@ mini_vfprintf:  ; int mini_vfprintf(FILE *filep, const char *format, va_list ap)
 		xor eax, eax  ; Set highest 24 bits of EAX to 0.
 		lodsb  ; mov al, [REG_VAR_formati] ++ inc REG_VAR_formati.
 		test al, al
-		jz near .done
+		jz short .done
 		cmp al, '%'
 		jne short .putc_al_cont
 		mov byte [VAR_pad], 0
 		xor edi, edi
 		lodsb  ; mov al, [REG_VAR_formati] ++ inc REG_VAR_formati.
 		test al, al
-		jz near .done  ; !! Optimize all near jumps.
+		jz short .done  ; !! Optimize all near jumps, including implicit ones.
 		cmp al, '%'
 		je short .putc_al_cont
 		cmp al, '-'
@@ -135,60 +135,57 @@ mini_vfprintf:  ; int mini_vfprintf(FILE *filep, const char *format, va_list ap)
 		mov ecx, [ARG_ap]
 		add ecx, byte 0x4
 		cmp al, 's'
-		jne .16
-		mov [ARG_ap], ecx
-		mov REG_VAR_s, [ecx-0x4]
-		test REG_VAR_s, REG_VAR_s
-		jne .not_null
-%ifdef CONFIG_PIC
-		call .after_str_null
-.str_null:
-		; This is also valid i386 machine code:
-		; db '(nu'  ;  sub [esi+0x75], ch
-		; db 'l'  ; insb
-		; db 'l'  ; insb
-		; db ')', 0  ; sub [eax], eax
-		db '(null)', 0
-.after_str_null:
-		pop REG_VAR_s  ; ESI := &.str_null.
-%else  ; CONFIG_PIC
-		mov REG_VAR_s, str_null
-%endif  ; CONFIG_PIC
-.not_null:
-.dpsj:		jmp near .do_print_s
-.16:
+		je near .fmtchr_s
 		cmp al, 'c'
 		jne .17
 		mov [ARG_ap], ecx
 		mov al, [ecx-0x4]
 		test edi, edi
-		jz near .putc_al_cont  ; Unfortunately it's already `near'.
-		mov [VAR_print_buf], al
+		jz short .putc_al_cont
+		mov [VAR_print_buf], al  ; !! Use REG_VAR_s.
 		mov byte [VAR_print_buf+1], 0x0
-		jmp short .dpsj
+		jmp near .do_print_s
+
+.done:
+%ifndef CONFIG_VFPRINTF_IS_FOR_S_PRINTF_ONLY
+		mov eax, [ARG_filep]  ; filep.
+		call mini___M_writebuf_unrelax_RP1  ; mini___M_writebuf_unrelax_RP1(filep);
+%endif
+		xchg eax, REG_VAR_pc  ; EAX := number of bytes written; REG_VAR_pc := junk.
+		add esp, byte 0x20
+		pop ebp
+		pop edi
+		pop esi
+		pop ebx
+%ifdef CONFIG_VFPRINTF_POP_ESP_BEFORE_RET
+		pop esp
+%endif
+		ret
+
 .17:
 		mov [ARG_ap], ecx
 		mov ecx, [ecx-0x4]
-		cmp al, 0x64
+		cmp al, 'd'
 		je .18
-		cmp al, 0x75
+		cmp al, 'u'
 		je .18
 		mov dl, al
 		or dl, 0x20
 		cmp dl, 'x'
-		jne near .done
+		jne .done
+
 .18:
-		mov dl, al
+		mov dl, al  ; !! Remove repetition.
 		or dl, 0x20
 		cmp dl, 'x'
 		jne .19
-		mov edx, 0x10
+		mov edx, 16
 		jmp short .20
 .19:
-		mov edx, 0xa
+		mov edx, 10  ; !! Set only the low 8 bits.
 .20:
 		mov [VAR_b], edx
-		cmp al, 0x58
+		cmp al, 'X'
 		jne .21
 		mov edx, 'A'
 		jmp short .22
@@ -296,21 +293,27 @@ mini_vfprintf:  ; int mini_vfprintf(FILE *filep, const char *format, va_list ap)
 		jmp short .15
 		; End of .do_print_s. It has already jumped to .next_format_byte.
 
-.done:
-%ifndef CONFIG_VFPRINTF_IS_FOR_S_PRINTF_ONLY
-		mov eax, [ARG_filep]  ; filep.
-		call mini___M_writebuf_unrelax_RP1  ; mini___M_writebuf_unrelax_RP1(filep);
-%endif
-		xchg eax, REG_VAR_pc  ; EAX := number of bytes written; REG_VAR_pc := junk.
-		add esp, byte 0x20
-		pop ebp
-		pop edi
-		pop esi
-		pop ebx
-%ifdef CONFIG_VFPRINTF_POP_ESP_BEFORE_RET
-		pop esp
-%endif
-		ret
+.fmtchr_s:	mov [ARG_ap], ecx
+		mov REG_VAR_s, [ecx-0x4]
+		test REG_VAR_s, REG_VAR_s
+		jne .not_null
+%ifdef CONFIG_PIC
+		call .after_str_null
+.str_null:
+		; This is also valid i386 machine code:
+		; db '(nu'  ;  sub [esi+0x75], ch
+		; db 'l'  ; insb
+		; db 'l'  ; insb
+		; db ')', 0  ; sub [eax], eax
+		db '(null)', 0
+.after_str_null:
+		pop REG_VAR_s  ; ESI := &.str_null.
+%else  ; CONFIG_PIC
+		mov REG_VAR_s, str_null
+%endif  ; CONFIG_PIC
+.not_null:
+.dpsj:		jmp short .do_print_s
+
 .call_mini_putc:  ; Input: AL contains the byte to be printed. Can use EAX, EDX and ECX as scratch. Output: byte is written to the buffer, REG_VAR_pc is incremented on success only.
 		mov edx, [4+ARG_filep]  ; filep. (`4+' because of the return pointer of .call_mini_putc.)  AL contains the byte to be printed, the high 24 bits of EAX is garbage here.
 		; Now we do inlined putc(c, filep). Memory layout must match <stdio.h> and c_stdio_medium.c.
