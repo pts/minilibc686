@@ -4,7 +4,7 @@
 ; Based on vfprintf_plus.nasm, with stdio_medium buffering added.
 ; Compile to i386 ELF .o object: nasm -O999999999 -w+orphan-labels -f elf -o stdio_medium_vfprintf.o stdio_medium_vfprintf.nasm
 ;
-; Code+data size: 0x238 bytes; +1 bytes with CONFIG_PIC.
+; Code+data size: 0x236 bytes; +1 bytes with CONFIG_PIC.
 ;
 ; Uses: %ifdef CONFIG_PIC
 ; Uses; %ifdef CONFIG_VFPRINTF_IS_FOR_S_PRINTF_ONLY
@@ -65,6 +65,7 @@ PAD_PLUS equ 4
 %define VAR_neg esp+0x14  ; uint8_t.
 %define VAR_letbase esp+0x18  ; uint8_t.
 %define VAR_c esp+0x1c  ; uint8_t.
+%define REG_VAR_formati ebx  ; char*.
 %define REG_VAR_s esi  ; char*.
 %define REG_VAR_pc ebp  ; uint32_t.
 %define ARG_filep esp+0x34  ; FILE*.
@@ -84,56 +85,57 @@ mini_vfprintf:  ; int mini_vfprintf(FILE *filep, const char *format, va_list ap)
 		mov eax, [ARG_filep]  ; filep.
 		call mini___M_writebuf_relax_RP1  ; mini___M_writebuf_relax_RP1(filep); Subsequent bytes written will be buffered until mini___M_writebuf_relax_RP1 below.
 %endif
-		mov ebx, [ARG_format]  ; EBX := format.
+		mov REG_VAR_formati, [ARG_format]  ; REG_VAR_formati := format.  ; TODO(pts): Swap the role of EBX and ESI, and use lodsb.
 		xor REG_VAR_pc, REG_VAR_pc
 .next_format_byte:
-		mov al, [ebx]
+		xor eax, eax  ; Set highest 24 bits of EAX to 0.
+		mov al, [REG_VAR_formati]
+		inc REG_VAR_formati
 		test al, al
-		je near .done
+		jz near .done
 		cmp al, '%'
 		jne near .30
 		mov byte [VAR_pad], 0
 		xor edi, edi
-		inc ebx
-		mov al, [ebx]
+		mov al, [REG_VAR_formati]
+		inc REG_VAR_formati
 		test al, al
-		je near .done  ; !! Optimize all near jumps.
+		jz near .done  ; !! Optimize all near jumps.
 		cmp al, '%'
 		je near .30
 		cmp al, '-'
 		jne .2
 		mov byte [VAR_pad], PAD_RIGHT
-		jmp short .3
+		jmp short .4cont
 .2:
 		cmp al, '+'  ; !! Make this conditional (CONFIG_VFPRINTF_NO_PLUS) and also others.
-		jne .4
+		jne .4al
 		mov byte [VAR_pad], PAD_PLUS
-.3:
-		inc ebx
-.4:
-		cmp byte [ebx], '0'
-		jne .5
+.4cont:
+		mov al, [REG_VAR_formati]
+		inc REG_VAR_formati
+.4al:
+		cmp al, '0'
+		jne .5al
 		or byte [VAR_pad], PAD_ZERO
-		inc ebx
-		jmp short .4
-.5:
-		xor eax, eax
+		jmp short .4cont
 .5cont:
-		mov al, [ebx]
-		sub al, '0'
+		mov al, [REG_VAR_formati]
+		inc REG_VAR_formati
+.5al:
+		cmp al, '0'
 		jl short .6
-		cmp al, 9
+		cmp al, '9'
 		jg short .6
-		imul edi, byte 0xa
+		sub al, '0'
+		imul edi, byte 10
 		add edi, eax
-		inc ebx
 		jmp short .5cont
 .6:
-		mov al, [ebx]
 		mov REG_VAR_s, VAR_print_buf
 		mov ecx, [ARG_ap]
 		add ecx, byte 0x4
-		cmp al, 0x73
+		cmp al, 's'
 		jne .16
 		mov [ARG_ap], ecx
 		mov REG_VAR_s, [ecx-0x4]
@@ -195,7 +197,7 @@ mini_vfprintf:  ; int mini_vfprintf(FILE *filep, const char *format, va_list ap)
 		jmp short .14
 .15:
 		test edi, edi
-		jbe near .32
+		jbe .next_format_byte
 		mov al, [VAR_c]
 		call .call_mini_putc
 		dec edi
@@ -207,7 +209,7 @@ mini_vfprintf:  ; int mini_vfprintf(FILE *filep, const char *format, va_list ap)
 		mov al, [ecx-0x4]
 		mov [VAR_print_buf], al
 		test edi, edi
-		je near .31
+		jz near .30
 		mov byte [VAR_print_buf+1], 0x0
 		jmp near .7
 .17:
@@ -291,11 +293,7 @@ mini_vfprintf:  ; int mini_vfprintf(FILE *filep, const char *format, va_list ap)
 		mov [REG_VAR_s], al
 		jmp short .jmp7
 .30:
-		mov al, [ebx]
-.31:
 		call .call_mini_putc
-.32:
-		inc ebx  ; TODO(pts): Swap the role of EBX and ESI, and use lodsb.
 		jmp near .next_format_byte
 .done:
 %ifndef CONFIG_VFPRINTF_IS_FOR_S_PRINTF_ONLY
