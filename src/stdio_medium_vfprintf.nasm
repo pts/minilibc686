@@ -1,4 +1,4 @@
-;f
+;
 ; optimized manually by pts@fazekas.hu at Wed Jul  5 20:03:44 CEST 2023
 ; It supports format flags '-', '+', '0', and length modifiers.
 ; Based on vfprintf_plus.nasm, with stdio_medium buffering added.
@@ -70,6 +70,7 @@ PAD_PLUS equ 4
 %define REG_VAR_formati esi  ; char*.
 %define REG_VAR_s ebx  ; char*.
 %define REG_VAR_pc ebp  ; uint32_t.
+%define REG_VAR_width edi  ; uint32_t.
 %define ARG_filep esp+0x34  ; FILE*.
 %define ARG_format esp+0x38  ; const char*.
 %define ARG_ap esp+0x3c  ; va_list (32-bit). Will be modified in place, the calling convention allows it.
@@ -100,7 +101,7 @@ mini_vfprintf:  ; int mini_vfprintf(FILE *filep, const char *format, va_list ap)
 		cmp al, '%'
 		jne short .putc_al_cont
 		mov byte [VAR_pad], 0
-		xor edi, edi
+		xor REG_VAR_width, REG_VAR_width
 		lodsb  ; mov al, [REG_VAR_formati] ++ inc REG_VAR_formati.
 		test al, al
 		jz short .done
@@ -129,8 +130,8 @@ mini_vfprintf:  ; int mini_vfprintf(FILE *filep, const char *format, va_list ap)
 		cmp al, '9'
 		jg short .6
 		sub al, '0'
-		imul edi, byte 10
-		add edi, eax
+		imul REG_VAR_width, byte 10
+		add REG_VAR_width, eax
 		jmp short .5cont
 .6:
 		mov REG_VAR_s, VAR_print_buf
@@ -142,7 +143,7 @@ mini_vfprintf:  ; int mini_vfprintf(FILE *filep, const char *format, va_list ap)
 		cmp al, 'c'
 		jne short .17
 		xchg eax, ecx  ; AL := CL; rest of EAX := junk; ECX := junk.
-		test edi, edi
+		test REG_VAR_width, REG_VAR_width
 		jz short .putc_al_cont
 		mov [REG_VAR_s], ax  ; byte [REG_VAR_s] := AL; byte [REG_VAR_s+1] := 0.
 		jmp near .do_print_s
@@ -234,13 +235,13 @@ mini_vfprintf:  ; int mini_vfprintf(FILE *filep, const char *format, va_list ap)
 		jnz short .26
 		cmp byte [VAR_neg], 0
 		je short .do_print_s
-		test edi, edi
+		test REG_VAR_width, REG_VAR_width
 		jz short .28
 		test byte [VAR_pad], PAD_ZERO
 		jz short .28
 		mov al, [VAR_neg]
 		call .call_mini_putc
-		dec edi  ; EDI contains the (remaining) width of the current number.
+		dec REG_VAR_width  ; EDI contains the (remaining) width of the current number.
 		jmp short short .28j
 .28:
 		dec REG_VAR_s
@@ -250,7 +251,7 @@ mini_vfprintf:  ; int mini_vfprintf(FILE *filep, const char *format, va_list ap)
 
 .do_print_s:
 		mov byte [VAR_c], ' '
-		test edi, edi
+		test REG_VAR_width, REG_VAR_width
 		jbe short .12
 		xor edx, edx
 		mov ecx, REG_VAR_s
@@ -261,12 +262,12 @@ mini_vfprintf:  ; int mini_vfprintf(FILE *filep, const char *format, va_list ap)
 		inc ecx
 		jmp short short .8
 .9:
-		cmp edx, edi
+		cmp edx, REG_VAR_width
 		jb short .10
-		xor edi, edi
+		xor REG_VAR_width, REG_VAR_width
 		jmp short .11
 .10:
-		sub edi, edx
+		sub REG_VAR_width, edx
 .11:
 		test byte [VAR_pad], PAD_ZERO
 		je short .12
@@ -275,11 +276,11 @@ mini_vfprintf:  ; int mini_vfprintf(FILE *filep, const char *format, va_list ap)
 		test byte [VAR_pad], PAD_RIGHT
 		jne short .14
 .13:
-		test edi, edi
+		test REG_VAR_width, REG_VAR_width
 		jbe short .14
 		mov al, [VAR_c]
 		call .call_mini_putc
-		dec edi
+		dec REG_VAR_width
 		jmp short .13
 .14:
 		mov al, [REG_VAR_s]
@@ -289,11 +290,11 @@ mini_vfprintf:  ; int mini_vfprintf(FILE *filep, const char *format, va_list ap)
 		inc REG_VAR_s
 		jmp short .14
 .15:
-		test edi, edi
+		test REG_VAR_width, REG_VAR_width
 		jbe near .next_fmtchr
 		mov al, [VAR_c]
 		call .call_mini_putc
-		dec edi
+		dec REG_VAR_width
 		jmp short .15
 		; End of .do_print_s. It has already jumped to .next_fmtchr.
 
