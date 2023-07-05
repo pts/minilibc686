@@ -3,7 +3,7 @@
 ; Based on vfprintf_plus.nasm, with stdio_medium buffering added.
 ; Compile to i386 ELF .o object: nasm -O999999999 -w+orphan-labels -f elf -o stdio_medium_vfprintf.o stdio_medium_vfprintf.nasm
 ;
-; Code+data size: 0x247 bytes; 0x248 bytes with CONFIG_PIC.
+; Code+data size: 0x247 bytes; +1 byte with CONFIG_PIC.
 ;
 ; Uses: %ifdef CONFIG_PIC
 ; Uses; %ifdef CONFIG_VFPRINTF_IS_FOR_S_PRINTF_ONLY
@@ -34,8 +34,8 @@ section .bss align=1
 %else
 section .text align=1
 section .rodata align=1
-section .data align=4
-section .bss align=4
+section .data align=1
+section .bss align=1
 %endif
 
 %ifndef CONFIG_VFPRINTF_IS_FOR_S_PRINTF_ONLY
