@@ -4,11 +4,13 @@
 ; Based on vfprintf_plus.nasm, with stdio_medium buffering added.
 ; Compile to i386 ELF .o object: nasm -O999999999 -w+orphan-labels -f elf -o stdio_medium_vfprintf.o stdio_medium_vfprintf.nasm
 ;
-; Code+data size: 0x1e9 bytes; +1 bytes with CONFIG_PIC.
+; Code+data size: 0x1e4 bytes; +1 bytes with CONFIG_PIC.
 ;
 ; Uses: %ifdef CONFIG_PIC
 ; Uses; %ifdef CONFIG_VFPRINTF_IS_FOR_S_PRINTF_ONLY
 ; Uses; %ifdef CONFIG_VFPRINTF_POP_ESP_BEFORE_RET
+;
+; Limitation: Printing `%...c' is incorrect if `...' is not empty and c is '\0'.
 ;
 ; TODO(pts): Add support for %p.
 ;
@@ -142,8 +144,7 @@ mini_vfprintf:  ; int mini_vfprintf(FILE *filep, const char *format, va_list ap)
 		mov al, [ecx-0x4]
 		test edi, edi
 		jz short .putc_al_cont
-		mov [VAR_print_buf], al  ; !! Use REG_VAR_s.
-		mov byte [VAR_print_buf+1], 0x0
+		mov [REG_VAR_s], ax  ; byte [REG_VAR_s] := AL; byte [REG_VAR_s+1] := 0.
 		jmp near .do_print_s
 
 .done:
