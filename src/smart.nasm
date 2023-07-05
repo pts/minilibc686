@@ -1174,10 +1174,23 @@ mini_putchar_RP3:  ; int REGPARM3 mini_putchar_RP3(int c);
   %include "src/stdio_medium_fflush.nasm"
 %endif
 
+%define NEED_include_vfprintf 0
+%ifdef __NEED_mini_printf
+  %ifndef __NEED_mini_vfprintf
+    %define NEED_include_vfprintf 1
+  %endif
+%endif
+%ifdef CONFIG_VFPRINTF_NO_PLUS
+  %define NEED_include_vfprintf 1
+%endif
+
 %ifdef __NEED_mini___M_vfsprintf
   %define mini_vfprintf mini___M_vfsprintf
-  ; %include these file, so that the `call mini_vfprintf_for_s_printf' they
-  ; %contain can be replaced with `call mini___M_vfsprintf'.
+  %ifndef NEED_include_vfprintf
+    __smart_extern mini_vfprintf
+  %endif
+  ; %include these files, so that the `call mini_vfprintf_for_s_printf' they
+  ; contain can be replaced with `call mini___M_vfsprintf'.
   ; TODO(pts): Unify mini_sprintf(...) and mini_snprintf(...) if both are needed.
   %ifdef __NEED_mini_sprintf
     %include "src/stdio_medium_sprintf.nasm"
@@ -1192,7 +1205,6 @@ mini_putchar_RP3:  ; int REGPARM3 mini_putchar_RP3(int c);
   %endif
 %endif  ; __NEED_mini___M_vfsprintf
 
-%define NEED_include_vfprintf 0
 %ifdef __NEED_mini_printf
   global mini_printf
   mini_printf:  ; int mini_printf(const char *fmt, ...) { return mini_vfprintf(mini_stdout, fmt, ap); }
@@ -1219,17 +1231,14 @@ mini_putchar_RP3:  ; int REGPARM3 mini_putchar_RP3(int c);
 		push eax  ; Prepared return ESP instead of return address, for CONFIG_VFPRINTF_POP_ESP_BEFORE_RET.
 		; Fall through to mini_vfprintf.
     %define CONFIG_VFPRINTF_POP_ESP_BEFORE_RET
-    %define NEED_include_vfprintf 1
   %endif
 %endif  ; __NEED_mini_printf
-%ifdef CONFIG_VFPRINTF_NO_PLUS
-  %define NEED_include_vfprintf 1
-%endif
 %if NEED_include_vfprintf
   section .rodata align=1  ; TODO(pts): Why is this line needed?
   section .text
   %include "src/stdio_medium_vfprintf.nasm"
   %undef __NEED_mini_vfprintf  ; Don't %include it again.
+  %undef __NEED_mini___M_vfsprintf  ; Don't %include it again.
 %endif
 
 %if ___NEED_strtofld_count>1

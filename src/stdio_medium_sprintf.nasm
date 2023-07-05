@@ -11,7 +11,6 @@ cpu 386
 global mini_sprintf
 global mini_sprintf.do
 %ifdef CONFIG_SECTIONS_DEFINED
-extern mini_vfprintf
 %elifidn __OUTPUT_FORMAT__, bin
 section .text align=1
 section .rodata align=1

@@ -22,11 +22,11 @@ Try it on Linux i386 or Linux amd64 (without the leading `$`):
 $ git clone --depth 1 https://github.com/pts/minilibc686
 $ cd minilibc686
 $ export PATH="$PWD/pathbin:$PATH"  # Add minicc to $PATH.
-$ minicc -mprintf-mini -o demo demo_c_hello.c
+$ minicc -mprintf-mini -mno-envp -o demo demo_c_hello.c
 $ ./demo
 Hello, World!
 $ ls -ld demo
--rwxrwxr-x 1 pts pts 1020 Jul  5 20:45 demo
+-rwxrwxr-x 1 pts pts 1016 Jul  5 21:59 demo
 $ printf '#include <unistd.h>\nint main() { write(1, "Hello, World!\\n", 14); return 0; }\n' >demo_write.c
 $ minicc -fomit-frame-pointer -o demo_write demo_write.c
 $ ./demo_write
@@ -55,25 +55,24 @@ What sizes are achievable:
   above): **163 bytes**. The extra bytes are mostly error handling code
   after write(2) has returned, and C compiler register use overhead.
 * A hello-world program, using snprintf(3) and Linux syscall write(2)
-  (test/demo_hello_linux_snprintf.nasm): **702 bytes**. Only the very short
+  (test/demo_hello_linux_snprintf.nasm): **679 bytes**. Only the very short
   main(...) function was written in C, the rest of the code is part of the
   libc, written in NASM assembly. Please note that that
   `test/demo_c_hello_snprintf.c` provides the same functionality, but the
-  program size depends on the C compiler. It's always 702 bytes when
+  program size depends on the C compiler. It's always 679 bytes when
   demo_hello_linux_printf.nasm is compiled with NASM.
 * A hello-world program, using printf(3) (demo_hello_linux_printf.nasm):
-  **1012 bytes**. Only the very short main(...) function was written in C,
+  **1008 bytes**. Only the very short main(...) function was written in C,
   the rest of the code is part of the libc, written in NASM assembly. Please
   note that that `demo_c_hello.c` provides the same functionality, but the
   program size depends on the C compiler. The built-in OpenWatcom C compiler
-  gives 1020 bytes (with `-msoft-float` it would be 4 bytes less), but GCC
-  7.5.0 gives 1012 bytes. It's always 1012 bytes when
-  demo_hello_linux_printf.nasm is compiled with NASM.
+  gives 1016 bytes, but GCC 7.5.0 gives 1008 bytes. It's always 1008 bytes
+  when demo_hello_linux_printf.nasm is compiled with NASM.
 
 hello-world size comparison of different libcs:
 
 * minilibc686 (`minicc --gcc`) is
-  1012 bytes, already stripped
+  1008 bytes, already stripped
 * [Baselibc](https://github.com/PetteriAimonen/Baselibc)
   [2018-11-06](https://github.com/PetteriAimonen/Baselibc/commit/245a5940483267ef501aa7cdbc1b6a422f6e9daf) is
   1388 bytes after stripping, but it doesn't do output buffering;
@@ -150,20 +149,20 @@ How is this possible?
   * 52 bytes: ELF-32 ehdr
   * 32 bytes: ELF-32 phdr for .text + .rodata
   * 70 bytes: main(...) function, compiled by GCC 7.5.0
-  * 49 bytes: _start (entry point) + _exit(3) + syscalls wrapper
+  * 45 bytes: _start (entry point) + _exit(3) + syscalls wrapper
   * 4 bytes: write(2) syscall wrapper
   * 67 bytes: snprintf(3), calls mini___M_vfsprintf(...)
-  * 403 bytes: mini___M_vfsprintf(...)
+  * 384 bytes: mini___M_vfsprintf(...)
   * 18 bytes: two NUL-terminated strings in main(...)
   * 7 bytes: `"(null)"` string (NUL-terminated) in mini___M_vfsprintf(...)
-  * (702 bytes): total
+  * (679 bytes): total
 * demo_c_hello.c == demo_hello_linux_printf.nasm
   * Compile with GCC 7.5.0: `minicc --gcc -W -Wall -Werror demo_c_hello.c`
   * 52 bytes: ELF-32 ehdr
   * 32 bytes: ELF-32 phdr for .text + .rodata
   * 32 bytes: ELF-32 phdr for .data
   * 35 bytes: main(...) function, compiled by GCC 7.5.0
-  * 93 bytes: _start (entry point) + stdout startup isatty ioctl + main(...)
+  * 89 bytes: _start (entry point) + stdout startup isatty ioctl + main(...)
     call + stdout exit flush + _exit(3) + syscalls wrapper
   * 4 bytes: write(2) syscall wrapper
   * 89 bytes: mini_fputc_RP3(...), calls fflush(3) and write(2)
@@ -177,7 +176,7 @@ How is this possible?
   * 1 byte: alignment padding for section .data (to a multiple of 4)
   * 4 bytes: stdout pointer
   * 36 bytes: stdout struct
-  * (1012 bytes): total
+  * (1008 bytes): total
 
 ## What's inside?
 

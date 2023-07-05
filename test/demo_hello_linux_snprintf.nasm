@@ -47,6 +47,10 @@
 %define ALIGN_RODATA 1
 %include "elf0.inc.nasm"
 
+; Config options respected by src/smart.nasm and other minilibc686 src/*.nasm.
+%define CONFIG_MAIN_NO_ENVP
+%define CONFIG_VFPRINTF_NO_PLUS
+
 extern mini_snprintf
 extern mini_write
 global main
