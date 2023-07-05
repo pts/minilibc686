@@ -4,7 +4,7 @@
 ; Based on vfprintf_plus.nasm, with stdio_medium buffering added.
 ; Compile to i386 ELF .o object: nasm -O999999999 -w+orphan-labels -f elf -o stdio_medium_vfprintf.o stdio_medium_vfprintf.nasm
 ;
-; Code+data size: 0x223 bytes; +1 bytes with CONFIG_PIC.
+; Code+data size: 0x21c bytes; +1 bytes with CONFIG_PIC.
 ;
 ; Uses: %ifdef CONFIG_PIC
 ; Uses; %ifdef CONFIG_VFPRINTF_IS_FOR_S_PRINTF_ONLY
@@ -155,63 +155,17 @@ mini_vfprintf:  ; int mini_vfprintf(FILE *filep, const char *format, va_list ap)
 		mov REG_VAR_s, str_null
 %endif  ; CONFIG_PIC
 .not_null:
-.do_print_s:
-		mov byte [VAR_c], ' '
-		test edi, edi
-		jbe .12
-		xor edx, edx
-		mov ecx, REG_VAR_s
-.8:
-		cmp byte [ecx], 0x0
-		je .9
-		inc edx
-		inc ecx
-		jmp short .8
-.9:
-		cmp edx, edi
-		jb .10
-		xor edi, edi
-		jmp short .11
-.10:
-		sub edi, edx
-.11:
-		test byte [VAR_pad], PAD_ZERO
-		je .12
-		mov byte [VAR_c], '0'
-.12:
-		test byte [VAR_pad], PAD_RIGHT
-		jne .14
-.13:
-		test edi, edi
-		jbe .14
-		mov al, [VAR_c]
-		call .call_mini_putc
-		dec edi
-		jmp short .13
-.14:
-		mov al, [REG_VAR_s]
-		test al, al
-		je .15
-		call .call_mini_putc
-		inc REG_VAR_s
-		jmp short .14
-.15:
-		test edi, edi
-		jbe .next_format_byte
-		mov al, [VAR_c]
-		call .call_mini_putc
-		dec edi
-		jmp short .15
+.dpsj:		jmp near .do_print_s
 .16:
 		cmp al, 'c'
 		jne .17
 		mov [ARG_ap], ecx
 		mov al, [ecx-0x4]
 		test edi, edi
-		jz near .putc_al_cont
+		jz near .putc_al_cont  ; Unfortunately it's already `near'.
 		mov [VAR_print_buf], al
 		mov byte [VAR_print_buf+1], 0x0
-		jmp near .do_print_s
+		jmp short .dpsj
 .17:
 		mov [ARG_ap], ecx
 		mov ecx, [ecx-0x4]
@@ -278,7 +232,7 @@ mini_vfprintf:  ; int mini_vfprintf(FILE *filep, const char *format, va_list ap)
 		test eax, eax
 		jnz .26
 		cmp byte [VAR_neg], 0
-		je near .do_print_s
+		je short .do_print_s
 		test edi, edi
 		jz .28
 		test byte [VAR_pad], PAD_ZERO
@@ -291,7 +245,57 @@ mini_vfprintf:  ; int mini_vfprintf(FILE *filep, const char *format, va_list ap)
 		dec REG_VAR_s
 		mov al, [VAR_neg]
 		mov [REG_VAR_s], al
-.28j:		jmp near .do_print_s
+.28j:		; Fall through to .do_print_s.
+
+.do_print_s:
+		mov byte [VAR_c], ' '
+		test edi, edi
+		jbe .12
+		xor edx, edx
+		mov ecx, REG_VAR_s
+.8:
+		cmp byte [ecx], 0x0
+		je .9
+		inc edx
+		inc ecx
+		jmp short .8
+.9:
+		cmp edx, edi
+		jb .10
+		xor edi, edi
+		jmp short .11
+.10:
+		sub edi, edx
+.11:
+		test byte [VAR_pad], PAD_ZERO
+		je .12
+		mov byte [VAR_c], '0'
+.12:
+		test byte [VAR_pad], PAD_RIGHT
+		jne .14
+.13:
+		test edi, edi
+		jbe .14
+		mov al, [VAR_c]
+		call .call_mini_putc
+		dec edi
+		jmp short .13
+.14:
+		mov al, [REG_VAR_s]
+		test al, al
+		je .15
+		call .call_mini_putc
+		inc REG_VAR_s
+		jmp short .14
+.15:
+		test edi, edi
+		jbe .next_format_byte
+		mov al, [VAR_c]
+		call .call_mini_putc
+		dec edi
+		jmp short .15
+		; End of .do_print_s. It has already jumped to .next_format_byte.
+
 .done:
 %ifndef CONFIG_VFPRINTF_IS_FOR_S_PRINTF_ONLY
 		mov eax, [ARG_filep]  ; filep.
