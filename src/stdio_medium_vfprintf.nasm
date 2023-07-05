@@ -3,7 +3,7 @@
 ; Based on vfprintf_plus.nasm, with stdio_medium buffering added.
 ; Compile to i386 ELF .o object: nasm -O999999999 -w+orphan-labels -f elf -o stdio_medium_vfprintf.o stdio_medium_vfprintf.nasm
 ;
-; Code+data size: 0x240 bytes; 0x240 bytes with CONFIG_PIC.
+; Code+data size: 0x247 bytes; 0x248 bytes with CONFIG_PIC.
 ;
 ; Uses: %ifdef CONFIG_PIC
 ; Uses; %ifdef CONFIG_VFPRINTF_IS_FOR_S_PRINTF_ONLY
@@ -302,9 +302,12 @@ mini_vfprintf:  ; int mini_vfprintf(FILE *filep, const char *format, va_list ap)
 		mov ecx, [edx]  ; ECX := buf_write_ptr.
 		cmp ecx, [edx+4]  ; buf_end.
 		je .call_mini_fputc
+%ifndef CONFIG_VFPRINTF_IS_FOR_S_PRINTF_ONLY
 		cmp al, 10  ; '\n'.
 		je .call_mini_fputc  ; In case filep == stdout and it's line buffered (_IOLBF).
-%if 1  ; With smart linking, exclude this if mini_snprintf(...) and mini_vsnprintf(...) are not used.
+%endif
+.append_byte:
+%if 1  ; With smart linking, exclude this if mini_snprintf(...) and mini_vsnprintf(...) are not used. !! Maybe ensure that it's not NULL here.
 		test ecx, ecx  ; if buf_write_ptr is NULL, then don't write the AL byte, but still increment the counter in EBP. This is for mini_snprintf(...).
 		jz .after_putc
 %endif
@@ -320,7 +323,11 @@ mini_vfprintf:  ; int mini_vfprintf(FILE *filep, const char *format, va_list ap)
 .call_mini_fputc:
 %if 1  ; TODO(pts): With smart linking, exclude this if mini_snprintf(...) and mini_vsnprintf(...) are not used.
 		cmp byte [edx+0x14], 7  ; dire == FD_WRITE_SATURATE?
+		jne .not_saturate
+		cmp ecx, [edx+4]  ; buf_end.
 		je .after_putc
+		jmp short .append_byte
+.not_saturate:
 %endif
 		; movsx eax, al : Not needed, mini_fputc ignores the high 24 bits anyway.
 		call mini_fputc_RP3  ; With extra smart linking, we could hardcore an EOF (-1) return if only mini_snprintf(...) etc., bur no mini_fprintf(...) etc. is used.
