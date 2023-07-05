@@ -224,6 +224,7 @@ WFLAGS="-W$NL-Wall$NL-Werror-implicit-function-declaration"
 HAD_OFLAG=
 HAD_V=
 HAD_OFILE=
+HAD_SSFILE=
 ARCH=i686
 GCC_BARG=-pipe  # Harmless default.
 LIBC=
@@ -342,7 +343,10 @@ for ARG in "$@"; do
    -*) echo "fatal: unsupported minicc flag: $ARG" >&2; exit 1 ;;
    *.[aocisS])
     if ! test -f "$ARG"; then echo "fatal: missing source file: $ARG" >&2; exit 1; fi
-    test "${ARG%.o}" = "$ARG" || HAD_OFILE=1
+    case "$ARG" in
+     *.o) HAD_OFILE=1 ;;
+     *.[sS]) HAD_SSFILE=1 ;;
+    esac
     ARGS="$ARGS$NL$ARG"
     ;;
    *.*) echo "fatal: unsupported input file extension for minicc: $ARG" >&2; exit 1 ;;
@@ -469,7 +473,7 @@ case "$GCC" in
       echo "fatal: problem with C compiler program file: $GCC" >&2; exit 6
     fi
   fi
-  if test "$IS_CC1" = 2 || test "$IS_CC1" = 3; then
+  if test "$IS_CC1" = 2 || test "$IS_CC1" = 3 || test "$IS_WATCOM$HAD_SSFILE" = 11; then
     if test -f "$MYDIR"/tools/as && test -s "$MYDIR"/tools/as; then
       :
     elif test -z "$DO_DOWNLOAD"; then
@@ -840,12 +844,7 @@ if test "$GCC" || test -z "$IS_TCCLD"; then
      *.[ao]) FILEARGS="$FILEARGS$NL--ldfile=$ARG" ;;
      *.[ci]) FILEARGS="$FILEARGS$NL--srcfile=$ARG" ;;  # owcc386 treats .i files just like .c, but gcc doesn't allow `#' in .i files, because they are apready preprocesed.
      *.[sS])
-       if test "$IS_CC1"; then
-         if test "${ARG%.S}" != "$ARG"; then echo "fatal: unsupported preprocessor--assembly source file type for cc1: $ARG" >&2; exit 5; fi
-         echo "fatal: unsupported assembly source file type for cc1: $ARG" >&2; exit 5  # !!! Run .s files with $GCC -E.
-       elif test "$IS_WATCOM"; then
-         echo "fatal: unsupported minicc wcc386 assembly source file type: $ARG" >&2; exit 5
-       fi
+       if test "${ARG%.S}" != "$ARG"; then echo "fatal: unsupported preprocessor--assembly source file type: $ARG" >&2; exit 5; fi  # !!! Run .S files with $GCC -E.
        FILEARGS="$FILEARGS$NL--srcfile=$ARG"
        ;;
      *) echo "fatal: unsupported input file extension: $ARG" >&2; exit 7 ;;
@@ -1073,30 +1072,47 @@ if test "$GCC" || test -z "$IS_TCCLD"; then
         echo "fatal: assert: missing --tmpofile=..." >&2; rm -f $TMPOFILES; exit 7;
       fi
       OFLAG=
+      ARG="${ARG#--*=}"
+      if test "$CCMODE" = -E; then
+        case "$ARG" in
+         *.s) TMPOFILE=; continue ;;  # Skip the source .s file silently, GCC also does it.
+        esac
+      fi
       if test "$TMPOFILE" = -; then
+        case "$ARG" in *.c) ;; *) echo "fatal: unsupported source file type for stdout: $ARG" >&2; exit 7 ;; esac
         test "$HAD_V" && echo "info: running compiler:" $CCARGS "${ARG#--*=}" >&2  # GCC also writes to stderr.
         $CCARGS "${ARG#--*=}"; EC="$?"
       else
         CCFARGS=
-        ARG="${ARG#--*=}"
-        if test "$IS_WATCOM"; then
-          if test "${TMPOFILE#.}" != "$TMPOFILE"; then
-            # Otherwise wcc386 would prepend a basename of the source file.
-            echo "fatal: object filename for minicc wcc386 must not start with a dot: $TMPOFILE" >&2; rm -f $TMPOFILES; exit 7;
-          fi
-          CCFARGS="-fo=$TMPOFILE$NL$ARG"
-        elif test "$IS_CC1"; then
-          if test "$IS_CC1" = 3; then  # PCC.
-            CCFARGS="-o$NL$TMPOFILE$NL$ARG"
+        SFILE=
+        case "$ARG" in
+         *.s) SFILE="$ARG"; CCARGS= ;;  # TODO(pts): Don't create empty $TMPOFILE (with .s extension), we don't use it.
+         *.c)
+          SFILE="$TMPOFILE"
+          if test "$IS_WATCOM"; then
+            if test "${TMPOFILE#.}" != "$TMPOFILE"; then
+              # Otherwise wcc386 would prepend a basename of the source file.
+              echo "fatal: object filename for minicc wcc386 must not start with a dot: $TMPOFILE" >&2; rm -f $TMPOFILES; exit 7;
+            fi
+            CCFARGS="-fo=$TMPOFILE$NL$ARG"
+          elif test "$IS_CC1"; then
+            if test "$IS_CC1" = 3; then  # PCC.
+              CCFARGS="-o$NL$TMPOFILE$NL$ARG"
+            else
+              CCFARGS="-dumpbase$NL$ARG$NL-auxbase-strip$NL${ARG%.*}.o$NL-o$NL$TMPOFILE$NL$ARG"
+            fi
           else
-            CCFARGS="-dumpbase$NL$ARG$NL-auxbase-strip$NL${ARG%.*}.o$NL-o$NL$TMPOFILE$NL$ARG"
+            CCFARGS="-o$NL$TMPOFILE$NL$ARG"
           fi
-          # !! Convert the .s file to .o with GNU as(1).
+          ;;
+         *) echo "fatal: assert: unknown source file type: $ARG" >&2; exit 7 ;;
+        esac
+        if test "$CCARGS"; then
+          test "$HAD_V" && echo "info: running compiler:" $CCARGS $CCFARGS >&2  # GCC also writes to stderr.
+          $CCARGS $CCFARGS; EC="$?"
         else
-          CCFARGS="-o$NL$TMPOFILE$NL$ARG"
+          EC=0
         fi
-        test "$HAD_V" && echo "info: running compiler:" $CCARGS $CCFARGS >&2  # GCC also writes to stderr.
-        $CCARGS $CCFARGS; EC="$?"
       fi
       if test "$EC" != 0; then  # The compiler has failed.
         if test "$TMPOFILE" = -; then
@@ -1114,14 +1130,14 @@ if test "$GCC" || test -z "$IS_TCCLD"; then
         else
           TMPOFILE2="${TMPOFILE%.*}.o"
         fi
-        if test "$IS_WATCOM"; then
+        if test "$IS_WATCOM" && test "${ARG%.c}" != "$ARG"; then
           EFARGS="$MYDIR/tools/omf2elf$NL-h$NL$WOSSFLAG$NL$HAD_V$NL-o$NL$TMPOFILE2$NL$TMPOFILE"
           test "$HAD_V" && echo "info: running OMF converter:" $EFARGS >&2
         else  # "$IS_CC1".
           # GNU as(1) also accepts a `-I...' flag, but we don't need it
           # here, because this .s source file was generated by GCC, which
-          # doesn't generates includes.
-          EFARGS="$MYDIR/tools/as$NL$HAD_V$NL--32$NL-march=$ARCH+387$NL-o$NL$TMPOFILE2$NL$TMPOFILE"
+          # doesn't generate includes.
+          EFARGS="$MYDIR/tools/as$NL$HAD_V$NL--32$NL-march=$ARCH+387$NL-o$NL$TMPOFILE2$NL$SFILE"
           test "$HAD_V" && echo "info: running GNU assembler:" $EFARGS >&2
         fi
         $EFARGS; EC="$?"
