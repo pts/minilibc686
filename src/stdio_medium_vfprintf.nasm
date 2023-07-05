@@ -4,7 +4,7 @@
 ; Based on vfprintf_plus.nasm, with stdio_medium buffering added.
 ; Compile to i386 ELF .o object: nasm -O999999999 -w+orphan-labels -f elf -o stdio_medium_vfprintf.o stdio_medium_vfprintf.nasm
 ;
-; Code+data size: 0x1e4 bytes; +1 bytes with CONFIG_PIC.
+; Code+data size: 0x1d6 bytes; +1 bytes with CONFIG_PIC.
 ;
 ; Uses: %ifdef CONFIG_PIC
 ; Uses; %ifdef CONFIG_VFPRINTF_IS_FOR_S_PRINTF_ONLY
@@ -135,13 +135,13 @@ mini_vfprintf:  ; int mini_vfprintf(FILE *filep, const char *format, va_list ap)
 .6:
 		mov REG_VAR_s, VAR_print_buf
 		mov ecx, [ARG_ap]
-		add ecx, byte 0x4
+		add dword [ARG_ap], byte 4
+		mov ecx, [ecx]  ; Next value to print.
 		cmp al, 's'
 		je near .fmtchr_s
 		cmp al, 'c'
 		jne .17
-		mov [ARG_ap], ecx
-		mov al, [ecx-0x4]
+		xchg eax, ecx  ; AL := CL; rest of EAX := junk; ECX := junk.
 		test edi, edi
 		jz short .putc_al_cont
 		mov [REG_VAR_s], ax  ; byte [REG_VAR_s] := AL; byte [REG_VAR_s+1] := 0.
@@ -164,8 +164,6 @@ mini_vfprintf:  ; int mini_vfprintf(FILE *filep, const char *format, va_list ap)
 		ret
 
 .17:
-		mov [ARG_ap], ecx  ; !! Remove code duplication.
-		mov ecx, [ecx-0x4]  ; Integer to print.
 		mov edx, ('a'-'0'-10)<<8 | 10 ; DL := 10; DH := 'a'-'0'-10.
 		cmp al, 'd'
 		je .22
@@ -278,8 +276,7 @@ mini_vfprintf:  ; int mini_vfprintf(FILE *filep, const char *format, va_list ap)
 		jmp short .15
 		; End of .do_print_s. It has already jumped to .next_format_byte.
 
-.fmtchr_s:	mov [ARG_ap], ecx
-		mov REG_VAR_s, [ecx-0x4]
+.fmtchr_s:	mov REG_VAR_s, ecx
 		test REG_VAR_s, REG_VAR_s
 		jne .not_null
 %ifdef CONFIG_PIC
