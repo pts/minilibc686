@@ -4,7 +4,7 @@
 ; Based on vfprintf_plus.nasm, with stdio_medium buffering added.
 ; Compile to i386 ELF .o object: nasm -O999999999 -w+orphan-labels -f elf -o stdio_medium_vfprintf.o stdio_medium_vfprintf.nasm
 ;
-; Code+data size: 0x243 bytes; +1 bytes with CONFIG_PIC.
+; Code+data size: 0x23c bytes; +1 bytes with CONFIG_PIC.
 ;
 ; Uses: %ifdef CONFIG_PIC
 ; Uses; %ifdef CONFIG_VFPRINTF_IS_FOR_S_PRINTF_ONLY
@@ -61,7 +61,7 @@ PAD_PLUS equ 4
 %define SIZEOF_print_buf 11
 %define VAR_print_buf esp  ; char[11].
 %define VAR_b esp+0xc  ; uint32_t.
-%define VAR_pad esp+0x10  ; uint32_t. !! changed it to uint8_t.
+%define VAR_pad esp+0x10  ; uint8_t.
 %define VAR_neg esp+0x14  ; uint8_t.
 %define VAR_letbase esp+0x18  ; uint8_t.
 %define VAR_c esp+0x1c  ; uint8_t.
@@ -92,8 +92,7 @@ mini_vfprintf:  ; int mini_vfprintf(FILE *filep, const char *format, va_list ap)
 		je near .done
 		cmp al, '%'
 		jne near .30
-		xor eax, eax  ; EAX : = 0.
-		mov [VAR_pad], eax  ; pad := 0.
+		mov byte [VAR_pad], 0
 		xor edi, edi
 		inc ebx
 		mov al, [ebx]
@@ -104,12 +103,12 @@ mini_vfprintf:  ; int mini_vfprintf(FILE *filep, const char *format, va_list ap)
 		lea edx, [ebx+0x1]
 		cmp al, '-'
 		jne .2
-		mov dword [VAR_pad], PAD_RIGHT  ; !! TODO(pts): Byte.
+		mov byte [VAR_pad], PAD_RIGHT
 		jmp short .3
 .2:
 		cmp al, '+'  ; !! Make this conditional (CONFIG_VFPRINTF_NO_PLUS) and also others.
 		jne .4
-		mov dword [VAR_pad], PAD_PLUS
+		mov byte [VAR_pad], PAD_PLUS
 .3:
 		mov ebx, edx
 .4:

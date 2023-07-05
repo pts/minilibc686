@@ -7,7 +7,8 @@
 typedef struct _FILE *FILE;
 extern int mini_fputc(int c, FILE *filep);
 int mini_vfprintf(FILE *filep, const char *format, va_list args) {
-  register unsigned width, pad;
+  register unsigned width;
+  register unsigned char pad;
   register unsigned pc = 0;
   /* String buffer large enough for the longest %u and %x. */
   char print_buf[sizeof(BBPRINTF_INT) == 4 ? 11 : sizeof(BBPRINTF_INT) == 2 ? 6 : sizeof(BBPRINTF_INT) * 3 + 1];
@@ -21,7 +22,8 @@ int mini_vfprintf(FILE *filep, const char *format, va_list args) {
   for (; *format != 0; ++format) {
     if (*format == '%') {
       ++format;
-      width = pad = 0;
+      width = 0;
+      pad = 0;
       if (*format == '\0') break;
       if (*format == '%') goto out;
       if (*format == '-') {
