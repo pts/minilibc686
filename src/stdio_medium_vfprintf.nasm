@@ -4,7 +4,7 @@
 ; Based on vfprintf_plus.nasm, with stdio_medium buffering added.
 ; Compile to i386 ELF .o object: nasm -O999999999 -w+orphan-labels -f elf -o stdio_medium_vfprintf.o stdio_medium_vfprintf.nasm
 ;
-; Code+data size: 0x22e bytes; +1 bytes with CONFIG_PIC.
+; Code+data size: 0x223 bytes; +1 bytes with CONFIG_PIC.
 ;
 ; Uses: %ifdef CONFIG_PIC
 ; Uses; %ifdef CONFIG_VFPRINTF_IS_FOR_S_PRINTF_ONLY
@@ -87,20 +87,23 @@ mini_vfprintf:  ; int mini_vfprintf(FILE *filep, const char *format, va_list ap)
 %endif
 		mov REG_VAR_formati, [ARG_format]  ; REG_VAR_formati := format.
 		xor REG_VAR_pc, REG_VAR_pc
+		jmp short .next_format_byte
+.putc_al_cont:
+		call .call_mini_putc
 .next_format_byte:
 		xor eax, eax  ; Set highest 24 bits of EAX to 0.
 		lodsb  ; mov al, [REG_VAR_formati] ++ inc REG_VAR_formati.
 		test al, al
 		jz near .done
 		cmp al, '%'
-		jne near .30
+		jne short .putc_al_cont
 		mov byte [VAR_pad], 0
 		xor edi, edi
 		lodsb  ; mov al, [REG_VAR_formati] ++ inc REG_VAR_formati.
 		test al, al
 		jz near .done  ; !! Optimize all near jumps.
 		cmp al, '%'
-		je near .30
+		je short .putc_al_cont
 		cmp al, '-'
 		jne .2
 		mov byte [VAR_pad], PAD_RIGHT
@@ -136,7 +139,7 @@ mini_vfprintf:  ; int mini_vfprintf(FILE *filep, const char *format, va_list ap)
 		mov [ARG_ap], ecx
 		mov REG_VAR_s, [ecx-0x4]
 		test REG_VAR_s, REG_VAR_s
-		jne .7
+		jne .not_null
 %ifdef CONFIG_PIC
 		call .after_str_null
 .str_null:
@@ -151,7 +154,8 @@ mini_vfprintf:  ; int mini_vfprintf(FILE *filep, const char *format, va_list ap)
 %else  ; CONFIG_PIC
 		mov REG_VAR_s, str_null
 %endif  ; CONFIG_PIC
-.7:
+.not_null:
+.do_print_s:
 		mov byte [VAR_c], ' '
 		test edi, edi
 		jbe .12
@@ -203,11 +207,11 @@ mini_vfprintf:  ; int mini_vfprintf(FILE *filep, const char *format, va_list ap)
 		jne .17
 		mov [ARG_ap], ecx
 		mov al, [ecx-0x4]
-		mov [VAR_print_buf], al
 		test edi, edi
-		jz near .30
+		jz near .putc_al_cont
+		mov [VAR_print_buf], al
 		mov byte [VAR_print_buf+1], 0x0
-		jmp near .7
+		jmp near .do_print_s
 .17:
 		mov [ARG_ap], ecx
 		mov ecx, [ecx-0x4]
@@ -274,7 +278,7 @@ mini_vfprintf:  ; int mini_vfprintf(FILE *filep, const char *format, va_list ap)
 		test eax, eax
 		jnz .26
 		cmp byte [VAR_neg], 0
-		je .7
+		je near .do_print_s
 		test edi, edi
 		jz .28
 		test byte [VAR_pad], PAD_ZERO
@@ -282,15 +286,12 @@ mini_vfprintf:  ; int mini_vfprintf(FILE *filep, const char *format, va_list ap)
 		mov al, [VAR_neg]
 		call .call_mini_putc
 		dec edi  ; EDI contains the (remaining) width of the current number.
-.jmp7:		jmp near .7
+		jmp short .28j
 .28:
 		dec REG_VAR_s
 		mov al, [VAR_neg]
 		mov [REG_VAR_s], al
-		jmp short .jmp7
-.30:
-		call .call_mini_putc
-		jmp near .next_format_byte
+.28j:		jmp near .do_print_s
 .done:
 %ifndef CONFIG_VFPRINTF_IS_FOR_S_PRINTF_ONLY
 		mov eax, [ARG_filep]  ; filep.
