@@ -22,7 +22,7 @@ Try it on Linux i386 or Linux amd64 (without the leading `$`):
 $ git clone --depth 1 https://github.com/pts/minilibc686
 $ cd minilibc686
 $ export PATH="$PWD/pathbin:$PATH"  # Add minicc to $PATH.
-$ minicc -mprintf-mini -mno-envp -o demo demo_c_hello.c
+$ minicc -mprintf-mini -mno-envp -mconst-seg -o demo demo_c_hello.c
 $ ./demo
 Hello, World!
 $ ls -ld demo
