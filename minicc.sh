@@ -873,6 +873,8 @@ if test "$GCC" || test -z "$IS_TCCLD"; then
     WFFLAG=-of+  # GCC -fno-omit-frame-pointer default.
     WSFLAG=
     WJFLAG=-j  # `signed char' is GCC default.
+    WECFLAG=-ec
+    WOSSFLAG=  # Flag for tools/omf2emf.
     # Not specifying -zls makes wcc386 insert these extern symbols:
     # * _cstart_: if main is defined.
     # * __argc: if main has at least 1 argument. There is no distinction between argc, argc+argv and argc+argv+envp.
@@ -881,7 +883,7 @@ if test "$GCC" || test -z "$IS_TCCLD"; then
     WISOMF=
     WHADWEXTRA=
     test "$HAD_V" || WARGS="$WARGS$NL-q"
-    WARGS="$WARGS$NL-bt=linux$NL-fr$NL-zl$NL-zld$NL-e=10000$NL-zp=4$NL-ec"
+    WARGS="$WARGS$NL-bt=linux$NL-fr$NL-zl$NL-zld$NL-e=10000$NL-zp=4"
     unset INCLUDE  # Don't let wcc386 find any system #include etc. file.
     unset WATCOM  # Don't let wcc386 find any system #include etc. file.
     SKIPARG=
@@ -916,6 +918,7 @@ if test "$GCC" || test -z "$IS_TCCLD"; then
        -finline-fp-rounding) WARGS="$WARGS$NL-zri" ;;  # To prevent the call to __CHP.
        -march=i386) WARGS="$WARGS$NL-3r" ;;
        -march=i686) WARGS="$WARGS$NL-6r" ;;  # !! TODO(pts): Does it generate larger code? Then change the default with -Os.
+       -mconst-seg) WECFLAG=; WOSSFLAG=-oss; WARGS="$WARGS$NL-fpc" ;;  # Put string literals to segment CONST. As a side-effect, -fpc (-msoft-float) must also be enabled. This is not a GCC flag, it's `minicc --wcc' only.
        -mno-80387 | -msoft-float) WARGS="$WARGS$NL-fpc" ;;  # Useful for string merging in .rodata.str1.1.
        -m80387 | -mhard-float | -mhard-emu-float) WARGS="$WARGS$NL-fpi" ;;  # Default.  # -mhard-float would be `-fpi87'.
        -nostdlib) ;;  # minicc $CCARGS always contains -nostdlib.
@@ -961,7 +964,7 @@ if test "$GCC" || test -z "$IS_TCCLD"; then
       esac
     done
     test "$HAD_NOINLINE" && WARGS="$WARGS$NL-oe0"
-    CCARGS="$GCC$NL$WSFLAG$NL$WJFLAG$NL$WFFLAG$NL$WAFLAG$NL$WAUTOSYMFLAG$NL$WARGS"; WARGS=
+    CCARGS="$GCC$NL$WSFLAG$NL$WJFLAG$NL$WFFLAG$NL$WAFLAG$NL$WAUTOSYMFLAG$NL$WECFLAG$NL$WARGS"; WARGS=
     # TODO(pts): Add -m... flag for string optimizations (like in minilibc32).
   elif test "$IS_CC1"; then  # If $IS_CC1, convert $CCARGS for GCC cc1.
     SKIPARG=
@@ -1112,7 +1115,7 @@ if test "$GCC" || test -z "$IS_TCCLD"; then
           TMPOFILE2="${TMPOFILE%.*}.o"
         fi
         if test "$IS_WATCOM"; then
-          EFARGS="$MYDIR/tools/omf2elf$NL-h$NL$HAD_V$NL-o$NL$TMPOFILE2$NL$TMPOFILE"
+          EFARGS="$MYDIR/tools/omf2elf$NL-h$NL$WOSSFLAG$NL$HAD_V$NL-o$NL$TMPOFILE2$NL$TMPOFILE"
           test "$HAD_V" && echo "info: running OMF converter:" $EFARGS >&2
         else  # "$IS_CC1".
           # GNU as(1) also accepts a `-I...' flag, but we don't need it
