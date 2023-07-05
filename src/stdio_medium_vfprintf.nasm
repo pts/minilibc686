@@ -4,7 +4,7 @@
 ; Based on vfprintf_plus.nasm, with stdio_medium buffering added.
 ; Compile to i386 ELF .o object: nasm -O999999999 -w+orphan-labels -f elf -o stdio_medium_vfprintf.o stdio_medium_vfprintf.nasm
 ;
-; Code+data size: 0x210 bytes; +1 bytes with CONFIG_PIC.
+; Code+data size: 0x1e9 bytes; +1 bytes with CONFIG_PIC.
 ;
 ; Uses: %ifdef CONFIG_PIC
 ; Uses; %ifdef CONFIG_VFPRINTF_IS_FOR_S_PRINTF_ONLY
@@ -163,43 +163,27 @@ mini_vfprintf:  ; int mini_vfprintf(FILE *filep, const char *format, va_list ap)
 		ret
 
 .17:
-		mov [ARG_ap], ecx
-		mov ecx, [ecx-0x4]
+		mov [ARG_ap], ecx  ; !! Remove code duplication.
+		mov ecx, [ecx-0x4]  ; Integer to print.
+		mov edx, ('a'-'0'-10)<<8 | 10 ; DL := 10; DH := 'a'-'0'-10.
 		cmp al, 'd'
-		je .18
+		je .22
 		cmp al, 'u'
-		je .18
-		mov dl, al
-		or dl, 0x20
-		cmp dl, 'x'
-		jne .done
-
-.18:
-		mov dl, al  ; !! Remove repetition.
-		or dl, 0x20
-		cmp dl, 'x'
-		jne .19
-		mov edx, 16
-		jmp short .20
-.19:
-		mov edx, 10  ; !! Set only the low 8 bits.
-.20:
-		mov [VAR_b], edx
+		je .22
+		mov dl, 16
+		cmp al, 'x'
+		je .22
+		mov dh, 'A'-'0'-10
 		cmp al, 'X'
-		jne .21
-		mov edx, 'A'
-		jmp short .22
-.21:
-		mov edx, 'a'  ; !! TODO(pts): `or dl, 0x20'.
+		jne .done  ; Stop on unknown format character.
 .22:
-		sub edx, byte '0'+10
-		mov [VAR_letbase], dl
+		mov [VAR_letbase], dh
+		mov dh, 0
+		mov [VAR_b], edx
 		cmp al, 'd'
-		jne .23
-		cmp dword [VAR_b], byte 10
 		jne .23
 		test ecx, ecx
-		jge .23
+		jge .23  ; Jump if integer to print is negative.
 		mov byte [VAR_neg], '-'
 		neg ecx
 		jmp short .25
@@ -213,7 +197,7 @@ mini_vfprintf:  ; int mini_vfprintf(FILE *filep, const char *format, va_list ap)
 .25:
 		lea REG_VAR_s, [VAR_print_buf+SIZEOF_print_buf-1]
 		mov byte [REG_VAR_s], 0
-		xchg eax, ecx  ; EAX := positive number to print; ECX := junk.
+		xchg eax, ecx  ; EAX := nonnegative integer to print; ECX := junk.
 .26:
 		xor edx, edx
 		div dword [VAR_b]
