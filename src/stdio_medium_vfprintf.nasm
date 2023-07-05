@@ -1,4 +1,4 @@
-;
+;f
 ; optimized manually by pts@fazekas.hu at Wed Jul  5 20:03:44 CEST 2023
 ; It supports format flags '-', '+', '0', and length modifiers.
 ; Based on vfprintf_plus.nasm, with stdio_medium buffering added.
@@ -89,10 +89,10 @@ mini_vfprintf:  ; int mini_vfprintf(FILE *filep, const char *format, va_list ap)
 %endif
 		mov REG_VAR_formati, [ARG_format]  ; REG_VAR_formati := format.
 		xor REG_VAR_pc, REG_VAR_pc
-		jmp short .next_format_byte
+		jmp short .next_fmtchr
 .putc_al_cont:
 		call .call_mini_putc
-.next_format_byte:
+.next_fmtchr:
 		xor eax, eax  ; Set highest 24 bits of EAX to 0.
 		lodsb  ; mov al, [REG_VAR_formati] ++ inc REG_VAR_formati.
 		test al, al
@@ -103,22 +103,22 @@ mini_vfprintf:  ; int mini_vfprintf(FILE *filep, const char *format, va_list ap)
 		xor edi, edi
 		lodsb  ; mov al, [REG_VAR_formati] ++ inc REG_VAR_formati.
 		test al, al
-		jz short .done  ; !! Optimize all near jumps, including implicit ones.
+		jz short .done
 		cmp al, '%'
 		je short .putc_al_cont
 		cmp al, '-'
-		jne .2
+		jne short .2
 		mov byte [VAR_pad], PAD_RIGHT
 		jmp short .4cont
 .2:
 		cmp al, '+'  ; !! Make this conditional (CONFIG_VFPRINTF_NO_PLUS) and also others.
-		jne .4al
+		jne short .4al
 		mov byte [VAR_pad], PAD_PLUS
 .4cont:
 		lodsb  ; mov al, [REG_VAR_formati] ++ inc REG_VAR_formati.
 .4al:
 		cmp al, '0'
-		jne .5al
+		jne short .5al
 		or byte [VAR_pad], PAD_ZERO
 		jmp short .4cont
 .5cont:
@@ -140,7 +140,7 @@ mini_vfprintf:  ; int mini_vfprintf(FILE *filep, const char *format, va_list ap)
 		cmp al, 's'
 		je short .fmtchr_s
 		cmp al, 'c'
-		jne .17
+		jne short .17
 		xchg eax, ecx  ; AL := CL; rest of EAX := junk; ECX := junk.
 		test edi, edi
 		jz short .putc_al_cont
@@ -166,23 +166,23 @@ mini_vfprintf:  ; int mini_vfprintf(FILE *filep, const char *format, va_list ap)
 .17:
 		mov edx, ('a'-'0'-10)<<8 | 10 ; DL := 10; DH := 'a'-'0'-10.
 		cmp al, 'd'
-		je .22
+		je short .22
 		cmp al, 'u'
-		je .22
+		je short .22
 		mov dl, 16
 		cmp al, 'x'
-		je .22
+		je short .22
 		mov dh, 'A'-'0'-10
 		cmp al, 'X'
-		jne .done  ; Stop on unknown format character.
+		jne short .done  ; Stop on unknown format character.
 .22:
 		mov [VAR_letbase], dh
 		mov dh, 0
 		mov [VAR_b], edx
 		cmp al, 'd'
-		jne .23
+		jne short .23
 		test ecx, ecx
-		jge .23  ; Jump if integer to print is negative.
+		jge short .23  ; Jump if integer to print is negative.
 		mov dl, '-'
 		neg ecx
 		jmp short .24
@@ -190,7 +190,7 @@ mini_vfprintf:  ; int mini_vfprintf(FILE *filep, const char *format, va_list ap)
 ; Putting .fmtchr_s here for the `jmp short .fmtchr_s'.
 .fmtchr_s:	mov REG_VAR_s, ecx
 		test REG_VAR_s, REG_VAR_s
-		jne .not_null
+		jne short .not_null
 %ifdef CONFIG_PIC
 		call .after_str_null
 .str_null:
@@ -211,7 +211,7 @@ mini_vfprintf:  ; int mini_vfprintf(FILE *filep, const char *format, va_list ap)
 .23:
 		mov dl, 0
 		test byte [VAR_pad], PAD_PLUS
-		je .24
+		je short .24
 		mov dl, '+'
 .24:
 		mov [VAR_neg], dl
@@ -223,7 +223,7 @@ mini_vfprintf:  ; int mini_vfprintf(FILE *filep, const char *format, va_list ap)
 		div dword [VAR_b]
 		xchg eax, edx  ; EAX := remainder; EDX := quotient.
 		cmp al, 10
-		jb .27
+		jb short .27
 		add al, [VAR_letbase]
 .27:
 		add al, '0'
@@ -231,17 +231,17 @@ mini_vfprintf:  ; int mini_vfprintf(FILE *filep, const char *format, va_list ap)
 		mov [REG_VAR_s], al
 		xchg edx, eax  ; After this: EAX == quotient.
 		test eax, eax
-		jnz .26
+		jnz short .26
 		cmp byte [VAR_neg], 0
 		je short .do_print_s
 		test edi, edi
-		jz .28
+		jz short .28
 		test byte [VAR_pad], PAD_ZERO
-		jz .28
+		jz short .28
 		mov al, [VAR_neg]
 		call .call_mini_putc
 		dec edi  ; EDI contains the (remaining) width of the current number.
-		jmp short .28j
+		jmp short short .28j
 .28:
 		dec REG_VAR_s
 		mov al, [VAR_neg]
@@ -251,32 +251,32 @@ mini_vfprintf:  ; int mini_vfprintf(FILE *filep, const char *format, va_list ap)
 .do_print_s:
 		mov byte [VAR_c], ' '
 		test edi, edi
-		jbe .12
+		jbe short .12
 		xor edx, edx
 		mov ecx, REG_VAR_s
 .8:
 		cmp byte [ecx], 0
-		je .9
+		je short .9
 		inc edx
 		inc ecx
-		jmp short .8
+		jmp short short .8
 .9:
 		cmp edx, edi
-		jb .10
+		jb short .10
 		xor edi, edi
 		jmp short .11
 .10:
 		sub edi, edx
 .11:
 		test byte [VAR_pad], PAD_ZERO
-		je .12
+		je short .12
 		mov byte [VAR_c], '0'
 .12:
 		test byte [VAR_pad], PAD_RIGHT
-		jne .14
+		jne short .14
 .13:
 		test edi, edi
-		jbe .14
+		jbe short .14
 		mov al, [VAR_c]
 		call .call_mini_putc
 		dec edi
@@ -284,18 +284,18 @@ mini_vfprintf:  ; int mini_vfprintf(FILE *filep, const char *format, va_list ap)
 .14:
 		mov al, [REG_VAR_s]
 		test al, al
-		je .15
+		je short .15
 		call .call_mini_putc
 		inc REG_VAR_s
 		jmp short .14
 .15:
 		test edi, edi
-		jbe .next_format_byte
+		jbe near .next_fmtchr
 		mov al, [VAR_c]
 		call .call_mini_putc
 		dec edi
 		jmp short .15
-		; End of .do_print_s. It has already jumped to .next_format_byte.
+		; End of .do_print_s. It has already jumped to .next_fmtchr.
 
 .call_mini_putc:  ; Input: AL contains the byte to be printed. Can use EAX, EDX and ECX as scratch. Output: byte is written to the buffer, REG_VAR_pc is incremented on success only.
 		mov edx, [4+ARG_filep]  ; filep. (`4+' because of the return pointer of .call_mini_putc.)  AL contains the byte to be printed, the high 24 bits of EAX is garbage here.
@@ -303,10 +303,10 @@ mini_vfprintf:  ; int mini_vfprintf(FILE *filep, const char *format, va_list ap)
 		; int putc(int c, FILE *filep) { return (((char**)filep)[0]/*->buf_write_ptr*/ == ((char**)filep)[1]/*->buf_end*/) || (_STDIO_SUPPORTS_LINE_BUFFERING && (unsigned char)c == '\n') ? mini_fputc_RP3(c, filep) : (unsigned char)(*((char**)filep)[0]/*->buf_write_ptr*/++ = c); }
 		mov ecx, [edx]  ; ECX := buf_write_ptr.
 		cmp ecx, [edx+4]  ; buf_end.
-		je .call_mini_fputc
+		je short .call_mini_fputc
 %ifndef CONFIG_VFPRINTF_IS_FOR_S_PRINTF_ONLY
 		cmp al, 10  ; '\n'.
-		je .call_mini_fputc  ; In case filep == stdout and it's line buffered (_IOLBF).
+		je short .call_mini_fputc  ; In case filep == stdout and it's line buffered (_IOLBF).
 %endif
 .append_byte:
 		mov [ecx], al  ; *buf_write_ptr := AL.
@@ -321,9 +321,9 @@ mini_vfprintf:  ; int mini_vfprintf(FILE *filep, const char *format, va_list ap)
 .call_mini_fputc:
 %if 1  ; TODO(pts): With smart linking, exclude this if mini_snprintf(...) and mini_vsnprintf(...) are not used.
 		cmp byte [edx+0x14], 7  ; dire == FD_WRITE_SATURATE?
-		jne .not_saturate
+		jne short .not_saturate
 		cmp ecx, [edx+4]  ; buf_end.
-		je .after_putc
+		je short .after_putc
 		jmp short .append_byte
 .not_saturate:
 %endif
