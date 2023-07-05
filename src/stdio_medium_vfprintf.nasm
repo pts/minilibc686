@@ -1,9 +1,10 @@
 ;
+; optimized manually by pts@fazekas.hu at Wed Jul  5 20:03:44 CEST 2023
 ; It supports format flags '-', '+', '0', and length modifiers.
 ; Based on vfprintf_plus.nasm, with stdio_medium buffering added.
 ; Compile to i386 ELF .o object: nasm -O999999999 -w+orphan-labels -f elf -o stdio_medium_vfprintf.o stdio_medium_vfprintf.nasm
 ;
-; Code+data size: 0x247 bytes; +1 bytes with CONFIG_PIC.
+; Code+data size: 0x243 bytes; +1 bytes with CONFIG_PIC.
 ;
 ; Uses: %ifdef CONFIG_PIC
 ; Uses; %ifdef CONFIG_VFPRINTF_IS_FOR_S_PRINTF_ONLY
@@ -325,10 +326,6 @@ mini_vfprintf:  ; int mini_vfprintf(FILE *filep, const char *format, va_list ap)
 		je .call_mini_fputc  ; In case filep == stdout and it's line buffered (_IOLBF).
 %endif
 .append_byte:
-%if 1  ; With smart linking, exclude this if mini_snprintf(...) and mini_vsnprintf(...) are not used. !! Maybe ensure that it's not NULL here.
-		test ecx, ecx  ; if buf_write_ptr is NULL, then don't write the AL byte, but still increment the counter in REG_VAR_pc. This is for mini_snprintf(...).
-		jz .after_putc
-%endif
 		mov [ecx], al  ; *buf_write_ptr := AL.
 		inc dword [edx]  ; buf_write_ptr += 1.
 %ifdef CONFIG_VFPRINTF_IS_FOR_S_PRINTF_ONLY

@@ -2,7 +2,7 @@
 ; written by pts@fazkeas.hu at Tue May 23 13:37:23 CEST 2023
 ; Compile to i386 ELF .o object: nasm -O999999999 -w+orphan-labels -f elf -o stdio_medium_snprintf.o stdio_medium_snprintf.nasm
 ;
-; Code size: 0x43 bytes.
+; Code size: 0x41 bytes.
 ;
 ; Uses: %ifdef CONFIG_PIC
 ;
@@ -42,12 +42,13 @@ mini_snprintf.do:  ; !! mini_vsnprintf(...) jumps here.
 		push byte 0  ; .buf_last.
 		push byte 0  ; .buf_read_ptr.
 		mov ecx, [edx-8+0xc]  ; Argument size.
-		sub ecx, byte 1
-		jnc .set_limit
-.zero_size:	push byte -1  ; .buf_end: practically unlimited buffer.
-		push byte 0  ; .buf_write_ptr := NULL if size == 0.
+		test ecx, ecx
+		jnz .set_limit
+.zero_size:	push ecx  ; .buf_end := NULL: practically unlimited buffer.
+		push ecx  ; .buf_write_ptr := .buf_end (== NULL) if size == 0. Actual value doesn't matter.
 		jmp short .after_size
-.set_limit:	add ecx, [edx]  ; Argument str.
+.set_limit:	dec ecx
+		add ecx, [edx]  ; Argument str.
 		push ecx  ; .buf_end: limited by argument size.
 		push dword [edx]  ; .buf_write_ptr == str argument.
 .after_size:
@@ -58,7 +59,7 @@ mini_snprintf.do:  ; !! mini_vsnprintf(...) jumps here.
 		push ecx  ; Argument filep of mini_vfprintf(...). Address of newly created struct _SMS_FILE on stack.
 		call mini_vfprintf
 		mov edx, [esp+3*4]  ; .buf_write_ptr.
-		test edx, edx
+		test edx, edx  ; .buf_write_ptr == NULL?
 		jz .no_term
 		mov byte [edx], 0  ; Terminate with '\0'.
 .no_term:	add esp, byte (3+9)*4  ; Clean up arguments of mini_vfprintf(...) and the struct _SMS_FILE from the stack.
