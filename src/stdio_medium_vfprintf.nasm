@@ -4,7 +4,7 @@
 ; Based on vfprintf_plus.nasm, with stdio_medium buffering added.
 ; Compile to i386 ELF .o object: nasm -O999999999 -w+orphan-labels -f elf -o stdio_medium_vfprintf.o stdio_medium_vfprintf.nasm
 ;
-; Code+data size: 0x1d6 bytes; +1 bytes with CONFIG_PIC.
+; Code+data size: 0x1cf bytes; +1 bytes with CONFIG_PIC.
 ;
 ; Uses: %ifdef CONFIG_PIC
 ; Uses; %ifdef CONFIG_VFPRINTF_IS_FOR_S_PRINTF_ONLY
@@ -183,17 +183,16 @@ mini_vfprintf:  ; int mini_vfprintf(FILE *filep, const char *format, va_list ap)
 		jne .23
 		test ecx, ecx
 		jge .23  ; Jump if integer to print is negative.
-		mov byte [VAR_neg], '-'
+		mov dl, '-'
 		neg ecx
-		jmp short .25
+		jmp short .24
 .23:
+		mov dl, 0
 		test byte [VAR_pad], PAD_PLUS
 		je .24
-		mov byte [VAR_neg], '+'
-		jmp short .25
+		mov dl, '+'
 .24:
-		mov byte [VAR_neg], 0
-.25:
+		mov [VAR_neg], dl
 		lea REG_VAR_s, [VAR_print_buf+SIZEOF_print_buf-1]
 		mov byte [REG_VAR_s], 0
 		xchg eax, ecx  ; EAX := nonnegative integer to print; ECX := junk.
@@ -234,7 +233,7 @@ mini_vfprintf:  ; int mini_vfprintf(FILE *filep, const char *format, va_list ap)
 		xor edx, edx
 		mov ecx, REG_VAR_s
 .8:
-		cmp byte [ecx], 0x0
+		cmp byte [ecx], 0
 		je .9
 		inc edx
 		inc ecx
