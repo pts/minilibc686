@@ -1,0 +1,4 @@
+OBJS='stdio_medium_vsnprintf.o stdio_medium_snprintf.o'
+_nasm $OBJS
+_utcc_nasm2 stdio_medium_vfprintf.nasm -o test_printf_format.prog "$TESTDIR"/test_printf_format.c $OBJS
+./test_printf_format.prog
