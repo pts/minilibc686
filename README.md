@@ -26,7 +26,7 @@ $ minicc -mprintf-mini -mno-envp -o demo demo_c_hello.c
 $ ./demo
 Hello, World!
 $ ls -ld demo
--rwxrwxr-x 1 pts pts 1016 Jul  5 21:59 demo
+-rwxrwxr-x 1 pts pts 1008 Jul  5 23:28 demo
 $ printf '#include <unistd.h>\nint main() { write(1, "Hello, World!\\n", 14); return 0; }\n' >demo_write.c
 $ minicc -fomit-frame-pointer -o demo_write demo_write.c
 $ ./demo_write
@@ -61,13 +61,15 @@ What sizes are achievable:
   `test/demo_c_hello_snprintf.c` provides the same functionality, but the
   program size depends on the C compiler. It's always 679 bytes when
   demo_hello_linux_printf.nasm is compiled with NASM.
-* A hello-world program, using printf(3) (demo_hello_linux_printf.nasm):
+* A hello-world program, using printf(3) (demo_hello_linux_printf.nasm and demo_c_hello.c):
   **1008 bytes**. Only the very short main(...) function was written in C,
   the rest of the code is part of the libc, written in NASM assembly. Please
   note that that `demo_c_hello.c` provides the same functionality, but the
-  program size depends on the C compiler. The built-in OpenWatcom C compiler
-  gives 1016 bytes, but GCC 7.5.0 gives 1008 bytes. It's always 1008 bytes
-  when demo_hello_linux_printf.nasm is compiled with NASM.
+  program size depends on the C compiler. The executable size usually
+  depends on the compiler version used, but to make the results reproducible,
+  an assembly implementation of main(...) is also included in `demo_c_hello.c`
+  above. For the original 1008-byte executable, GCC 7.5.0 was used to compile
+  main(...).
 
 hello-world size comparison of different libcs:
 

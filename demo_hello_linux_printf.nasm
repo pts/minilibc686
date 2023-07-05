@@ -2,7 +2,7 @@
 ; demo_hello_linux_printf.nasm: Linux i386 32-bit ELF executable program with printf(3)
 ; by pts@fazekas.hu at Wed May 24 01:08:00 CEST 2023
 ;
-; Total file size: 1194 bytes.
+; Total file size: 1008 bytes.
 ;
 ; This file matches the output of GCC 7.5.0:
 ;
@@ -10,13 +10,13 @@
 ;
 ; Compile to Linux i386 32-bit ELF executable:
 ;
-;     nasm -O0 -w+orphan-labels -f bin -o demo_hello_linux_printf.prog demo_hello_linux_printf.nasm &&
+;     tools/nasm-0.98.39 -O0 -w+orphan-labels -f bin -o demo_hello_linux_printf.prog demo_hello_linux_printf.nasm &&
 ;     chmod +x demo_hello_linux_printf.prog
 ;
 ; With NASM optimizations enabled it generates the same program (bitwise
 ; identical):
 ;
-;     nasm -O999999999 -w+orphan-labels -f bin -o demo_hello_linux_printf.prog demo_hello_linux_printf.nasm &&
+;     tools/nasm-0.98.39 -O999999999 -w+orphan-labels -f bin -o demo_hello_linux_printf.prog demo_hello_linux_printf.nasm &&
 ;     chmod +x demo_hello_linux_printf.prog
 ;
 ; Compiling with Yasm (tested with 1.2.0 and 1.3.0) doesn't work, because
