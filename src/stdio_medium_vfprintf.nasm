@@ -4,7 +4,7 @@
 ; Based on vfprintf_plus.nasm, with stdio_medium buffering added.
 ; Compile to i386 ELF .o object: nasm -O999999999 -w+orphan-labels -f elf -o stdio_medium_vfprintf.o stdio_medium_vfprintf.nasm
 ;
-; Code+data size: 0x236 bytes; +1 bytes with CONFIG_PIC.
+; Code+data size: 0x22e bytes; +1 bytes with CONFIG_PIC.
 ;
 ; Uses: %ifdef CONFIG_PIC
 ; Uses; %ifdef CONFIG_VFPRINTF_IS_FOR_S_PRINTF_ONLY
@@ -65,8 +65,8 @@ PAD_PLUS equ 4
 %define VAR_neg esp+0x14  ; uint8_t.
 %define VAR_letbase esp+0x18  ; uint8_t.
 %define VAR_c esp+0x1c  ; uint8_t.
-%define REG_VAR_formati ebx  ; char*.
-%define REG_VAR_s esi  ; char*.
+%define REG_VAR_formati esi  ; char*.
+%define REG_VAR_s ebx  ; char*.
 %define REG_VAR_pc ebp  ; uint32_t.
 %define ARG_filep esp+0x34  ; FILE*.
 %define ARG_format esp+0x38  ; const char*.
@@ -85,20 +85,18 @@ mini_vfprintf:  ; int mini_vfprintf(FILE *filep, const char *format, va_list ap)
 		mov eax, [ARG_filep]  ; filep.
 		call mini___M_writebuf_relax_RP1  ; mini___M_writebuf_relax_RP1(filep); Subsequent bytes written will be buffered until mini___M_writebuf_relax_RP1 below.
 %endif
-		mov REG_VAR_formati, [ARG_format]  ; REG_VAR_formati := format.  ; TODO(pts): Swap the role of EBX and ESI, and use lodsb.
+		mov REG_VAR_formati, [ARG_format]  ; REG_VAR_formati := format.
 		xor REG_VAR_pc, REG_VAR_pc
 .next_format_byte:
 		xor eax, eax  ; Set highest 24 bits of EAX to 0.
-		mov al, [REG_VAR_formati]
-		inc REG_VAR_formati
+		lodsb  ; mov al, [REG_VAR_formati] ++ inc REG_VAR_formati.
 		test al, al
 		jz near .done
 		cmp al, '%'
 		jne near .30
 		mov byte [VAR_pad], 0
 		xor edi, edi
-		mov al, [REG_VAR_formati]
-		inc REG_VAR_formati
+		lodsb  ; mov al, [REG_VAR_formati] ++ inc REG_VAR_formati.
 		test al, al
 		jz near .done  ; !! Optimize all near jumps.
 		cmp al, '%'
@@ -112,16 +110,14 @@ mini_vfprintf:  ; int mini_vfprintf(FILE *filep, const char *format, va_list ap)
 		jne .4al
 		mov byte [VAR_pad], PAD_PLUS
 .4cont:
-		mov al, [REG_VAR_formati]
-		inc REG_VAR_formati
+		lodsb  ; mov al, [REG_VAR_formati] ++ inc REG_VAR_formati.
 .4al:
 		cmp al, '0'
 		jne .5al
 		or byte [VAR_pad], PAD_ZERO
 		jmp short .4cont
 .5cont:
-		mov al, [REG_VAR_formati]
-		inc REG_VAR_formati
+		lodsb  ; mov al, [REG_VAR_formati] ++ inc REG_VAR_formati.
 .5al:
 		cmp al, '0'
 		jl short .6
