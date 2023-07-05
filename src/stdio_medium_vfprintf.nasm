@@ -7,8 +7,9 @@
 ; Code+data size: 0x1cb bytes; +1 bytes with CONFIG_PIC.
 ;
 ; Uses: %ifdef CONFIG_PIC
-; Uses; %ifdef CONFIG_VFPRINTF_IS_FOR_S_PRINTF_ONLY
-; Uses; %ifdef CONFIG_VFPRINTF_POP_ESP_BEFORE_RET
+; Uses: %ifdef CONFIG_VFPRINTF_IS_FOR_S_PRINTF_ONLY
+; Uses: %ifdef CONFIG_VFPRINTF_POP_ESP_BEFORE_RET
+; Uses: %ifdef CONFIG_VFPRINTF_NO_PLUS
 ;
 ; Limitation: Printing `%...c' is incorrect if `...' is not empty and c is '\0'.
 ;
@@ -111,12 +112,18 @@ mini_vfprintf:  ; int mini_vfprintf(FILE *filep, const char *format, va_list ap)
 		jne short .2
 		mov byte [VAR_pad], PAD_RIGHT
 		jmp short .4cont
+%ifdef CONFIG_VFPRINTF_NO_PLUS
+.4cont:
+		lodsb  ; mov al, [REG_VAR_formati] ++ inc REG_VAR_formati.
 .2:
-		cmp al, '+'  ; !! Make this conditional (CONFIG_VFPRINTF_NO_PLUS) and also others.
+%else
+.2:
+		cmp al, '+'
 		jne short .4al
 		mov byte [VAR_pad], PAD_PLUS
 .4cont:
 		lodsb  ; mov al, [REG_VAR_formati] ++ inc REG_VAR_formati.
+%endif
 .4al:
 		cmp al, '0'
 		jne short .5al
@@ -211,9 +218,11 @@ mini_vfprintf:  ; int mini_vfprintf(FILE *filep, const char *format, va_list ap)
 
 .23:
 		mov dl, 0
+%ifndef CONFIG_VFPRINTF_NO_PLUS
 		test byte [VAR_pad], PAD_PLUS
 		je short .24
 		mov dl, '+'
+%endif
 .24:
 		mov [VAR_neg], dl
 		lea REG_VAR_s, [VAR_print_buf+SIZEOF_print_buf-1]

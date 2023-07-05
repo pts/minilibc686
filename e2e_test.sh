@@ -40,7 +40,7 @@ test "$(./demo_hello_linux_snprintf.prog)" = "Hello, World!"
 "$MYDIR"/tools/nasm-0.98.39 -I"$MYDIR"/ -O0 -w+orphan-labels -f elf -o demo_hello_linux_snprintf.o "$MYDIR"/test/demo_hello_linux_snprintf.nasm
 
 "$MYDIR"/build.sh
-"$MYDIR"/pathbin/minicc -v -o demo_hello_linux_printf.prog2 demo_hello_linux_printf.o
+"$MYDIR"/pathbin/minicc -mprintf-mini -v -o demo_hello_linux_printf.prog2 demo_hello_linux_printf.o
 cmp demo_hello_linux_printf.prog demo_hello_linux_printf.prog2
 "$MYDIR"/pathbin/minicc -v -o demo_hello_linux_snprintf.prog2 demo_hello_linux_snprintf.o
 cmp demo_hello_linux_snprintf.prog demo_hello_linux_snprintf.prog2

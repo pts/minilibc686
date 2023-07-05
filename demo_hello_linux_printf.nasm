@@ -47,6 +47,8 @@
 %define ALIGN_RODATA 1
 %include "elf0.inc.nasm"
 
+%define CONFIG_VFPRINTF_NO_PLUS
+
 extern mini_printf
 global main
 main:  ; int main(int argc, char **argv, char **envp);  /* envp is optional to declare and/or use. */

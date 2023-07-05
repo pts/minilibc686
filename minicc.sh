@@ -239,6 +239,8 @@ DO_DOWNLOAD=1
 HAD_OPTIMIZE=
 HAD_NOINLINE=
 DO_MODE=
+DEF_CMDARG=
+PRINTF_PLUS=1
 
 SKIPARG=
 ARGS=
@@ -304,6 +306,9 @@ for ARG in "$@"; do
    -mno-argv) DO_ARGV=0 ;;
    -menvp) DO_ENVP=1 ;;
    -mno-envp) DO_ENVP=0 ;;
+   -mprintf-mini) PRINTF_PLUS= ;;  # This is a minilibc686-specific flag. TODO(pts): Fail for this and other such flags with other libcs.
+   -mprintf-plus) PRINTF_PLUS=1 ;;
+   -mno-printf-plus) PRINTF_PLUS= ;;
    -Wno-no) WFLAGS= ;;  # Disable warnings. GCC and Clang accept and ignore it.
    -Wno-*) ARGS="$ARGS$NL$ARG" ;;
    -Werror[-=]implicit-function-declaration) ARGS="$ARGS$NL-Werror-implicit-function-declaration"; WFLAGS= ;;  # GCC 4.1 supports only -Werror-implicit-function-declaration, GCC >=4.2 supports it and also -Werror=implicit-function-declaration.
@@ -312,7 +317,8 @@ for ARG in "$@"; do
    -finline) ARGS="$ARGS$NL$ARG"; HAD_NOINLINE= ;;
    -[fm]?* | -pedantic) ARGS="$ARGS$NL$ARG" ;;
    -ansi | -std=*) ANSIFLAG="$ARG" ;;
-   -[DUI]*?) ARGS="$ARGS$NL$ARG" ;;
+   -[DU]*?) DEF_CMDARG="$DEF_CMDARG$NL$ARG" ;;
+   -I*?) ARGS="$ARGS$NL$ARG" ;;
    -O0) ARGS="$ARGS$NL$ARG"; HAD_OFLAG=1; HAD_OPTIMIZE= ;;
    -O*) ARGS="$ARGS$NL$ARG"; HAD_OFLAG=1; HAD_OPTIMIZE=1 ;;
    -g00) STRIP_MODE=0 ;;
@@ -668,6 +674,7 @@ if test "$DO_ARGC" = 0; then DEF_ARG="$DEF_ARG$NL-DCONFIG_MAIN_NO_ARGC_ARGV_ENVP
 elif test "$DO_ARGV" = 0; then DEF_ARG="$DEF_ARG$NL-DCONFIG_MAIN_NO_ARGV_ENVP"
 elif test "$DO_ENVP" = 0; then DEF_ARG="$DEF_ARG$NL-DCONFIG_MAIN_NO_ENVP"
 fi
+test -z "$PRINTF_PLUS" && DEF_ARG="$DEF_ARG$NL-DCONFIG_VFPRINTF_NO_PLUS"
 if test "$IS_WATCOM" || test "$IS_CC1" = 3 || test "$TCC"; then
   # Add some -D.. flags which GCC (>=1) already defines. These flags affect EGLIBC on other compilers.
   test "$HAD_OPTIMIZE" && DEF_ARG="$DEF_ARG$NL-D__OPTIMIZE__"
@@ -683,7 +690,7 @@ if test "$TCC"; then
    -std=c* | -ansi) ANSIFLAG=-D__STRICT_ANSI__ ;;
    *) ANSIFLAG= ;;
   esac
-  ARGS="$TCC$NL-m32$NL-march=$ARCH$NL-static$NL-nostdlib$NL-nostdinc$NL$SFLAG$NL$OFLAG_ARGS$NL$ANSIFLAG$NL$WFLAGS$NL$DEF_ARG$NL$ARGS$NL$INCLUDEDIR_ARG$NL$OUTFILE_ARG"
+  ARGS="$TCC$NL-m32$NL-march=$ARCH$NL-static$NL-nostdlib$NL-nostdinc$NL$SFLAG$NL$OFLAG_ARGS$NL$ANSIFLAG$NL$WFLAGS$NL$DEF_ARG$NL$DEF_CMDARG$NL$ARGS$NL$INCLUDEDIR_ARG$NL$OUTFILE_ARG"
 else
   # This also works with TCC, but it's too much cruft.
   # Add $INCLUDEDIR_ARG last, so that -I... specified by the user takes precedence. !! TODO(pts): Does GCC do this or the opposite?
@@ -693,7 +700,7 @@ else
   # !! TODO(pts): Try -mno-align-stringops. What happens with old GCC not supporting it, or Clang?
   # !! TODO(pts): Try -fno-unroll-loops -fmerge-all-constants -fno-math-errno. What happens with old GCC not supporting it, or Clang?
   # !! TODO(pts): Document -Wl,-N for merging sections .text and .data.
-  ARGS="$TCC$NL$GCC$NL$GCC_BARG$NL-m32$NL-march=$ARCH$NL-static$NL-fno-pic$NL-U_FORTIFY_SOURCE$NL-fcommon$NL-fno-stack-protector$NL-fno-unwind-tables$NL-fno-asynchronous-unwind-tables$NL-fno-builtin$NL-fno-ident$NL-fsigned-char$NL-ffreestanding$NL-nostdlib$NL-nostdinc$NL$SFLAG$NL$OFLAG_ARGS$NL$ANSIFLAG$NL$WFLAGS$NL$DEF_ARG$NL$ARGS$NL$INCLUDEDIR_ARG$NL$OUTFILE_ARG"
+  ARGS="$TCC$NL$GCC$NL$GCC_BARG$NL-m32$NL-march=$ARCH$NL-static$NL-fno-pic$NL-U_FORTIFY_SOURCE$NL-fcommon$NL-fno-stack-protector$NL-fno-unwind-tables$NL-fno-asynchronous-unwind-tables$NL-fno-builtin$NL-fno-ident$NL-fsigned-char$NL-ffreestanding$NL-nostdlib$NL-nostdinc$NL$SFLAG$NL$OFLAG_ARGS$NL$ANSIFLAG$NL$WFLAGS$NL$DEF_ARG$NL$DEF_CMDARG$NL$ARGS$NL$INCLUDEDIR_ARG$NL$OUTFILE_ARG"
 fi
 NEED_LIBMINITCC1=
 if test "$DO_ADD_LIB"; then
@@ -1175,10 +1182,6 @@ if test "$DO_SMART" != 0; then  # Smart linking.
     rm -f "$OUTFILE.err" "$OUTFILE.smart.o"  # !! Generate temporary filename.
     NASMARCHARG=
     test "$ARCH" = i686 || NASMARCHARG=-DCONFIG_I386
-    DEF_ARG=
-    for F in $(cat "$MYDIR/libc/$LIBC/libc.defs"); do  # Split on any whitespace, $IFS hasn't been set yet.
-      DEF_ARG="$DEF_ARG$NL$F"
-    done
     if test "$DO_MAIN_AUTO" = 1; then
       case ",$UNDEFSYMS," in ,_start*,)  # Search for cstart_ and _argc manually in the specified .o files.
         SKIPARG=
@@ -1201,7 +1204,7 @@ if test "$DO_SMART" != 0; then  # Smart linking.
       elif test "$DO_ENVP" = 0; then DEF_ARG="$DEF_ARG$NL-DCONFIG_MAIN_NO_ENVP"
       fi
     fi
-    NASMCMD="$MYDIR/tools/nasm-0.98.39$NL-O0$NL-w+orphan-labels$NL-f${NL}elf$NL$NASMARCHARG$NL-DUNDEFSYMS=$UNDEFSYMS$NL$DEF_ARG$NL-o$NL$OUTFILE.smart.o$NL$MYDIR/libc/$LIBC/smart.nasm"; EC="$?"
+    NASMCMD="$MYDIR/tools/nasm-0.98.39$NL-O0$NL-w+orphan-labels$NL-f${NL}elf$NL$NASMARCHARG$NL-DUNDEFSYMS=$UNDEFSYMS$NL$DEF_ARG$NL$DEF_CMDARG$NL-o$NL$OUTFILE.smart.o$NL$MYDIR/libc/$LIBC/smart.nasm"; EC="$?"
     test "$HAD_V" && echo "info: running smart nasm:" $NASMCMD >&2
     $NASMCMD; EC="$?"
     if test "$EC" = 0 && test -f "$OUTFILE.smart.o"; then :; else
