@@ -322,6 +322,7 @@ for ARG in "$@"; do
    -Wno-no) WFLAGS= ;;  # Disable warnings. GCC and Clang accept and ignore it.
    -Wno-*) ARGS="$ARGS$NL$ARG" ;;
    -Werror[-=]implicit-function-declaration) ARGS="$ARGS$NL-Werror-implicit-function-declaration"; WFLAGS= ;;  # GCC 4.1 supports only -Werror-implicit-function-declaration, GCC >=4.2 supports it and also -Werror=implicit-function-declaration.
+   -Wadd=*) ARGS="$ARGS$NL-W${ARG#*=}" ;;  # This doesn't set WFLAGS="". This is a minicc extension.
    -W*) ARGS="$ARGS$NL$ARG"; WFLAGS= ;;
    -fno-inline) ARGS="$ARGS$NL$ARG"; HAD_NOINLINE=1 ;;
    -finline) ARGS="$ARGS$NL$ARG"; HAD_NOINLINE= ;;
