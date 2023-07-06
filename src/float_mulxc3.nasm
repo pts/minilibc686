@@ -38,12 +38,12 @@ section .bss align=1
 %endif
 
 %ifdef CONFIG_I386  ; Emulate the missing i686 instructions using i386 instructions.
-  %macro _fucomip 2  ; The emulation is not perfect, it runs AX.
+  %macro _fucomip 2  ; The emulation is not perfect, it ruins AX.
     fucomp %1, %2
     fnstsw ax
     sahf
   %endmacro
-  %macro _fucomi 2  ; The emulation is not perfect, it runs AX.
+  %macro _fucomi 2  ; The emulation is not perfect, it ruins AX.
     fucom %1, %2
     fnstsw ax
     sahf
