@@ -844,7 +844,6 @@ if test "$GCC" || test -z "$IS_TCCLD"; then
      *.[ao]) FILEARGS="$FILEARGS$NL--ldfile=$ARG" ;;
      *.[ci]) FILEARGS="$FILEARGS$NL--srcfile=$ARG" ;;  # owcc386 treats .i files just like .c, but gcc doesn't allow `#' in .i files, because they are apready preprocesed.
      *.[sS])
-       if test "${ARG%.S}" != "$ARG"; then echo "fatal: unsupported preprocessor--assembly source file type: $ARG" >&2; exit 5; fi  # !!! Run .S files with $GCC -E.
        FILEARGS="$FILEARGS$NL--srcfile=$ARG"
        ;;
      *) echo "fatal: unsupported input file extension: $ARG" >&2; exit 7 ;;
@@ -1011,13 +1010,15 @@ if test "$GCC" || test -z "$IS_TCCLD"; then
   for ARG in $FILEARGS; do
     case "$ARG" in
      --srcfile=?*)
+      SRCTMPCCOUTEXT="$TMPCCOUTEXT"
+      if test "$IS_WATCOM"; then case "$ARG" in *.S) SRCTMPCCOUTEXT=s ;; esac; fi
       if test "$DO_LINK"; then
-        TMPOFILE="$("$MYDIR"/tools/mktmpf "$TMPDIR"/minicc.@@@@@@."$TMPCCOUTEXT")"  # Already creates the file.
+        TMPOFILE="$("$MYDIR"/tools/mktmpf "$TMPDIR"/minicc.@@@@@@."$SRCTMPCCOUTEXT")"  # Already creates the file.
         if test -z "$TMPOFILE"; then
-          echo "fatal: error creating temporary .$TMPCCOUTEXT file: $TMPOFILE" >&2; rm -f $TMPOFILES; exit 7
+          echo "fatal: error creating temporary .$SRCTMPCCOUTEXT file: $TMPOFILE" >&2; rm -f $TMPOFILES; exit 7
         fi
         TMPOFILES="$TMPOFILES$NL$TMPOFILE"
-        if test "$TMPCCOUTEXT" != o; then  # With $DO_LINK, this test is equivalent to "$NEED_OCONV".
+        if test "$SRCTMPCCOUTEXT" != o; then  # With $DO_LINK, this test is equivalent to "$NEED_OCONV".
           if ! : >"${TMPOFILE%.*}.o"; then
             echo "fatal: error creating temporary .o file: ${TMPOFILE%.*}.o" >&2; rm -f $TMPOFILES; exit 7
           fi
@@ -1028,7 +1029,7 @@ if test "$GCC" || test -z "$IS_TCCLD"; then
         TMPOFILE="${ARG#--*=}"
         if test "$CCMODE" = -c; then
           if test "$NEED_OCONV"; then
-            TMPOFILE="$("$MYDIR"/tools/mktmpf "$TMPDIR"/minicc.@@@@@@."$TMPCCOUTEXT")"  # Already creates the file.
+            TMPOFILE="$("$MYDIR"/tools/mktmpf "$TMPDIR"/minicc.@@@@@@."$SRCTMPCCOUTEXT")"  # Already creates the file.
             if test -z "$TMPOFILE"; then
               echo "fatal: error creating temporary .o file" >&2; rm -f $TMPOFILES; exit 7
             fi
@@ -1036,7 +1037,7 @@ if test "$GCC" || test -z "$IS_TCCLD"; then
           elif test "$OUTFILE"; then
             TMPOFILE="$OUTFILE"
           else
-            TMPOFILE="${TMPOFILE%.*}"."$TMPCCOUTEXT"; TMPOFILE="${TMPOFILE##*/}"  # GCC also strips the dirname.
+            TMPOFILE="${TMPOFILE%.*}"."$SRCTMPCCOUTEXT"; TMPOFILE="${TMPOFILE##*/}"  # GCC also strips the dirname.
           fi
         elif test "$CCMODE" = -S; then
           if test "$OUTFILE"; then TMPOFILE="$OUTFILE"
@@ -1076,10 +1077,12 @@ if test "$GCC" || test -z "$IS_TCCLD"; then
       if test "$CCMODE" = -E; then
         case "$ARG" in
          *.s) TMPOFILE=; continue ;;  # Skip the source .s file silently, GCC also does it.
+         *.[cS]) ;;
+         *) echo "fatal: unsupported source file type for -E: $ARG" >&2; exit 7 ;;
         esac
       fi
       if test "$TMPOFILE" = -; then
-        case "$ARG" in *.c) ;; *) echo "fatal: unsupported source file type for stdout: $ARG" >&2; exit 7 ;; esac
+        case "$ARG" in *.[cS]) ;; *) echo "fatal: unsupported source file type for stdout: $ARG" >&2; exit 7 ;; esac
         test "$HAD_V" && echo "info: running compiler:" $CCARGS "${ARG#--*=}" >&2  # GCC also writes to stderr.
         $CCARGS "${ARG#--*=}"; EC="$?"
       else
@@ -1087,9 +1090,31 @@ if test "$GCC" || test -z "$IS_TCCLD"; then
         SFILE=
         case "$ARG" in
          *.s) SFILE="$ARG"; CCARGS= ;;  # TODO(pts): Don't create empty $TMPOFILE (with .s extension), we don't use it.
-         *.c)
+         *.[cS])
           SFILE="$TMPOFILE"
+          case "$ARG" in
+           *.S)
+            if test "$CCMODE" = -E; then SEARG=
+            elif test "$IS_WATCOM"; then SEARG=-pl
+            elif test "$IS_CC1"; then SEARG=-E
+            else SEARG=/
+            fi
+            if test "$SEARG" != /; then  # Regular GCC and Clang can process .s files directly, no need to change.
+              CCARGS="${CCARGS#*$NL}"  # Remove $GCC from the beginning.
+              CCARGS="$SEARG$NL-D__ASSEMBLER__$NL$CCARGS"
+              CCARGS="$GCC$NL$CCARGS"
+            fi
+            ;;
+          esac
           if test "$IS_WATCOM"; then
+            if test "$CCMODE" = -E; then
+              EXT="${OUTFILE##*/}"
+              case "$EXT" in
+               *.*) ;;
+               *) echo "fatal: --wcc -E -o <file> needs a <file> with an .<extension>" >&2; exit 7  # Otherwise wcc386 appends `.i'.
+               ;;
+              esac
+            fi
             if test "${TMPOFILE#.}" != "$TMPOFILE"; then
               # Otherwise wcc386 would prepend a basename of the source file.
               echo "fatal: object filename for minicc wcc386 must not start with a dot: $TMPOFILE" >&2; rm -f $TMPOFILES; exit 7;
