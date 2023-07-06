@@ -51,7 +51,7 @@ __fixunsxfdi:  ; unsigned long long __fixunsxfdi(long double a);
 		neg ecx
 		mov eax, [esp+4]  ; Low dword of a1.
 		mov edx, [esp+8]  ; High dword of a1.
-		; Now shift EDX:EAX right by CL. This is simuler to __U8RS.
+		; Now shift EDX:EAX right by CL. This is similar to __U8RS.
 		test cl, 0x20
 		jnz short .big
 		shrd eax, edx, cl
