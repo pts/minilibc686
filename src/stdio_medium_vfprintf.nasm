@@ -200,8 +200,9 @@ mini_vfprintf:  ; int mini_vfprintf(FILE *filep, const char *format, va_list ap)
 		mov [VAR_letbase], dh
 		mov dh, 0
 		mov [VAR_b], edx
+		mov dl, 0
 		cmp al, 'd'
-		jne short .23
+		jne short .24
 		test ecx, ecx
 		jge short .23  ; Jump if integer to print is negative.
 		mov dl, '-'
@@ -230,7 +231,6 @@ mini_vfprintf:  ; int mini_vfprintf(FILE *filep, const char *format, va_list ap)
 .dpsj:		jmp short .do_print_s
 
 .23:
-		mov dl, 0
 %ifndef CONFIG_VFPRINTF_NO_PLUS
 		test byte [VAR_pad], PAD_PLUS
 		je short .24

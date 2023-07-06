@@ -96,13 +96,13 @@ int mini_vfprintf(FILE *filep, const char *format, va_list args) {
         /* This code block modifies `width', and it's fine to modify `width' and `pad'. */
         b = ((c | 32) == 'x') ? 16 : c == 'o' ? 8 : 10;
         letbase = ((c == 'X') ? 'A' : 'a') - '0' - 10;
-        if (c == 'd' && b == 10 && (BBPRINTF_INT)u < 0) {
+        neg = 0;
+        if (c != 'd') {
+        } else if ((BBPRINTF_INT)u < 0) {
           neg = '-';
           u = -(BBPRINTF_INT)u;  /* Casting to BBPRINTF_INT to avoid Borland C++ 5.2 warning: Negating unsigned value. */
         } else if (pad & PAD_PLUS) {
           neg = '+';
-        } else {
-          neg = 0;
         }
         s = print_buf + sizeof(print_buf) - 1;
         *s = '\0';
