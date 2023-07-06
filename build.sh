@@ -105,7 +105,7 @@ for F in src/[a-zA-Z0-9_]*.nasm; do
     # We cd into src, otherwise NASM would insert `build_tmp/' to the "$BFA".o as filename.
     "$NASM" $CFLAGS_ARCH $CFLAGS -O999999999 -w+orphan-labels -f elf -o "$BFA".o "$F" || exit 4  # Can %include "src/....nasm".
     # !! TODO(pts): Remove local symbols from the .o file, to make it smaller.
-    tools/elfofix -v -w -- "$BFA".o  # `-w' fixes weak symbols. .nasm files containing WEAK.. are affected.
+    tools/elfofix -r -v -w -- "$BFA".o  # `-w' fixes weak symbols. .nasm files containing WEAK.. are affected.
     "$NASM" $CFLAGS_ARCH $CFLAGS -O999999999 -w+orphan-labels -f bin -o "$BFA".bin "$F"
     "$NASM" $CFLAGS_ARCH $CFLAGS -O0 -w+orphan-labels -f bin -o "$BFA".o0.bin "$F"
     # $NDISASM -b 32 "$BFA".bin | tail  # For the size.

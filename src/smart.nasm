@@ -276,6 +276,9 @@ _need mini_waitid, mini___M_jmp_pop_ebx_syscall_return
 _need mini_raise, mini___M_jmp_syscall_pop_ebx_return
 _need mini_getenv, mini_environ  ; Without this, the linker failes with duplicate symbols in *.smart.o and src/stdio_medium_linux.o. (It's a misleading error message, it doesn't mention mini_getenv or mini_environ). TODO(pts): Document this.
 _need mini_getopt, mini_write
+_need mini_execvp, mini_environ
+_need mini_execvp, mini_errno
+_need mini_execvp, mini_execve
 _need mini_errno, .bss
 _need mini_environ, .bss
 _need mini_stdout, .data
