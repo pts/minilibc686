@@ -64,6 +64,8 @@ int main(int argc, char **argv) {
   if (!expect("Hello, %s!%-5X.", "World", -7)) exit_code |= 1;
   if (!expect("Hello, %s!%-5u.", "World", 14)) exit_code |= 1;
   if (!expect("Hello, %s!%-5u.", "World", -7)) exit_code |= 1;
+  if (!expect("Hello, %s!%-5o.", "World", 14)) exit_code |= 1;
+  if (!expect("Hello, %s!%-5o.", "World", -7)) exit_code |= 1;
 
   return exit_code;
 }

@@ -91,10 +91,10 @@ int mini_vfprintf(FILE *filep, const char *format, va_list args) {
 #else
         u = va_arg(args, unsigned);
 #endif
-        if (!(c == 'd' || c == 'u' || (c | 32) == 'x' )) goto done;  /* Assumes ASCII. */
+        if (!(c == 'd' || c == 'u' || c == 'o' || (c | 32) == 'x' )) goto done;  /* Assumes ASCII. */
         /* pc += printi(filep, va_arg(args, int), (c | 32) == 'x' ? 16 : 10, c == 'd', width, pad, c == 'X' ? 'A' : 'a'); */
         /* This code block modifies `width', and it's fine to modify `width' and `pad'. */
-        b = ((c | 32) == 'x') ? 16 : 10;
+        b = ((c | 32) == 'x') ? 16 : c == 'o' ? 8 : 10;
         letbase = ((c == 'X') ? 'A' : 'a') - '0' - 10;
         if (c == 'd' && b == 10 && (BBPRINTF_INT)u < 0) {
           neg = '-';

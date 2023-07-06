@@ -50,6 +50,7 @@
 ; Config options respected by src/smart.nasm and other minilibc686 src/*.nasm.
 %define CONFIG_MAIN_NO_ENVP
 %define CONFIG_VFPRINTF_NO_PLUS
+%define CONFIG_VFPRINTF_NO_OCTAL
 
 extern mini_printf
 global main

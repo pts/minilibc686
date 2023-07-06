@@ -10,13 +10,13 @@
 ;
 ; Compile to Linux i386 32-bit ELF executable:
 ;
-;     nasm -O0 -w+orphan-labels -f bin -o demo_hello_linux_snprintf.prog demo_hello_linux_snprintf.nasm &&
+;     tools/nasm-0.98.39 -O0 -w+orphan-labels -f bin -o demo_hello_linux_snprintf.prog demo_hello_linux_snprintf.nasm &&
 ;     chmod +x demo_hello_linux_snprintf.prog
 ;
 ; With NASM optimizations enabled it generates the same program (bitwise
 ; identical):
 ;
-;     nasm -O999999999 -w+orphan-labels -f bin -o demo_hello_linux_snprintf.prog demo_hello_linux_snprintf.nasm &&
+;     tools/nasm-0.98.39 -O999999999 -w+orphan-labels -f bin -o demo_hello_linux_snprintf.prog demo_hello_linux_snprintf.nasm &&
 ;     chmod +x demo_hello_linux_snprintf.prog
 ;
 ; Compiling with Yasm (tested with 1.2.0 and 1.3.0) doesn't work, because
@@ -50,6 +50,7 @@
 ; Config options respected by src/smart.nasm and other minilibc686 src/*.nasm.
 %define CONFIG_MAIN_NO_ENVP
 %define CONFIG_VFPRINTF_NO_PLUS
+%define CONFIG_VFPRINTF_NO_OCTAL
 
 extern mini_snprintf
 extern mini_write
