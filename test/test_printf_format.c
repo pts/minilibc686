@@ -6,9 +6,11 @@
 extern int mini_snprintf(char *str, size_t size, const char *format, ...);  /* Function under test. */
 extern int mini_vsnprintf(char *str, size_t size, const char *format, va_list ap);  /* Function under test. */
 
+#ifdef __TEST__
 void mini_fputc_RP3(void) { _exit(121); }  /* Not called by mini_vsnprintf(...). */
 void mini___M_writebuf_relax_RP1(void) {}
 void mini___M_writebuf_unrelax_RP1(void) {}
+#endif
 
 int expect(const char *format, ...) {
   static char expected[0x1000], value[0x1000];
@@ -69,6 +71,12 @@ int main(int argc, char **argv) {
   if (!expect("Hello, %s!%-5o.", "World", -7)) exit_code |= 1;
   if (!expect("Hello, %s!%-5lo.%d", "World", 14L, 42)) exit_code |= 1;
   if (!expect("Hello, %s!%-5lo.%d", "World", -7L, 42)) exit_code |= 1;
+  if (!expect("Hello, %s!%+5llo.%d", "World", 14LL, 42)) exit_code |= 1;
+  if (!expect("Hello, %s!%+5llo.%d", "World", 1234567890987654321LL, 42)) exit_code |= 1;
+  if (!expect("Hello, %s!%+5llo.%d", "World", -7LL, 42)) exit_code |= 1;
+  if (!expect("Hello, %s!%+5lld.%d", "World", 14LL, 42)) exit_code |= 1;
+  if (!expect("Hello, %s!%+5lld.%d", "World", 1234567890987654321LL, 42)) exit_code |= 1;
+  if (!expect("Hello, %s!%+5lld.%d", "World", -7LL, 42)) exit_code |= 1;
 
   return exit_code;
 }

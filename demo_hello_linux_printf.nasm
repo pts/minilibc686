@@ -52,6 +52,7 @@
 %define CONFIG_VFPRINTF_NO_PLUS
 %define CONFIG_VFPRINTF_NO_OCTAL
 %define CONFIG_VFPRINTF_NO_LONG
+%define CONFIG_VFPRINTF_NO_LONGLONG
 
 extern mini_printf
 global main

@@ -83,8 +83,9 @@ int mini_vfprintf(FILE *filep, const char *format, va_list args) {
       } else {
 #if CONFIG_BBPRINTF_LONG
         if (c == 'l') {  /* !! TODO(pts): Keep u as `long' if sizeof(int) >= 4. This is for saving space and time if sizeof(long) > 4. */
-          u = va_arg(args, unsigned long);
+          u = va_arg(args, unsigned long);  /* TODO(pts): Sign extend instead on c == 'd'. */
           c = *++format;
+          /* TODO(pts): Add `long long' support here, src/stdio_medium_vfprintf.nasm already has it. */
         } else {
           u = va_arg(args, unsigned);
         }

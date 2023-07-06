@@ -4,7 +4,7 @@
 ; Based on vfprintf_plus.nasm, with stdio_medium buffering added.
 ; Compile to i386 ELF .o object: nasm -O999999999 -w+orphan-labels -f elf -o stdio_medium_vfprintf.o stdio_medium_vfprintf.nasm
 ;
-; Code+data size: 0x1d0 bytes; +1 bytes with CONFIG_PIC.
+; Code+data size: 0x210 bytes (of which long-long support is 0x40 bytes); +1 bytes with CONFIG_PIC.
 ;
 ; Uses: %ifdef CONFIG_PIC
 ; Uses: %ifdef CONFIG_VFPRINTF_IS_FOR_S_PRINTF_ONLY
@@ -12,6 +12,7 @@
 ; Uses: %ifdef CONFIG_VFPRINTF_NO_PLUS
 ; Uses: %ifdef CONFIG_VFPRINTF_NO_OCTAL
 ; Uses: %ifdef CONFIG_VFPRINTF_NO_LONG
+; Uses: %ifdef CONFIG_VFPRINTF_NO_LONGLONG
 ;
 ; Limitation: Printing `%...c' is incorrect if `...' is not empty and c is '\0'.
 ;
@@ -27,6 +28,14 @@ cpu 386
 %else
   %undef  CONFIG_VFPRINTF_IS_FOR_S_PRINTF_ONLY
   %undef  mini_vfprintf
+%endif
+
+%ifndef   CONFIG_VFPRINTF_NO_LONGLONG
+  %undef  CONFIG_VFPRINTF_NO_LONGS
+%elifndef CONFIG_VFPRINTF_NO_LONG
+  %undef  CONFIG_VFPRINTF_NO_LONGS
+%else
+  %define CONFIG_VFPRINTF_NO_LONGS
 %endif
 
 %ifndef CONFIG_VFPRINTF_POP_ESP_BEFORE_RET
@@ -63,13 +72,13 @@ section .bss align=1
 PAD_RIGHT equ 1
 PAD_ZERO equ 2
 PAD_PLUS equ 4
-%define SIZEOF_print_buf 11
-%define VAR_print_buf esp  ; char[11].
-%define VAR_b esp+0xc  ; uint32_t.
-%define VAR_pad esp+0x10  ; uint8_t.
-%define VAR_neg esp+0x14  ; uint8_t.
-%define VAR_letbase esp+0x18  ; uint8_t.
-%define VAR_c esp+0x1c  ; uint8_t.
+%define SIZEOF_print_buf 24  ; !! TODO(pts): Use less memory (11 or 21 bytes only).
+%define VAR_print_buf esp  ; char[24]. 11 would be enough for no-long-long, 21 would be enough for long-long.
+%define VAR_b esp+0x18  ; uint32_t.
+%define VAR_pad esp+0x1c  ; uint8_t.
+%define VAR_neg esp+0x1d  ; uint8_t.
+%define VAR_letbase esp+0x1e  ; uint8_t.
+%define VAR_c esp+0x1f  ; uint8_t.
 %define REG_VAR_formati esi  ; char*.
 %define REG_VAR_s ebx  ; char*.
 %define REG_VAR_pc ebp  ; uint32_t.
@@ -100,13 +109,18 @@ mini_vfprintf:  ; int mini_vfprintf(FILE *filep, const char *format, va_list ap)
 		xor eax, eax  ; Set highest 24 bits of EAX to 0.
 		lodsb  ; mov al, [REG_VAR_formati] ++ inc REG_VAR_formati.
 		test al, al
+%ifdef CONFIG_VFPRINTF_NO_LONGLONG
 		jz short .done
+%else
+		jz short .jdone
+%endif
 		cmp al, '%'
 		jne short .putc_al_cont
 		mov byte [VAR_pad], 0
 		xor REG_VAR_width, REG_VAR_width
 		lodsb  ; mov al, [REG_VAR_formati] ++ inc REG_VAR_formati.
 		test al, al
+.jdone:
 		jz short .done
 		cmp al, '%'
 		je short .putc_al_cont
@@ -143,15 +157,33 @@ mini_vfprintf:  ; int mini_vfprintf(FILE *filep, const char *format, va_list ap)
 		add REG_VAR_width, eax
 		jmp short .5cont
 .6:
-		mov REG_VAR_s, VAR_print_buf
-		mov ecx, [ARG_ap]
+		mov edx, [ARG_ap]
 		add dword [ARG_ap], byte 4
-		mov ecx, [ecx]  ; Next value to print.
-%ifndef CONFIG_VFPRINTF_NO_LONG
+		mov ecx, [edx]  ; Next value to print.
+%ifndef CONFIG_VFPRINTF_NO_LONGLONG
+		xor REG_VAR_s, REG_VAR_s  ; Zero-extend ECX to REG_VAR_s:ECX.
+%endif
+%ifndef CONFIG_VFPRINTF_NO_LONGS
 		cmp al, 'l'
-		jne short .after_l
+		jne short .try_extend
 		lodsb
-.after_l:
+%endif
+%ifndef CONFIG_VFPRINTF_NO_LONGLONG
+		cmp al, 'l'
+		jne short .try_extend
+		lodsb
+		add edx, byte 4
+		add dword [ARG_ap], byte 4
+		mov REG_VAR_s, [edx]  ; High dword of value to print.
+		jmp short .done_extend
+.try_extend:	cmp al, 'd'
+		jne short .done_extend
+		; Sign-extend ECX to REG_VAR_s:ECX.
+		mov REG_VAR_s, ecx
+		sar REG_VAR_s, 31
+.done_extend:
+%else
+.try_extend:
 %endif
 		cmp al, 's'
 		je short .fmtchr_s
@@ -159,7 +191,12 @@ mini_vfprintf:  ; int mini_vfprintf(FILE *filep, const char *format, va_list ap)
 		jne short .17
 		xchg eax, ecx  ; AL := CL; rest of EAX := junk; ECX := junk.
 		test REG_VAR_width, REG_VAR_width
+%ifdef CONFIG_VFPRINTF_NO_LONGLONG
 		jz short .putc_al_cont
+%else
+		jz near .putc_al_cont
+%endif
+		mov REG_VAR_s, VAR_print_buf
 		mov [REG_VAR_s], ax  ; byte [REG_VAR_s] := AL; byte [REG_VAR_s+1] := 0.
 		jmp near .do_print_s
 
@@ -203,10 +240,20 @@ mini_vfprintf:  ; int mini_vfprintf(FILE *filep, const char *format, va_list ap)
 		mov dl, 0
 		cmp al, 'd'
 		jne short .24
+%ifdef CONFIG_VFPRINTF_NO_LONGLONG
 		test ecx, ecx
 		jge short .23  ; Jump if integer to print is negative.
 		mov dl, '-'
 		neg ecx
+%else  ; Negatve REG_VAR_s:ECX; EAX := junk.
+		test REG_VAR_s, REG_VAR_s
+		jge short .23  ; Jump if integer to print is negative.
+		mov dl, '-'
+                xor eax, eax
+                neg ecx
+                sbb eax, REG_VAR_s
+                mov REG_VAR_s, eax
+%endif
 		jmp short .24
 
 ; Putting .fmtchr_s here for the `jmp short .fmtchr_s'.
@@ -238,23 +285,46 @@ mini_vfprintf:  ; int mini_vfprintf(FILE *filep, const char *format, va_list ap)
 %endif
 .24:
 		mov [VAR_neg], dl
+%ifndef CONFIG_VFPRINTF_NO_LONGLONG
+		xchg eax, REG_VAR_s  ; Copy highest 32 bits to EAX.
+%endif
+		xchg eax, ecx  ; EAX := nonnegative integer to print; ECX := (junk or highest 32 bits of nonnegative integer to print).
 		lea REG_VAR_s, [VAR_print_buf+SIZEOF_print_buf-1]
 		mov byte [REG_VAR_s], 0
-		xchg eax, ecx  ; EAX := nonnegative integer to print; ECX := junk.
-.26:
+.next_digit:
+
+%ifndef CONFIG_VFPRINTF_NO_LONGLONG
+; Input: ECX:EAX == uint64_t dividend; dword [VAR_b] == uint32_t divisor.
+; Output: ECX:EAX == quotient; EDX == remainder.
+		mov edx, ecx
+		cmp edx, [VAR_b]
+		jnb short .L2
+		xor ecx, ecx
+		jmp short .L3
+.L2:		xchg ecx, eax  ; ECX := EAX (save lowest 32 bits of dividend); EAX := junk.
+		xchg eax, edx  ; EAX := EDX; EDX := junk.
 		xor edx, edx
 		div dword [VAR_b]
-		xchg eax, edx  ; EAX := remainder; EDX := quotient.
-		cmp al, 10
+		xchg ecx, eax  ; ECX := EAX; EAX := (lowest 32 bits of dividend).
+.L3:
+		div dword [VAR_b]
+		; Result: EDX == ramainder.
+%else
+; Input: EAX == uint32_t dividend; dword [VAR_b] == uint32_t divisor.
+; Output: EAX == quotient; EDX == remainder.
+		xor edx, edx
+		div dword [VAR_b]
+%endif
+		cmp dl, 10
 		jb short .27
-		add al, [VAR_letbase]
+		add dl, [VAR_letbase]
 .27:
-		add al, '0'
+		add dl, '0'
 		dec REG_VAR_s
-		mov [REG_VAR_s], al
-		xchg edx, eax  ; After this: EAX == quotient.
+		mov [REG_VAR_s], dl
+		; Now: EAX == quotient.
 		test eax, eax
-		jnz short .26
+		jnz short .next_digit
 		cmp byte [VAR_neg], 0
 		je short .do_print_s
 		test REG_VAR_width, REG_VAR_width

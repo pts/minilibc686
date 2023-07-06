@@ -1189,6 +1189,9 @@ mini_putchar_RP3:  ; int REGPARM3 mini_putchar_RP3(int c);
 %ifdef CONFIG_VFPRINTF_NO_LONG
   %define NEED_include_vfprintf 1
 %endif
+%ifdef CONFIG_VFPRINTF_NO_LONGLONG
+  %define NEED_include_vfprintf 1
+%endif
 
 %ifdef __NEED_mini___M_vfsprintf
   %define mini_vfprintf mini___M_vfsprintf
