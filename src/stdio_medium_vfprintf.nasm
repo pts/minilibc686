@@ -11,6 +11,7 @@
 ; Uses: %ifdef CONFIG_VFPRINTF_POP_ESP_BEFORE_RET
 ; Uses: %ifdef CONFIG_VFPRINTF_NO_PLUS
 ; Uses: %ifdef CONFIG_VFPRINTF_NO_OCTAL
+; Uses: %ifdef CONFIG_VFPRINTF_NO_LONG
 ;
 ; Limitation: Printing `%...c' is incorrect if `...' is not empty and c is '\0'.
 ;
@@ -146,6 +147,12 @@ mini_vfprintf:  ; int mini_vfprintf(FILE *filep, const char *format, va_list ap)
 		mov ecx, [ARG_ap]
 		add dword [ARG_ap], byte 4
 		mov ecx, [ecx]  ; Next value to print.
+%ifndef CONFIG_VFPRINTF_NO_LONG
+		cmp al, 'l'
+		jne short .after_l
+		lodsb
+.after_l:
+%endif
 		cmp al, 's'
 		je short .fmtchr_s
 		cmp al, 'c'

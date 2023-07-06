@@ -243,6 +243,7 @@ DO_MODE=
 DEF_CMDARG=
 PRINTF_PLUS=1
 PRINTF_OCTAL=1
+PRINTF_LONG=1
 
 SKIPARG=
 ARGS=
@@ -308,11 +309,13 @@ for ARG in "$@"; do
    -mno-argv) DO_ARGV=0 ;;
    -menvp) DO_ENVP=1 ;;
    -mno-envp) DO_ENVP=0 ;;
-   -mprintf-mini) PRINTF_PLUS=; PRINTF_OCTAL= ;;  # This is a minilibc686-specific flag. TODO(pts): Fail for this and other such flags with other libcs.
+   -mprintf-mini) PRINTF_PLUS=; PRINTF_OCTAL=; PRINTF_LONG= ;;  # This is a minilibc686-specific flag. TODO(pts): Fail for this and other such flags with other libcs.
    -mprintf-plus) PRINTF_PLUS=1 ;;
    -mno-printf-plus) PRINTF_PLUS= ;;
    -mprintf-octal) PRINTF_OCTAL=1 ;;
    -mno-printf-octal) PRINTF_OCTAL= ;;
+   -mprintf-long | -mprintf-l) PRINTF_LONG=1 ;;
+   -mno-printf-long | -mno-printf-l) PRINTF_LONG= ;;
    -Wno-no) WFLAGS= ;;  # Disable warnings. GCC and Clang accept and ignore it.
    -Wno-*) ARGS="$ARGS$NL$ARG" ;;
    -Werror[-=]implicit-function-declaration) ARGS="$ARGS$NL-Werror-implicit-function-declaration"; WFLAGS= ;;  # GCC 4.1 supports only -Werror-implicit-function-declaration, GCC >=4.2 supports it and also -Werror=implicit-function-declaration.
@@ -683,6 +686,7 @@ elif test "$DO_ENVP" = 0; then DEF_ARG="$DEF_ARG$NL-DCONFIG_MAIN_NO_ENVP"
 fi
 test "$PRINTF_PLUS"  || DEF_ARG="$DEF_ARG$NL-DCONFIG_VFPRINTF_NO_PLUS"
 test "$PRINTF_OCTAL" || DEF_ARG="$DEF_ARG$NL-DCONFIG_VFPRINTF_NO_OCTAL"
+test "$PRINTF_LONG"  || DEF_ARG="$DEF_ARG$NL-DCONFIG_VFPRINTF_NO_LONG"
 if test "$IS_WATCOM" || test "$IS_CC1" = 3 || test "$TCC"; then
   # Add some -D.. flags which GCC (>=1) already defines. These flags affect EGLIBC on other compilers.
   test "$HAD_OPTIMIZE" && DEF_ARG="$DEF_ARG$NL-D__OPTIMIZE__"
