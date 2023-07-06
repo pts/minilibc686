@@ -221,6 +221,7 @@ NEED_GCC_AS=1
 SFLAG=
 STRIP_MODE=2  # 0: Don't strip, don't chage he ELF OSABI (-g00); 1: change the ELF OSABI to Linux and fix first section alignment (-g0); 2: change the ELF OSABI to Linux and strip.
 WFLAGS="-W$NL-Wall$NL-Werror-implicit-function-declaration"
+DO_WKEEP=1
 HAD_OFLAG=
 HAD_V=
 HAD_OFILE=
@@ -319,11 +320,12 @@ for ARG in "$@"; do
    -mno-printf-long | -mno-printf-l) PRINTF_LONG= ;;
    -mprintf-longlong | -mprintf-long-long | -mprintf-ll) PRINTF_LONGLONG=1 ;;
    -mno-printflonglong | -mno-printf-long-long | -mno-printf-ll) PRINTF_LONGLONG= ;;
-   -Wno-no) WFLAGS= ;;  # Disable warnings. GCC and Clang accept and ignore it.
+   -Wno-no) DO_WKEEP= ;;  # Disable warnings. GCC and Clang accept and ignore it. GCC ignores it.
+   -Wkeep | -Wno-no-no) DO_WKEEP=1 ;;  # This is not a GCC flag, it's a minicc extension. GCC ignores -Wno-no-no, but Clang warns.
    -Wno-*) ARGS="$ARGS$NL$ARG" ;;
-   -Werror[-=]implicit-function-declaration) ARGS="$ARGS$NL-Werror-implicit-function-declaration"; WFLAGS= ;;  # GCC 4.1 supports only -Werror-implicit-function-declaration, GCC >=4.2 supports it and also -Werror=implicit-function-declaration.
-   -Wadd=*) ARGS="$ARGS$NL-W${ARG#*=}" ;;  # This doesn't set WFLAGS="". This is a minicc extension.
-   -W*) ARGS="$ARGS$NL$ARG"; WFLAGS= ;;
+   -Werror[-=]implicit-function-declaration) ARGS="$ARGS$NL-Werror-implicit-function-declaration"; DO_WKEEP= ;;  # GCC 4.1 supports only -Werror-implicit-function-declaration, GCC >=4.2 supports it and also -Werror=implicit-function-declaration.
+   -Wadd=*) ARGS="$ARGS$NL-W${ARG#*=}" ;;  # This doesn't set DO_WKEEP="". This is a minicc extension.
+   -W*) ARGS="$ARGS$NL$ARG"; DO_WKEEP= ;;
    -fno-inline) ARGS="$ARGS$NL$ARG"; HAD_NOINLINE=1 ;;
    -finline) ARGS="$ARGS$NL$ARG"; HAD_NOINLINE= ;;
    -[fm]?* | -pedantic) ARGS="$ARGS$NL$ARG" ;;
@@ -700,6 +702,7 @@ if test "$IS_WATCOM" || test "$IS_CC1" = 3 || test "$TCC"; then
 fi
 OUTFILE_ARG=
 test "$OUTFILE" && OUTFILE_ARG="-o$NL$OUTFILE"
+test "$DO_WKEEP" || WFLAGS=  # Maybe clear the default -W... warning flags.
 if test "$TCC"; then
   # TODO(pts): Does TCC really generate i386-only code?
   # We don't pass $ANSIFLAG, because TCC 0.9.26 would fail for it.
