@@ -13,7 +13,8 @@
    * $ minicc --gcc=4.1 -mprintf-mini -mno-envp -o demo2 demo_c_hello.c  # Any GCC >=4.1.
    * $ minicc --pcc -mprintf-mini -mno-envp -o demo3 demo_c_hello.c
    * $ minicc -mprintf-mini -mno-envp -o demo4 demo_hello_printf.s
-   * $ tools/nasm-0.98.39 -O999999999 -w+orphan-labels -f bin -o demo4 demo_hello_linux_printf.nasm && chmod +x demo3
+   * $ minicc -mprintf-mini -mno-envp -o demo5 demo_hello_printf.S
+   * $ minicc nasm -O999999999 -w+orphan-labels -f bin -o demo6 demo_hello_linux_printf.nasm && chmod +x demo6
    */
   static const char __based(__segname("_CONST")) str_world[] = "World";
   static const char __based(__segname("_CONST")) str_hello[] = "Hello, %s!\n";
