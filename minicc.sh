@@ -1103,9 +1103,10 @@ if test "$GCC" || test -z "$IS_TCCLD"; then
         $CCARGS "${ARG#--*=}"; EC="$?"
       else
         CCFARGS=
+        CCTHISARGS="$CCARGS"
         SFILE=
         case "$ARG" in
-         *.s) SFILE="$ARG"; CCARGS= ;;  # TODO(pts): Don't create empty $TMPOFILE (with .s extension), we don't use it.
+         *.s) SFILE="$ARG"; CCTHISARGS= ;;  # TODO(pts): Don't create empty $TMPOFILE (with .s extension), we don't use it.
          *.[cS])
           case "$ARG" in
            *.c)
@@ -1118,9 +1119,9 @@ if test "$GCC" || test -z "$IS_TCCLD"; then
             else SEARG=/
             fi
             if test "$SEARG" != /; then  # Regular GCC and Clang can process .s files directly, no need to change.
-              CCARGS="${CCARGS#*$NL}"  # Remove $GCC from the beginning.
-              CCARGS="$SEARG$NL-D__ASSEMBLER__$NL$CCARGS"
-              CCARGS="$GCC$NL$CCARGS"
+              CCTHISARGS="${CCTHISARGS#*$NL}"  # Remove $GCC from the beginning.
+              CCTHISARGS="$SEARG$NL-D__ASSEMBLER__$NL$CCTHISARGS"
+              CCTHISARGS="$GCC$NL$CCTHISARGS"
             fi
             ;;
           esac
@@ -1150,9 +1151,9 @@ if test "$GCC" || test -z "$IS_TCCLD"; then
           ;;
          *) echo "fatal: assert: unknown source file type: $ARG" >&2; exit 7 ;;
         esac
-        if test "$CCARGS"; then
-          test "$HAD_V" && echo "info: running compiler:" $CCARGS $CCFARGS >&2  # GCC also writes to stderr.
-          $CCARGS $CCFARGS; EC="$?"
+        if test "$CCTHISARGS"; then
+          test "$HAD_V" && echo "info: running compiler:" $CCTHISARGS $CCFARGS >&2  # GCC also writes to stderr.
+          $CCTHISARGS $CCFARGS; EC="$?"
         else
           EC=0
         fi
@@ -1212,7 +1213,7 @@ if test "$GCC" || test -z "$IS_TCCLD"; then
   fi
   ARGS="$LDARGS"
   WHAT=linker
-  unset LDARGS CCARGS CCFILEARGS FILEARGS TMPOFILE TMPOFILE2 FOFLAG CCMODE TMPCCOUTEXT
+  unset LDARGS CCARGS CCTHISARGS CCFILEARGS FILEARGS TMPOFILE TMPOFILE2 FOFLAG CCMODE TMPCCOUTEXT
   # Don't forget: rm -f $TMPOFILES
 else
   TMPOFILES=
