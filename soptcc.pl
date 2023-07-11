@@ -326,9 +326,10 @@ my %shift_instructions = map { $_ => 1 } qw (rcl rcr rol ror sal sar shl shr);
 
 # !! Was fuzz2.pl complete? Why not jb, jl, cmpxchg8b, fcmovl, prefetchw?
 my %force_nosize_insts = map { $_ => 1 } qw(
-    arpl call cmovb cmovl fldcw fnstcw fnstsw fstcw fstsw imul lmsw lsl mul
-    rcl rol sbb setb setl shl smsw sub verw jb jnb jl jnl cmpxchg8b lcall fcmovb fcmovnb
-    prefetchw syscall cbw iretw popaw popfw pushaw pushfw fisttpll fmul fsub);
+    arpl call cmovb cmovnb cmovl cmovnl fldcw fnstcw fnstsw fstcw fstsw imul
+    lmsw lsl mul rcl rol sbb setb setl shl smsw sub verw jb jnb jl jnl
+    cmpxchg8b lcall fcmovb fcmovnb prefetchw syscall cbw iretw popaw popfw
+    pushaw pushfw fisttpll fmul fsub setl setnl setb setnb);
 
 # All floating point instructions with memory argument (m32fp, m64fp, m80fp).
 my %fp_memarg_insts = ("fldt" => 1, "fstpt" => 1, map { $_ . "s" => 1, $_ . "l" => 1 } qw(fld fst fstp fmul fdiv fdivr fadd fsub fsubr fcom fcomp));
