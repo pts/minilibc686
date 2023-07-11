@@ -66,6 +66,11 @@ static __inline__ float __get_huge_valf(void) { static union { unsigned __i; flo
 #endif
 
 __LIBC_FUNC(double, log, (double x), __LIBC_NOATTR);
+
+__LIBC_FUNC(float, sqrtf, (float x), __LIBC_NOATTR);
+__LIBC_FUNC(double, sqrt, (double x), __LIBC_NOATTR);
+__LIBC_FUNC(long double, sqrtl, (long double x), __LIBC_NOATTR);
+
 #if defined(__UCLIBC__) || defined(__GLIBC__)
   __LIBC_FUNC(int, __isnanf, (float x), __LIBC_NOATTR);
   __LIBC_FUNC(int, __isnan, (double x), __LIBC_NOATTR);
