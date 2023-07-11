@@ -65,7 +65,9 @@ static __inline__ float __get_huge_valf(void) { static union { unsigned __i; flo
 #  define INFINITY  (__get_huge_valf())
 #endif
 
+__LIBC_FUNC(float, logf, (float x), __LIBC_NOATTR);
 __LIBC_FUNC(double, log, (double x), __LIBC_NOATTR);
+__LIBC_FUNC(long double, logl, (long double x), __LIBC_NOATTR);
 
 __LIBC_FUNC(float, sqrtf, (float x), __LIBC_NOATTR);
 __LIBC_FUNC(double, sqrt, (double x), __LIBC_NOATTR);
