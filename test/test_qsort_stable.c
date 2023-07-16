@@ -225,14 +225,25 @@ static void ip_merge_(void *v, size_t nb, size_t nc, size_t size, int (*cmp)(con
 
 /* The signature is the same as of qsort(3). */
 void ip_mergesort(void *v, size_t n, size_t size, int (*cmp)(const void*, const void*)) {
-  size_t h;
-  if (n > 1) {  /* !! TODO(pts): Use insertion sort for 2 <= n <= 16 etc. */
-    /* This is the only multiplication, there is no division. */
-    h = n >> 1;
-    ip_mergesort(v, h, size, cmp);
-    n -= h;
-    ip_mergesort((char*)v + h * size, n, size, cmp);
-    ip_merge_(v, h, n, size, cmp);
+  /* !! TODO(pts): Use insertion sort for 2 <= n <= 16 etc. */
+  size_t nb, i, idsize;
+  char *vi;
+  for (nb = 1; nb < n; nb <<= 1) {
+    i = 0;
+    vi = v;
+    idsize = (nb << 1) * size;
+    for (;;) {
+      if (n > i + (nb << 1)) {
+        ip_merge_(vi, nb, nb, size, cmp);
+        i += nb << 1;
+        vi += idsize;
+      } else if (n > i + nb) {
+        ip_merge_(vi, nb, n - i - nb, size, cmp);
+        break;
+      } else {
+        break;
+      }
+    }
   }
 }
 
