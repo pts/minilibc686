@@ -216,9 +216,11 @@ static void ip_merge_(void *v, size_t nb, size_t nc, size_t size, int (*cmp)(con
     np = nr;
   }
   rotate_(v, np, nb, nq, size);
+  if ((char*)v + nr * size != r) abort();
   nr += nx;
+  if ((char*)v + nr * size != r + nx * size) abort();
   ip_merge_(v, np, nr - np, size, cmp);  /* !! TODO(pts): Manual stack. What is the stack size limit? */
-  ip_merge_(r + nx * size, nq - nr, nc + nb - nq, size, cmp);  /* !! TODO(pts): Manual tail recursion. */
+  ip_merge_((char*)v + nr * size, nq - nr, nc + nb - nq, size, cmp);  /* !! TODO(pts): Manual tail recursion. */
 }
 
 /* The signature is the same as of qsort(3). */
