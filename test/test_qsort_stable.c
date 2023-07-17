@@ -168,15 +168,15 @@ static void rotate_(char *p, char *b, char *q) {
 }
 
 /* inplace merge [0,b) and [b,b+c) to [0,b+c). */
-static void ip_merge_(void *v, size_t nb, size_t nc, size_t size, int (*cmp)(const void*, const void*)) {
+static void ip_merge_(char *v, size_t nb, size_t nc, size_t size, int (*cmp)(const void*, const void*)) {
   char *r, *key;
   size_t i, isize;
   size_t np, nq, nr, nx;
   int is_lower;
   if (nb == 0 || nc == 0) return;
   if (nb + nc == 2) {
-    if (cmp((char*)v + size, v) < 0) {  /* The rhucmp test checks that 0 is the only correct value here. */
-      rotate_(v, (char*)v + size, (char*)v + (size << 1));
+    if (cmp(v + size, v) < 0) {  /* The rhucmp test checks that 0 is the only correct value here. */
+      rotate_(v, v + size, v + (size << 1));
     }
     return;
   }
@@ -185,16 +185,16 @@ static void ip_merge_(void *v, size_t nb, size_t nc, size_t size, int (*cmp)(con
   if (is_lower) {
     np = (nb >> 1);
     nr = nb;
-    r = (char*)v + isize;
+    r = v + isize;
     i = nc;
     isize = nc * size;
   } else {
     np = nb + (nc >> 1);
     nr = 0;
-    r = (char*)v;
+    r = v;
     i = nb;
   }
-  key = (char*)v + np * size;
+  key = v + np * size;
   nx = np - nb;
   /* bound_(r, i, key, is_lower, size, cmp); -- Use binary search to find upper or lower bound. */
   while (i != 0) {
@@ -222,13 +222,13 @@ static void ip_merge_(void *v, size_t nb, size_t nc, size_t size, int (*cmp)(con
     np = nr;
   }
   if (np != nb && nb != nq) {
-    rotate_((char*)v + np * size, (char*)v + nb * size, (char*)v + nq * size);
+    rotate_(v + np * size, v + nb * size, v + nq * size);
   }
-  if ((char*)v + nr * size != r) abort();
+  if (v + nr * size != r) abort();
   nr += nx;
-  if ((char*)v + nr * size != r + nx * size) abort();
+  if (v + nr * size != r + nx * size) abort();
   ip_merge_(v, np, nr - np, size, cmp);  /* !! TODO(pts): Manual stack. What is the stack size limit? */
-  ip_merge_((char*)v + nr * size, nq - nr, nc + nb - nq, size, cmp);  /* !! TODO(pts): Manual tail recursion. */
+  ip_merge_(v + nr * size, nq - nr, nc + nb - nq, size, cmp);  /* !! TODO(pts): Manual tail recursion. */
 }
 
 /* The signature is the same as of qsort(3). */
