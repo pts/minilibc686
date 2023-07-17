@@ -168,6 +168,7 @@ void ip_mergesort(void *v, size_t n, size_t size, int (*cmp)(const void*, const 
 
 #if defined(__WATCOMC__) && defined(__386__)
   static __declspec(naked) void __watcall rotate_(char *p, char *b, char *q) { (void)p;  /* EAX. */ (void)b;  /* EDX. */  (void)q;  /* EBX. */ __asm {
+#ifdef CONFIG_MERGE_SLOW_ROTATE  /* Slower but shorter. The other one moves 4 or 2 bytes at a time, if possible. */
 		cmp eax, edx
 		je Ldone
 		cmp edx, ebx
@@ -196,7 +197,6 @@ void ip_mergesort(void *v, size_t n, size_t size, int (*cmp)(const void*, const 
 		push edx
 		push edx  /* reverse_(edx, ebx); */
 		push ebx
-		/* !! TODO(pts): Do 2 bytes or 4 bytes at a time. */
     Lrevnext:	pop edx
 		test edx, edx
 		jz Ldone
@@ -213,6 +213,116 @@ void ip_mergesort(void *v, size_t n, size_t size, int (*cmp)(const void*, const 
 		pop ecx
 		jmp Lrevnext
     Ldone:	ret
+#else  /* else CONFIG_SLOW_ROTATE */
+		cmp eax, edx
+		je short Ldone
+		cmp edx, ebx
+		je short Ldone
+		push edx
+		add edx, edx
+		sub edx, eax
+		cmp edx, ebx
+		pop edx
+		jne Lreverses
+		push ecx
+		mov ecx, ebx
+		sub ecx, edx
+		test cl, 3
+		jz Lnextc4
+		test cl, 1
+		jz Lnextc2
+
+    Lnextc1:	mov cl, [eax]
+		xchg cl, [edx]
+		mov [eax], cl
+		inc eax
+		inc edx
+		cmp edx, ebx
+		jne Lnextc1
+		jmp short Ldone_ecx
+
+    Lnextc2:	mov cx, [eax]
+		xchg cx, [edx]
+		mov [eax], cx
+		inc eax
+		inc eax
+		inc edx
+		inc edx
+		cmp edx, ebx
+		jne Lnextc2
+		jmp short Ldone_ecx
+
+    Lnextc4:	mov ecx, [eax]
+		xchg ecx, [edx]
+		mov [eax], ecx
+		add eax, 4
+		add edx, 4
+		cmp edx, ebx
+		jne Lnextc4
+		jmp short Ldone_ecx
+
+    Ldone_ecx:	pop ecx
+    Ldone:	ret
+    Lreverses:	push 0  /* Sentinel for end of reverses. */
+		push eax  /* reverse_(eax, ebx); */
+		push ebx
+		push eax  /* reverse_(eax, edx); */
+		push edx
+		push edx  /* reverse_(edx, ebx); */
+		push ebx
+		sub ebx, edx
+		sub edx, eax
+		or edx, ebx
+		test dl, 3
+		jz Lrevnext4
+		test dl, 1
+		jz Lrevnext2
+
+    Lrevnext1:	pop edx
+		test edx, edx
+		jz short Ldone
+		pop eax
+		dec edx
+    Lswapc1:	mov bl, [eax]
+		xchg bl, [edx]
+		mov [eax], bl
+		inc eax
+		dec edx
+		cmp eax, edx
+		jb Lswapc1
+		jmp Lrevnext1
+
+    Lrevnext2:	pop edx
+		test edx, edx
+		jz short Ldone
+		pop eax
+		dec edx
+		dec edx
+    Lswapc2:	mov bx, [eax]
+		xchg bx, [edx]
+		mov [eax], bx
+		inc eax
+		inc eax
+		dec edx
+		dec edx
+		cmp eax, edx
+		jb Lswapc2
+		jmp Lrevnext2
+
+    Lrevnext4:	pop edx
+		test edx, edx
+		jz short Ldone
+		pop eax
+		jmp Lswape4
+    Lswapc4:	mov ebx, [eax]
+		xchg ebx, [edx]
+		mov [eax], ebx
+		add eax, 4
+    Lswape4:	sub edx, 4
+		cmp eax, edx
+		jb Lswapc4
+		jmp Lrevnext4
+#endif  /* else CONFIG_SLOW_ROTATE */
   } }
 #else
   /* swap the sequence [p,b) with [b,q). */
@@ -321,7 +431,6 @@ static void ip_merge_(struct merge_task *st, size_t size, int (*cmp)(const void*
 
 /* The signature is the same as of qsort(3). */
 void ip_mergesort(void *v, size_t n, size_t size, int (*cmp)(const void*, const void*)) {
-  /* !! TODO(pts): Use insertion sort for 2 <= n <= 16 etc. */
   size_t nb, i, idsize;
   char *vi;
   char *vend;
