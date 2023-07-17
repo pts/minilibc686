@@ -27,12 +27,30 @@
  * !! TODO(pts): Compare it with the Java version: http://thomas.baudel.name/Visualisation/VisuTri/inplacestablesort.html
  */
 
+#if defined(__WATCOMC__) && defined(__386__)
+  /* !! TODO(pts): Do 2 bytes or 4 bytes at a time. */
+  static __declspec(naked) void __watcall reverse_(char *a, char *b) { (void)a; (void)b; __asm {
+		push ecx
+		dec edx
+    Lagain:	cmp eax, edx
+		jb Lswapc
+		pop ecx
+		ret
+    Lswapc:	mov cl, [eax]
+		xchg cl, [edx]
+		mov [eax], cl
+		inc eax
+		dec edx
+		jmp Lagain
+  } }
+#else
 static void reverse_(char *a, char *b) {
-  char c;
-  for (--b; a < b; a++, b--) {
-    c = *a; *a = *b; *b = c;
+    char c;
+    for (--b; a < b; a++, b--) {
+      c = *a; *a = *b; *b = c;
+    }
   }
-}
+#endif
 
 #if CONFIG_QSORT_STABLE_MULTIPLY_ONCE  /* 1 multiplication, 0 divisions. */
 
@@ -148,25 +166,67 @@ void ip_mergesort(void *v, size_t n, size_t size, int (*cmp)(const void*, const 
 
 #else  /* Many multiplications, 0 divisions. */
 
-/* swap the sequence [p,b) with [b,q). */
-static void rotate_(char *p, char *b, char *q) {
-  char c;
-  if (p != b && b != q) {
-    if (b - p == q - b) {  /* Same size: swap. */
-      /* memswap_(p, b, q - b); */
-      for (; b != q; ++p, ++b) {
-        c = *b;
-        *b = *p;
-        *p = c;
+#if defined(__WATCOMC__) && defined(__386__)
+  static __declspec(naked) void __watcall rotate_(char *p, char *b, char *q) { (void)p;  /* EAX. */ (void)b;  /* EDX. */  (void)q;  /* EBX. */ __asm {
+		cmp eax, edx
+		je Ldone
+		cmp edx, ebx
+		je Ldone
+		push edx
+		add edx, edx
+		sub edx, eax
+		cmp edx, ebx
+		pop edx
+		jne Lreverses
+		push ecx
+    Lnextc:	cmp edx, ebx
+		je Ldone_ecx
+		mov cl, [eax]
+		xchg cl, [edx]
+		mov [eax], cl
+		inc eax
+		inc edx
+		jmp Lnextc
+    Ldone_ecx:	pop ecx
+		jmp Ldone
+    Lreverses:	push eax
+		push edx
+		push ebx
+		call reverse_  /* reverse_(eax, edx); */
+		pop edx
+		pop eax
+		pop ebx
+		push eax
+		push edx
+		push ebx
+		call reverse_  /* reverse_(edx. ebx); */
+		pop eax
+		pop edx
+		pop ebx
+		call reverse_
+    Ldone:	ret
+  } }
+#else
+  /* swap the sequence [p,b) with [b,q). */
+  static void rotate_(char *p, char *b, char *q) {
+    char c;
+    if (p != b && b != q) {
+      if (b - p == q - b) {  /* Same size: swap. */
+        /* memswap_(p, b, q - b); */
+        for (; b != q; ++p, ++b) {
+          c = *b;
+          *b = *p;
+          *p = c;
+        }
+      } else {
+        /* !! TODO(pts): There is a faster algorithm using GCD. */
+        reverse_(p, b);
+        reverse_(b, q);
+        reverse_(p, q);
       }
-    } else {
-      /* !! TODO(pts): There is a faster algorithm using GCD. */
-      reverse_(p, b);
-      reverse_(b, q);
-      reverse_(p, q);
     }
   }
-}
+#endif
 
 struct merge_task { char *v; size_t nb, nc; };
 
@@ -434,7 +494,7 @@ int main(int argc, char **argv) {
 	}
 	if (cmp_count != sizeof(nx)/sizeof(nx[0]) - 1) {
 		FAIL("too many comparisons for already sorted input");
-		printf("cmp_count=%d expected=%d\n", cmp_count, sizeof(nx)/sizeof(nx[0]));
+		printf("cmp_count=%d expected=%d\n", cmp_count, (int)(sizeof(nx)/sizeof(nx[0])));
 	}
 
 	for (i = 0; i + 0U < sizeof(nx)/sizeof(nx[0]); ++i) {
