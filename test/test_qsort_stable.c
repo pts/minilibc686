@@ -29,7 +29,7 @@
 
 #if defined(__WATCOMC__) && defined(__386__)
   /* !! TODO(pts): Do 2 bytes or 4 bytes at a time. */
-  static __declspec(naked) void __watcall reverse_(char *a, char *b) { (void)a; (void)b; __asm {
+  __declspec(naked) void __watcall reverse_(char *a, char *b) { (void)a; (void)b; __asm {
 		push ecx
 		dec edx
     Lagain:	cmp eax, edx
@@ -44,7 +44,7 @@
 		jmp Lagain
   } }
 #else
-static void reverse_(char *a, char *b) {
+void reverse_(char *a, char *b) {
     char c;
     for (--b; a < b; a++, b--) {
       c = *a; *a = *b; *b = c;
@@ -189,21 +189,29 @@ void ip_mergesort(void *v, size_t n, size_t size, int (*cmp)(const void*, const 
 		jmp Lnextc
     Ldone_ecx:	pop ecx
 		jmp Ldone
-    Lreverses:	push eax
-		push edx
+    Lreverses:	push 0  /* Sentinel for end of reverses. */
+		push eax  /* reverse_(eax, ebx); */
 		push ebx
-		call reverse_  /* reverse_(eax, edx); */
-		pop edx
-		pop eax
-		pop ebx
-		push eax
+		push eax  /* reverse_(eax, edx); */
 		push edx
+		push edx  /* reverse_(edx, ebx); */
 		push ebx
-		call reverse_  /* reverse_(edx. ebx); */
+		/* !! TODO(pts): Do 2 bytes or 4 bytes at a time. */
+    Lrevnext:	pop edx
+		test edx, edx
+		jz Ldone
 		pop eax
-		pop edx
-		pop ebx
-		call reverse_
+		push ecx
+		dec edx
+    Lswapc:	mov cl, [eax]
+		xchg cl, [edx]
+		mov [eax], cl
+		inc eax
+		dec edx
+		cmp eax, edx
+		jb Lswapc
+		pop ecx
+		jmp Lrevnext
     Ldone:	ret
   } }
 #else
