@@ -57,7 +57,7 @@ static void ip_merge_(void *v, size_t nb, size_t nbsize, size_t nc, size_t ncsiz
   if (nb == 0 || nc == 0) return;
   if (nb + nc == 2) {
     if (cmp((char*)v + size, v) < 0) {  /* The rhucmp test checks that 0 is the only correct value here. */
-      rotate_(v, 0, size, size << 1);
+      rotate_(v, 0, size, size << 1);  /* !! TODO(pts): Implement this with memswap. */
     }
     return;
   }
@@ -228,18 +228,15 @@ void ip_mergesort(void *v, size_t n, size_t size, int (*cmp)(const void*, const 
   /* !! TODO(pts): Use insertion sort for 2 <= n <= 16 etc. */
   size_t nb, i, idsize;
   char *vi;
-  for (vi = v, i = 1; i < n; i += 2) {  /* Without this speed optimization, `nb = 1' should be used instead of `nb = 2' below. */
-    if (cmp(vi, vi + size) > 0) {
-      reverse_(vi, vi + size);
-      vi += size;
+  char *vend;
+  for (vi = (char*)v + size, vend = (char*)v + n * size; vi < vend; vi += size << 1) {  /* Without this speed optimization, `nb = 1' should be used instead of `nb = 2' below. */
+    if (cmp(vi - size, vi) > 0) {  /* TODO(pts): Implement this with memswap. */
+      reverse_(vi - size, vi);
       reverse_(vi, vi + size);
       reverse_(vi - size, vi + size);
-    } else {
-      vi += size;
     }
-    vi += size;
   }
-  for (nb = 2; nb < n; nb <<= 1) {
+  for (nb = 2; nb < n; nb <<= 1) {  /* !! TODO(pts): Use insertion sort for 2 <= n <= 16 etc. */
     i = 0;
     vi = v;
     idsize = (nb << 1) * size;
