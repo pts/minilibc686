@@ -168,7 +168,7 @@ void ip_mergesort(void *v, size_t n, size_t size, int (*cmp)(const void*, const 
 
 #if defined(__WATCOMC__) && defined(__386__)
   static __declspec(naked) void __watcall rotate_(char *p, char *b, char *q) { (void)p;  /* EAX. */ (void)b;  /* EDX. */  (void)q;  /* EBX. */ __asm {
-#ifdef CONFIG_MERGE_SLOW_ROTATE  /* Slower but shorter. The other one moves 4 or 2 bytes at a time, if possible. */
+#  ifdef CONFIG_MERGE_SLOW_ROTATE  /* Slower but shorter. The other one moves 4 or 2 bytes at a time, if possible. */
 		cmp eax, edx
 		je Ldone
 		cmp edx, ebx
@@ -213,7 +213,7 @@ void ip_mergesort(void *v, size_t n, size_t size, int (*cmp)(const void*, const 
 		pop ecx
 		jmp Lrevnext
     Ldone:	ret
-#else  /* else CONFIG_SLOW_ROTATE */
+#  else  /* else CONFIG_SLOW_ROTATE */
 		cmp eax, edx
 		je short Ldone
 		cmp edx, ebx
@@ -260,8 +260,9 @@ void ip_mergesort(void *v, size_t n, size_t size, int (*cmp)(const void*, const 
 		cmp edx, ebx
 		jne Lnextc4
 		jmp short Ldone_ecx
-
+		/* Fall through. */
     Ldone_ecx:	pop ecx
+
     Ldone:	ret
     Lreverses:	push 0  /* Sentinel for end of reverses. */
 		push eax  /* reverse_(eax, ebx); */
@@ -324,6 +325,195 @@ void ip_mergesort(void *v, size_t n, size_t size, int (*cmp)(const void*, const 
 		jmp Lrevnext4
 #endif  /* else CONFIG_SLOW_ROTATE */
   } }
+#elif (defined(__GNUC__) || defined(__TINYC__)) && defined(__i386__)
+/* !! TODO(pts): Segfault:`clang -m32 -fsanitize=address'; -- why no segfault with GCC? why no addr? */
+#  undef E
+#  ifdef __TINYC__
+#    define E "L"  /* The inline assembler of TCC 0.9.26 doesn't support labels starting with `.'. TODO(pts): Fix pts-tcc, add support. */
+#  else
+#    define E ".L"  /* GNU as(1) supports labels starting with `.', and it won't put them to the .o file. */
+#  endif
+#  ifdef __PCC__
+  __attribute__((__regparm__(0)))  /* PCC would ignore regparm(3). */
+#  else
+  __attribute__((__regparm__(3)))
+#  endif
+  void rotate_(char *p, char *b, char *q);  /* p == EAX; b == EDX; q == ECX. */
+  __asm__(".global rotate_; rotate_:\n"
+#  ifdef __PCC__
+    "\
+		mov 4(%esp), %eax;\
+		mov 8(%esp), %edx;\
+		mov 0xc(%esp), %ecx;\
+    "
+#  endif
+#  ifdef CONFIG_MERGE_SLOW_ROTATE  /* Slower but shorter. The other one moves 4 or 2 bytes at a time, if possible. */
+    "\
+		cmp %edx, %eax;\
+		je "E"done;\
+		cmp %ecx, %edx;\
+		je "E"done;\
+		push %edx;\
+		add %edx, %edx;\
+		sub %eax, %edx;\
+		cmp %ecx, %edx;\
+		pop %edx;\
+		jne "E"reverses;\
+		push %ebx;\
+    "E"nextb:	cmp %ecx, %edx;\
+		je "E"done_ebx;\
+		mov (%eax), %bl;\
+		xchg (%edx), %bl;\
+		mov %bl, (%eax);\
+		inc %eax;\
+		inc %edx;\
+		jmp "E"nextb;\
+    "E"done_ebx:\
+		pop %ebx;\
+		jmp "E"done;\
+    "E"reverses:\
+		pushl $0; "  /* Sentinel for end of reverses. */"\
+		push %eax; "  /* reverse_(%eax, %ecx); */"\
+		push %ecx;\
+		push %eax;  " /* reverse_(%eax, %edx); */"\
+		push %edx;\
+		push %edx; "  /* reverse_(%edx, %ecx); */"\
+		push %ecx;\
+    "E"revnext:	pop %edx;\
+		test %edx, %edx;\
+		jz "E"done;\
+		pop %eax;\
+		push %ebx;\
+		dec %edx;\
+    "E"swapb:	mov (%eax), %bl;\
+		xchg (%edx), %bl;\
+		mov %bl, (%eax);\
+		inc %eax;\
+		dec %edx;\
+		cmp %edx, %eax;\
+		jb "E"swapb;\
+		pop %ebx;\
+		jmp "E"revnext;\
+    "E"done:	ret;\
+    "
+#else  /* else CONFIG_SLOW_ROTATE */
+    "\
+		cmp %edx, %eax;\
+		je "E"done;\
+		cmp %ecx, %edx;\
+		je "E"done;\
+		push %edx;\
+		add %edx, %edx;\
+		sub %eax, %edx;\
+		cmp %ecx, %edx;\
+		pop %edx;\
+		jne "E"reverses;\
+		push %ebx;\
+		mov %ecx, %ebx;\
+		sub %edx, %ebx;\
+		test $3, %bl;\
+		jz "E"nextb4;\
+		test $1, %bl;\
+		jz "E"nextb2;\
+		\
+    "E"nextb1:	mov (%eax), %bl;\
+		xchg (%edx), %bl;\
+		mov %bl, (%eax);\
+		inc %eax;\
+		inc %edx;\
+		cmp %ecx, %edx;\
+		jne "E"nextb1;\
+		jmp "E"done_ebx;\
+		\
+    "E"nextb2:	mov (%eax), %bx;\
+		xchg (%edx), %bx;\
+		mov %bx, (%eax);\
+		inc %eax;\
+		inc %eax;\
+		inc %edx;\
+		inc %edx;\
+		cmp %ecx, %edx;\
+		jne "E"nextb2;\
+		jmp "E"done_ebx;\
+		\
+    "E"nextb4:	mov (%eax), %ebx;\
+		xchg (%edx), %ebx;\
+		mov %ebx, (%eax);\
+		add $4, %eax;\
+		add $4, %edx;\
+		cmp %ecx, %edx;\
+		jne "E"nextb4;\
+		"  /* Fall through. */"\
+    "E"done_ebx:\
+		pop %ebx;\
+		\
+    "E"done:	ret;\
+    "E"reverses:\
+		pushl $0; "  /* Sentinel for end of reverses. */"\
+		push %eax; "  /* reverse_(%eax, %ecx); */"\
+		push %ecx;\
+		push %eax; "  /* reverse_(%eax, %edx); */"\
+		push %edx;\
+		push %edx; "  /* reverse_(%edx, %ecx); */"\
+		push %ecx;\
+		sub %edx, %ecx;\
+		sub %eax, %edx;\
+		or %ecx, %edx;\
+		test $3, %dl;\
+		jz "E"revnext4;\
+		test $1, %dl;\
+		jz "E"revnext2;\
+		\
+    "E"revnext1:\
+		pop %edx;\
+		test %edx, %edx;\
+		jz "E"done;\
+		pop %eax;\
+		dec %edx;\
+    "E"swapb1:	mov (%eax), %cl;\
+		xchg (%edx), %cl;\
+		mov %cl, (%eax);\
+		inc %eax;\
+		dec %edx;\
+		cmp %edx, %eax;\
+		jb "E"swapb1;\
+		jmp "E"revnext1;\
+		\
+    "E"revnext2:\
+		pop %edx;\
+		test %edx, %edx;\
+		jz "E"done;\
+		pop %eax;\
+		dec %edx;\
+		dec %edx;\
+    "E"swapb2:	mov (%eax), %cx;\
+		xchg (%edx), %cx;\
+		mov %cx, (%eax);\
+		inc %eax;\
+		inc %eax;\
+		dec %edx;\
+		dec %edx;\
+		cmp %edx, %eax;\
+		jb "E"swapb2;\
+		jmp "E"revnext2;\
+		\
+    "E"revnext4:\
+		pop %edx;\
+		test %edx, %edx;\
+		jz "E"done;\
+		pop %eax;\
+		jmp "E"swape4;\
+    "E"swapb4:	mov (%eax), %ecx;\
+		xchg (%edx), %ecx;\
+		mov %ecx, (%eax);\
+		add $4, %eax;\
+    "E"swape4:	sub $4, %edx;\
+		cmp %edx, %eax;\
+		jb "E"swapb4;\
+		jmp "E"revnext4;\
+    "
+#  endif  /* else CONFIG_SLOW_ROTATE */
+  );
 #else
   /* swap the sequence [p,b) with [b,q). */
   static void rotate_(char *p, char *b, char *q) {
