@@ -213,7 +213,7 @@ void ip_mergesort(void *v, size_t n, size_t size, int (*cmp)(const void*, const 
 		pop ecx
 		jmp Lrevnext
     Ldone:	ret
-#  else  /* else CONFIG_SLOW_ROTATE */
+#  else  /* else CONFIG_MERGE_SLOW_ROTATE */
 		cmp eax, edx
 		je short Ldone
 		cmp edx, ebx
@@ -323,7 +323,7 @@ void ip_mergesort(void *v, size_t n, size_t size, int (*cmp)(const void*, const 
 		cmp eax, edx
 		jb Lswapc4
 		jmp Lrevnext4
-#endif  /* else CONFIG_SLOW_ROTATE */
+#endif  /* else CONFIG_MERGE_SLOW_ROTATE */
   } }
 #elif (defined(__GNUC__) || defined(__TINYC__)) && defined(__i386__)
 /* !! TODO(pts): Segfault:`clang -m32 -fsanitize=address'; -- why no segfault with GCC? why no addr? */
@@ -383,20 +383,18 @@ void ip_mergesort(void *v, size_t n, size_t size, int (*cmp)(const void*, const 
 		test %edx, %edx;\
 		jz "E"done;\
 		pop %eax;\
-		push %ebx;\
 		dec %edx;\
-    "E"swapb:	mov (%eax), %bl;\
-		xchg (%edx), %bl;\
-		mov %bl, (%eax);\
+    "E"swapb:	mov (%eax), %cl;\
+		xchg (%edx), %cl;\
+		mov %cl, (%eax);\
 		inc %eax;\
 		dec %edx;\
 		cmp %edx, %eax;\
 		jb "E"swapb;\
-		pop %ebx;\
 		jmp "E"revnext;\
     "E"done:	ret;\
     "
-#else  /* else CONFIG_SLOW_ROTATE */
+#else  /* else CONFIG_MERGE_SLOW_ROTATE */
     "\
 		cmp %edx, %eax;\
 		je "E"done;\
@@ -512,7 +510,203 @@ void ip_mergesort(void *v, size_t n, size_t size, int (*cmp)(const void*, const 
 		jb "E"swapb4;\
 		jmp "E"revnext4;\
     "
-#  endif  /* else CONFIG_SLOW_ROTATE */
+#  endif  /* else CONFIG_MERGE_SLOW_ROTATE */
+  );
+#elif (defined(__GNUC__) || defined(__TINYC__)) && (defined(__amd64__) || defined(__x86_64__))
+/* !! TODO(pts): Do we have segfault:`clang -fsanitize=address'; -- why no segfault with GCC? why no addr? */
+#  undef E
+#  ifdef __TINYC__
+#    define E "L"  /* The inline assembler of TCC 0.9.26 doesn't support labels starting with `.'. TODO(pts): Fix pts-tcc, add support. */
+#  else
+#    define E ".L"  /* GNU as(1) supports labels starting with `.', and it won't put them to the .o file. */
+#  endif
+#  ifdef __PCC__
+  __attribute__((__regparm__(0)))  /* PCC would ignore regparm(3). */
+#  else
+  __attribute__((__regparm__(3)))
+#  endif
+  void rotate_(char *p, char *b, char *q);  /* p == RDI; b == RSI; q == RDX. */
+  __asm__(".global rotate_; rotate_:\n"
+#  ifdef CONFIG_MERGE_SLOW_ROTATE  /* Slower but shorter. The other one moves 8 or 4 or 2 bytes at a time, if possible. */
+    "\
+		cmp %rsi, %rdi;\
+		je "E"done;\
+		cmp %rdx, %rsi;\
+		je "E"done;\
+		push %rsi;\
+		add %rsi, %rsi;\
+		sub %rdi, %rsi;\
+		cmp %rdx, %rsi;\
+		pop %rsi;\
+		jne "E"reverses;\
+    "E"nextb:	cmp %rdx, %rsi;\
+		je "E"done;\
+		mov (%rdi), %cl;\
+		xchg (%rsi), %cl;\
+		mov %cl, (%rdi);\
+		inc %rdi;\
+		inc %rsi;\
+		jmp "E"nextb;\
+    "E"reverses:\
+		pushq $0; "  /* Sentinel for end of reverses. */"\
+		push %rdi; "  /* reverse_(%rdi, %rdx); */"\
+		push %rdx;\
+		push %rdi;  " /* reverse_(%rdi, %rsi); */"\
+		push %rsi;\
+		push %rsi; "  /* reverse_(%rsi, %rdx); */"\
+		push %rdx;\
+    "E"revnext:	pop %rsi;\
+		test %rsi, %rsi;\
+		jz "E"done;\
+		pop %rdi;\
+		dec %rsi;\
+    "E"swapb:	mov (%rdi), %cl; "  /* !! TODO(pts): Use lodsb etc. */"\
+		xchg (%rsi), %cl;\
+		mov %cl, (%rdi);\
+		inc %rdi;\
+		dec %rsi;\
+		cmp %rsi, %rdi;\
+		jb "E"swapb;\
+		jmp "E"revnext;\
+    "E"done:	ret;\
+    "
+#else  /* else CONFIG_MERGE_SLOW_ROTATE */
+    "\
+		cmp %rsi, %rdi;\
+		je "E"done;\
+		cmp %rdx, %rsi;\
+		je "E"done;\
+		push %rsi;\
+		add %rsi, %rsi;\
+		sub %rdi, %rsi;\
+		cmp %rdx, %rsi;\
+		pop %rsi;\
+		jne "E"reverses;\
+		mov %rdx, %rcx;\
+		sub %rsi, %rcx;\
+		test $7, %cl;\
+		jz "E"nextb8;\
+		test $3, %cl;\
+		jz "E"nextb4;\
+		test $1, %cl;\
+		jz "E"nextb2;\
+		\
+    "E"nextb1:	mov (%rdi), %cl;\
+		xchg (%rsi), %cl;\
+		mov %cl, (%rdi);\
+		inc %rdi;\
+		inc %rsi;\
+		cmp %rdx, %rsi;\
+		jne "E"nextb1;\
+		jmp "E"done;\
+		\
+    "E"nextb2:	mov (%rdi), %cx;\
+		xchg (%rsi), %cx;\
+		mov %cx, (%rdi);\
+		add $2, %rdi;\
+		add $2, %rsi;\
+		cmp %rdx, %rsi;\
+		jne "E"nextb2;\
+		jmp "E"done;\
+		\
+    "E"nextb4:	mov (%rdi), %ecx;\
+		xchg (%rsi), %ecx;\
+		mov %ecx, (%rdi);\
+		add $4, %rdi;\
+		add $4, %rsi;\
+		cmp %rdx, %rsi;\
+		jne "E"nextb4;\
+		jmp "E"done;\
+		\
+    "E"nextb8:	mov (%rdi), %rcx;\
+		xchg (%rsi), %rcx;\
+		mov %rcx, (%rdi);\
+		add $8, %rdi;\
+		add $8, %rsi;\
+		cmp %rdx, %rsi;\
+		jne "E"nextb8;\
+		"  /* Fall through. */"\
+    "E"done:	ret;\
+    "E"reverses:\
+		pushq $0; "  /* Sentinel for end of reverses. */"\
+		push %rdi; "  /* reverse_(%rdi, %rdx); */"\
+		push %rdx;\
+		push %rdi; "  /* reverse_(%rdi, %rsi); */"\
+		push %rsi;\
+		push %rsi; "  /* reverse_(%rsi, %rdx); */"\
+		push %rdx;\
+		sub %rsi, %rdx;\
+		sub %rdi, %rsi;\
+		or %rsi, %rdx;\
+		test $7, %dl;\
+		jz "E"revnext8;\
+		test $3, %dl;\
+		jz "E"revnext4;\
+		test $1, %dl;\
+		jz "E"revnext2;\
+		\
+    "E"revnext1:\
+		pop %rsi;\
+		test %rsi, %rsi;\
+		jz "E"done;\
+		pop %rdi;\
+		dec %rsi;\
+    "E"swapb1:	mov (%rdi), %cl;\
+		xchg (%rsi), %cl;\
+		mov %cl, (%rdi);\
+		inc %rdi;\
+		dec %rsi;\
+		cmp %rsi, %rdi;\
+		jb "E"swapb1;\
+		jmp "E"revnext1;\
+		\
+    "E"revnext2:\
+		pop %rsi;\
+		test %rsi, %rsi;\
+		jz "E"done;\
+		pop %rdi;\
+		dec %rsi;\
+		dec %rsi;\
+    "E"swapb2:	mov (%rdi), %cx;\
+		xchg (%rsi), %cx;\
+		mov %cx, (%rdi);\
+		add $2, %rdi;\
+		sub $2, %rsi;\
+		cmp %rsi, %rdi;\
+		jb "E"swapb2;\
+		jmp "E"revnext2;\
+		\
+    "E"revnext4:\
+		pop %rsi;\
+		test %rsi, %rsi;\
+		jz "E"done;\
+		pop %rdi;\
+		jmp "E"swape4;\
+    "E"swapb4:	mov (%rdi), %ecx;\
+		xchg (%rsi), %ecx;\
+		mov %ecx, (%rdi);\
+		add $4, %rdi;\
+    "E"swape4:	sub $4, %rsi;\
+		cmp %rsi, %rdi;\
+		jb "E"swapb4;\
+		jmp "E"revnext4;\
+		\
+    "E"revnext8:\
+		pop %rsi;\
+		test %rsi, %rsi;\
+		jz "E"done;\
+		pop %rdi;\
+		jmp "E"swape8;\
+    "E"swapb8:	mov (%rdi), %rcx;\
+		xchg (%rsi), %rcx;\
+		mov %rcx, (%rdi);\
+		add $8, %rdi;\
+    "E"swape8:	sub $8, %rsi;\
+		cmp %rsi, %rdi;\
+		jb "E"swapb8;\
+		jmp "E"revnext8;\
+    "
+#  endif  /* else CONFIG_MERGE_SLOW_ROTATE */
   );
 #else
   /* swap the sequence [p,b) with [b,q). */
