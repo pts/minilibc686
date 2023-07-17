@@ -228,7 +228,18 @@ void ip_mergesort(void *v, size_t n, size_t size, int (*cmp)(const void*, const 
   /* !! TODO(pts): Use insertion sort for 2 <= n <= 16 etc. */
   size_t nb, i, idsize;
   char *vi;
-  for (nb = 1; nb < n; nb <<= 1) {
+  for (vi = v, i = 1; i < n; i += 2) {  /* Without this speed optimization, `nb = 1' should be used instead of `nb = 2' below. */
+    if (cmp(vi, vi + size) > 0) {
+      reverse_(vi, vi + size);
+      vi += size;
+      reverse_(vi, vi + size);
+      reverse_(vi - size, vi + size);
+    } else {
+      vi += size;
+    }
+    vi += size;
+  }
+  for (nb = 2; nb < n; nb <<= 1) {
     i = 0;
     vi = v;
     idsize = (nb << 1) * size;
