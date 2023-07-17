@@ -148,16 +148,22 @@ void ip_mergesort(void *v, size_t n, size_t size, int (*cmp)(const void*, const 
 #else  /* Many multiplications, 0 divisions. */
 
 /* swap the sequence [p,b) with [b,q). */
-static void rotate_(void *v, size_t np, size_t nb, size_t nq, size_t size) {
-  char *p, *b, *q;
-  if (np != nb && nb != nq) {
-    p = (char*)v + np * size;
-    b = (char*)v + nb * size;
-    q = (char*)v + nq * size;
-    /* !! TODO(pts): There is a faster algorithm using GCD. */
-    reverse_(p, b);
-    reverse_(b, q);
-    reverse_(p, q);
+static void rotate_(char *p, char *b, char *q) {
+  char c;
+  if (p != b && b != q) {
+    if (b - p == q - b) {  /* Same size: swap. */
+      /* memswap_(p, b, q - b); */
+      for (; b != q; ++p, ++b) {
+        c = *b;
+        *b = *p;
+        *p = c;
+      }
+    } else {
+      /* !! TODO(pts): There is a faster algorithm using GCD. */
+      reverse_(p, b);
+      reverse_(b, q);
+      reverse_(p, q);
+    }
   }
 }
 
@@ -170,7 +176,7 @@ static void ip_merge_(void *v, size_t nb, size_t nc, size_t size, int (*cmp)(con
   if (nb == 0 || nc == 0) return;
   if (nb + nc == 2) {
     if (cmp((char*)v + size, v) < 0) {  /* The rhucmp test checks that 0 is the only correct value here. */
-      rotate_(v, 0, 1, 2, size);
+      rotate_(v, (char*)v + size, (char*)v + (size << 1));
     }
     return;
   }
@@ -215,7 +221,9 @@ static void ip_merge_(void *v, size_t nb, size_t nc, size_t size, int (*cmp)(con
     nq = np;
     np = nr;
   }
-  rotate_(v, np, nb, nq, size);
+  if (np != nb && nb != nq) {
+    rotate_((char*)v + np * size, (char*)v + nb * size, (char*)v + nq * size);
+  }
   if ((char*)v + nr * size != r) abort();
   nr += nx;
   if ((char*)v + nr * size != r + nx * size) abort();
@@ -231,9 +239,7 @@ void ip_mergesort(void *v, size_t n, size_t size, int (*cmp)(const void*, const 
   char *vend;
   for (vi = (char*)v + size, vend = (char*)v + n * size; vi < vend; vi += size << 1) {  /* Without this speed optimization, `nb = 1' should be used instead of `nb = 2' below. */
     if (cmp(vi - size, vi) > 0) {  /* TODO(pts): Implement this with memswap. */
-      reverse_(vi - size, vi);
-      reverse_(vi, vi + size);
-      reverse_(vi - size, vi + size);
+      rotate_(vi - size, vi, vi + size);
     }
   }
   for (nb = 2; nb < n; nb <<= 1) {  /* !! TODO(pts): Use insertion sort for 2 <= n <= 16 etc. */
