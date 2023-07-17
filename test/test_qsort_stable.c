@@ -193,7 +193,7 @@ static void ip_merge_(struct merge_task *st, size_t size, int (*cmp)(const void*
     goto pop_again;
   }
   isize = nb * size;
-  /* !! TODO(pts): `goto pop_again' here if nothing to be done (cmp(v + isize - size, v + isize) <= 0. */
+  if (cmp(v + isize - size, v + isize) <= 0) goto pop_again;  /* Shortcut: nothing to do if the input is already merged. */
   is_lower = (nb > nc);
   if (is_lower) {
     np = (nb >> 1);
@@ -329,7 +329,9 @@ static int ricmp(const void *a, const void *b) {  /* Sorts descending. */
 	return *(int*)b - *(int*)a;
 }
 
+static unsigned cmp_count;
 static int rhucmp(const void *a, const void *b) {  /* Sorts descending, ignores low 16 bits. */
+	++cmp_count;
 	return (*(unsigned*)b >> 16) - (*(unsigned*)a >> 16);
 }
 
@@ -417,14 +419,32 @@ int main(int argc, char **argv) {
 		}
 	}
 
-	for (i = 0; i + 0U < sizeof(nx)/sizeof(int); ++i) {
+	for (i = 0; i + 0U < sizeof(nx)/sizeof(nx[0]); ++i) {
+		nx[i] = ~(i >> 3) << 16 | (0xffff - i);
+	}
+	cmp_count = 0;
+	ip_mergesort(nx, sizeof(nx)/sizeof(nx[0]), sizeof(nx[0]), rhucmp);
+	for (i=0; i<(int)(sizeof(nx)/sizeof(nx[0])-1); i++) {
+		if (nx[i] < nx[i+1]) {
+			FAIL("integer sort inplace merge long already_sorted");
+			for (i=0; i<(int)(sizeof(nx)/sizeof(nx[0])); i++)
+				printf("\t0x%04x\n", nx[i]);
+			break;
+		}
+	}
+	if (cmp_count != sizeof(nx)/sizeof(nx[0]) - 1) {
+		FAIL("too many comparisons for already sorted input");
+		printf("cmp_count=%d expected=%d\n", cmp_count, sizeof(nx)/sizeof(nx[0]));
+	}
+
+	for (i = 0; i + 0U < sizeof(nx)/sizeof(nx[0]); ++i) {
 		nx[i] = (i % 13) << 16 | (0xffff - i);
 	}
-	ip_mergesort(nx, sizeof(nx)/sizeof(int), sizeof(int), rhucmp);
-	for (i=0; i<(int)(sizeof(nx)/sizeof(int)-1); i++) {
+	ip_mergesort(nx, sizeof(nx)/sizeof(nx[0]), sizeof(nx[0]), rhucmp);
+	for (i=0; i<(int)(sizeof(nx)/sizeof(nx[0])-1); i++) {
 		if (nx[i] < nx[i+1]) {
 			FAIL("integer sort inplace merge long");
-			for (i=0; i<(int)(sizeof(nx)/sizeof(int)); i++)
+			for (i=0; i<(int)(sizeof(nx)/sizeof(nx[0])); i++)
 				printf("\t0x%04x\n", nx[i]);
 			break;
 		}
