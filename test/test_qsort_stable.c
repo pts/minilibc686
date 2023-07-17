@@ -9,6 +9,7 @@
  */
 
 #define _GNU_SOURCE
+#include <alloca.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -167,20 +168,32 @@ static void rotate_(char *p, char *b, char *q) {
   }
 }
 
-/* inplace merge [0,b) and [b,b+c) to [0,b+c). */
-static void ip_merge_(char *v, size_t nb, size_t nc, size_t size, int (*cmp)(const void*, const void*)) {
-  char *r, *key;
-  size_t i, isize;
-  size_t np, nq, nr, nx;
+struct merge_task { char *v; size_t nb, nc; };
+
+/* inplace all merge [0,st->nb) and [st->nb,st->b+st->c) to [0,st->b+st->c). */
+static void ip_merge_(struct merge_task *st, size_t size, int (*cmp)(const void*, const void*)) {
+  char *v, *r, *key;
+  size_t i, isize, nb, nc, np, nq, nr, nx;
   int is_lower;
-  if (nb == 0 || nc == 0) return;
+  struct merge_task *sp = st + 1;
+  /*fprintf(stderr, "MERGE sn=%d %d %d\n", (int)(sp - st), (int)sp[-1].nb, (int)sp[-1].nc);*/
+ pop_again:
+  /*fprintf(stderr, "POP_AGAIN sn=%d\n", (int)(sp - st));*/
+  if (st == sp) return;
+  v = (--sp)->v;
+  nb = sp->nb;
+  nc = sp->nc;
+ again:
+  /*fprintf(stderr, "AGAIN sn=%d %d %d\n", (int)(sp - st), nb, nc);*/
+  if (nb == 0 || nc == 0) goto pop_again;
   if (nb + nc == 2) {
     if (cmp(v + size, v) < 0) {  /* The rhucmp test checks that 0 is the only correct value here. */
       rotate_(v, v + size, v + (size << 1));
     }
-    return;
+    goto pop_again;
   }
   isize = nb * size;
+  /* !! TODO(pts): `goto pop_again' here if nothing to be done (cmp(v + isize - size, v + isize) <= 0. */
   is_lower = (nb > nc);
   if (is_lower) {
     np = (nb >> 1);
@@ -227,8 +240,15 @@ static void ip_merge_(char *v, size_t nb, size_t nc, size_t size, int (*cmp)(con
   if (v + nr * size != r) abort();
   nr += nx;
   if (v + nr * size != r + nx * size) abort();
-  ip_merge_(v, np, nr - np, size, cmp);  /* !! TODO(pts): Manual stack. What is the stack size limit? */
-  ip_merge_(v + nr * size, nq - nr, nc + nb - nq, size, cmp);  /* !! TODO(pts): Manual tail recursion. */
+  /* ip_merge_(v + nr * size, nq - nr, nc + nb - nq, size, cmp); */
+  sp->v = v + nr * size;
+  sp->nb = nq - nr;
+  sp->nc = nc + nb - nq;
+  ++sp;
+  /* ip_merge_(v, np, nr - np, size, cmp); */
+  nb = np;
+  nc = nr - np;
+  goto again;
 }
 
 /* The signature is the same as of qsort(3). */
@@ -237,23 +257,33 @@ void ip_mergesort(void *v, size_t n, size_t size, int (*cmp)(const void*, const 
   size_t nb, i, idsize;
   char *vi;
   char *vend;
+  struct merge_task *st;  /* Stack. */
   for (vi = (char*)v + size, vend = (char*)v + n * size; vi < vend; vi += size << 1) {  /* Without this speed optimization, `nb = 1' should be used instead of `nb = 2' below. */
     if (cmp(vi - size, vi) > 0) {  /* TODO(pts): Implement this with memswap. */
       rotate_(vi - size, vi, vi + size);
     }
   }
+  if (n < 2) return;
+  for (nb = 1, i = 1; nb < n; nb <<= 1, ++i) {}  /* !! TODO(pts): Use a CPU instruction to compute ceil(log2(..)). */
+  st = alloca(i * (sizeof(struct merge_task) << 1));  /* 2 * ceil(log2(n)) * sizeof(struct merge_task). That's enough, because ip_merge_ splits the larger interval to halv every 2nd time. */
   for (nb = 2; nb < n; nb <<= 1) {  /* !! TODO(pts): Use insertion sort for 2 <= n <= 16 etc. */
     i = 0;
     vi = v;
     idsize = (nb << 1) * size;
     for (;;) {
+      st->v = vi;
+      st->nb = nb;
       if (n > i + (nb << 1)) {
-        ip_merge_(vi, nb, nb, size, cmp);
+        st->nc = nb;
         i += nb << 1;
         vi += idsize;
+       do_merge:
+        ip_merge_(st, size, cmp);
+        if (!vi) break;
       } else if (n > i + nb) {
-        ip_merge_(vi, nb, n - i - nb, size, cmp);
-        break;
+        st->nc = n - i - nb;
+        vi = NULL;
+        goto do_merge;
       } else {
         break;
       }
