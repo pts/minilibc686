@@ -22,9 +22,17 @@
  * Number of comparisons and number of item copies is <= constant * n *
  * log2(n) * log2(n).
  *
- * Based on __merge_without_buffer https://github.com/gcc-mirror/gcc/blob/9ed4fcfe47f28b36c73d74109898514ef4da00fb/libstdc%2B%2B-v3/include/bits/stl_algo.h#L2426
- * Based on ip_merge in https://stackoverflow.com/a/22839426/97248
- * !! TODO(pts): Compare it with the Java version: http://thomas.baudel.name/Visualisation/VisuTri/inplacestablesort.html
+ * Based on ip_merge (C, simplest) at https://stackoverflow.com/a/22839426/97248
+ * Based on __merge_without_buffer (C++) at https://github.com/gcc-mirror/gcc/blob/9ed4fcfe47f28b36c73d74109898514ef4da00fb/libstdc%2B%2B-v3/include/bits/stl_algo.h#L2426
+ * Based on merge (Java) at http://thomas.baudel.name/Visualisation/VisuTri/inplacestablesort.html
+ * Different from the adjacent-same-size-swapping algorithm in: https://xinok.wordpress.com/2014/08/17/in-place-merge-sort-demystified-2/
+ * Different from the Practical In-Place Merging algorithm (https://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.88.1155&rep=rep1&type=pdf) also explained in a C++ code comment in https://keithschwarz.com/interesting/code/?dir=inplace-merge
+ * Different from imsort based in Practical In-Place Merging, implemented in C: https://github.com/liuxinyu95/AlgoXY/blob/4488cd0654ccd2425b3cc0a34d2996b61025c372/sorting/merge-sort/src/mergesort.c#L81
+ * Different from the non-stable algorithm in https://www.geeksforgeeks.org/in-place-merge-sort/
+ * Different from block merge sort explained in Ratio based stable in-place merging article: https://github.com/BonzaiThePenguin/WikiSort/blob/master/tamc2008.pdf
+ * Different from WikiSort (based on Ratio based stable in-place merging), uses a cache buffer by default: https://github.com/BonzaiThePenguin/WikiSort
+ *
+ * TODO(pts): Which one is faster: Practical In-Place Merging; Ratio based stable in-place merging; this?
  */
 
 #if defined(__WATCOMC__) && defined(__386__)
