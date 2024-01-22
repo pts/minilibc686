@@ -86,7 +86,7 @@ mini_qsort_fast:  ; void mini_qsort_fast(void *base, size_t n, size_t size, int 
 		je .7
 .10:		mov edi, [ebp-0x10]
 .13:		mov esi, edi
-		sub esi, [ebp+0x8]
+.13b:		sub esi, [ebp+0x8]
 		add esi, ebx
 		add esi, edi
 		cmp esi, [ebp-0x14]
@@ -118,9 +118,9 @@ mini_qsort_fast:  ; void mini_qsort_fast(void *base, size_t n, size_t size, int 
 		mov eax, edi
 		mov ecx, ebx
 		mov edx, esi
-		mov edi, esi
 		call mini_memswap_RP3
-		jmp short .13
+		mov edi, esi
+		jmp short .13b
 .16:		mov ecx, ebx
 		mov edx, edi
 		mov eax, edi
