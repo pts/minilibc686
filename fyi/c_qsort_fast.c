@@ -15,7 +15,8 @@ static void memswap(void *a, void *b, size_t size) {
 }
 
 /* Same signature as qsort(3), but it implements the fast-in-worst-case
- * heapsort. It is not stable.
+ * heapsort. It is not stable. For a stable but very slow
+ * qsort(3) implementation, see fyi/c_qsort.c.
  *
  * Worst case execution time: O(n*log(n)): less than 3*n*log_2(n)
  * comparisons and swaps. (The number of swaps is usually a bit smaller than

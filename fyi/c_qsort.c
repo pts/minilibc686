@@ -8,7 +8,7 @@ typedef unsigned size_t;
 
 /* Same signature as qsort(3), but it implements the slower insertion sort
  * instead in compact code. It is stable, but very slow. For a faster
- * qsort(3) implementation, see sort_fast.c.
+ * qsort(3) implementation, see fyi/c_qsort_fast.c.
  *
  * Worst case number of comparisons and swaps: n*(n-1)/2. Best case is when
  * the input is sorted: n-1 comparisons and 0 swaps.
