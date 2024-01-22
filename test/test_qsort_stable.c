@@ -33,6 +33,61 @@
  * Different from WikiSort (based on Ratio based stable in-place merging), uses a cache buffer by default: https://github.com/BonzaiThePenguin/WikiSort
  *
  * TODO(pts): Which one is faster: Practical In-Place Merging; Ratio based stable in-place merging; this?
+ *
+ * It works like this:
+ *
+ * * The input is an array of values (A...C) split into to two sorted
+ *   subarrays (A...B and B...C).
+ * * The output is the original array (A...C), sorted.
+ * * Sorting is done in-place, recursively. In total, sorting uses only a
+ *   constant bytes of memory in local variables, with a stack depth of at
+ *   most constant * log2(n).
+ * * Steps:
+ *   * It finds the halfway value of the longer subarray (let it be
+ *     B...C, without loss of generality) within the shorter subarray
+ *     (A...B) using binary search, creating 4 sorted subarrays:
+ *     A...P, P...B, B...Q, Q...C. Here Q is halfway between B and C, and
+ #     B-A <= C-B.
+ *   * It swaps (rotates) P...B and B...Q in-place, creating 4 sorted subarrays:
+ *     A...P, P...D, D...Q, Q...C, where D-P == Q-B and Q-D == B-P.
+ *   * Recursively, it merges A...P and P...D in-place to A...D.
+ *   * Recursively, it merges D...Q and Q...C in-place to D...C.
+ * * For correctness, we have to prove that A...C is sorted in the end.
+ *   After the recursive merges, the subarrays A...D and D...C are sorted.
+ *   All remaining to prove is that to prove that values in A...D are at most
+ *   the values in D...C. For that, we prove these before-swap:
+ *   * Values in A...P are at most the values in P...B. That's true because
+ *     A...B is sorted in the input.
+ *   * Values in B...Q are at most the values in P...B. That's because of
+ *     the binary search: the value near P is the same as the value near Q.
+ *   * Values in A...P are at most the values in Q...C. That's because of
+ *     the binary search: the value near P is the same as the value near Q.
+ *   * Values in B...Q are at most the values in Q...C. That's true because
+ *     B...C is sorted in the input.
+ * * Subarray sizes of calls:
+ *   * Input: n1 and n2, where 0 <= n1 <= n2.
+ *   * First recursive call: s and floor(n2/2), where 0 <= s <= n1 <= n2.
+ *   * Second recursive call: n1-s and ceil(n2/2).
+ * * Proof that stack depth is at most 2 * ceil(log2(n2)), for the memory
+ *   upper bound:
+ *   * It's enough to prove that in 1 and 2 recursion depth, n2 (size of the
+ *     longer input subarray) is at most ceil(n2/2).
+ *   * Let's observe that both recursive calls on level 1 have an input of at
+ *     most n1 elements and another input of at most ceil(n2/2) elements.
+ *   * If the first input size f of a recursive call on level 1 is at
+ *     most ceil(n2/2), then one recursive calls on level 2 have an input
+ *     of at most f elements and another input of at most ceil(ceil(n2/2)/2)
+ *     elements. Thus one input has at most f <= ceil(n2/2) elements, and
+ *     another input has at most ceil(ceil(n2/2)/2) <= ceil(n2/2) elements,
+ *     thus both have at most ceil(n2/2) elements, and we are done.
+ *   * If the first input size f of a recursive call on level 1 is more
+ *     than ceil(n2/2), then both recursive calls on level 2 have an input
+ *     of at most ceil(n2/2) elements and another input of at most ceil(f/2)
+ *     elements, and since f <= n1 <= n2, ceil(f/2) <= ceil(n2/2),
+ *     thus both have at most ceil(n2/2) elements, and we are done.
+ * * We still need to prove that execution time is at most constant * n *
+ *   log2(n) log2(n) for each operation type (comparisons, copies etc.).
+ *   TODO(pts): Write this.
  */
 
 #if defined(__WATCOMC__) && defined(__386__)
