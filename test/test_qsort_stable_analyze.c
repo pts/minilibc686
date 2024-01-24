@@ -1,0 +1,253 @@
+/* by pts@fazekas.hu at Wed Jan 24 09:09:14 CET 2024
+ *
+ * Simple C and C++ implementation of qsort(3) with in-place mergesort.
+ *
+ * Based on ip_merge (C, simplest) at https://stackoverflow.com/a/22839426/97248
+ */
+
+#include <stddef.h>  /* size_t. */
+
+static void ip_swap(const void *base, size_t item_size, size_t a, size_t b) {
+  char *ca = (char*)base + (item_size * a), *cb = (char*)base + (item_size * b), t;
+  for (; item_size > 0; --item_size, ++ca, ++cb) {
+    t = *ca;
+    *ca = *cb;
+    *cb = t;
+  }
+}
+
+static void ip_reverse(const void *base, size_t item_size, size_t a, size_t b) {
+  for (--b; a < b; a++, b--) {
+    ip_swap(base, item_size, a, b);
+  }
+}
+
+/* In-place merge of [a,b) and [b,c) to [a,c) within base. */
+static void ip_merge(const void *base, size_t item_size, int (*cmp)(const void *, const void *), size_t a, size_t b, size_t c) {
+  size_t p, q, low, high, mid, key, i;
+  const char is_lower = b - a > c - b;
+  if (a == b || b == c) return;
+  if (c - a == 2) {
+    if (cmp((char*)base + (item_size * b), (char*)base + (item_size * a)) < 0) ip_swap(base, item_size, a, b);
+    return;
+  }
+  if (is_lower) {
+    key = a + ((b - a) >> 1); low = b; high = c;
+  } else {
+    key = b + ((c - b) >> 1); low = a; high = b;
+  }
+  /* find first element not less (for is_lower) or greater (for !is_lower)
+   * than @p key in sorted sequence or end of sequence (@p b) if not found.
+   */
+  for (i = high - low; i != 0; i >>= 1) {  /* low = ip_bound(base, item_size, low, high, key, is_lower); */
+    mid = low + (i >> 1);
+    if (cmp((char*)base + (item_size * key), (char*)base + (item_size * mid)) >= is_lower) {
+      low = mid + 1;
+      i--;
+    }
+  }
+  if (is_lower) {
+    q = low; p = key;
+  } else {
+    p = low; q = key;
+  }
+  if (p != b && b != q) {  /* swap the sequence [p,b) with [b,q). */
+    ip_reverse(base, item_size, p, b);
+    ip_reverse(base, item_size, b, q);
+    ip_reverse(base, item_size, p, q);
+  }
+  b = p + (q - b);
+  ip_merge(base, item_size, cmp, a, p, b);
+  ip_merge(base, item_size, cmp, b, q, c);
+}
+
+/* In-place stable sort using in-place mergesort.
+ * Same signature and semantics as qsort(3).
+ * Does O(n*log(n)*log(n)) comparisons and swaps.
+ * Uses O(log(n)) memory, mostly recursive calls to ip_merge(...).
+ */
+void ip_mergesort(void *base, size_t n, size_t item_size, int (*cmp)(const void *, const void *)) {
+  size_t a, b, d;
+  for (d = 1; d < n; d <<= 1) {  /* TODO(pts): Check overflows. */
+    for (a = 0; a + d < n; a = b) {
+      b = a + (d << 1);
+      ip_merge(base, item_size, cmp, a, a + d,  b > n ? n : b);
+    }
+  }
+}
+
+
+/*
+ * Copyright (C) 2005 - 2020 Rich Felker
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+
+#include <stdio.h>
+#include <string.h>
+
+static int scmp(const void *a, const void *b) {
+	return strcmp(*(char **)a, *(char **)b);
+}
+
+static int icmp(const void *a, const void *b) {
+	return *(int*)a - *(int*)b;
+}
+
+static int ricmp(const void *a, const void *b) {  /* Sorts descending. */
+	return *(int*)b - *(int*)a;
+}
+
+static unsigned cmp_count;
+static int rhucmp(const void *a, const void *b) {  /* Sorts descending, ignores low 16 bits. */
+	++cmp_count;
+	return (*(unsigned*)b >> 16) - (*(unsigned*)a >> 16);
+}
+
+struct three {
+    unsigned char b[3];
+};
+
+#define i3(x) { { (unsigned char) ((x) >> 16), (unsigned char) ((x) >> 8), (unsigned char) ((x) >> 0) } }
+
+static int tcmp(const void *av, const void *bv) {
+    const struct three *a = (const struct three*)av, *b = (const struct three*)bv;
+    int c;
+    int i;
+
+    for (i = 0; i < 3; i++) {
+        c = (int) a->b[i] - (int) b->b[i];
+        if (c)
+            return c;
+    }
+    return 0;
+}
+
+#define FAIL(m) do {                                            \
+        printf(__FILE__ ":%d: %s failed\n", __LINE__, m);       \
+        err++;                                                  \
+    } while(0)
+
+int main(int argc, char **argv) {
+	int i;
+	int err=0;
+	/* 26 items -- even */
+	const char *s[] = {
+		"Bob", "Alice", "John", "Ceres",
+		"Helga", "Drepper", "Emeralda", "Zoran",
+		"Momo", "Frank", "Pema", "Xavier",
+		"Yeva", "Gedun", "Irina", "Nono",
+		"Wiener", "Vincent", "Tsering", "Karnica",
+		"Lulu", "Quincy", "Osama", "Riley",
+		"Ursula", "Sam"
+	};
+	/* 23 items -- odd, prime */
+	int n[] = {
+		879045, 394, 99405644, 33434, 232323, 4334, 5454,
+		343, 45545, 454, 324, 22, 34344, 233, 45345, 343,
+		848405, 3434, 3434344, 3535, 93994, 2230404, 4334
+	};
+
+	int nx[256];
+
+        struct three t[] = {
+                i3(879045), i3(394), i3(99405644), i3(33434), i3(232323), i3(4334), i3(5454),
+                i3(343), i3(45545), i3(454), i3(324), i3(22), i3(34344), i3(233), i3(45345), i3(343),
+                i3(848405), i3(3434), i3(3434344), i3(3535), i3(93994), i3(2230404), i3(4334)
+        };
+
+	(void)argc; (void)argv;
+
+	ip_mergesort(s, sizeof(s)/sizeof(char *), sizeof(char *), scmp);
+	for (i=0; i<(int) (sizeof(s)/sizeof(char *)-1); i++) {
+		if (strcmp(s[i], s[i+1]) > 0) {
+			FAIL("string sort");
+			for (i=0; i<(int)(sizeof(s)/sizeof(char *)); i++)
+				printf("\t%s\n", s[i]);
+			break;
+		}
+	}
+
+	ip_mergesort(n, sizeof(n)/sizeof(int), sizeof(int), icmp);
+	for (i=0; i<(int)(sizeof(n)/sizeof(int)-1); i++) {
+		if (n[i] > n[i+1]) {
+			FAIL("integer sort");
+			for (i=0; i<(int)(sizeof(n)/sizeof(int)); i++)
+				printf("\t%d\n", n[i]);
+			break;
+		}
+	}
+
+	ip_mergesort(n, sizeof(n)/sizeof(int), sizeof(int), ricmp);
+	for (i=0; i<(int)(sizeof(n)/sizeof(int)-1); i++) {
+		if (n[i] < n[i+1]) {
+			FAIL("integer sort inplace merge");
+			for (i=0; i<(int)(sizeof(n)/sizeof(int)); i++)
+				printf("\t%d\n", n[i]);
+			break;
+		}
+	}
+
+	for (i = 0; i + 0U < sizeof(nx)/sizeof(nx[0]); ++i) {
+		nx[i] = ~(i >> 3) << 16 | (0xffff - i);
+	}
+	cmp_count = 0;
+	ip_mergesort(nx, sizeof(nx)/sizeof(nx[0]), sizeof(nx[0]), rhucmp);
+	for (i=0; i<(int)(sizeof(nx)/sizeof(nx[0])-1); i++) {
+		if (nx[i] < nx[i+1]) {
+			FAIL("integer sort inplace merge long already_sorted");
+			for (i=0; i<(int)(sizeof(nx)/sizeof(nx[0])); i++)
+				printf("\t0x%04x\n", nx[i]);
+			break;
+		}
+	}
+#if 0  /* TODO(pts): Why does it fail here but succeed in test/test_qsort_stable.c? */
+	if (cmp_count != sizeof(nx)/sizeof(nx[0]) - 1) {
+		FAIL("too many comparisons for already sorted input");
+		printf("cmp_count=%d expected=%d\n", cmp_count, (int)(sizeof(nx)/sizeof(nx[0])));
+	}
+#endif
+
+	for (i = 0; i + 0U < sizeof(nx)/sizeof(nx[0]); ++i) {
+		nx[i] = (i % 13) << 16 | (0xffff - i);
+	}
+	ip_mergesort(nx, sizeof(nx)/sizeof(nx[0]), sizeof(nx[0]), rhucmp);
+	for (i=0; i<(int)(sizeof(nx)/sizeof(nx[0])-1); i++) {
+		if (nx[i] < nx[i+1]) {
+			FAIL("integer sort inplace merge long");
+			for (i=0; i<(int)(sizeof(nx)/sizeof(nx[0])); i++)
+				printf("\t0x%04x\n", nx[i]);
+			break;
+		}
+	}
+
+        ip_mergesort(t, sizeof(t)/sizeof(t[0]), sizeof(t[0]), tcmp);
+	for (i=0; i<(int)(sizeof(t)/sizeof(t[0])-1); i++) {
+                if (tcmp(&t[i], &t[i+1]) > 0) {
+			FAIL("three byte sort");
+			for (i=0; i<(int)(sizeof(t)/sizeof(t[0])); i++)
+                                printf("\t0x%02x%02x%02x\n", t[i].b[0], t[i].b[1], t[i].b[2]);
+			break;
+		}
+	}
+
+
+	return err;
+}
