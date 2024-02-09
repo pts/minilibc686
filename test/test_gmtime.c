@@ -12,7 +12,7 @@ extern time_t mini_timegm(const struct tm *tm);  /* Function under test. */
 typedef char static_assert_int_is_at_least_32_bits[sizeof(int) >= 4];
 typedef char static_assert_time_t_is_signed[(time_t)-1 < 0 ? 1 : -1];
 
-/* This is reference implementation (without optimizations) works, and
+/* This reference implementation (without optimizations) works, and
  * doesn't overflow for any sizeof(time_t). It checks for overflow/underflow
  * in tm->tm_year output. Other than that, it never overflows or underflows.
  * It assumes that that time_t is signed.
@@ -88,19 +88,20 @@ struct tm *reference_gmtime_r(const time_t *timep, struct tm *tm) {
  *
  * This is not a standard C or POSIX function.
  *
- * This is reference implementation (without optimizations)
- * works, and doesn't overflow for any sizeof(time_t),
- * as long as the result fits. It doesn't check for overflow/underflow.
- * It assumes that that time_t is signed.
+ * This reference implementation (without optimizations) works, and doesn't
+ * overflow for any sizeof(time_t), as long as the result fits. It doesn't
+ * check for overflow/underflow. It assumes that that time_t is signed.
  *
  * If tm->yday >= 0, this implements the POSIX formula
  * (http://pubs.opengroup.org/onlinepubs/9699919799/basedefs/V1_chap04.html#tag_04_15)
- * for all time_t values, no matter the size, as long as it
- * overflow or underflow. The formula is: tm_sec + tm_min*60 + tm_hour*3600
- * + tm_yday*86400 + (tm_year-70)*31536000 + ((tm_year-69)/4)*86400 -
+ * for all time_t values, no matter the size, as long as it doesn't overflow
+ * or underflow. The formula is: tm_sec + tm_min*60 + tm_hour*3600 +
+ * tm_yday*86400 + (tm_year-70)*31536000 + ((tm_year-69)/4)*86400 -
  * ((tm_year-1)/100)*86400 + ((tm_year+299)/400)*86400.
  *
- * It uses tm->tm_mon and tm->tm_mday iff tm->tm_yday < 0.
+ * If tm->tm_yday is >=0, then it uses tm->tm_yday, and it ignores
+ * tm->tm_mon and tm->tm_mday, otherwise it uses tm->tm_mon and tm->tm_mday,
+ * and it ignores iff tm->tm_yday.
  */
 time_t reference_timegm(const struct tm *tm) {
   int year = tm->tm_year + 1900;
