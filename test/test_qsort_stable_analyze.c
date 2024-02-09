@@ -7,6 +7,7 @@
 
 #include <stddef.h>  /* size_t. */
 
+/* 0 comparisons, 1 (item) swap. */
 static void ip_swap(const void *base, size_t item_size, size_t a, size_t b) {
   char *ca = (char*)base + (item_size * a), *cb = (char*)base + (item_size * b), t;
   for (; item_size > 0; --item_size, ++ca, ++cb) {
@@ -16,6 +17,7 @@ static void ip_swap(const void *base, size_t item_size, size_t a, size_t b) {
   }
 }
 
+/* 0 comparisons, (b-a)//2 swaps. */
 static void ip_reverse(const void *base, size_t item_size, size_t a, size_t b) {
   for (--b; a < b; a++, b--) {
     ip_swap(base, item_size, a, b);
@@ -28,7 +30,9 @@ static void ip_merge(const void *base, size_t item_size, int (*cmp)(const void *
   const char is_lower = b - a > c - b;
   if (a == b || b == c) return;
   if (c - a == 2) {
-    if (cmp((char*)base + (item_size * b), (char*)base + (item_size * a)) < 0) ip_swap(base, item_size, a, b);
+    if (cmp((char*)base + (item_size * b), (char*)base + (item_size * a)) < 0) {  /* 1 comparison. */
+      ip_swap(base, item_size, a, b);  /* 1 swap. */
+    }
     return;
   }
   if (is_lower) {
@@ -36,8 +40,9 @@ static void ip_merge(const void *base, size_t item_size, int (*cmp)(const void *
   } else {
     key = b + ((c - b) >> 1); low = a; high = b;
   }
-  /* find first element not less (for is_lower) or greater (for !is_lower)
-   * than @p key in sorted sequence or end of sequence (@p b) if not found.
+  /* Finds first element not less (for is_lower) or greater (for !is_lower)
+   * than key in sorted sequence [low,high) or end of sequence (high) if not found.
+   * ceil(log2(high-low+1)) comparisons, which is == ceil(log2(min(b-a,c-b)+1)) <= ceil(log2((c-a)//2+1)).
    */
   for (i = high - low; i != 0; i >>= 1) {  /* low = ip_bound(base, item_size, low, high, key, is_lower); */
     mid = low + (i >> 1);
@@ -51,15 +56,34 @@ static void ip_merge(const void *base, size_t item_size, int (*cmp)(const void *
   } else {
     p = low; q = key;
   }
-  if (p != b && b != q) {  /* swap the sequence [p,b) with [b,q). */
+  /* Let t be the total number of items in [p,b) and [b,q), i.e. t == (b-p)+(q-b) == q-p.
+   *
+   * If is_lower, then t == (b-key)+(q-b) == q-key <= c-key == c-a-(b-a)//2 == (c-a)-(b-a)//2 == -(a+a-c-c+b-a)//2 == -(b-c+a-c)//2 == ceil((c-b+c-a)/2) <= ceil((c-a)//2+(c-a))/2 <= ceil((c-a)*3/4).
+   * otherwise         t == (b-p)+(key-b) == key-p <= key-a == b+(c-b)//2-a == (b-a)+(c-b)//2 ==  (b+b-a-a+c-b)//2 ==  (b-a+c-a)//2 <= ((c-a)//2+(c-a))//2 == (c-a)*3//4.
+   *
+   * If is_lower, then t == (b-key)+(q-b) == q-key >= b-key == b-a-(b-a)//2 == ceil((b-a)/2) >= ceil((c-a)/4).
+   * otherwise         t == (b-p)+(key-b) == key-p >= key-b == b+(c-b)//2-b == (c-b)//2 >= (c-a)//4.
+   *
+   * Thus we have (c-a)//4 <= t <= ceil((c-a)*3/4), no matter the value of is_lower.
+   */
+  if (p != b && b != q) {  /* swap adjacent sequences [p,b) and [b,q). */
+    /* Let's count the total number of swaps in the 3 ip_reverse(...) calls below: (b-p)//2 + (q-b)//2 + (q-p)//2 <= (b-p+q-b+q-p)//2 == q-p == (b-p)+(q-b) == t. */
     ip_reverse(base, item_size, p, b);
     ip_reverse(base, item_size, b, q);
     ip_reverse(base, item_size, p, q);
   }
-  b = p + (q - b);
+  b = p + (q - b);  /* Sets b_new. */
+  /* Let s be the number of items in the 1st recursive ip_merge call, i.e. b_new-a.
+   * Similarly to the proof above for t, it's possible to prove that
+   * (c-a)//4 <= s <= ceil((c-a)*3/4), no matter the value of is_lower.
+   */
   ip_merge(base, item_size, cmp, a, p, b);
   ip_merge(base, item_size, cmp, b, q, c);
 }
+
+/* !! ceil
+ * r*n1*log(n1) + r*n2*log(n2) ...
+ */
 
 /* In-place stable sort using in-place mergesort.
  * Same signature and semantics as qsort(3).
