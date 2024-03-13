@@ -159,15 +159,6 @@ def calct1(n, _cache=[0, 0, 1]):
   return _cache[n]
 
 
-def calct2(n, _cache=[0, 0, 1]):
-  if n < 0:
-    raise ValueError
-  while len(_cache) <= n:
-    nn = len(_cache)
-    _cache.append(((nn * 3 + 3) >> 2) + (_cache[nn - ((nn + 1) >> 2)]) << 1)
-  return _cache[n]
-
-
 def calcs1(n, _cache=[0, 0]):
   """Returns upper bound on maximum number of swaps in an in-place mergesort of size n."""
   if n < 0:
@@ -226,12 +217,6 @@ def main(argv):
         maxr1 = r1
         print (n, t1, u1, r1)  # r1 seems to be limited.
       assert (n * 3 + 3) >> 2 <= n * 76 // 100
-  if 0:
-    print 'CALCT2:', [calct2(n) for n in xrange(13)]
-    for n in xrange(2, 4000):
-      t2 = calct2(n)
-      u2 = n * (math.log(n) / math.log(2))
-      print (n, t2, u2, t2 / u2)  # t2 / u2 doesn't seem to be limited.
   print 'CALCS1:', [calcs1(n) for n in xrange(33)]
   assert [calcs1(n) for n in xrange(33)] == [0, 0, 1, 5, 9, 20, 26, 32, 41, 67, 74, 82, 89, 107, 118, 128, 140, 206, 213, 222, 230, 245, 260, 272, 287, 319, 331, 342, 353, 381, 399, 415, 433]
   if 1:
