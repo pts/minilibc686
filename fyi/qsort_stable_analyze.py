@@ -1,8 +1,98 @@
 #! /usr/bin/python
 # by pts@fazekas.hu at Mon Jan 22 15:55:07 CET 2024
 
+import math
 import sys
 
+
+# n1 := len(left) == b - a.
+# n2 := len(right) == c - b.
+# n := n1 + n2 == (b - a) + (c - b) == c - a.
+# is_lower := (n1 > n2) == b - a > c -b.
+# v := ceil((c-a)*3/4) == ceil(n*3/4).
+#
+# We focus on n1 >= 1 and n2 >= 1 case (thus n >= 2). Smaller inputs are
+# trivial.
+#
+# We analyze the n1 <= n2 case, same is !is_lower, same as n1 <= n // 2,
+# same as n2 >= ceil(n/2). The other one is symmetrical.
+#
+# [b,c) is split to two almost equal halves: [b,q) and [q,b), where q
+# := b + ((c - b) // 2). (q is same as *key*)
+#
+# The binary search finds data[q] within [a,b), the result is named p (same
+# as *low*). Thus a <= p <= b.
+#
+# The block swap swaps the blocks [p,b) and [b,q). If one of the blocks are
+# empty, then it's 0 swaps. We analyze only the nonempty case (b > q and q >
+# b).
+#
+# t := (b - p) + (q - b), the total number number of items in the block swap.
+#
+# t <= (b-a) + (c-b)//2 == (2*b-2*a+c-b)//2 ==
+# ((b-a)+(c-a))//2 <= ((c-a)//2+(c-a))//2 == (c-a)*3//4 <= ceil((c-a)*3/4)
+# == v. The last `ceil' is needed only in the n2 > n1 case.
+#
+# The block swap consists of 3 reverses of size b - p, q - b, q - p
+# each. A reverse of size r is at most r // 2 swaps, thus the total number
+# of swaps is at most (b-p)//2 + (q-b)//2 + (q-p)//2 <= (b-p+q-b+q-p)//2 ==
+# q-p == (b-p) + (q-b) == t <= v.
+#
+# First recursive call: (a, p, p+(q-b)), total number of items: nr1 := s := (p-a) + (q-b).
+# !! Prove: n//4 <= nr1 <= v.
+# nr1 == (p-a) + (q-b) >= q-b == (c-b)//2 == n2//2 >= ceil(n/2)//2 == (n+1)//4.  !! Is this symmetrical?
+#
+# Second recursive call: (p+(q-b), q, c), total number of items: nr2 := (q-p) + (q-b) + (c-q) == (q-p) + (c-b).
+# !! Prove: n//4 <= nr2 <= v.
+#
+# x := min(nr1_min, nr2_min) == (n+1)//4. !! Prove it. For nr1: 
+#
+# y := n-x
+#
+# T(n) := maximum total number of swaps for an in-place merge of total size n.
+#
+# Theorem (!! prove it): T(x) + T(n-x) <= T(n//2) + T(ceil(n/2)).  !!! This is incorrect, it should be the other way round.
+#
+# If n <= 1: T(n) == 0.
+# If n == 2: T(n) == 1.
+# If n > 2: T(n) <= v(n) + T(x(n)) + T(y(n))
+
+
+# n   v  x  y  T(n)<=
+#  0  -  -  -   0
+#  1  -  -  -   0
+#  2  -  -  -   1
+#  3  3  1  2   4 == 3+T(1)+T(2)
+#  4  3  1  3   5 == 3+T(2)+T(2)
+#  5  4  1  4   9 == 4+T(2)+T(3)
+#  6  5  1  5  13 == 5+T(3)+T(3)
+#  7  6  2  5  15 == 6+T(3)+T(4)
+#  8  6  2  6  16 == 6+T(4)+T(4)
+#  9  7  2  7  21 == 7+T(4)+T(5)
+# 10  8  2  8  26 == 8+T(5)+T(5)
+# 11  9  3  8  31 == 9+T(5)+T(6)
+# 12  9  3  9  35 == 9+T(6)+T(6)
+
+
+def calct1(n, _cache=[0, 0, 1]):
+  if n < 0:
+    raise ValueError
+  while len(_cache) <= n:
+    nn = len(_cache)
+    _cache.append(((nn * 3 + 3) >> 2) + _cache[nn >> 1] + _cache[(nn + 1) >> 1])
+  return _cache[n]
+
+
+def main(argv):
+  print 'CALC1:', [calct1(n) for n in xrange(13)]
+  assert [calct1(n) for n in xrange(13)] == [0, 0, 1, 4, 5, 9, 13, 15, 16, 21, 26, 31, 35]
+  for n in xrange(2, 40):
+    t1 = calct1(n)
+    u1 = n * (math.log(n) / math.log(2)) # ** 2
+    print (n, t1, u1, t1 / u1)
+
+
+# ---
 
 def add(logd, key, delta=1):
   logd[key] = logd.get(key, 0) + delta
@@ -31,36 +121,47 @@ def qsort_copy(n2, logd):
       qsort_copy(n2h, logd)
 
 
-# 2: rotate(1, 1) == swap
-# 3 == 1 + 2 == 1 + 2: rotate(1, 1) == swap
-# 4 == 1 + 3 == 1 + 3: rotate(2, 1)
-# 4 == 2 + 2 == 1 + 3
-# 5 == 1 + 4 == 2 + 3
-# 5 == 2 + 3 == 1 + 4
-# 6 == 1 + 5 == 2 + 4
-# 6 == 2 + 4 == 2 + 4
-# 6 == 3 + 3 == 1 + 5
-# 7 == 1 + 6 == 3 + 4
-# 7 == 2 + 5 == 4 + 3
-# 7 == 3 + 4 == 2 + 5
-# 8 == 1 + 7 == 3 + 5
-# 8 == 2 + 6 == 3 + 5
-# 8 == 3 + 5 == 2 + 6
-# 8 == 3 + 5 == 2 + 6
-# 9 == 1 + 8 == 4 + 5
-# 9 == 2 + 7 == 3 + 6
-# 9 == 3 + 6 == 3 + 6
-# 9 == 4 + 5 == 2 + 7
-# 10 == 1 + 9 == 4 + 6
-# 10 == 2 + 8 == 4 + 6
-# 10 == 3 + 7 == 3 + 7
-# 10 == 4 + 6 == 3 + 7
-# 10 == 5 + 5 == 2 + 8
-# 11 == 1 + 10 == 5 + 6
-# 11 == 2 + 9 == 4 + 7
-# 11 == 3 + 8 == 4 + 7
-# 11 == 4 + 7 == 3 + 8
-# 11 == 5 + 6 == 3 + 8
+# 
+#
+# n   n1  n2  v  b-p q-b
+#  0  ------
+#  1  ------
+#  2   1   1           rotate(1, 1) == swap
+#  3   1   2    1 + 2: rotate(1, 1)  swap
+#  4   1   3    1 + 3: rotate(2, 1)
+#  4   2   2    1 + 3
+#  5   1   4    2 + 3
+#  5   2   3    1 + 4
+#  6   1   5    2 + 4
+#  6   2   4    2 + 4
+#  6   3   3    1 + 5
+#  7   1   6    3 + 4
+#  7   2   5    4 + 3
+#  7   3   4    2 + 5
+#  8   1   7    3 + 5
+#  8   2   6    3 + 5
+#  8   3   5    2 + 6
+#  8   4   4
+#  9   1   8    4 + 5
+#  9   2   7    3 + 6
+#  9   3   6    3 + 6
+#  9   4   5    2 + 7
+# 10   1   9    4 + 6
+# 10   2   8    4 + 6
+# 10   3   7    3 + 7
+# 10   4   6    3 + 7
+# 10   5   5    2 + 8
+# 11   1  10    5 + 6
+# 11   2   9    4 + 7
+# 11   3   8    4 + 7
+# 11   4   7    3 + 8
+# 11   5   6    3 + 8
+# 12   1  11
+# 12   2  10
+# 12   3   9
+# 12   4   8
+# 12   5   7
+# 12   6   6
 #
 # f(11) == 3, f(7) == 2, f(3) == 1; f(n) == (n + 1) >> 2
 def qsort_both(n, logd):
@@ -105,9 +206,7 @@ def qsort_both(n, logd):
 #
 #
 
-
-
-def main(argv):
+def old_main(argv):
   logd = {}
   qsort_depth(256, logd)
   print sorted(logd.iteritems())
@@ -135,8 +234,6 @@ def main(argv):
   for n1 in xrange(1, 30):
     n2 = 30 - n1
     print (n1, n2, n1 * math.log(n1) + n2 * math.log(n2))
-
-
 
 
 if __name__ == '__main__':
