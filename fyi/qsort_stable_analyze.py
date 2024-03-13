@@ -75,6 +75,26 @@ import sys
 # 11  9  3  8  36 == 9+T(3)+T(8)
 # 12  9  3  9  39 == 9+T(3)+T(9)
 #
+# If n >= 100, then n*cc >= n*3/4+1.  n*(cc-3/4) >= 1.  cc >= 1/n+3/4.  <=  cc >= 1/100+3/4.  cc >= 76/100.
+
+# T(n) <= n*3/4 + 1 + T(n/4) + T(n*3/4).
+# T(n) <= n*76/100 + T(n/4) + T(n*3/4).
+#
+# T(n) <= z*n*log2(n).
+#
+# T(n) <= n*76/100 + T(n/4) + T(n*3/4) <= n*76/10 + T(n/4) + T(3*n/4)
+#      <= n*76/100 + z*n/4*log2(n/4) + z*n*3/4*log2(n*3/4)
+#      <= n*76/100 + z*n/4*log2(n) + z*n/4*log2(1/4) + z*n*3/4*log2(n) + z*n*3/4*log2(3/4)
+#      == n*76/100 + z*n*log2(n) + z*n/4*log2(1/4) + z*n*3/4*log2(3/4)
+#      == n*(76/100+z*(1/4*log2(1/4)+3/4*log2(3/4))) + z*n*log2(n)
+#
+# We need: 76/100+z*(4*log2(1/4)+3/4*log2(3/4)) <= 0
+#          .76+z*-0.8112781244591328 <= 0
+#          .76 <= z*0.8112781244591328
+#          .76/0.8112781244591328 <= z
+#          z >= 0.9367934091735566
+#          z >= 0.9368  # !! This is too small, it should be about 0.9522.
+#
 
 
 def calct1(n, _cache=[0, 0, 1]):
@@ -98,21 +118,22 @@ def calct2(n, _cache=[0, 0, 1]):
 def main(argv):
   print 'CALCT1:', [calct1(n) for n in xrange(13)]
   assert [calct1(n) for n in xrange(13)] == [0, 0, 1, 4, 7, 11, 16, 18, 23, 26, 32, 36, 39]
-  if 0:
+  if 1:
     for n in xrange(2, 40):
       t1 = calct1(n)
       u1 = n * (math.log(n) / math.log(2))
       print (n, t1, u1, t1 / u1)
     print '---'
     maxr1 = 0
-    for n in xrange(7, 10000):
+    for n in xrange(100, 10000):
       t1 = calct1(n)
       u1 = n * (math.log(n) / math.log(2))
       r1 = t1 / u1
       if r1 > maxr1:
         maxr1 = r1
         print (n, t1, u1, r1)  # r1 seems to be limited.
-  if 1:
+      assert (n * 3 + 3) >> 2 <= n * 76 // 100
+  if 0:
     print 'CALCT2:', [calct2(n) for n in xrange(13)]
     for n in xrange(2, 4000):
       t2 = calct2(n)
