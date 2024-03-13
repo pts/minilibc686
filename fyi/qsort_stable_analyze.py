@@ -51,27 +51,30 @@ import sys
 #
 # T(n) := maximum total number of swaps for an in-place merge of total size n.
 #
-# Theorem (!! prove it): T(x) + T(n-x) <= T(n//2) + T(ceil(n/2)).  !!! This is incorrect, it should be the other way round.
+# Theorem (!! prove it): T(first) + T(second) <= T(x) + T(n-x).
 #
 # If n <= 1: T(n) == 0.
 # If n == 2: T(n) == 1.
 # If n > 2: T(n) <= v(n) + T(x(n)) + T(y(n))
-
-
+#
+# CALCT1: [0, 0, 1, 4, 7, 11, 16, 18, 23, 26, 32, 36, 39]
+#
 # n   v  x  y  T(n)<=
+# ------------------------------
 #  0  -  -  -   0
 #  1  -  -  -   0
 #  2  -  -  -   1
 #  3  3  1  2   4 == 3+T(1)+T(2)
-#  4  3  1  3   5 == 3+T(2)+T(2)
-#  5  4  1  4   9 == 4+T(2)+T(3)
-#  6  5  1  5  13 == 5+T(3)+T(3)
-#  7  6  2  5  15 == 6+T(3)+T(4)
-#  8  6  2  6  16 == 6+T(4)+T(4)
-#  9  7  2  7  21 == 7+T(4)+T(5)
-# 10  8  2  8  26 == 8+T(5)+T(5)
-# 11  9  3  8  31 == 9+T(5)+T(6)
-# 12  9  3  9  35 == 9+T(6)+T(6)
+#  4  3  1  3   7 == 3+T(1)+T(3)
+#  5  4  1  4  11 == 4+T(1)+T(4)
+#  6  5  1  5  16 == 5+T(1)+T(5)
+#  7  6  2  5  18 == 6+T(2)+T(5)
+#  8  6  2  6  23 == 6+T(2)+T(6)
+#  9  7  2  7  26 == 7+T(2)+T(7)
+# 10  8  2  8  32 == 8+T(2)+T(8)
+# 11  9  3  8  36 == 9+T(3)+T(8)
+# 12  9  3  9  39 == 9+T(3)+T(9)
+#
 
 
 def calct1(n, _cache=[0, 0, 1]):
@@ -79,17 +82,46 @@ def calct1(n, _cache=[0, 0, 1]):
     raise ValueError
   while len(_cache) <= n:
     nn = len(_cache)
-    _cache.append(((nn * 3 + 3) >> 2) + _cache[nn >> 1] + _cache[(nn + 1) >> 1])
+    _cache.append(((nn * 3 + 3) >> 2) + _cache[(nn + 1) >> 2] + _cache[nn - ((nn + 1) >> 2)])
+  return _cache[n]
+
+
+def calct2(n, _cache=[0, 0, 1]):
+  if n < 0:
+    raise ValueError
+  while len(_cache) <= n:
+    nn = len(_cache)
+    _cache.append(((nn * 3 + 3) >> 2) + (_cache[nn - ((nn + 1) >> 2)]) << 1)
   return _cache[n]
 
 
 def main(argv):
-  print 'CALC1:', [calct1(n) for n in xrange(13)]
-  assert [calct1(n) for n in xrange(13)] == [0, 0, 1, 4, 5, 9, 13, 15, 16, 21, 26, 31, 35]
-  for n in xrange(2, 40):
-    t1 = calct1(n)
-    u1 = n * (math.log(n) / math.log(2)) # ** 2
-    print (n, t1, u1, t1 / u1)
+  print 'CALCT1:', [calct1(n) for n in xrange(13)]
+  assert [calct1(n) for n in xrange(13)] == [0, 0, 1, 4, 7, 11, 16, 18, 23, 26, 32, 36, 39]
+  if 0:
+    for n in xrange(2, 40):
+      t1 = calct1(n)
+      u1 = n * (math.log(n) / math.log(2))
+      print (n, t1, u1, t1 / u1)
+    print '---'
+    maxr1 = 0
+    for n in xrange(7, 10000):
+      t1 = calct1(n)
+      u1 = n * (math.log(n) / math.log(2))
+      r1 = t1 / u1
+      if r1 > maxr1:
+        maxr1 = r1
+        print (n, t1, u1, r1)  # r1 seems to be limited.
+  if 1:
+    print 'CALCT2:', [calct2(n) for n in xrange(13)]
+    for n in xrange(2, 4000):
+      t2 = calct2(n)
+      u2 = n * (math.log(n) / math.log(2))
+      print (n, t2, u2, t2 / u2)  # t2 / u2 doesn't seem to be limited.
+  
+
+
+ 
 
 
 # ---
