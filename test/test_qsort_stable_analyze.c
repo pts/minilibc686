@@ -40,6 +40,7 @@ static void ip_merge(const void *base, size_t item_size, int (*cmp)(const void *
   } else {
     key = b + ((c - b) >> 1); low = a; high = b;
   }
+  /* !! TODO(pts): (already-sorted shortcut) If data[b - 1] < data[b], then return here. Don't do it if c - a == 3 (??). Also update the comparison formulas below. */
   /* Finds first element not less (for is_lower) or greater (for !is_lower)
    * than key in sorted sequence [low,high) or end of sequence (high) if not found.
    * ceil(log2(high-low+1)) comparisons, which is == ceil(log2(min(b-a,c-b)+1)) <= ceil(log2((c-a)//2+1)).
@@ -81,14 +82,42 @@ static void ip_merge(const void *base, size_t item_size, int (*cmp)(const void *
   ip_merge(base, item_size, cmp, b, q, c);
 }
 
-/* !! ceil
- * r*n1*log(n1) + r*n2*log(n2) ...
- */
-
 /* In-place stable sort using in-place mergesort.
  * Same signature and semantics as qsort(3).
- * Does O(n*log(n)*log(n)) comparisons and swaps.
- * Uses O(log(n)) memory, mostly recursive calls to ip_merge(...).
+ *
+ * If you don't need a stable sort, try qsort_fast(...) instead, because
+ * that does fewer comparisons. (That may do a bit more swaps though.)
+ *
+ * If you want to use much less stack space, or you need a shorter qsort(3)
+ * implementation, try qsort_fast(...) instead. Please note that that is not
+ * stable, and that may do a bit more swaps.
+ *
+ * The formulas below are mathematically correct, without rounding.
+ *
+ * Number of item swaps:
+ *
+ * * O(n*log(n)*log(n)).
+ * * If n <= 1, then 0.
+ * * If n == 2, then at most 1.
+ * * If n >= 2, then less than 0.75 * n * log2(n) * log2(n).
+ * * !! Currently this is not true: If the input is already sorted, then 0.
+ *
+ * Number of comparisons:
+ *
+ * * O(n*log(n)*log(n)), but typically much less.
+ * * If n <= 1, then 0.
+ * * If n == 2, then at most 1.
+ * * If n >= 2, then less than 1.4823 * n * log2(n) * log2(n).
+ * * If 2 <= n <= 2**32, then less than 1.97 * n * log2(n).
+ * * If 2 <= n <= 2**64, then less than 1.9997 * n * log2(n).
+ * * If 2 <= n <= 2**128, then less than 2.0155 * n * log2(n).
+ * * If 2 <= n <= 2**256, then less than 2.0232 * n * log2(n).
+ * * If 2 <= n <= 2**512, then less than 2.027 * n * log2(n).
+ * * !! Currently this is not true: If the input is already sorted, and n >=
+ *   1, then n-1.
+ *
+ * Uses O(log(n)) memory, mostly recursive calls to ip_merge(...). Call
+ * depth is less than log(n)/log(4/3)+2.
  */
 void ip_mergesort(void *base, size_t n, size_t item_size, int (*cmp)(const void *, const void *)) {
   size_t a, b, d;
