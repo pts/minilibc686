@@ -95,9 +95,23 @@ import sys
 #          z >= 0.9367934091735566
 #          z >= 0.9368  # !! This is too small, it should be about 0.9522.
 #
-
+#
+# Mergesort of: S(2**k):
+# 1: 0
+# 2: T(2) <= 1
+# 4: 2*T(2)+T(4) <= 9
+# 8: 4*T(2)+2*T(4)+T(8) <= 41
+#
+# S(2**k) <= 2*S(2**(k-1)) + T(2**k) if k >= 1.
+#
+# S(2**k) <= T(2**k) + 2*T(2**(k-1)) + ... 2**k*T(2**0)
+#         == sum(2**(k-i) * T(2**i), i=0..k) <=
+#         == sum(2**(k-i) * z*(2**i)*log2(2**i), i=0..k)
+#         == 2**k*z * sum(i, i=0..k) == z*(2**k)*k*(k+1)/2
+#         <= z*(2**k)*k*k.
 
 def calct1(n, _cache=[0, 0, 1]):
+  """Returns upper bound on maximum number of swaps in an in-place merge of size n."""
   if n < 0:
     raise ValueError
   while len(_cache) <= n:
@@ -112,6 +126,19 @@ def calct2(n, _cache=[0, 0, 1]):
   while len(_cache) <= n:
     nn = len(_cache)
     _cache.append(((nn * 3 + 3) >> 2) + (_cache[nn - ((nn + 1) >> 2)]) << 1)
+  return _cache[n]
+
+
+def calcs1(n, _cache=[0, 0]):
+  """Returns upper bound on maximum number of swaps in a mergesort of size n."""
+  if n < 0:
+    raise ValueError
+  while len(_cache) <= n:
+    nn = len(_cache)
+    kk = 1
+    while kk << 1 < nn:
+      kk <<= 1
+    _cache.append(_cache[kk] + _cache[nn - kk] + calct1(nn))
   return _cache[n]
 
 
@@ -139,10 +166,32 @@ def main(argv):
       t2 = calct2(n)
       u2 = n * (math.log(n) / math.log(2))
       print (n, t2, u2, t2 / u2)  # t2 / u2 doesn't seem to be limited.
-  
-
-
- 
+  print 'CALCS1:', [calcs1(n) for n in xrange(33)]
+  assert [calcs1(n) for n in xrange(33)] == [0, 0, 1, 5, 9, 20, 26, 32, 41, 67, 74, 82, 89, 107, 118, 128, 140, 206, 213, 222, 230, 245, 260, 272, 287, 319, 331, 342, 353, 381, 399, 415, 433]
+  if 1:
+    for n in xrange(2, 33):
+      s1 = calcs1(n)
+      u1 = n * ((math.log(n) / math.log(2)) * (math.log(n) / math.log(2)))
+      print (n, s1, u1, s1 / u1)
+    print '---'
+    maxr1 = 0
+    for n in xrange(2, 33):
+      s1 = calcs1(n)
+      u1 = n * ((math.log(n) / math.log(2)) * (math.log(n) / math.log(2)))
+      r1 = s1 / u1
+      if r1 > maxr1:
+        maxr1 = r1
+        print (n, s1, u1, r1)  # r1 seems so be limised.
+    print '---'
+    maxr1 = 0
+    for n in xrange(33, 10000):
+      s1 = calcs1(n)
+      u1 = n * ((math.log(n) / math.log(2)) * (math.log(n) / math.log(2)))
+      r1 = s1 / u1
+      if r1 > maxr1:
+        maxr1 = r1
+        print (n, s1, u1, r1)  # r1 seems so be limised.
+    # It seems that S(n) < 0.75 * n * log2(n) * log2(n) for any n >= 2. And S(n) == 0 for n < 2.
 
 
 # ---
