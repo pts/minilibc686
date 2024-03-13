@@ -1,5 +1,11 @@
 #! /usr/bin/python
 # by pts@fazekas.hu at Mon Jan 22 15:55:07 CET 2024
+#
+# This Python script analyses the in-place mergesort implementation in
+# test/test_qsort_stable_analyze.c. The analysis contans some mathematical
+# proofs, but most of the final results are derived numerically, without
+# rigorous proof.
+#
 
 import math
 import sys
@@ -178,7 +184,7 @@ def calcd1(n, _cache=[0, 0, 1]):
     raise ValueError
   while len(_cache) <= n:
     nn = len(_cache)
-    nnn = (n >> 1) + 1
+    nnn = (nn >> 1) + 1
     k = 0
     while (1 << k) < nnn:
       k += 1
@@ -197,6 +203,39 @@ def calcc1(n, _cache=[0, 0]):
       kk <<= 1
     _cache.append(_cache[kk] + _cache[nn - kk] + calcd1(nn))
   return _cache[n]
+
+
+def calcd1sc(n, _cache={0: 0, 1: 0, 2: 1}):
+  """Returns upper bound on maximum number of comparisons in an in-place merge of total size n.
+
+  Uses a sparse cache.
+  """
+  if n < 0:
+    raise ValueError
+  v = _cache.get(n)
+  if v is None:
+    nnn = (n >> 1) + 1
+    k = 0
+    while (1 << k) < nnn:
+      k += 1
+    _cache[n] = v = k + calcd1sc((n + 1) >> 2) + calcd1sc(n - ((n + 1) >> 2))
+  return v
+
+
+def calcc1sc(n, _cache={0: 0, 1: 0}):
+  """Returns upper bound on maximum number of comparisons in an in-place mergesort of size n.
+
+  Uses a sparse cache.
+  """
+  if n < 0:
+    raise ValueError
+  v = _cache.get(n)
+  if v is None:
+    kk = 1
+    while kk << 1 < n:
+      kk <<= 1
+    _cache[n] = v = calcc1sc(kk) + calcc1sc(n - kk) + calcd1sc(n)
+  return v
 
 
 def main(argv):
@@ -232,7 +271,7 @@ def main(argv):
       r1 = s1 / u1
       if r1 > maxr1:
         maxr1 = r1
-        print (n, s1, u1, r1)  # r1 seems so be limised.
+        print (n, s1, u1, r1)  # r1 seems to be limited.
     print '---'
     maxr1 = 0
     for n in xrange(33, 10000):
@@ -241,18 +280,29 @@ def main(argv):
       r1 = s1 / u1
       if r1 > maxr1:
         maxr1 = r1
-        print (n, s1, u1, r1)  # r1 seems so be limised.
+        print (n, s1, u1, r1)  # r1 seems to be limited.
     # It seems that S(n) < 0.75 * n * log2(n) * log2(n) for any n >= 2. And S(n) == 0 for n < 2.
   print 'CALCD1:', [calcd1(n) for n in xrange(33)]
   assert [calcd1(n) for n in xrange(33)] == [0, 0, 1, 2, 4, 6, 8, 9, 12, 13, 16, 17, 18, 21, 22, 24, 26, 29, 30, 32, 34, 36, 39, 41, 42, 44, 46, 47, 49, 52, 54, 57, 59]
+  assert [calcd1sc(n) for n in xrange(33)] == [0, 0, 1, 2, 4, 6, 8, 9, 12, 13, 16, 17, 18, 21, 22, 24, 26, 29, 30, 32, 34, 36, 39, 41, 42, 44, 46, 47, 49, 52, 54, 57, 59]
 
   print 'CALCC1:', [calcc1(n) for n in xrange(33)]
   assert [calcc1(n) for n in xrange(33)] == [0, 0, 1, 3, 6, 12, 15, 18, 24, 37, 41, 44, 48, 57, 61, 66, 74, 103, 105, 109, 114, 122, 128, 133, 140, 155, 161, 165, 171, 183, 189, 197, 207]
+  assert [calcc1sc(n) for n in xrange(33)] == [0, 0, 1, 3, 6, 12, 15, 18, 24, 37, 41, 44, 48, 57, 61, 66, 74, 103, 105, 109, 114, 122, 128, 133, 140, 155, 161, 165, 171, 183, 189, 197, 207]
   if 1:
     for n in xrange(2, 33):
       c1 = calcc1(n)
       u1 = n * ((math.log(n) / math.log(2)))
       print (n, c1, u1, c1 / u1)
+    print '---LL'
+    maxr1 = 0
+    for n in xrange(33, 10000):
+      c1 = calcc1(n)
+      u1 = n * ((math.log(n) / math.log(2)) * (math.log(n) / math.log(2)))
+      r1 = c1 / u1
+      if r1 > maxr1:
+        maxr1 = r1
+        print (n, c1, u1, r1)  # r1 seems to be limited.
     print '---'
     maxr1 = 0
     for n in xrange(2, 33):
@@ -261,7 +311,7 @@ def main(argv):
       r1 = c1 / u1
       if r1 > maxr1:
         maxr1 = r1
-        print (n, c1, u1, r1)  # r1 seems co be limiced.
+        print (n, c1, u1, r1)  # r1 seems to be almost limited.
     print '---'
     maxr1 = 0
     for n in xrange(33, 10000):
@@ -270,12 +320,13 @@ def main(argv):
       r1 = c1 / u1
       if r1 > maxr1:
         maxr1 = r1
-        print (n, c1, u1, r1)  # r1 seems co be limiced.
+        print (n, c1, u1, r1)  # r1 seems to be almost limited.
     print '---'
     maxr1 = 0
-    for k in xrange(1, 70):
+    #sys.setrecursionlimit(20000)
+    for k in xrange(1, 130):
       n = (1 << k) + 1
-      c1 = calcc1(n)
+      c1 = calcc1sc(n)
       u1 = n * ((math.log(n) / math.log(2)))
       r1 = c1 / u1
       if r1 > maxr1:
@@ -292,7 +343,7 @@ def main(argv):
         # (4194305, 179317875, 92274711.44269522, 1.9433046410701664)
         # (8388609, 375295641, 192938008.44269514, 1.9451617855352084)
         # (16777217, 785371931, 402653209.4426951, 1.950492166912115)
-        print (n, c1, u1, r1)  # r1 seems co be limiced.
+        print (k, n, c1, u1, r1)  # r1 seems co be almost limited.
 
 
 if __name__ == '__main__':
