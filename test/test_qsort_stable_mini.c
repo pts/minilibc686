@@ -38,7 +38,14 @@ static void ip_reverse(const void *base, size_t item_size, size_t a, size_t b) {
   }
 }
 
-/* In-place merge of [a,b) and [b,c) to [a,c) within base. */
+#ifndef ASSERT
+#define ASSERT(x) do { if (!(x)) ++*(char*)0; } while(0)
+#endif
+
+/* In-place merge of [a,b) and [b,c) to [a,c) within base.
+ *
+ * Precondition: a <= b && b <= c.
+ */
 static void ip_merge(const void *base, size_t item_size, int (*cmp)(const void *, const void *), size_t a, size_t b, size_t c) {
   size_t p, q, i;
   const char is_lower = b - a > c - b;
@@ -54,6 +61,7 @@ static void ip_merge(const void *base, size_t item_size, int (*cmp)(const void *
   } else {
     /* key = */ p = b + ((c - b) >> 1); /* low = */ q = a; /* high = b; */ i = b - a;
   }
+  ASSERT(is_lower == (p < q));
   /* Finds first element not less (for is_lower) or greater (for !is_lower)
    * than key in sorted sequence [low,high) or end of sequence (high) if not found.
    * ceil(log2(high-low+1)) comparisons, which is == ceil(log2(min(b-a,c-b)+1)) <= ceil(log2((c-a)//2+1)).
@@ -65,6 +73,7 @@ static void ip_merge(const void *base, size_t item_size, int (*cmp)(const void *
       i--;
     }
   }
+  ASSERT(is_lower == (p < q));
   if (!is_lower) {  /* Swap p and q, ruin i. */
     i = q; q = p; p = i;
   }
