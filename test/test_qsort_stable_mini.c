@@ -21,9 +21,17 @@
 #define DO_SHORTCUT_OPT 1
 #endif
 
+/* Constant state for ip_merge and ip_mergesort. */
+struct ip_cs {
+  const void *base;
+  size_t item_size;
+  int (*cmp)(const void*, const void*);
+};
+
 /* 0 comparisons, 1 (item) swap. */
-static void ip_swap(const void *base, size_t item_size, size_t a, size_t b) {
-  char *ca = (char*)base + (item_size * a), *cb = (char*)base + (item_size * b), t;
+static void ip_swap(const struct ip_cs *cs, size_t a, size_t b) {
+  size_t item_size = cs->item_size;
+  char *ca = (char*)cs->base + (item_size * a), *cb = (char*)cs->base + (item_size * b), t;
   for (; item_size > 0; --item_size, ++ca, ++cb) {
     t = *ca;
     *ca = *cb;
@@ -32,10 +40,14 @@ static void ip_swap(const void *base, size_t item_size, size_t a, size_t b) {
 }
 
 /* 0 comparisons, (b-a)//2 swaps. */
-static void ip_reverse(const void *base, size_t item_size, size_t a, size_t b) {
+static void ip_reverse(const struct ip_cs *cs, size_t a, size_t b) {
   for (--b; a < b; a++, b--) {
-    ip_swap(base, item_size, a, b);
+    ip_swap(cs, a, b);
   }
+}
+
+static int ip_cmp(const struct ip_cs *cs, size_t a, size_t b) {
+  return cs->cmp((char*)cs->base + cs->item_size * a, (char*)cs->base + cs->item_size * b);
 }
 
 #ifndef ASSERT
@@ -46,12 +58,12 @@ static void ip_reverse(const void *base, size_t item_size, size_t a, size_t b) {
  *
  * Precondition: a <= b && b <= c.
  */
-static void ip_merge(const void *base, size_t item_size, int (*cmp)(const void *, const void *), size_t a, size_t b, size_t c) {
+static void ip_merge(const struct ip_cs *cs, size_t a, size_t b, size_t c) {
   size_t p, q, i;
   if (a == b || b == c) return;
   if (c - a == 2) {
-    if (cmp((char*)base + (item_size * b), (char*)base + (item_size * a)) < 0) {  /* 1 comparison. */
-      ip_swap(base, item_size, a, b);  /* 1 swap. */
+    if (ip_cmp(cs, b, a) < 0) {  /* 1 comparison. */
+      ip_swap(cs, a, b);  /* 1 swap. */
     }
     return;
   }
@@ -61,18 +73,18 @@ static void ip_merge(const void *base, size_t item_size, int (*cmp)(const void *
    */
   if (b - a > c - b /* is_lower */) {
     /* key = */ p = a + ((b - a) >> 1); /* low = */ q = b; /* high = c; */ i = c - b;
-    for (/* i = high - low */; i != 0; i >>= 1) {  /* low = ip_bound(base, item_size, low, high, key, is_lower); */
+    for (/* i = high - low */; i != 0; i >>= 1) {  /* low = ip_bound(cs, low, high, key, is_lower); */
       /* mid = low + (i >> 1); */
-      if (cmp((char*)base + (item_size * p), (char*)base + (item_size * (q + (i >> 1)))) >= 1) {
+      if (ip_cmp(cs, p, q + (i >> 1)) >= 1) {
         q += (i >> 1) + 1;
         i--;
       }
     }
   } else {
     /* key = */ q = b + ((c - b) >> 1); /* low = */ p = a; /* high = b; */ i = b - a;
-    for (/* i = high - low */; i != 0; i >>= 1) {  /* low = ip_bound(base, item_size, low, high, key, is_lower); */
+    for (/* i = high - low */; i != 0; i >>= 1) {  /* low = ip_bound(cs, low, high, key, is_lower); */
       /* mid = low + (i >> 1); */
-      if (cmp((char*)base + (item_size * q), (char*)base + (item_size * (p + (i >> 1)))) >= 0) {
+      if (ip_cmp(cs, q, p + (i >> 1)) >= 0) {
         p += (i >> 1) + 1;
         i--;
       }
@@ -91,17 +103,17 @@ static void ip_merge(const void *base, size_t item_size, int (*cmp)(const void *
    */
   if (p != b && b != q) {  /* swap adjacent sequences [p,b) and [b,q). */
     /* Let's count the total number of swaps in the 3 ip_reverse(...) calls below: (b-p)//2 + (q-b)//2 + (q-p)//2 <= (b-p+q-b+q-p)//2 == q-p == (b-p)+(q-b) == t. */
-    ip_reverse(base, item_size, p, b);
-    ip_reverse(base, item_size, b, q);
-    ip_reverse(base, item_size, p, q);
+    ip_reverse(cs, p, b);
+    ip_reverse(cs, b, q);
+    ip_reverse(cs, p, q);
   }
   b = p + (q - b);  /* Sets b_new. */
   /* Let s be the number of items in the 1st recursive ip_merge call, i.e. b_new-a.
    * Similarly to the proof above for t, it's possible to prove that
    * (c-a)//4 <= s <= ceil((c-a)*3/4), no matter the value of is_lower.
    */
-  ip_merge(base, item_size, cmp, a, p, b);
-  ip_merge(base, item_size, cmp, b, q, c);
+  ip_merge(cs, a, p, b);
+  ip_merge(cs, b, q, c);
 }
 
 /* In-place stable sort using in-place mergesort.
@@ -152,14 +164,16 @@ static void ip_merge(const void *base, size_t item_size, int (*cmp)(const void *
  */
 void ip_mergesort(void *base, size_t n, size_t item_size, int (*cmp)(const void *, const void *)) {
   size_t a, b, d;
+  struct ip_cs cs;
+  cs.base = base; cs.item_size = item_size; cs.cmp = cmp;
   for (d = 1; d != 0 && d < n; d <<= 1) {  /* We check `d != 0' to detect overflow in the previous: `d <<= 1'. */
     for (a = 0; a + d < n; a = b) {
       b = a + (d << 1);
 #if DO_SHORTCUT_OPT
       /* Shortcut if [a,c) is already sorted. */
-      if (d > 1 && cmp((char*)base + (item_size * (a + d - 1)), (char*)base + (item_size * (a + d))) <= 0) continue;
+      if (d > 1 && ip_cmp(&cs, a + d - 1, a + d) <= 0) continue;
 #endif
-      ip_merge(base, item_size, cmp, a, a + d,  b > n ? n : b);
+      ip_merge(&cs, a, a + d,  b > n ? n : b);
     }
   }
 }
