@@ -28,29 +28,37 @@ struct ip_cs {
   int (*cmp)(const void*, const void*);
 };
 
-/* 0 comparisons, (b-a)//2 swaps. */
+#ifndef ASSERT
+#define ASSERT(x) do { if (!(x)) ++*(char*)0; } while(0)
+#endif
+
+/* 0 comparisons, (b-a)//2 swaps.
+ *
+ * Precondition: a < b.
+ */
 static void ip_reverse(const struct ip_cs *cs, size_t a, size_t b) {
-  size_t item_size;
+  const size_t item_size = cs->item_size;
   char *cbase = (char*)cs->base;
-  char *ca, *cb;
+  char *ca = cbase + item_size * a, *cb = cbase + item_size * (b - 1), *ca_end;
   char t;
-  for (--b; a < b; a++, b--) {
+  size_t cabd;
+  for (--b; a < b; a++, b--, cb -= item_size) {
     /* ip_swap(cs, a, b); */  /* 0 comparisons, 1 (item) swap. */
-    for (item_size = cs->item_size, ca = cbase + item_size * a, cb = cbase + item_size * b; item_size > 0; --item_size, ++ca, ++cb) {
+    ASSERT(ca == cbase + item_size * a);
+    ASSERT(cb == cbase + item_size * b);
+    for (cabd = cb - ca, ca_end = ca + item_size; ca != ca_end; ++ca) {
       t = *ca;
-      *ca = *cb;
-      *cb = t;
+      *ca = ca[cabd];
+      ca[cabd] = t;
     }
+    ASSERT(ca == cbase + item_size * (a + 1));
+    ASSERT(cb == cbase + item_size * b);
   }
 }
 
 static int ip_cmp(const struct ip_cs *cs, size_t a, size_t b) {
   return cs->cmp((char*)cs->base + cs->item_size * a, (char*)cs->base + cs->item_size * b);
 }
-
-#ifndef ASSERT
-#define ASSERT(x) do { if (!(x)) ++*(char*)0; } while(0)
-#endif
 
 /* In-place merge of [a,b) and [b,c) to [a,c) within base.
  *
