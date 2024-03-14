@@ -39,6 +39,7 @@ struct ip_cs {
 #define ASSERT(x) do { if (!(x)) ++*(char*)0; } while(0)
 #endif
 
+
 /* 0 comparisons, (b-a)//2 swaps.
  *
  * Precondition: a < b.
@@ -61,34 +62,28 @@ static void ip_reverse(const struct ip_cs *cs, size_t a, size_t b) {
   }
 }
 
-#if defined(__WATCOMC__) && defined(__386__)
-  __declspec(naked) static int __watcall ip_cmp(const struct ip_cs *cs, size_t a, size_t b) { (void)cs; (void)a; (void)b; __asm {
-		/* EAX: cs; EDX: a, EBX: b. */
-		/* TODO(pts): Size-optimize this function. */
-		push ecx
-		mov ecx, [eax+4]  /* ECX := cs->item_size. */
-		imul ebx, ecx  /* EBX := b * cs->item_size. */
-		add ebx, [eax]  /* EBX += cs->base. */
-		push ebx  /* arg2. */
-		imul edx, ecx  /* EDX := a * cs->item_size. */
-		add edx, [eax]  /* EDX += cs->base. */
-		push edx  /* arg1. */
-		call [eax+8]  /* Call cs->cmp. May ruin EDX and ECX. Return value in EAX. */
-		pop edx  /* Clean up arg1 from stack. */
-		pop edx  /* Clean up arg2 from stack. */
-		pop ecx
-		ret
-  } }
-#else
+#if !(defined(__WATCOMC__) && defined(__386__))
   static int ip_cmp(const struct ip_cs *cs, size_t a, size_t b) {
     return cs->cmp((char*)cs->base + cs->item_size * a, (char*)cs->base + cs->item_size * b);
   }
-void reverse_(char *a, char *b) {
-    char c;
-    for (--b; a < b; a++, b--) {
-      c = *a; *a = *b; *b = c;
-    }
-  }
+#else
+  /* TODO(pts): Optimize __modify in caller. */
+#  pragma aux ip_cmp  __parm __caller [__esi] [__edx] [__ebx] __value __struct __caller [] [__eax] __modify [__edx __ebx __ecx]
+  __declspec(naked) static int ip_cmp(const struct ip_cs *cs, size_t a, size_t b) { (void)cs; (void)a; (void)b; __asm {
+		/* ESI: cs; EDX: a, EBX: b. */
+		/* TODO(pts): Size-optimize this function. */
+		mov ecx, [esi+4]  /* ECX := cs->item_size. */
+		imul ebx, ecx  /* EBX := b * cs->item_size. */
+		add ebx, [esi]  /* EBX += cs->base. */
+		push ebx  /* Push arg2. */
+		imul edx, ecx  /* EDX := a * cs->item_size. */
+		add edx, [esi]  /* EDX += cs->base. */
+		push edx  /* Push arg1. */
+		call [esi+8]  /* Call cs->cmp. May ruin EDX and ECX. Return value in ESI. */
+		pop ecx  /* Clean up arg1 from stack. */
+		pop ecx  /* Clean up arg2 from stack. */
+		ret
+  } }
 #endif
 
 
