@@ -1,8 +1,18 @@
-/* by pts@fazekas.hu at Wed Jan 24 09:09:14 CET 2024
+/* by pts@fazekas.hu at Thu Mar 14 16:43:39 CET 2024
  *
- * Simple C and C++ implementation of qsort(3) with in-place mergesort.
+ * Size-optimized C and C++ implementation of qsort(3) with in-place mergesort.
  *
  * Based on ip_merge (C, simplest) at https://stackoverflow.com/a/22839426/97248
+ * Based on ip_merge in test/test_qstort_stable_analyze.c.
+ * Does the same number of comparisons and swaps as test/test_qstort_stable_analyze.c.
+ *
+ * Compile: gcc -s -O2 -W -Wall  -ansi -pedantic test/test_qsort_stable_mini.c && ./a.out && echo OK
+ * Compile: pathbin/minicc --gcc -ansi -pedantic test/test_qsort_stable_mini.c && ./a.out && echo OK
+ * Compile: pathbin/minicc --wcc -ansi -pedantic test/test_qsort_stable_mini.c && ./a.out && echo OK
+ * Compile: pathbin/minicc --pcc -ansi -pedantic test/test_qsort_stable_mini.c && ./a.out && echo OK
+ * Compile: pathbin/minicc --tcc -ansi -pedantic test/test_qsort_stable_mini.c && ./a.out && echo OK
+ * Compile: owcc -I"$WATCOM"/lh -blinux -s -Os -W -Wall -fsigned-char -o a.out -std=c89 test/test_qsort_stable_mini.c && ./a.out && echo OK
+ * Compile: gcc -fsanitize=address -m64 -s -O2 -W -Wall  -ansi -pedantic test/test_qsort_stable_mini.c && ./a.out && echo OK
  */
 
 #include <stddef.h>  /* size_t. */
@@ -145,6 +155,8 @@ void ip_mergesort(void *base, size_t n, size_t item_size, int (*cmp)(const void 
   }
 }
 
+
+/* --- Tests. */
 
 /*
  * Copyright (C) 2005 - 2020 Rich Felker
