@@ -22,11 +22,17 @@
 #define DO_SHORTCUT_OPT 1
 #endif
 
+#if defined(__WATCOMC__) && defined(__386__)  /* !! buggy */
+#  define CMPDECL __cdecl
+#else
+#  define CMPDECL
+#endif
+
 /* Constant state for ip_merge and ip_mergesort. */
 struct ip_cs {
   const void *base;
   size_t item_size;
-  int (*cmp)(const void*, const void*);
+  int CMPDECL (*cmp)(const void*, const void*);
 };
 
 #ifndef ASSERT
@@ -36,6 +42,8 @@ struct ip_cs {
 /* 0 comparisons, (b-a)//2 swaps.
  *
  * Precondition: a < b.
+ *
+ * It is quite slow, because it moves 1 byte a time (rather than 4 or 8).
  */
 static void ip_reverse(const struct ip_cs *cs, size_t a, size_t b) {
   const size_t item_size = cs->item_size;
@@ -53,9 +61,40 @@ static void ip_reverse(const struct ip_cs *cs, size_t a, size_t b) {
   }
 }
 
-static int ip_cmp(const struct ip_cs *cs, size_t a, size_t b) {
-  return cs->cmp((char*)cs->base + cs->item_size * a, (char*)cs->base + cs->item_size * b);
-}
+#if defined(__WATCOMC__) && defined(__386__)
+  __declspec(naked) static int __watcall ip_cmp(const struct ip_cs *cs, size_t a, size_t b) { (void)cs; (void)a; (void)b; __asm {
+		/* EAX: cs; EDX: a, EBX: b. */
+		/* TODO(pts): Size-optimize this function. */
+		push ecx
+		push esi
+		mov ecx, [eax+4]  /* ECX := cs->item_size. */
+		mov esi, [eax+8]  /* ESI := cs->cmp. */
+		mov eax, [eax]  /* EAX := cs->base. */
+		imul ebx, ecx  /* EBX := b * cs->item_size. */
+		add ebx, eax
+		push ebx  /* arg2. */
+		imul edx, ecx  /* EDX := a * cs->item_size. */
+		add edx, eax
+		push edx  /* arg1. */
+		call esi  /* May ruin EDX and ECX. Return value in EAX. */
+		pop edx  /* Clean up arg1 from stack. */
+		pop edx  /* Clean up arg2 from stack. */
+		pop esi
+		pop ecx
+		ret
+  } }
+#else
+  static int ip_cmp(const struct ip_cs *cs, size_t a, size_t b) {
+    return cs->cmp((char*)cs->base + cs->item_size * a, (char*)cs->base + cs->item_size * b);
+  }
+void reverse_(char *a, char *b) {
+    char c;
+    for (--b; a < b; a++, b--) {
+      c = *a; *a = *b; *b = c;
+    }
+  }
+#endif
+
 
 /* In-place merge of [a,b) and [b,c) to [a,c) within base.
  *
@@ -165,7 +204,7 @@ static void ip_merge(const struct ip_cs *cs, size_t a, size_t b, size_t c) {
  * Uses O(log(n)) memory, mostly recursive calls to ip_merge(...). Call
  * depth is less than log(n)/log(4/3)+2.
  */
-void ip_mergesort(void *base, size_t n, size_t item_size, int (*cmp)(const void *, const void *)) {
+void ip_mergesort(void *base, size_t n, size_t item_size, int CMPDECL (*cmp)(const void *, const void *)) {
   size_t a, b, d;
   struct ip_cs cs;
   cs.base = base; cs.item_size = item_size; cs.cmp = cmp;
@@ -210,20 +249,27 @@ void ip_mergesort(void *base, size_t n, size_t item_size, int (*cmp)(const void 
 #include <stdio.h>
 #include <string.h>
 
-static int scmp(const void *a, const void *b) {
+#if 0
+static int CMPDECL debugcmp(const void *a, const void *b) {
+  printf("DEBUGCMP (%s) (%s)\n", a, b);
+  return 42;
+}
+#endif
+
+static int CMPDECL scmp(const void *a, const void *b) {
 	return strcmp(*(char **)a, *(char **)b);
 }
 
-static int icmp(const void *a, const void *b) {
+static int CMPDECL icmp(const void *a, const void *b) {
 	return *(int*)a - *(int*)b;
 }
 
-static int ricmp(const void *a, const void *b) {  /* Sorts descending. */
+static int CMPDECL ricmp(const void *a, const void *b) {  /* Sorts descending. */
 	return *(int*)b - *(int*)a;
 }
 
 static unsigned cmp_count;
-static int rhucmp(const void *a, const void *b) {  /* Sorts descending, ignores low 16 bits. */
+static int CMPDECL rhucmp(const void *a, const void *b) {  /* Sorts descending, ignores low 16 bits. */
 	++cmp_count;
 	return (*(unsigned*)b >> 16) - (*(unsigned*)a >> 16);
 }
@@ -234,7 +280,7 @@ struct three {
 
 #define i3(x) { { (unsigned char) ((x) >> 16), (unsigned char) ((x) >> 8), (unsigned char) ((x) >> 0) } }
 
-static int tcmp(const void *av, const void *bv) {
+static int CMPDECL tcmp(const void *av, const void *bv) {
     const struct three *a = (const struct three*)av, *b = (const struct three*)bv;
     int c;
     int i;
@@ -284,6 +330,16 @@ int main(int argc, char **argv) {
         };
 
 	(void)argc; (void)argv;
+
+#if 0
+	{
+		struct ip_cs cs;
+		int r;
+		cs.base = "HelloWorld"; cs.item_size = 3; cs.cmp = debugcmp;
+		r = ip_cmp(&cs, 1, 2);
+		printf("r=%d\n", r);
+	}
+#endif
 
 	ip_mergesort(s, sizeof(s)/sizeof(char *), sizeof(char *), scmp);
 	for (i=0; i<(int) (sizeof(s)/sizeof(char *)-1); i++) {
