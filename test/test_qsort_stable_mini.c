@@ -48,7 +48,6 @@ static void ip_reverse(const void *base, size_t item_size, size_t a, size_t b) {
  */
 static void ip_merge(const void *base, size_t item_size, int (*cmp)(const void *, const void *), size_t a, size_t b, size_t c) {
   size_t p, q, i;
-  const char is_lower = b - a > c - b;
   if (a == b || b == c) return;
   if (c - a == 2) {
     if (cmp((char*)base + (item_size * b), (char*)base + (item_size * a)) < 0) {  /* 1 comparison. */
@@ -56,25 +55,25 @@ static void ip_merge(const void *base, size_t item_size, int (*cmp)(const void *
     }
     return;
   }
-  if (is_lower) {
+  if (b - a > c - b /* is_lower */) {
     /* key = */ p = a + ((b - a) >> 1); /* low = */ q = b; /* high = c; */ i = c - b;
   } else {
     /* key = */ p = b + ((c - b) >> 1); /* low = */ q = a; /* high = b; */ i = b - a;
   }
-  ASSERT(is_lower == (p < q));
+  /* ASSERT(is_lower == (p < q)); */
   /* Finds first element not less (for is_lower) or greater (for !is_lower)
    * than key in sorted sequence [low,high) or end of sequence (high) if not found.
    * ceil(log2(high-low+1)) comparisons, which is == ceil(log2(min(b-a,c-b)+1)) <= ceil(log2((c-a)//2+1)).
    */
   for (/* i = high - low */; i != 0; i >>= 1) {  /* low = ip_bound(base, item_size, low, high, key, is_lower); */
     /* mid = low + (i >> 1); */
-    if (cmp((char*)base + (item_size * p), (char*)base + (item_size * (q + (i >> 1)))) >= is_lower) {
+    if (cmp((char*)base + (item_size * p), (char*)base + (item_size * (q + (i >> 1)))) >= (p < q) /* is_lower */) {
       q += (i >> 1) + 1;
       i--;
     }
   }
-  ASSERT(is_lower == (p < q));
-  if (!is_lower) {  /* Swap p and q, ruin i. */
+  /* ASSERT(is_lower == (p < q)); */
+  if (p >= q  /* !is_lower */) {  /* Swap p and q, ruin i. */
     i = q; q = p; p = i;
   }
   /* Let t be the total number of items in [p,b) and [b,q), i.e. t == (b-p)+(q-b) == q-p.
