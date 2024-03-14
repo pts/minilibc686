@@ -246,7 +246,6 @@ int main(int argc, char **argv) {
         };
 
 	(void)argc; (void)argv;
-	(void)expected_cmp_count;
 
 	ip_mergesort(s, sizeof(s)/sizeof(char *), sizeof(char *), scmp);
 	for (i=0; i<(int) (sizeof(s)/sizeof(char *)-1); i++) {
@@ -292,13 +291,16 @@ int main(int argc, char **argv) {
 				break;
 			}
 		}
-#if DO_SHORTCUT_OPT
 		expected_cmp_count = nx_sizes[nxsi] == 0 ? 0 : nx_sizes[nxsi] - 1;
-		if (cmp_count != expected_cmp_count) {
+#if DO_SHORTCUT_OPT
+		if (cmp_count != expected_cmp_count)
+#else
+		if (cmp_count < expected_cmp_count)
+#endif
+		{
 			FAIL("too many comparisons for already sorted input");
 			printf("cmp_count=%u expected=%u\n", cmp_count, expected_cmp_count);
 		}
-#endif
 	}
 
 	for (i = 0; i + 0U < sizeof(nx)/sizeof(nx[0]); ++i) {
