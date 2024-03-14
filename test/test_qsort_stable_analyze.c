@@ -133,7 +133,7 @@ static void ip_merge(const void *base, size_t item_size, int (*cmp)(const void *
  */
 void ip_mergesort(void *base, size_t n, size_t item_size, int (*cmp)(const void *, const void *)) {
   size_t a, b, d;
-  for (d = 1; d < n; d <<= 1) {  /* TODO(pts): Check overflows. */
+  for (d = 1; d != 0 && d < n; d <<= 1) {  /* We check `d != 0' to detect overflow in the previous: `d <<= 1'. */
     for (a = 0; a + d < n; a = b) {
       b = a + (d << 1);
 #if DO_SHORTCUT_OPT
