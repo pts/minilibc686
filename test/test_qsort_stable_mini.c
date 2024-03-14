@@ -66,20 +66,16 @@ static void ip_reverse(const struct ip_cs *cs, size_t a, size_t b) {
 		/* EAX: cs; EDX: a, EBX: b. */
 		/* TODO(pts): Size-optimize this function. */
 		push ecx
-		push esi
 		mov ecx, [eax+4]  /* ECX := cs->item_size. */
-		mov esi, [eax+8]  /* ESI := cs->cmp. */
-		mov eax, [eax]  /* EAX := cs->base. */
 		imul ebx, ecx  /* EBX := b * cs->item_size. */
-		add ebx, eax
+		add ebx, [eax]  /* EBX += cs->base. */
 		push ebx  /* arg2. */
 		imul edx, ecx  /* EDX := a * cs->item_size. */
-		add edx, eax
+		add edx, [eax]  /* EDX += cs->base. */
 		push edx  /* arg1. */
-		call esi  /* May ruin EDX and ECX. Return value in EAX. */
+		call [eax+8]  /* Call cs->cmp. May ruin EDX and ECX. Return value in EAX. */
 		pop edx  /* Clean up arg1 from stack. */
 		pop edx  /* Clean up arg2 from stack. */
-		pop esi
 		pop ecx
 		ret
   } }
