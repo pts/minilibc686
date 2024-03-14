@@ -28,21 +28,19 @@ struct ip_cs {
   int (*cmp)(const void*, const void*);
 };
 
-/* 0 comparisons, 1 (item) swap. */
-static void ip_swap(const struct ip_cs *cs, size_t a, size_t b) {
-  size_t item_size = cs->item_size;
-  char *ca = (char*)cs->base + (item_size * a), *cb = (char*)cs->base + (item_size * b), t;
-  for (; item_size > 0; --item_size, ++ca, ++cb) {
-    t = *ca;
-    *ca = *cb;
-    *cb = t;
-  }
-}
-
 /* 0 comparisons, (b-a)//2 swaps. */
 static void ip_reverse(const struct ip_cs *cs, size_t a, size_t b) {
+  size_t item_size;
+  char *cbase = (char*)cs->base;
+  char *ca, *cb;
+  char t;
   for (--b; a < b; a++, b--) {
-    ip_swap(cs, a, b);
+    /* ip_swap(cs, a, b); */  /* 0 comparisons, 1 (item) swap. */
+    for (item_size = cs->item_size, ca = cbase + item_size * a, cb = cbase + item_size * b; item_size > 0; --item_size, ++ca, ++cb) {
+      t = *ca;
+      *ca = *cb;
+      *cb = t;
+    }
   }
 }
 
@@ -63,7 +61,7 @@ static void ip_merge(const struct ip_cs *cs, size_t a, size_t b, size_t c) {
   if (a == b || b == c) return;
   if (c - a == 2) {
     if (ip_cmp(cs, b, a) < 0) {  /* 1 comparison. */
-      ip_swap(cs, a, b);  /* 1 swap. */
+      ip_reverse(cs, a, c);  /* Same as: ip_swap(cs, a, b); */  /* 1 swap. */
     }
     return;
   }
