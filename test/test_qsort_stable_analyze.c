@@ -7,6 +7,10 @@
 
 #include <stddef.h>  /* size_t. */
 
+#ifndef DO_SHORTCUT_OPT
+#define DO_SHORTCUT_OPT 1
+#endif
+
 /* 0 comparisons, 1 (item) swap. */
 static void ip_swap(const void *base, size_t item_size, size_t a, size_t b) {
   char *ca = (char*)base + (item_size * a), *cb = (char*)base + (item_size * b), t;
@@ -40,7 +44,6 @@ static void ip_merge(const void *base, size_t item_size, int (*cmp)(const void *
   } else {
     key = b + ((c - b) >> 1); low = a; high = b;
   }
-  /* !! TODO(pts): (already-sorted shortcut) If data[b - 1] < data[b], then return here. Don't do it if c - a == 3 (??). Also update the comparison formulas below. */
   /* Finds first element not less (for is_lower) or greater (for !is_lower)
    * than key in sorted sequence [low,high) or end of sequence (high) if not found.
    * ceil(log2(high-low+1)) comparisons, which is == ceil(log2(min(b-a,c-b)+1)) <= ceil(log2((c-a)//2+1)).
@@ -100,21 +103,30 @@ static void ip_merge(const void *base, size_t item_size, int (*cmp)(const void *
  * * If n <= 1, then 0.
  * * If n == 2, then at most 1.
  * * If n >= 2, then less than 0.75 * n * log2(n) * log2(n).
- * * !! Currently this is not true: If the input is already sorted, then 0.
+ * * With DO_SHORTCUT_OPT:
+ *   * If the input is already sorted, then 0.
+ *   * If large chunks of the input is already shorted, then less.
  *
  * Number of comparisons:
  *
  * * O(n*log(n)*log(n)), but typically much less.
  * * If n <= 1, then 0.
  * * If n == 2, then at most 1.
- * * If n >= 2, then less than 1.4823 * n * log2(n) * log2(n).
- * * If 2 <= n <= 2**32, then less than 1.97 * n * log2(n).
- * * If 2 <= n <= 2**64, then less than 1.9997 * n * log2(n).
- * * If 2 <= n <= 2**128, then less than 2.0155 * n * log2(n).
- * * If 2 <= n <= 2**256, then less than 2.0232 * n * log2(n).
- * * If 2 <= n <= 2**512, then less than 2.027 * n * log2(n).
- * * !! Currently this is not true: If the input is already sorted, and n >=
- *   1, then n-1.
+ * * With DO_SHORTCUT_OPT:
+ *   * If n >= 2, then less than 0.5308 * n * log2(n) * log2(n).
+ *   * If 2 <= n <= 2**32, then less than 1.9844 * n * log2(n).
+ *   * If 2 <= n <= 2**64, then less than 2.0078 * n * log2(n).
+ *   * If 2 <= n <= 2**128, then less than 2.0193 * n * log2(n).
+ *   * If 2 <= n <= 2**256, then less than 2.0251 * n * log2(n).
+ *   * If 2 <= n <= 2**512, then less than 2.0279 * n * log2(n).
+ *   * If the input is already sorted, and n >= 1, then n-1.
+ * * Without DO_SHORTCUT_OPT:
+ *   * If n >= 2, then less than 0.5 * n * log2(n) * log2(n).
+ *   * If 2 <= n <= 2**32, then less than 1.9683 * n * log2(n).
+ *   * If 2 <= n <= 2**64, then less than 1.9998 * n * log2(n).
+ *   * If 2 <= n <= 2**128, then less than 2.0154 * n * log2(n).
+ *   * If 2 <= n <= 2**256, then less than 2.0232 * n * log2(n).
+ *   * If 2 <= n <= 2**512, then less than 2.0270 * n * log2(n).
  *
  * Uses O(log(n)) memory, mostly recursive calls to ip_merge(...). Call
  * depth is less than log(n)/log(4/3)+2.
@@ -124,6 +136,10 @@ void ip_mergesort(void *base, size_t n, size_t item_size, int (*cmp)(const void 
   for (d = 1; d < n; d <<= 1) {  /* TODO(pts): Check overflows. */
     for (a = 0; a + d < n; a = b) {
       b = a + (d << 1);
+#if DO_SHORTCUT_OPT
+      /* Shortcut if [a,c) is already sorted. */
+      if (d > 1 && cmp((char*)base + (item_size * (a + d - 1)), (char*)base + (item_size * (a + d))) <= 0) continue;
+#endif
       ip_merge(base, item_size, cmp, a, a + d,  b > n ? n : b);
     }
   }
@@ -276,7 +292,7 @@ int main(int argc, char **argv) {
 				break;
 			}
 		}
-#if 0  /* TODO(pts): Why does it fail here but succeed in test/test_qsort_stable.c? */
+#if DO_SHORTCUT_OPT
 		expected_cmp_count = nx_sizes[nxsi] == 0 ? 0 : nx_sizes[nxsi] - 1;
 		if (cmp_count != expected_cmp_count) {
 			FAIL("too many comparisons for already sorted input");

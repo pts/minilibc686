@@ -10,6 +10,8 @@
 import math
 import sys
 
+DO_SHORTCUT_OPT = 1
+
 
 # n1 := len(left) == b - a.
 # n2 := len(right) == c - b.
@@ -131,8 +133,7 @@ import sys
 # If n >= 3: D(n) <= k(n) + D(x(n)) - D(n - x(n)).
 # !! Prove that splits more even than x(n) are yield smaller recursive D + D.
 #
-# CALCD1: [0, 0, 1, 2, 4, 6, 8, 9, 12, 13, 16, 17, 18, 21, 22, 24, 26, 29, 30, 32, 34, 36, 39, 41, 42, 44, 46, 47, 49, 52, 54, 57, 59]
-# !! Calculate the extra comparison for the shortcut.
+# CALCD1: [0, 0, 1, 3, 5, 7, 9, 10, 13, 14, 17, 18, 19, 22, 23, 25, 27, 30, 31, 33, 35, 37, 40, 42, 43, 45, 47, 48, 50, 53, 55, 58, 60]
 #
 # n   k  x  y  D(n)<=
 # ------------------------------
@@ -189,7 +190,10 @@ def calcd1(n, _cache=[0, 0, 1]):
     while (1 << k) < nnn:
       k += 1
     _cache.append(k + _cache[(nn + 1) >> 2] + _cache[nn - ((nn + 1) >> 2)])
-  return _cache[n]
+  v = _cache[n]
+  if n > 2 and DO_SHORTCUT_OPT:
+    v += 1  # Cost of shortcut optimization (DO_SHORTCUT_OPT).
+  return v
 
 
 def calcc1(n, _cache=[0, 0]):
@@ -218,7 +222,11 @@ def calcd1sc(n, _cache={0: 0, 1: 0, 2: 1}):
     k = 0
     while (1 << k) < nnn:
       k += 1
-    _cache[n] = v = k + calcd1sc((n + 1) >> 2) + calcd1sc(n - ((n + 1) >> 2))
+    calcd1sc((n + 1) >> 2)
+    calcd1sc(n - ((n + 1) >> 2))
+    _cache[n] = v = k + _cache[(n + 1) >> 2] + _cache[n - ((n + 1) >> 2)]
+  if n > 2 and DO_SHORTCUT_OPT:
+    v += 1  # Cost of shortcut optimization (DO_SHORTCUT_OPT).
   return v
 
 
@@ -283,12 +291,12 @@ def main(argv):
         print (n, s1, u1, r1)  # r1 seems to be limited.
     # It seems that S(n) < 0.75 * n * log2(n) * log2(n) for any n >= 2. And S(n) == 0 for n < 2.
   print 'CALCD1:', [calcd1(n) for n in xrange(33)]
-  assert [calcd1(n) for n in xrange(33)] == [0, 0, 1, 2, 4, 6, 8, 9, 12, 13, 16, 17, 18, 21, 22, 24, 26, 29, 30, 32, 34, 36, 39, 41, 42, 44, 46, 47, 49, 52, 54, 57, 59]
-  assert [calcd1sc(n) for n in xrange(33)] == [0, 0, 1, 2, 4, 6, 8, 9, 12, 13, 16, 17, 18, 21, 22, 24, 26, 29, 30, 32, 34, 36, 39, 41, 42, 44, 46, 47, 49, 52, 54, 57, 59]
+  assert [calcd1(n)   for n in xrange(33)] == [0, 0, 1, 3, 5, 7, 9, 10, 13, 14, 17, 18, 19, 22, 23, 25, 27, 30, 31, 33, 35, 37, 40, 42, 43, 45, 47, 48, 50, 53, 55, 58, 60]
+  assert [calcd1sc(n) for n in xrange(33)] == [0, 0, 1, 3, 5, 7, 9, 10, 13, 14, 17, 18, 19, 22, 23, 25, 27, 30, 31, 33, 35, 37, 40, 42, 43, 45, 47, 48, 50, 53, 55, 58, 60]
 
   print 'CALCC1:', [calcc1(n) for n in xrange(33)]
-  assert [calcc1(n) for n in xrange(33)] == [0, 0, 1, 3, 6, 12, 15, 18, 24, 37, 41, 44, 48, 57, 61, 66, 74, 103, 105, 109, 114, 122, 128, 133, 140, 155, 161, 165, 171, 183, 189, 197, 207]
-  assert [calcc1sc(n) for n in xrange(33)] == [0, 0, 1, 3, 6, 12, 15, 18, 24, 37, 41, 44, 48, 57, 61, 66, 74, 103, 105, 109, 114, 122, 128, 133, 140, 155, 161, 165, 171, 183, 189, 197, 207]
+  assert [calcc1(n)   for n in xrange(33)] == [0, 0, 1, 4, 7, 14, 17, 21, 27, 41, 45, 49, 53, 63, 67, 73, 81, 111, 113, 118, 123, 132, 138, 144, 151, 167, 173, 178, 184, 197, 203, 212, 222]  # With DO_SHORTCUT_OPT.
+  assert [calcc1sc(n) for n in xrange(33)] == [0, 0, 1, 4, 7, 14, 17, 21, 27, 41, 45, 49, 53, 63, 67, 73, 81, 111, 113, 118, 123, 132, 138, 144, 151, 167, 173, 178, 184, 197, 203, 212, 222]  # With DO_SHORTCUT_OPT.
   if 1:
     for n in xrange(2, 33):
       c1 = calcc1(n)
@@ -296,7 +304,7 @@ def main(argv):
       print (n, c1, u1, c1 / u1)
     print '---LL'
     maxr1 = 0
-    for n in xrange(33, 10000):
+    for n in xrange(2, 10000):
       c1 = calcc1(n)
       u1 = n * ((math.log(n) / math.log(2)) * (math.log(n) / math.log(2)))
       r1 = c1 / u1
@@ -323,27 +331,21 @@ def main(argv):
         print (n, c1, u1, r1)  # r1 seems to be almost limited.
     print '---'
     maxr1 = 0
-    #sys.setrecursionlimit(20000)
-    for k in xrange(1, 130):
+    sys.setrecursionlimit(20000)
+    for k in xrange(1, 515):
       n = (1 << k) + 1
       c1 = calcc1sc(n)
       u1 = n * ((math.log(n) / math.log(2)))
       r1 = c1 / u1
       if r1 > maxr1:
         maxr1 = r1
-        # (8193, 200461, 106510.44278309244, 1.8820783649189876)
-        # (16385, 433962, 229391.44273906754, 1.8917968116780677)
-        # (32769, 934593, 491536.4427170545, 1.901370720009837)
-        # (65537, 2002784, 1048593.4427060478, 1.9099718903749052)
-        # (131073, 4269122, 2228242.4427005444, 1.9159144975382427)
-        # (262145, 9077484, 4718611.442697792, 1.9237617062213732)
-        # (524289, 19200302, 9961492.442696417, 1.9274523481747263)
-        # (1048577, 40571133, 20971541.44269573, 1.9345803984346939)
-        # (2097153, 85306297, 44040214.44269539, 1.9370091194946282)
-        # (4194305, 179317875, 92274711.44269522, 1.9433046410701664)
-        # (8388609, 375295641, 192938008.44269514, 1.9451617855352084)
-        # (16777217, 785371931, 402653209.4426951, 1.950492166912115)
         print (k, n, c1, u1, r1)  # r1 seems co be almost limited.
+    for k in (32 - 1, 64 - 1, 128 - 1, 256 - 1, 512 - 1):
+      n = (1 << k) + 1
+      c1 = calcc1sc(n)
+      u1 = n * ((math.log(n) / math.log(2)))
+      r1 = c1 / u1
+      print (k, float(n), float(c1), float(u1), r1)  # r1 seems co be almost limited.
 
 
 if __name__ == '__main__':
