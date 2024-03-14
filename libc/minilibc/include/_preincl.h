@@ -90,11 +90,11 @@
      */
 #    pragma aux   __default   "_*"           __parm __caller [] __value __struct __caller [] __modify [__eax __ecx __edx]  /* GCC __regparm__(0) default. */
 #    pragma aux   __cdecl     "_*"           __parm __caller [] __value __struct __caller [] __modify [__eax __ecx __edx]  /* Same as the default. */
-#    pragma aux   __fastcall  "_*"           __parm __caller [__eax __edx __ecx] __value __struct __caller [] __modify [__eax __ecx __edx]  /* GCC __regparm__(1) .. __regparm(3). Returns struct address is passed in EAX. */
+#    pragma aux   __fastcall  "_*"           __parm __caller [__eax] [__edx] [__ecx] __value __struct __caller [] __modify [__eax __ecx __edx]  /* GCC __regparm__(1) .. __regparm(3). Returns struct address is passed in EAX. */
 #    ifdef __MINILIBC686__
 #      pragma aux __minirp1   "_mini_*_RP1"  __parm __caller [__eax] __value __struct __caller [] __modify [__eax __ecx __edx]  /* GCC __regparm__(1). Returns struct address is passed in EAX. */
 #      pragma aux __syscall   "_mini_*"      __parm __caller [] __value __struct __caller [] __modify [__eax __ecx __edx]  /* Same as the default, with mini_ prefix. */
-#      pragma aux __fortran   "_mini_*_RP3"  __parm __caller [__eax __edx __ecx] __value __struct __caller [] __modify [__eax __ecx __edx]  /* GCC __regparm__(1) .. __regparm(3). Returns struct address is passed in EAX. */
+#      pragma aux __fortran   "_mini_*_RP3"  __parm __caller [__eax] [__edx] [__ecx] __value __struct __caller [] __modify [__eax __ecx __edx]  /* GCC __regparm__(1) .. __regparm(3). Returns struct address is passed in EAX. */
 #    endif
 #    pragma aux (__default) main
 #    pragma aux main "_*"
