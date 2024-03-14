@@ -219,6 +219,9 @@ int main(int argc, char **argv) {
 	};
 
 	int nx[256];
+	const int nx_sizes[] = {0, 1, 2, 3, 4, 5, 6, sizeof(nx) / sizeof(nx[0])};
+	int nxsi;
+	unsigned expected_cmp_count;
 
         struct three t[] = {
                 i3(879045), i3(394), i3(99405644), i3(33434), i3(232323), i3(4334), i3(5454),
@@ -227,6 +230,7 @@ int main(int argc, char **argv) {
         };
 
 	(void)argc; (void)argv;
+	(void)expected_cmp_count;
 
 	ip_mergesort(s, sizeof(s)/sizeof(char *), sizeof(char *), scmp);
 	for (i=0; i<(int) (sizeof(s)/sizeof(char *)-1); i++) {
@@ -258,25 +262,28 @@ int main(int argc, char **argv) {
 		}
 	}
 
-	for (i = 0; i + 0U < sizeof(nx)/sizeof(nx[0]); ++i) {
-		nx[i] = ~(i >> 3) << 16 | (0xffff - i);
-	}
-	cmp_count = 0;
-	ip_mergesort(nx, sizeof(nx)/sizeof(nx[0]), sizeof(nx[0]), rhucmp);
-	for (i=0; i<(int)(sizeof(nx)/sizeof(nx[0])-1); i++) {
-		if (nx[i] < nx[i+1]) {
-			FAIL("integer sort inplace merge long already_sorted");
-			for (i=0; i<(int)(sizeof(nx)/sizeof(nx[0])); i++)
-				printf("\t0x%04x\n", nx[i]);
-			break;
+	for (nxsi = 0; nxsi + 0U < sizeof(nx_sizes) / sizeof(nx_sizes[0]); ++nxsi) {
+		for (i = 0; i < nx_sizes[nxsi]; ++i) {
+			nx[i] = ~(i >> 3) << 16 | (0xffff - i);
 		}
-	}
+		cmp_count = 0;
+		ip_mergesort(nx, nx_sizes[nxsi], sizeof(nx[0]), rhucmp);
+		for (i=1; i < nx_sizes[nxsi]; i++) {
+			if (nx[i-1] < nx[i]) {
+				FAIL("integer sort inplace merge long already_sorted");
+				for (i=0; i< nx_sizes[nxsi]; i++)
+					printf("\t0x%04x\n", nx[i]);
+				break;
+			}
+		}
 #if 0  /* TODO(pts): Why does it fail here but succeed in test/test_qsort_stable.c? */
-	if (cmp_count != sizeof(nx)/sizeof(nx[0]) - 1) {
-		FAIL("too many comparisons for already sorted input");
-		printf("cmp_count=%d expected=%d\n", cmp_count, (int)(sizeof(nx)/sizeof(nx[0])));
-	}
+		expected_cmp_count = nx_sizes[nxsi] == 0 ? 0 : nx_sizes[nxsi] - 1;
+		if (cmp_count != expected_cmp_count) {
+			FAIL("too many comparisons for already sorted input");
+			printf("cmp_count=%u expected=%u\n", cmp_count, expected_cmp_count);
+		}
 #endif
+	}
 
 	for (i = 0; i + 0U < sizeof(nx)/sizeof(nx[0]); ++i) {
 		nx[i] = (i % 13) << 16 | (0xffff - i);
