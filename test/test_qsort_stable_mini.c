@@ -45,22 +45,54 @@ struct ip_cs {
  * Precondition: a < b.
  *
  * It is quite slow, because it moves 1 byte a time (rather than 4 or 8).
+ *
+ * It's not OK to a bytewise reverse, because this function is also used for
+ * item swapping.
  */
-static void ip_reverse(const struct ip_cs *cs, size_t a, size_t b) {
-  const size_t item_size = cs->item_size;
-  char *cbase = (char*)cs->base;
-  char *ca = cbase + item_size * a, *cb = cbase + item_size * b, *ca_end;
-  char t;
-  size_t cabd;
-  while (0 < (ssize_t)(cabd = (cb -= item_size) - ca)) {  /* cabd cast to ssize_t can overflow here. We'll fix it in assembly. */
-    /* ip_swap(cs, a, b); */  /* 0 comparisons, 1 (item) swap. */
-    for (ca_end = ca + item_size; ca != ca_end; ++ca) {
-      t = *ca;
-      *ca = ca[cabd];
-      ca[cabd] = t;
+#if !(defined(__WATCOMC__) && defined(__386__))
+  static void ip_reverse(const struct ip_cs *cs, size_t a, size_t b) {
+    const size_t item_size = cs->item_size;
+    char *cbase = (char*)cs->base;
+    char *ca = cbase + item_size * a, *cb = cbase + item_size * b, *ca_end;
+    char t;
+    size_t cabd;
+    while (0 < (ssize_t)(cabd = (cb -= item_size) - ca)) {  /* cabd cast to ssize_t can overflow here. We'll fix it in assembly. */
+      /* ip_swap(cs, a, b); */  /* 0 comparisons, 1 (item) swap. */
+      for (ca_end = ca + item_size; ca != ca_end; ++ca) {
+        t = *ca;
+        *ca = ca[cabd];
+        ca[cabd] = t;
+      }
     }
   }
-}
+#else
+#  pragma aux ip_reverse  __parm __caller [__esi] [__edx] [__ebx] __value __struct __caller [] [__eax] __modify [__edx __ebx __ecx __eax __esi __edi]
+  __declspec(naked) static void ip_reverse(const struct ip_cs *cs, size_t a, size_t b) { (void)cs; (void)a; (void)b; __asm {
+	mov eax, [esi]  /* EAX := cs->base. (cbase) */
+	mov esi, [esi+4]  /* ESI := cs->item_size (item_size). */
+	imul ebx, esi  /* EBX := item_size * b. */
+	add ebx, eax  /* EBX := cbase + item_size * b. (cb) */
+	imul edx, esi  /* EBD := item_size * a. */
+	add edx, eax  /* EDX := cbase + item_size * a. (ca) */
+    Lnext:
+	sub ebx, esi  /* EBX -= item_size. (cb) */
+	mov ecx, ebx
+	sub ecx, edx  /* ECX := cb - ca. (cabd) */
+	jna Ldone
+	mov edi, edx
+	add edi, esi  /* EDI := ca + item_size. (ca_end). */
+    Lnextin:
+	cmp edx, edi
+	je Lnext
+	mov al, [edx]
+	xchg [edx+ecx], al
+	mov [edx], al  /* TODO(pts): stosb if EDI and EDX are swapped. */
+	inc edx
+	jmp Lnextin
+    Ldone:
+	ret
+  } }
+#endif
 
 #if !(defined(__WATCOMC__) && defined(__386__))
   static int ip_cmp(const struct ip_cs *cs, size_t a, size_t b) {
