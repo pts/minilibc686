@@ -16,6 +16,7 @@
  */
 
 #include <stddef.h>  /* size_t. */
+#include <sys/types.h>  /* ssize_t. */
 
 #ifndef DO_SHORTCUT_OPT
 #define DO_SHORTCUT_OPT 1
@@ -39,20 +40,16 @@ struct ip_cs {
 static void ip_reverse(const struct ip_cs *cs, size_t a, size_t b) {
   const size_t item_size = cs->item_size;
   char *cbase = (char*)cs->base;
-  char *ca = cbase + item_size * a, *cb = cbase + item_size * (b - 1), *ca_end;
+  char *ca = cbase + item_size * a, *cb = cbase + item_size * b, *ca_end;
   char t;
   size_t cabd;
-  for (--b; a < b; a++, b--, cb -= item_size) {
+  while (0 < (ssize_t)(cabd = (cb -= item_size) - ca)) {  /* cabd cast to ssize_t can overflow here. We'll fix it in assembly. */
     /* ip_swap(cs, a, b); */  /* 0 comparisons, 1 (item) swap. */
-    ASSERT(ca == cbase + item_size * a);
-    ASSERT(cb == cbase + item_size * b);
-    for (cabd = cb - ca, ca_end = ca + item_size; ca != ca_end; ++ca) {
+    for (ca_end = ca + item_size; ca != ca_end; ++ca) {
       t = *ca;
       *ca = ca[cabd];
       ca[cabd] = t;
     }
-    ASSERT(ca == cbase + item_size * (a + 1));
-    ASSERT(cb == cbase + item_size * b);
   }
 }
 
