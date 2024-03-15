@@ -79,8 +79,8 @@ mini_qsort_stable_fast:  ; void mini_qsort_stable_fast(void *base, size_t n, siz
 ;
 ; Uses O(log(n)) stack memory, mostly recursive calls to
 ; mini___M_inplace_merge_RX(...). More exactly, this function uses at most
-; 1348 (mini___M_inplace_merge_RX) + 4 (return address) + 4*4 (arguments) +
-; 32 (pushad) == 1400 bytes of stack.
+; 1024 (mini___M_inplace_merge_RX) + 4 (return address) + 4*4 (arguments) +
+; 32 (pushad) == 1076 bytes of stack.
 ;
 ; void mini_qsort_stable_fast(void *base, size_t n, size_t item_size, int CMPDECL (*cmp)(const void *, const void *)) {
 ;   size_t a, b, d;

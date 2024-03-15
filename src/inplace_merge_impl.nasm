@@ -2,7 +2,7 @@
 ; written by pts@fazekas.hu at Fri Mar 15 03:38:43 CET 2024
 ; Compile to i386 ELF .o object: nasm -O999999999 -w+orphan-labels -f elf -o inplace_merge_impl.o inplace_merge_impl.nasm
 ;
-; Code size: 0x11d bytes, 0x15b bytes including src/qsort_stable_fast.nasm.
+; Code size: 0x120 bytes, 0x15e bytes including src/qsort_stable_fast.nasm.
 ;
 ; Based on ip_merge (C, simplest) at https://stackoverflow.com/a/22839426/97248
 ; Based on ip_merge in test/test_qstort_stable_mini.c.
@@ -118,10 +118,11 @@ mini___M_cmp_RX:  ; int mini___M_cmp_RX(const struct ip_cs *cs, size_t a, size_t
 		pop ecx  ; Restore.
 		ret
 
-mini___M_inplace_merge_top_RX:  ; void mini___M_inplace_merge_RX(const struct ip_cs *cs, size_t a, size_t b, size_t c);
+mini___M_inplace_merge_RX:  ; void mini___M_inplace_merge_RX(const struct ip_cs *cs, size_t a, size_t b, size_t c);
 ; In-place merge of [a,b) and [b,c) to [a,c) within base.
 ;
 ; Precondition: a <= b && b <= c.
+; Precondition: c >= 1 (because the 0 value is used as sentinel) for stopping the recursion.
 ;
 ; See also function ip_merge in test/test_qsort_stable_mini.c.
 ;
@@ -131,9 +132,21 @@ mini___M_inplace_merge_top_RX:  ; void mini___M_inplace_merge_RX(const struct ip
 ;
 ; Since c-a < 2**32 on 32-bit systems such as i386, maximum recursion depth
 ; is less than log(2**32)/(4/3)+1, so it is at most 78. Thus maximum stack
-; size used for recursion is 78*16 == 1248 bytes. Add about 100 bytes for
+; size used for recursion is 77*12 == 924 bytes. Add about 100 bytes for
 ; saves and other function calls (e.g. ip_reverse and mini___M_cmp_RX), so
-; this function uses at most 1348 bytes of stack space.
+; this function uses at most 1024 bytes of stack.
+;
+; Here is the Python script which gives the maximum recursion depth of 77:
+;
+;   c, n = 1, (1 << 32) - 1
+;   while n > 2:
+;     c += 1
+;     #print((c, n))
+;     if n == 3:
+;       n = 2
+;     else:
+;       n = (n * 3 + 3) >> 2
+;   print(c)
 ;
 ; The ABI of this function (calling convention, `#pragma aux') is custom
 ; tailored for the register usage of the functions in this file.
@@ -182,13 +195,11 @@ mini___M_inplace_merge_top_RX:  ; void mini___M_inplace_merge_RX(const struct ip
 ; }
 ;
 		; Register allocation: ESI: cs; EAX: a; EBX: b; ECX: c; EDX: i (after .afterbound: q); EDI: p; EBP: q.
-		;
-		; The function entry point isn't here, but at
-		; mini___M_inplace_merge_RX. This is to make jump
-		; instructions shorter.
-ip_merge_top:
+		push byte 0  ; Sentinel arg c value for the final `ret' after all recursive calls are complete.
+		jmp short .ree
+
 .c1:		cmp ebx, ecx
-		je short mini___M_inplace_merge_RX.ret
+		je short mini___M_inplace_merge_RX.reco
 		mov edi, ecx
 		sub edi, eax
 		cmp edi, byte 2
@@ -198,10 +209,10 @@ ip_merge_top:
 		call mini___M_cmp_RX  ; mini___M_cmp_RX(cs, a, b);
 		test eax, eax  ; Same as: cmp eax, byte 0
 		pop edx  ; EDX := EAX (a).
-		jle short mini___M_inplace_merge_RX.ret
+		jle short mini___M_inplace_merge_RX.reco
 		mov ebx, ecx
 		call ip_reverse  ; ip_reverse(cs, a, c);
-		jmp short mini___M_inplace_merge_RX.ret
+		jmp short mini___M_inplace_merge_RX.reco
 
 .c2:		push ebp  ; Save. (OpenWatcom doesn't allow __modify [__ebp].)
 		push eax  ; Save a.
@@ -239,11 +250,17 @@ ip_merge_top:
 		dec edx  ; i--;
 .lowercont:	shr edx, 1
 		jmp short .lowernext
-mini___M_inplace_merge_RX:  ; Entry point.
-.ree:
-		cmp eax, ebx
-		jne short ip_merge_top.c1
-.ret:		ret
+
+.noret:		pop ebx  ; Arg b.
+		pop eax  ; Arg a.
+.ree:		cmp eax, ebx
+		jne short .c1
+.reco:  ; Done with the current call. Pop arg tuple (a, b,c) from the stack, or return if none.
+		pop ecx  ; Arg c or sentinel value (0).
+		test ecx, ecx
+		jnz .noret
+		ret  ; Sentinel arg c value popped.
+
 .upper:		mov ebp, ecx
 		sub ebp, ebx
 		shr ebp, 1
@@ -276,9 +293,9 @@ mini___M_inplace_merge_RX:  ; Entry point.
 		mov edx, ebp  ; EDX := q.
 		pop ebp  ; Restore.
 		cmp edi, ebx
-		je short .rec
+		je short .recs
 		cmp ebx, edx
-		je short .rec
+		je short .recs
 		push edx  ; Save.
 		push ebx  ; Save.
 		push edx
@@ -291,20 +308,17 @@ mini___M_inplace_merge_RX:  ; Entry point.
 		call ip_reverse  ; ip_reverse(cs, p, q);
 		pop ebx  ; Restore.
 		pop edx  ; Restore.
+		; Fall through to .recs.
 
-.rec:		neg ebx
+.recs:		neg ebx
 		add ebx, edi
 		add ebx, edx
-		push ebx  ; Pushed for the 2nd ip_merge call below.
-		push edx  ; Pushed for the 2nd ip_merge call below.
-		push ecx  ; Pushed for the 2nd ip_merge call below.
-		mov ecx, ebx
+		push ebx  ; Arg a (== b) of the 2nd ip_merge call (mini___M_inplace_merge_RX(cs, b, q, c)).
+		push edx  ; Arg b (== q) of the 2nd ip_merge call (mini___M_inplace_merge_RX(cs, b, q, c)).
+		push ecx  ; Arg c (== c) of the 2nd ip_merge call (mini___M_inplace_merge_RX(cs, b, q, c)). Nonzero to avoid sentinel.
+		mov ecx, ebx  ; It would work if this was zero, but it isn't, because that would mean infinite recursion.
 		mov ebx, edi
-		call mini___M_inplace_merge_RX  ; mini___M_inplace_merge_RX(cs, a, p, b);  !! TODO(pts): Make this a jump, use a sentinel 0 to figure out when to end. Thus use 4 bytes less stack space per level.
-		pop ecx
-		pop ebx
-		pop eax
-		jmp short .ree  ; mini___M_inplace_merge_RX(cs, b, q, c);
+		jmp short .ree  ; mini___M_inplace_merge_RX(cs, a, p, b);
 
 %ifdef CONFIG_PIC  ; Already position-independent code.
 %endif
