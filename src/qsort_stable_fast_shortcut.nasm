@@ -82,8 +82,11 @@ mini_qsort_stable_fast_shortcut:  ; void mini_qsort_stable_fast_shortcut(void *b
 ; * If 2 <= n <= 2**512, then less than 2.0279 * n * log2(n).
 ; * If the input is already sorted, and n >= 1, then n-1.
 ;
-; Uses O(log(n)) memory, mostly recursive calls to mini___M_inplace_merge_RX(...). Call
-; depth is less than log(n)/log(4/3)+2.
+; Uses O(log(n)) stack memory, mostly recursive calls to
+; mini___M_inplace_merge_RX(...). More exactly, this function uses at most
+; 1348 (mini___M_inplace_merge_RX) + 4 (return address) + 4*4 (arguments) +
+; 32 (pushad) == 1400 bytes of stack.
+;
 ;
 ; void mini_qsort_stable_fast_shortcut(void *base, size_t n, size_t item_size, int CMPDECL (*cmp)(const void *, const void *)) {
 ;   size_t a, b, d;

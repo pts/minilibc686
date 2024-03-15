@@ -118,6 +118,16 @@ mini___M_inplace_merge_RX:  ; void mini___M_inplace_merge(const struct ip_cs *cs
 ;
 ; See also function ip_merge in test/test_qsort_stable_mini.c.
 ;
+; This is a recursive function, but it uses very little stack space: only 16
+; bytes per recursion level. Maximum recursion depth is less than
+; log(c-a)/log(4/3)+1.
+;
+; Since c-a < 2**32 on 32-bit systems such as i386, maximum recursion depth
+; is less than log(2**32)/(4/3)+1, so it is at most 78. Thus maximum stack
+; size used for recursion is 78*16 == 1248 bytes. Add about 100 bytes for
+; saves and other function calls (e.g. ip_reverse and mini___M_cmp_RX), so
+; this function uses at most 1348 bytes of stack space.
+;
 ; #pragma aux mini___M_inplace_merge_RX  __parm __caller [__esi] [__eax] [__ebx] [__ecx] __value __struct __caller [] [__eax] __modify [__eax __edx __ebx __ecx __eax __esi __edi]
 ; void mini___M_inplace_merge_RX(const struct ip_cs *cs, size_t a, size_t b, size_t c) {
 ;   size_t p, q, i;
@@ -270,7 +280,7 @@ mini___M_inplace_merge_RX:  ; void mini___M_inplace_merge(const struct ip_cs *cs
 .rec:		neg ebx
 		add ebx, edi
 		add ebx, edx
-		push ebx  ; Pushed for the 2nd ip_merge call below. !! How much stack space is used by ip_mergesort?
+		push ebx  ; Pushed for the 2nd ip_merge call below.
 		push edx  ; Pushed for the 2nd ip_merge call below.
 		push ecx  ; Pushed for the 2nd ip_merge call below.
 		mov ecx, ebx
