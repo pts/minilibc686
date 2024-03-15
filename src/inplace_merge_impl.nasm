@@ -285,7 +285,7 @@ mini___M_inplace_merge_RX:  ; void mini___M_inplace_merge(const struct ip_cs *cs
 		push ecx  ; Pushed for the 2nd ip_merge call below.
 		mov ecx, ebx
 		mov ebx, edi
-		call mini___M_inplace_merge_RX  ; mini___M_inplace_merge_RX(cs, a, p, b);
+		call mini___M_inplace_merge_RX  ; mini___M_inplace_merge_RX(cs, a, p, b);  !! TODO(pts): Make this a jump, use a sentinel 0 to figure out when to end. Thus use 4 bytes less stack space per level.
 		pop ecx
 		pop ebx
 		pop eax
