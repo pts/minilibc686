@@ -112,7 +112,7 @@ mini___M_cmp_RX:  ; int mini___M_cmp_RX(const struct ip_cs *cs, size_t a, size_t
 		imul edx, ecx  ; EDX := a * cs->item_size.
 		add edx, [esi]  ; EDX += cs->base.
 		push edx  ; Push arg1.
-		call [esi+12]  ; Call cs->cmp. May ruin EDX and ECX. Return value in ESI.
+		call [esi+12]  ; Call cs->cmp. May ruin EDX and ECX. Return value in EAX.
 		pop ecx  ; Clean up arg1 from stack.
 		pop ecx  ; Clean up arg2 from stack.
 		pop ecx  ; Restore.

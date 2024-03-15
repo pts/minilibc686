@@ -120,7 +120,7 @@ struct ip_cs {
 	imul edx, ecx  /* EDX := a * cs->item_size. */
 	add edx, [esi]  /* EDX += cs->base. */
 	push edx  /* Push arg1. */
-	call [esi+8]  /* Call cs->cmp. May ruin EDX and ECX. Return value in ESI. */
+	call [esi+8]  /* Call cs->cmp. May ruin EDX and ECX. Return value in EAX. */
 	pop ecx  /* Clean up arg1 from stack. */
 	pop ecx  /* Clean up arg2 from stack. */
 	pop ecx  /* Restore. */
