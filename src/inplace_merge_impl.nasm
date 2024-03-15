@@ -2,7 +2,7 @@
 ; written by pts@fazekas.hu at Fri Mar 15 03:38:43 CET 2024
 ; Compile to i386 ELF .o object: nasm -O999999999 -w+orphan-labels -f elf -o inplace_merge_impl.o inplace_merge_impl.nasm
 ;
-; Code size: 0x120 bytes, 0x15e bytes including src/qsort_stable_fast.nasm.
+; Code size: 0x11e bytes, 0x15c bytes including src/qsort_stable_fast.nasm.
 ;
 ; Based on ip_merge (C, simplest) at https://stackoverflow.com/a/22839426/97248
 ; Based on ip_merge in test/test_qstort_stable_mini.c.
@@ -197,7 +197,7 @@ ip_merge_top:
 		push eax  ; Save a.
 		xchg edx, eax  ; EDX := EAX; EAX := junk.
 		call mini___M_cmp_RX  ; mini___M_cmp_RX(cs, a, b);
-		cmp eax, byte 0
+		test eax, eax  ; Same as: cmp eax, byte 0
 		pop edx  ; EDX := EAX (a).
 		jle short mini___M_inplace_merge_RX.ret
 		mov ebx, ecx
@@ -231,8 +231,8 @@ ip_merge_top:
 		call mini___M_cmp_RX  ; mini___M_cmp_RX(cs, p, q + (i >> 1));
 		pop ebx  ; Restore.
 		pop edx  ; Restore.
-		cmp eax, byte 1
-		jl short .lowercont
+		cmp eax, byte 0
+		jle short .lowercont
 		mov eax, edx
 		shr eax, byte 1
 		inc eax
@@ -263,8 +263,8 @@ mini___M_inplace_merge_RX:  ; Entry point.
 		call mini___M_cmp_RX  ; mini___M_cmp_RX(cs, q, p + (i >> 1));
 		pop ebx  ; Restore.
 		pop edx  ; Restore.
-		cmp eax, byte 0
-		jl short .uppercont
+		test eax, eax
+		js short .uppercont  ; Shorter than: cmp eax, byte 0 ++ jl short .uppercont
 		mov eax, edx
 		shr eax, 1
 		inc eax
