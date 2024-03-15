@@ -2,7 +2,7 @@
 ; written by pts@fazekas.hu at Fri Mar 15 03:38:43 CET 2024
 ; Compile to i386 ELF .o object: nasm -O999999999 -w+orphan-labels -f elf -o inplace_merge_impl.o inplace_merge_impl.nasm
 ;
-; Code size: 0x11e bytes, 0x15c bytes including src/qsort_stable_fast.nasm.
+; Code size: 0x11d bytes, 0x15b bytes including src/qsort_stable_fast.nasm.
 ;
 ; Based on ip_merge (C, simplest) at https://stackoverflow.com/a/22839426/97248
 ; Based on ip_merge in test/test_qstort_stable_mini.c.
@@ -80,8 +80,7 @@ ip_reverse:  ; void ip_reverse(const struct ip_cs *cs, size_t a, size_t b);
 		mov ecx, ebx
 		sub ecx, edx  ; ECX := cb - ca. (cabd)
 		jna short .done
-		mov edi, edx
-		add edi, esi  ; EDI := ca + item_size. (ca_end).
+		lea edi, [edx+esi]  ; EDI := ca + item_size. (ca_end).
 .nextin:	cmp edx, edi
 		je short .next
 		mov al, [edx]
