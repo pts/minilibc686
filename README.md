@@ -963,5 +963,6 @@ This section is mostly an FYI, it doesn't affter minilibc686 users directly.
   OpenWatcom. With OpenWatcom, `long double' is the same as `double'.
 * Add `-fno-ident` to PCC.
 * Add `-falign-functions=1` to PCC.
+* Strip local (`t') symbols from libc/minilibc/libc.i[36]86.a
 
 __END__
