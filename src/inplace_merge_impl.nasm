@@ -40,6 +40,10 @@ section .text
 ; };
 
 ip_reverse:  ; void ip_reverse(const struct ip_cs *cs, size_t a, size_t b);
+; Puts the array elements [a,b) to reverse order, in-place.
+;
+; The ABI of this function (calling convention, `#pragma aux') is custom
+; tailored for the register usage of the functions in this file.
 ; 0 comparisons, (b-a)//2 swaps.
 ;
 ; Precondition: a < b.
@@ -89,7 +93,11 @@ ip_reverse:  ; void ip_reverse(const struct ip_cs *cs, size_t a, size_t b);
 		ret
 
 mini___M_cmp_RX:  ; int mini___M_cmp_RX(const struct ip_cs *cs, size_t a, size_t b);
-; Calls cs->cmp with the right arguments.
+; Compares array element a and b (with cs->cmp). Propagates the return value
+; of cs->cmp, which is less than 0 if a < b, 0 if a == b and 1 if a > b.
+;
+; The ABI of this function (calling convention, `#pragma aux') is custom
+; tailored for the register usage of the functions in this file.
 ;
 ; #pragma aux mini___M_cmp_RX  __parm __caller [__esi] [__edx] [__ebx] __value __struct __caller [] [__eax] __modify [__edx __ebx]
 ; int mini___M_cmp_RX(const struct ip_cs *cs, size_t a, size_t b) {
@@ -127,6 +135,9 @@ mini___M_inplace_merge_RX:  ; void mini___M_inplace_merge(const struct ip_cs *cs
 ; size used for recursion is 78*16 == 1248 bytes. Add about 100 bytes for
 ; saves and other function calls (e.g. ip_reverse and mini___M_cmp_RX), so
 ; this function uses at most 1348 bytes of stack space.
+;
+; The ABI of this function (calling convention, `#pragma aux') is custom
+; tailored for the register usage of the functions in this file.
 ;
 ; #pragma aux mini___M_inplace_merge_RX  __parm __caller [__esi] [__eax] [__ebx] [__ecx] __value __struct __caller [] [__eax] __modify [__eax __edx __ebx __ecx __eax __esi __edi]
 ; void mini___M_inplace_merge_RX(const struct ip_cs *cs, size_t a, size_t b, size_t c) {
