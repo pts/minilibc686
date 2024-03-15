@@ -232,7 +232,7 @@ void ip_mergesort(void *base, size_t n, size_t item_size, int CMPDECL (*cmp)(con
   struct ip_cs cs;
   cs.base = base; cs.item_size = item_size; cs.cmp = cmp;
   for (d = 1; d != 0 && d < n; d <<= 1) {  /* We check `d != 0' to detect overflow in the previous: `d <<= 1'. */
-    for (a = 0; a + d < n; a = b) {
+    for (a = 0; a < n - d; a = b) {
       b = a + (d << 1);
 #if DO_SHORTCUT_OPT
       /* Shortcut if [a,c) is already sorted. */
