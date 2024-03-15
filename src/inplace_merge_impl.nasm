@@ -2,7 +2,7 @@
 ; written by pts@fazekas.hu at Fri Mar 15 03:38:43 CET 2024
 ; Compile to i386 ELF .o object: nasm -O999999999 -w+orphan-labels -f elf -o inplace_merge_impl.o inplace_merge_impl.nasm
 ;
-; Code size: 0x120 bytes, 0x15e bytes including src/qsort_stable_fast.nasm.
+; Code size: 0x11e bytes, 0x15c bytes for i686 including src/qsort_stable_fast.nasm.
 ;
 ; Based on ip_merge (C, simplest) at https://stackoverflow.com/a/22839426/97248
 ; Based on ip_merge in test/test_qstort_stable_mini.c.
@@ -251,8 +251,8 @@ mini___M_inplace_merge_RX:  ; void mini___M_inplace_merge_RX(const struct ip_cs 
 .lowercont:	shr edx, 1
 		jmp short .lowernext
 
-.noret:		pop ebx  ; Arg b.
-		pop eax  ; Arg a.
+.noret:		pop eax  ; Arg a.
+		pop ebx  ; Arg b.
 .ree:		cmp eax, ebx
 		jne short .c1
 .reco:  ; Done with the current call. Pop arg tuple (a, b,c) from the stack, or return if none.
@@ -310,13 +310,13 @@ mini___M_inplace_merge_RX:  ; void mini___M_inplace_merge_RX(const struct ip_cs 
 		pop edx  ; Restore.
 		; Fall through to .recs.
 
-.recs:		neg ebx
-		add ebx, edi
-		add ebx, edx
-		push ebx  ; Arg a (== b) of the 2nd ip_merge call (mini___M_inplace_merge_RX(cs, b, q, c)).
-		push edx  ; Arg b (== q) of the 2nd ip_merge call (mini___M_inplace_merge_RX(cs, b, q, c)).
+.recs:		push edx  ; Arg b (== q) of the 2nd ip_merge call (mini___M_inplace_merge_RX(cs, b, q, c)).
+		; From this point until the end of the code we break register allocation: EDX will store the new b (== p + (q - b)).
+		add edx, edi
+		sub edx, ebx
+		push edx  ; Arg a (== b) of the 2nd ip_merge call (mini___M_inplace_merge_RX(cs, b, q, c)).
 		push ecx  ; Arg c (== c) of the 2nd ip_merge call (mini___M_inplace_merge_RX(cs, b, q, c)). Nonzero to avoid sentinel.
-		mov ecx, ebx  ; It would work if this was zero, but it isn't, because that would mean infinite recursion.
+		mov ecx, edx  ; It would work if this was zero, but it isn't, because that would mean infinite recursion.
 		mov ebx, edi
 		jmp short .ree  ; mini___M_inplace_merge_RX(cs, a, p, b);
 
