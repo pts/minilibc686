@@ -22,7 +22,7 @@
 #define DO_SHORTCUT_OPT 1
 #endif
 
-#if defined(__WATCOMC__) && defined(__386__)  /* !! buggy */
+#if defined(__WATCOMC__) && defined(__386__)
 #  define CMPDECL __cdecl
 #else
 #  define CMPDECL
@@ -66,8 +66,9 @@ struct ip_cs {
     }
   }
 #else
-#  pragma aux ip_reverse  __parm __caller [__esi] [__edx] [__ebx] __value __struct __caller [] [__eax] __modify [__edx __ebx __ecx __eax __esi __edi]
+#  pragma aux ip_reverse  __parm __caller [__esi] [__edx] [__ebx] __value __struct __caller [] [__eax] __modify []
   __declspec(naked) static void ip_reverse(const struct ip_cs *cs, size_t a, size_t b) { (void)cs; (void)a; (void)b; __asm {
+	pushad
 	mov eax, [esi]  /* EAX := cs->base. (cbase) */
 	mov esi, [esi+4]  /* ESI := cs->item_size (item_size). */
 	imul ebx, esi  /* EBX := item_size * b. */
@@ -90,6 +91,7 @@ struct ip_cs {
 	inc edx
 	jmp Lnextin
     Ldone:
+	popad
 	ret
   } }
 #endif
@@ -100,21 +102,23 @@ struct ip_cs {
   }
 #else
   /* TODO(pts): Optimize __modify in caller. */
-#  pragma aux ip_cmp  __parm __caller [__esi] [__edx] [__ebx] __value __struct __caller [] [__eax] __modify [__edx __ebx __ecx]
+#  pragma aux ip_cmp  __parm __caller [__esi] [__edx] [__ebx] __value __struct __caller [] [__eax] __modify [__edx __ebx]
   __declspec(naked) static int ip_cmp(const struct ip_cs *cs, size_t a, size_t b) { (void)cs; (void)a; (void)b; __asm {
-		/* ESI: cs; EDX: a, EBX: b. */
-		/* TODO(pts): Size-optimize this function. */
-		mov ecx, [esi+4]  /* ECX := cs->item_size. */
-		imul ebx, ecx  /* EBX := b * cs->item_size. */
-		add ebx, [esi]  /* EBX += cs->base. */
-		push ebx  /* Push arg2. */
-		imul edx, ecx  /* EDX := a * cs->item_size. */
-		add edx, [esi]  /* EDX += cs->base. */
-		push edx  /* Push arg1. */
-		call [esi+8]  /* Call cs->cmp. May ruin EDX and ECX. Return value in ESI. */
-		pop ecx  /* Clean up arg1 from stack. */
-		pop ecx  /* Clean up arg2 from stack. */
-		ret
+	push ecx  /* Save. */
+	/* ESI: cs; EDX: a, EBX: b. */
+	/* TODO(pts): Size-optimize this function. */
+	mov ecx, [esi+4]  /* ECX := cs->item_size. */
+	imul ebx, ecx  /* EBX := b * cs->item_size. */
+	add ebx, [esi]  /* EBX += cs->base. */
+	push ebx  /* Push arg2. */
+	imul edx, ecx  /* EDX := a * cs->item_size. */
+	add edx, [esi]  /* EDX += cs->base. */
+	push edx  /* Push arg1. */
+	call [esi+8]  /* Call cs->cmp. May ruin EDX and ECX. Return value in ESI. */
+	pop ecx  /* Clean up arg1 from stack. */
+	pop ecx  /* Clean up arg2 from stack. */
+	pop ecx  /* Restore. */
+	ret
   } }
 #endif
 
@@ -123,63 +127,198 @@ struct ip_cs {
  *
  * Precondition: a <= b && b <= c.
  */
-static void ip_merge(const struct ip_cs *cs, size_t a, size_t b, size_t c) {
-  size_t p, q, i;
-  if (a == b || b == c) return;
-  if (c - a == 2) {
-    if (ip_cmp(cs, b, a) < 0) {  /* 1 comparison. */
-      ip_reverse(cs, a, c);  /* Same as: ip_swap(cs, a, b); */  /* 1 swap. */
+#if !(defined(__WATCOMC__) && defined(__386__))
+  static void ip_merge(const struct ip_cs *cs, size_t a, size_t b, size_t c) {
+    size_t p, q, i;
+    if (a == b || b == c) return;
+    if (c - a == 2) {
+      if (ip_cmp(cs, b, a) < 0) {  /* 1 comparison. */
+        ip_reverse(cs, a, c);  /* Same as: ip_swap(cs, a, b); */  /* 1 swap. */
+      }
+      return;
     }
-    return;
-  }
-  /* Finds first element not less (for is_lower) or greater (for !is_lower)
-   * than key in sorted sequence [low,high) or end of sequence (high) if not found.
-   * ceil(log2(high-low+1)) comparisons, which is == ceil(log2(min(b-a,c-b)+1)) <= ceil(log2((c-a)//2+1)).
-   */
-  if (b - a > c - b /* is_lower */) {
-    /* key = */ p = a + ((b - a) >> 1); /* low = */ q = b; /* high = c; */ i = c - b;
-    for (/* i = high - low */; i != 0; i >>= 1) {  /* low = ip_bound(cs, low, high, key, is_lower); */
-      /* mid = low + (i >> 1); */
-      if (ip_cmp(cs, p, q + (i >> 1)) >= 1) {
-        q += (i >> 1) + 1;
-        i--;
+    /* Finds first element not less (for is_lower) or greater (for !is_lower)
+     * than key in sorted sequence [low,high) or end of sequence (high) if not found.
+     * ceil(log2(high-low+1)) comparisons, which is == ceil(log2(min(b-a,c-b)+1)) <= ceil(log2((c-a)//2+1)).
+     */
+    if (b - a > c - b /* is_lower */) {
+      /* key = */ p = a + ((b - a) >> 1); /* low = */ q = b; /* high = c; */ i = c - b;
+      for (/* i = high - low */; i != 0; i >>= 1) {  /* low = ip_bound(cs, low, high, key, is_lower); */
+        /* mid = low + (i >> 1); */
+        if (ip_cmp(cs, p, q + (i >> 1)) >= 1) {
+          q += (i >> 1) + 1;
+          i--;
+        }
+      }
+    } else {
+      /* key = */ q = b + ((c - b) >> 1); /* low = */ p = a; /* high = b; */ i = b - a;
+      for (/* i = high - low */; i != 0; i >>= 1) {  /* low = ip_bound(cs, low, high, key, is_lower); */
+        /* mid = low + (i >> 1); */
+        if (ip_cmp(cs, q, p + (i >> 1)) >= 0) {
+          p += (i >> 1) + 1;
+          i--;
+        }
       }
     }
-  } else {
-    /* key = */ q = b + ((c - b) >> 1); /* low = */ p = a; /* high = b; */ i = b - a;
-    for (/* i = high - low */; i != 0; i >>= 1) {  /* low = ip_bound(cs, low, high, key, is_lower); */
-      /* mid = low + (i >> 1); */
-      if (ip_cmp(cs, q, p + (i >> 1)) >= 0) {
-        p += (i >> 1) + 1;
-        i--;
-      }
+    /* ASSERT(is_lower == (p < q)); */
+    /* Let t be the total number of items in [p,b) and [b,q), i.e. t == (b-p)+(q-b) == q-p.
+     *
+     * If is_lower, then t == (b-key)+(q-b) == q-key <= c-key == c-a-(b-a)//2 == (c-a)-(b-a)//2 == -(a+a-c-c+b-a)//2 == -(b-c+a-c)//2 == ceil((c-b+c-a)/2) <= ceil((c-a)//2+(c-a))/2 <= ceil((c-a)*3/4).
+     * otherwise         t == (b-p)+(key-b) == key-p <= key-a == b+(c-b)//2-a == (b-a)+(c-b)//2 ==  (b+b-a-a+c-b)//2 ==  (b-a+c-a)//2 <= ((c-a)//2+(c-a))//2 == (c-a)*3//4.
+     *
+     * If is_lower, then t == (b-key)+(q-b) == q-key >= b-key == b-a-(b-a)//2 == ceil((b-a)/2) >= ceil((c-a)/4).
+     * otherwise         t == (b-p)+(key-b) == key-p >= key-b == b+(c-b)//2-b == (c-b)//2 >= (c-a)//4.
+     *
+     * Thus we have (c-a)//4 <= t <= ceil((c-a)*3/4), no matter the value of is_lower.
+     */
+    if (p != b && b != q) {  /* swap adjacent sequences [p,b) and [b,q). */
+      /* Let's count the total number of swaps in the 3 ip_reverse(...) calls below: (b-p)//2 + (q-b)//2 + (q-p)//2 <= (b-p+q-b+q-p)//2 == q-p == (b-p)+(q-b) == t. */
+      ip_reverse(cs, p, b);
+      ip_reverse(cs, b, q);
+      ip_reverse(cs, p, q);
     }
+    b = p + (q - b);  /* Sets b_new. */
+    /* Let s be the number of items in the 1st recursive ip_merge call, i.e. b_new-a.
+     * Similarly to the proof above for t, it's possible to prove that
+     * (c-a)//4 <= s <= ceil((c-a)*3/4), no matter the value of is_lower.
+     */
+    ip_merge(cs, a, p, b);
+    ip_merge(cs, b, q, c);
   }
-  /* ASSERT(is_lower == (p < q)); */
-  /* Let t be the total number of items in [p,b) and [b,q), i.e. t == (b-p)+(q-b) == q-p.
-   *
-   * If is_lower, then t == (b-key)+(q-b) == q-key <= c-key == c-a-(b-a)//2 == (c-a)-(b-a)//2 == -(a+a-c-c+b-a)//2 == -(b-c+a-c)//2 == ceil((c-b+c-a)/2) <= ceil((c-a)//2+(c-a))/2 <= ceil((c-a)*3/4).
-   * otherwise         t == (b-p)+(key-b) == key-p <= key-a == b+(c-b)//2-a == (b-a)+(c-b)//2 ==  (b+b-a-a+c-b)//2 ==  (b-a+c-a)//2 <= ((c-a)//2+(c-a))//2 == (c-a)*3//4.
-   *
-   * If is_lower, then t == (b-key)+(q-b) == q-key >= b-key == b-a-(b-a)//2 == ceil((b-a)/2) >= ceil((c-a)/4).
-   * otherwise         t == (b-p)+(key-b) == key-p >= key-b == b+(c-b)//2-b == (c-b)//2 >= (c-a)//4.
-   *
-   * Thus we have (c-a)//4 <= t <= ceil((c-a)*3/4), no matter the value of is_lower.
-   */
-  if (p != b && b != q) {  /* swap adjacent sequences [p,b) and [b,q). */
-    /* Let's count the total number of swaps in the 3 ip_reverse(...) calls below: (b-p)//2 + (q-b)//2 + (q-p)//2 <= (b-p+q-b+q-p)//2 == q-p == (b-p)+(q-b) == t. */
-    ip_reverse(cs, p, b);
-    ip_reverse(cs, b, q);
-    ip_reverse(cs, p, q);
-  }
-  b = p + (q - b);  /* Sets b_new. */
-  /* Let s be the number of items in the 1st recursive ip_merge call, i.e. b_new-a.
-   * Similarly to the proof above for t, it's possible to prove that
-   * (c-a)//4 <= s <= ceil((c-a)*3/4), no matter the value of is_lower.
-   */
-  ip_merge(cs, a, p, b);
-  ip_merge(cs, b, q, c);
-}
+#else
+#  pragma aux ip_merge  __parm __caller [__esi] [__eax] [__ebx] [__ecx] __value __struct __caller [] [__eax] __modify [__eax __edx __ebx __ecx __eax __esi __edi]
+  __declspec(naked) static void ip_merge(const struct ip_cs *cs, size_t a, size_t b, size_t c) { (void)cs; (void)a; (void)b; (void)c; __asm {
+	/* Register allocation: ESI: cs; EAX: a; EBX: b; ECX: c; EDX: i (after Lafterbound: q); EDI: p; EBP: q. */
+    Lre:
+	cmp eax, ebx
+	jne Lc1
+    Lret:
+	ret
+    Lc1:
+	cmp ebx, ecx
+	je Lret
+	mov edi, ecx
+	sub edi, eax
+	cmp edi, 2
+	jne Lc2
+	push eax  /* Save a. */
+	xchg edx, eax  /* EDX := EAX; EAX := junk. */
+	call ip_cmp  /* ip_cmp(cs, a, b); */
+	cmp eax, 0
+	pop edx  /* EDX := EAX (a). */
+	jle Lret
+	mov ebx, ecx
+	call ip_reverse  /* ip_reverse(cs, a, c); */
+	jmp Lret
+
+    Lc2:
+	push ebp  /* Save. (OpenWatcom doesn't allow __modify [__ebp].) */
+	push eax  /* Save a. */
+	mov edx, ebx
+	sub edx, eax
+	mov edi, ecx
+	sub edi, ebx
+	cmp edx, edi
+	jna Lupper  /* if (b - a > c - b /-* is_lower *-/) */
+
+	mov edi, ebx
+	sub edi, eax
+	shr edi, 1
+	add edi, eax  /* p = a + ((b - a) >> 1); */
+	mov ebp, ebx  /* q = b; */
+	mov edx, ecx
+	sub edx, ebx  /* i = c - b; */
+    Llowernext:
+	test edx, edx
+	jz Lafterbound
+	push edx  /* Save. */
+	push ebx  /* Save. */
+	mov ebx, edx
+	shr ebx, 1
+	add ebx, ebp
+	mov edx, edi
+	call ip_cmp  /* ip_cmp(cs, p, q + (i >> 1)); */
+	pop ebx  /* Restore. */
+	pop edx  /* Restore. */
+	cmp eax, 1
+	jl Llowercont
+	mov eax, edx
+	shr eax, 1
+	inc eax
+	add ebp, eax  /* q += (i >> 1) + 1; */
+	dec edx  /* i--; */
+    Llowercont:
+	shr edx, 1
+	jmp Llowernext
+
+    Lupper:
+	mov ebp, ecx
+	sub ebp, ebx
+	shr ebp, 1
+	add ebp, ebx  /* q = b + ((c - b) >> 1); */
+	mov edi, eax  /* p = a; */
+	mov edx, ebx
+	sub edx, eax  /* i = b - a; */
+    Luppernext:
+	test edx, edx
+	jz Lafterbound
+	push edx  /* Save. */
+	push ebx  /* Save. */
+	mov ebx, edx
+	shr ebx, 1
+	add ebx, edi
+	mov edx, ebp
+	call ip_cmp  /* ip_cmp(cs, q, p + (i >> 1)); */
+	pop ebx  /* Restore. */
+	pop edx  /* Restore. */
+	cmp eax, 0
+	jl Luppercont
+	mov eax, edx
+	shr eax, 1
+	inc eax
+	add edi, eax  /* p += (i >> 1) + 1; */
+	dec edx  /* i--; */
+    Luppercont:
+	shr edx, 1
+	jmp Luppernext
+
+    Lafterbound:
+	pop eax  /* Restore a. */
+	mov edx, ebp  /* EDX := q. */
+	pop ebp  /* Restore. */
+	cmp edi, ebx
+	je Lrec
+	cmp ebx, edx
+	je Lrec
+	push edx  /* Save. */
+	push ebx  /* Save. */
+	push edx
+	mov edx, edi
+	call ip_reverse  /* ip_reverse(cs, p, b); */
+	pop edx
+	xchg edx, ebx
+	call ip_reverse  /* ip_reverse(cs, b, q); */
+	mov edx, edi
+	call ip_reverse  /* ip_reverse(cs, p, q); */
+	pop ebx  /* Restore. */
+	pop edx  /* Restore. */
+
+    Lrec:
+	neg ebx
+	add ebx, edi
+	add ebx, edx
+	push ebx  /* Pushed for the 2nd ip_merge call below. */  /* !! How much stack space is used by ip_mergesort? */
+	push edx  /* Pushed for the 2nd ip_merge call below. */
+	push ecx  /* Pushed for the 2nd ip_merge call below. */
+	mov ecx, ebx
+	mov ebx, edi
+	call ip_merge  /* ip_merge(cs, a, p, b); */
+	pop ecx
+	pop ebx
+	pop eax
+	jmp Lre  /* ip_merge(cs, b, q, c); */
+  } }
+#endif
 
 /* In-place stable sort using in-place mergesort.
  * Same signature and semantics as qsort(3).
