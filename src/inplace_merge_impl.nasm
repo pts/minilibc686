@@ -2,7 +2,7 @@
 ; written by pts@fazekas.hu at Fri Mar 15 03:38:43 CET 2024
 ; Compile to i386 ELF .o object: nasm -O999999999 -w+orphan-labels -f elf -o inplace_merge_impl.o inplace_merge_impl.nasm
 ;
-; Code size: 0x122 bytes, 0x160 bytes including src/qsort_stable_fast.nasm.
+; Code size: 0x120 bytes, 0x15e bytes including src/qsort_stable_fast.nasm.
 ;
 ; Based on ip_merge (C, simplest) at https://stackoverflow.com/a/22839426/97248
 ; Based on ip_merge in test/test_qstort_stable_mini.c.
@@ -119,7 +119,7 @@ mini___M_cmp_RX:  ; int mini___M_cmp_RX(const struct ip_cs *cs, size_t a, size_t
 		pop ecx  ; Restore.
 		ret
 
-mini___M_inplace_merge_RX:  ; void mini___M_inplace_merge(const struct ip_cs *cs, size_t a, size_t b, size_t c);
+mini___M_inplace_merge_top_RX:  ; void mini___M_inplace_merge_RX(const struct ip_cs *cs, size_t a, size_t b, size_t c);
 ; In-place merge of [a,b) and [b,c) to [a,c) within base.
 ;
 ; Precondition: a <= b && b <= c.
@@ -183,11 +183,13 @@ mini___M_inplace_merge_RX:  ; void mini___M_inplace_merge(const struct ip_cs *cs
 ; }
 ;
 		; Register allocation: ESI: cs; EAX: a; EBX: b; ECX: c; EDX: i (after .afterbound: q); EDI: p; EBP: q.
-.re:		cmp eax, ebx
-		jne short .c1
-.ret:		ret
+		;
+		; The function entry point isn't here, but at
+		; mini___M_inplace_merge_RX. This is to make jump
+		; instructions shorter.
+ip_merge_top:
 .c1:		cmp ebx, ecx
-		je short .ret
+		je short mini___M_inplace_merge_RX.ret
 		mov edi, ecx
 		sub edi, eax
 		cmp edi, byte 2
@@ -197,10 +199,10 @@ mini___M_inplace_merge_RX:  ; void mini___M_inplace_merge(const struct ip_cs *cs
 		call mini___M_cmp_RX  ; mini___M_cmp_RX(cs, a, b);
 		cmp eax, byte 0
 		pop edx  ; EDX := EAX (a).
-		jle short .ret
+		jle short mini___M_inplace_merge_RX.ret
 		mov ebx, ecx
 		call ip_reverse  ; ip_reverse(cs, a, c);
-		jmp short .ret
+		jmp short mini___M_inplace_merge_RX.ret
 
 .c2:		push ebp  ; Save. (OpenWatcom doesn't allow __modify [__ebp].)
 		push eax  ; Save a.
@@ -209,7 +211,7 @@ mini___M_inplace_merge_RX:  ; void mini___M_inplace_merge(const struct ip_cs *cs
 		mov edi, ecx
 		sub edi, ebx
 		cmp edx, edi
-		jna short .upper  ; if (b - a > c - b /-* is_lower *-/)
+		jna short mini___M_inplace_merge_RX.upper  ; if (b - a > c - b /-* is_lower *-/)
 
 		mov edi, ebx
 		sub edi, eax
@@ -219,7 +221,7 @@ mini___M_inplace_merge_RX:  ; void mini___M_inplace_merge(const struct ip_cs *cs
 		mov edx, ecx
 		sub edx, ebx  ; i = c - b;
 .lowernext:	test edx, edx
-		jz short .afterbound
+		jz short mini___M_inplace_merge_RX.afterbound
 		push edx  ; Save.
 		push ebx  ; Save.
 		mov ebx, edx
@@ -238,8 +240,11 @@ mini___M_inplace_merge_RX:  ; void mini___M_inplace_merge(const struct ip_cs *cs
 		dec edx  ; i--;
 .lowercont:	shr edx, 1
 		jmp short .lowernext
-.ree:		jmp short .re  ; Just a trampoline for .re, to save a byte of code.
-
+mini___M_inplace_merge_RX:  ; Entry point.
+.ree:
+		cmp eax, ebx
+		jne short ip_merge_top.c1
+.ret:		ret
 .upper:		mov ebp, ecx
 		sub ebp, ebx
 		shr ebp, 1
