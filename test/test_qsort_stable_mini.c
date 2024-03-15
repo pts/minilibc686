@@ -366,22 +366,147 @@ struct ip_cs {
  * Uses O(log(n)) memory, mostly recursive calls to ip_merge(...). Call
  * depth is less than log(n)/log(4/3)+2.
  */
-void ip_mergesort(void *base, size_t n, size_t item_size, int CMPDECL (*cmp)(const void *, const void *)) {
-  size_t a, b, d;
-  struct ip_cs cs;
-  cs.base = base; cs.item_size = item_size; cs.cmp = cmp;
-  for (d = 1; d != 0 && d < n; d <<= 1) {  /* We check `d != 0' to detect overflow in the previous: `d <<= 1'. */
-    for (a = 0; a < n - d; a = b) {
-      b = a + (d << 1);
 #if DO_SHORTCUT_OPT
-      /* Shortcut if [a,c) is already sorted. */
-      if (d > 1 && ip_cmp(&cs, a + d - 1, a + d) <= 0) continue;
-#endif
-      ip_merge(&cs, a, a + d,  b > n ? n : b);
+#  if !(defined(__WATCOMC__) && defined(__386__))
+    void ip_mergesort_shortcut(void *base, size_t n, size_t item_size, int CMPDECL (*cmp)(const void *, const void *)) {
+      size_t a, b, d;
+      struct ip_cs cs;
+      cs.base = base; cs.item_size = item_size; cs.cmp = cmp;
+      for (d = 1; d != 0 && d < n; d <<= 1) {  /* We check `d != 0' to detect overflow in the previous: `d <<= 1'. */
+        for (a = 0; a < n - d; a = b) {
+          b = a + (d << 1);
+          /* Shortcut if [a,c) is already sorted. */
+          if (d > 1 && ip_cmp(&cs, a + d - 1, a + d) <= 0) continue;
+          ip_merge(&cs, a, a + d,  b > n ? n : b);
+        }
+      }
     }
-  }
-}
-
+#  else
+    __declspec(naked) void __cdecl ip_mergesort_shortcut(void *base, size_t n, size_t item_size, int CMPDECL (*cmp)(const void *, const void *)) { (void)base; (void)n; (void)item_size; (void)cmp; __asm {
+	/* Register allocation: ESI: cs; EAX: a; EBX: b and various temporaries; ECX: n; EDX: d. */
+	mov ecx, [esp+8]  /* ECX := n. */
+	push esi  /* Save. */
+	push ebx  /* Save. */
+	push [esp+16+8]  /* cs.cmp := cmp. */
+	push [esp+16+8]  /* cs.item_size := item_size. */
+	push [esp+12+8]  /* cs.base := base. */
+	mov esi, esp  /* ESI := &cs. */
+	xor edx, edx
+	inc edx
+    Lnext:
+	test edx, edx
+	jz Ldone
+	cmp edx, ecx
+	jae Ldone
+	xor eax, eax
+    Lnextin:
+	mov ebx, ecx
+	sub ebx, edx
+	cmp eax, ebx  /* a < n - d. */
+	jnb Ldonein
+	mov ebx, edx
+	add ebx, ebx
+	add ebx, eax  /* b = a + (d << 1); */
+	/* Now: Shortcut if [a,c) is already sorted. if (d > 1 && ip_cmp(&cs, a + d - 1, a + d) <= 0) continue; */
+	cmp edx, 1
+	jbe Lnoshortcut
+	push eax  /* Save. */
+	push edx  /* Save. */
+	push ebx  /* Save. */
+	add edx, eax
+	mov ebx, edx  /* a + d. */
+	dec edx  /* a + d - 1. */
+	call ip_cmp  /* ip_cmp(&cs, a + d - 1, a + d). */
+	cmp eax, 0
+	pop ebx  /* Restore. */
+	pop edx  /* Restore. */
+	pop eax  /* Restore. */
+	jle Lcontin
+    Lnoshortcut:
+	pushad  /* Save. */
+	cmp ebx, ecx
+	ja Lusen  /* TODO(pts): i686: cmovna ecx, ebx */
+	mov ecx, ebx
+    Lusen:
+	mov ebx, eax
+	add ebx, edx
+	call ip_merge  /* ip_merge(&cs, a, a + d,  b > n ? n : b); */
+	popad  /* ip_merge has ruined all registers. */
+    Lcontin:
+	xchg eax, ebx   /* a := b, b := junk. */
+	jmp Lnextin
+    Ldonein:
+	add edx, edx
+	jmp Lnext
+    Ldone:
+	add esp, 12  /* Clean up cs. */
+	pop ebx  /* Restore. */
+	pop esi  /* Restore. */
+	ret
+    } }
+#  endif
+#  define ip_mergesort ip_mergesort_shortcut
+#else
+#  if !(defined(__WATCOMC__) && defined(__386__))
+    void ip_mergesort(void *base, size_t n, size_t item_size, int CMPDECL (*cmp)(const void *, const void *)) {
+      size_t a, b, d;
+      struct ip_cs cs;
+      cs.base = base; cs.item_size = item_size; cs.cmp = cmp;
+      for (d = 1; d != 0 && d < n; d <<= 1) {  /* We check `d != 0' to detect overflow in the previous: `d <<= 1'. */
+        for (a = 0; a < n - d; a = b) {
+          b = a + (d << 1);
+          ip_merge(&cs, a, a + d,  b > n ? n : b);
+        }
+      }
+    }
+#  else
+    __declspec(naked) void __cdecl ip_mergesort(void *base, size_t n, size_t item_size, int CMPDECL (*cmp)(const void *, const void *)) { (void)base; (void)n; (void)item_size; (void)cmp; __asm {
+	/* Register allocation: ESI: cs; EAX: a; EBX: b and various temporaries; ECX: n; EDX: d. */
+	mov ecx, [esp+8]  /* ECX := n. */
+	push esi  /* Save. */
+	push ebx  /* Save. */
+	push [esp+16+8]  /* cs.cmp := cmp. */
+	push [esp+16+8]  /* cs.item_size := item_size. */
+	push [esp+12+8]  /* cs.base := base. */
+	mov esi, esp  /* ESI := &cs. */
+	xor edx, edx
+	inc edx
+    Lnext:
+	test edx, edx
+	jz Ldone
+	cmp edx, ecx
+	jae Ldone
+	xor eax, eax
+    Lnextin:
+	mov ebx, ecx
+	sub ebx, edx
+	cmp eax, ebx  /* a < n - d. */
+	jnb Ldonein
+	mov ebx, edx
+	add ebx, ebx
+	add ebx, eax  /* b = a + (d << 1); */
+	pushad  /* Save. */
+	cmp ebx, ecx
+	ja Lusen  /* TODO(pts): i686: cmovna ecx, ebx */
+	mov ecx, ebx
+    Lusen:
+	mov ebx, eax
+	add ebx, edx
+	call ip_merge  /* ip_merge(&cs, a, a + d,  b > n ? n : b); */
+	popad  /* ip_merge has ruined all registers. */
+	xchg eax, ebx   /* a := b, b := junk. */
+	jmp Lnextin
+    Ldonein:
+	add edx, edx
+	jmp Lnext
+    Ldone:
+	add esp, 12  /* Clean up cs. */
+	pop ebx  /* Restore. */
+	pop esi  /* Restore. */
+	ret
+    } }
+#  endif
+#endif
 
 /* --- Tests. */
 
