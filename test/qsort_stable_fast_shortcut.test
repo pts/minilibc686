@@ -1,0 +1,3 @@
+_nasm inplace_merge_impl.nasm
+_utcc_nasm2 qsort_stable_fast_shortcut.nasm -DDO_STABLE -DDO_SHORTCUT_OPT -Dmini_qsort=mini_qsort_stable_fast_shortcut -o test_qsort_stable_fast_shortcut.prog "$TESTDIR"/test_qsort.c inplace_merge_impl.o
+./test_qsort_stable_fast_shortcut.prog

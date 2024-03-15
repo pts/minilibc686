@@ -1,3 +1,3 @@
 _nasm memswap_rp3.nasm
-_utcc_nasm2 qsort_fast.nasm -Dmini_qsort=mini_qsort_fast -o test_qsort_fast.prog "$TESTDIR"/test_qsort.c memswap_rp3.o
+_utcc_nasm2 qsort_fast.nasm -DDO_SHORTCUT_OPT -Dmini_qsort=mini_qsort_fast -o test_qsort_fast.prog "$TESTDIR"/test_qsort.c memswap_rp3.o
 ./test_qsort_fast.prog

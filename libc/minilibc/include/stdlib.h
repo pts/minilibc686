@@ -69,10 +69,103 @@ __LIBC_FUNC(long double, strtold, (const char *nptr, char **endptr), __LIBC_NOAT
 #  endif
 #endif
 
-/* Short and stable, but slow: insertion sort with O(n**2) worst time.
- * It's not quicksort because the implementation of insertion sort is shorter.
+/* In minilibc686: short and stable, but slow: insertion sort with O(n**2)
+ * worst time. It's not quicksort because the implementation of insertion
+ * sort is shorter.
  */
 __LIBC_FUNC(void, qsort, (void *base, size_t n, size_t size, int (*cmp)(const void*, const void*)), __LIBC_NOATTR);
+#ifdef __MINILIBC686__
+  /* Worst case execution time: O(n*log(n)): less than 3*n*log_2(n)
+   * comparisons and swaps. (The number of swaps is usually a bit smaller than
+   * the number of comparisons.) The average number of comparisons is
+   * 2*n*log_2(n)-O(n). It is very fast if all values are the same (but still
+   * does lots of comparisons and swaps). It is not especially faster than
+   * average if the input is already ascending or descending (with unique
+   * values),
+   *
+   * Uses a constant amount of memory in addition to the input/output array.
+   *
+   * Based on heapsort algorithm H from Knuth TAOCP 5.2.3. The original uses a
+   * temporary variable (of `size' bytes) and copies elements between it and
+   * the array. That code was changed to swaps within the original array.
+   *
+   * Not stable.
+   */
+  __LIBC_FUNC(void, qsort_fast, (void *base, size_t n, size_t size, int (*cmp)(const void*, const void*)), __LIBC_NOATTR);
+  /* In-place stable sort using in-place mergesort.
+   * Same signature and semantics as qsort(3).
+   *
+   * If you don't need a stable sort, try qsort_fast(...) instead, because
+   * that does fewer comparisons. (That may do a bit more swaps though.)
+   *
+   * If you want to use much less stack space, or you need a shorter qsort(3)
+   * implementation, try qsort_fast(...) instead. Please note that that is not
+   * stable, and that may do a bit more swaps.
+   *
+   * The formulas below are mathematically correct, without rounding.
+   *
+   * Number of item swaps:
+   *
+   * * O(n*log(n)*log(n)).
+   * * If n <= 1, then 0.
+   * * If n == 2, then at most 1.
+   * * If n >= 2, then less than 0.75 * n * log2(n) * log2(n).
+   *
+   * Number of comparisons:
+   *
+   * * O(n*log(n)*log(n)), but typically much less.
+   * * If n <= 1, then 0.
+   * * If n == 2, then at most 1.
+   * * If n >= 2, then less than 0.5 * n * log2(n) * log2(n).
+   * * If 2 <= n <= 2**32, then less than 1.9683 * n * log2(n).
+   * * If 2 <= n <= 2**64, then less than 1.9998 * n * log2(n).
+   * * If 2 <= n <= 2**128, then less than 2.0154 * n * log2(n).
+   * * If 2 <= n <= 2**256, then less than 2.0232 * n * log2(n).
+   * * If 2 <= n <= 2**512, then less than 2.0270 * n * log2(n).
+   *
+   * Uses O(log(n)) memory, mostly recursive calls to ip_merge(...). Call
+   * depth is less than log(n)/log(4/3)+2.
+   */
+  __LIBC_FUNC(void, qsort_stable_fast, (void *base, size_t n, size_t size, int (*cmp)(const void*, const void*)), __LIBC_NOATTR);
+  /* In-place stable sort using in-place mergesort.
+   * Same signature and semantics as qsort(3).
+   *
+   * If you don't need a stable sort, try qsort_fast(...) instead, because
+   * that does fewer comparisons. (That may do a bit more swaps though.)
+   *
+   * If you want to use much less stack space, or you need a shorter qsort(3)
+   * implementation, try qsort_fast(...) instead. Please note that that is not
+   * stable, and that may do a bit more swaps.
+   *
+   * The formulas below are mathematically correct, without rounding.
+   *
+   * Number of item swaps:
+   *
+   * * O(n*log(n)*log(n)).
+   * * If n <= 1, then 0.
+   * * If n == 2, then at most 1.
+   * * If n >= 2, then less than 0.75 * n * log2(n) * log2(n).
+   * * If the input is already sorted, then 0.
+   * * If large chunks of the input is already shorted, then less.
+   *
+   * Number of comparisons:
+   *
+   * * O(n*log(n)*log(n)), but typically much less.
+   * * If n <= 1, then 0.
+   * * If n == 2, then at most 1.
+   * * If n >= 2, then less than 0.5308 * n * log2(n) * log2(n).
+   * * If 2 <= n <= 2**32, then less than 1.9844 * n * log2(n).
+   * * If 2 <= n <= 2**64, then less than 2.0078 * n * log2(n).
+   * * If 2 <= n <= 2**128, then less than 2.0193 * n * log2(n).
+   * * If 2 <= n <= 2**256, then less than 2.0251 * n * log2(n).
+   * * If 2 <= n <= 2**512, then less than 2.0279 * n * log2(n).
+   * * If the input is already sorted, and n >= 1, then n-1.
+   *
+   * Uses O(log(n)) memory, mostly recursive calls to ip_merge(...). Call
+   * depth is less than log(n)/log(4/3)+2.
+   */
+  __LIBC_FUNC(void, qsort_stable_fast_shortcut, (void *base, size_t n, size_t size, int (*cmp)(const void*, const void*)), __LIBC_NOATTR);
+#endif
 
 #ifdef __MINILIBC686__
   /* Returns an unaligned pointer. There is no API to free it. Suitable for

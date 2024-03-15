@@ -1,2 +1,2 @@
-_utcc_nasm2 qsort.nasm -o test_qsort.prog "$TESTDIR"/test_qsort.c
+_utcc_nasm2 qsort.nasm -DDO_STABLE -DO_SHORTCUT_OPT -o test_qsort.prog "$TESTDIR"/test_qsort.c
 ./test_qsort.prog
