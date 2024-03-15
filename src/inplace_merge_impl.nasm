@@ -296,18 +296,16 @@ mini___M_inplace_merge_RX:  ; void mini___M_inplace_merge_RX(const struct ip_cs 
 		je short .recs
 		cmp ebx, edx
 		je short .recs
-		push edx  ; Save.
-		push ebx  ; Save.
-		push edx
-		mov edx, edi
+		; The `xchg's below temporarily break register allocation, but they also restore it.
+		xchg edx, edi
 		call ip_reverse  ; ip_reverse(cs, p, b);
-		pop edx
+		xchg edx, edi
 		xchg edx, ebx
 		call ip_reverse  ; ip_reverse(cs, b, q);
-		mov edx, edi
+		xchg edx, edi
 		call ip_reverse  ; ip_reverse(cs, p, q);
-		pop ebx  ; Restore.
-		pop edx  ; Restore.
+		xchg ebx, edx
+		xchg ebx, edi  ; Restore register allocation.
 		; Fall through to .recs.
 
 .recs:		push edx  ; Arg b (== q) of the 2nd ip_merge call (mini___M_inplace_merge_RX(cs, b, q, c)).
