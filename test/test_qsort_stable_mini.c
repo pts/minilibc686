@@ -13,6 +13,12 @@
  * Compile: pathbin/minicc --tcc -ansi -pedantic test/test_qsort_stable_mini.c && ./a.out && echo OK
  * Compile: owcc -I"$WATCOM"/lh -blinux -s -Os -W -Wall -fsigned-char -o a.out -std=c89 test/test_qsort_stable_mini.c && ./a.out && echo OK
  * Compile: gcc -fsanitize=address -m64 -s -O2 -W -Wall  -ansi -pedantic test/test_qsort_stable_mini.c && ./a.out && echo OK
+ *
+ * This file contains both standard C and i386 assembly implementations.
+ * However, the i386 assembly implementations are not fully optimized for
+ * size. For even more optimized versions, see files
+ * src/qsort_stable_fast.nasm, src/qsort_stable_fast_shortcut.nasm and
+ * src/inplace_merge_impl.nasm.
  */
 
 #include <stddef.h>  /* size_t. */
@@ -307,7 +313,7 @@ struct ip_cs {
 	neg ebx
 	add ebx, edi
 	add ebx, edx
-	push ebx  /* Pushed for the 2nd ip_merge call below. */  /* !! How much stack space is used by ip_mergesort? */
+	push ebx  /* Pushed for the 2nd ip_merge call below. */
 	push edx  /* Pushed for the 2nd ip_merge call below. */
 	push ecx  /* Pushed for the 2nd ip_merge call below. */
 	mov ecx, ebx

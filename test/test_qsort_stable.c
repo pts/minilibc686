@@ -6,6 +6,12 @@
  * Compile: pathbin/minicc --pcc -ansi -pedantic test/test_qsort_stable.c && ./a.out && echo OK
  * Compile: pathbin/minicc --tcc -ansi -pedantic test/test_qsort_stable.c && ./a.out && echo OK
  * Compile: owcc -I"$WATCOM"/lh -blinux -s -Os -W -Wall -fsigned-char -o a.out -std=c89 test/test_qsort_stable.c && ./a.out && echo OK
+ *
+ * This file contains both standard C and i386 assembly implementations.
+ * However, the i386 assembly implementations are not at all optimized for
+ * size, some of them are optimized for speed. For size-optimized versions,
+ * see files src/qsort_stable_fast.nasm, src/qsort_stable_fast_shortcut.nasm
+ * and src/inplace_merge_impl.nasm and test/test_qsort_stable_mini.c
  */
 
 #define _GNU_SOURCE
