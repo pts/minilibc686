@@ -2,7 +2,7 @@
 ; written by pts@fazekas.hu at Fri Mar 15 03:38:43 CET 2024
 ; Compile to i386 ELF .o object: nasm -O999999999 -w+orphan-labels -f elf -o inplace_merge_impl.o inplace_merge_impl.nasm
 ;
-; Code size: 0x123 bytes, 0x16f bytes including src/qsort_stable_fast.nasm.
+; Code size: 0x122 bytes, 0x160 bytes including src/qsort_stable_fast.nasm.
 ;
 ; Based on ip_merge (C, simplest) at https://stackoverflow.com/a/22839426/97248
 ; Based on ip_merge in test/test_qstort_stable_mini.c.
@@ -32,8 +32,9 @@ section .bss align=1
 section .text
 
 ; /* Constant state for ip_merge and ip_mergesort. */
-; struct ip_cs {
+; struct ip_cs {  /* Same memory layout as the qsort arguments on the stack. */
 ;   const void *base;
+;   size_t unused_n;
 ;   size_t item_size;
 ;   int CMPDECL (*cmp)(const void*, const void*);
 ; };
@@ -66,7 +67,7 @@ ip_reverse:  ; void ip_reverse(const struct ip_cs *cs, size_t a, size_t b);
 ;  }
 		pushad
 		mov eax, [esi]  ; EAX := cs->base. (cbase)
-		mov esi, [esi+4]  ; ESI := cs->item_size (item_size).
+		mov esi, [esi+8]  ; ESI := cs->item_size (item_size).
 		imul ebx, esi  ; EBX := item_size * b.
 		add ebx, eax  ; EBX := cbase + item_size * b. (cb)
 		imul edx, esi  ; EBD := item_size * a.
@@ -97,14 +98,14 @@ mini___M_cmp_RX:  ; int mini___M_cmp_RX(const struct ip_cs *cs, size_t a, size_t
 		; Register allocation: ESI: cs; EDX: a, EBX: b.
 		push ecx  ; Save.
 		; TODO(pts): Size-optimize this function.
-		mov ecx, [esi+4]  ; ECX := cs->item_size.
+		mov ecx, [esi+8]  ; ECX := cs->item_size.
 		imul ebx, ecx  ; EBX := b * cs->item_size.
 		add ebx, [esi]  ; EBX += cs->base.
 		push ebx  ; Push arg2.
 		imul edx, ecx  ; EDX := a * cs->item_size.
 		add edx, [esi]  ; EDX += cs->base.
 		push edx  ; Push arg1.
-		call [esi+8]  ; Call cs->cmp. May ruin EDX and ECX. Return value in ESI.
+		call [esi+12]  ; Call cs->cmp. May ruin EDX and ECX. Return value in ESI.
 		pop ecx  ; Clean up arg1 from stack.
 		pop ecx  ; Clean up arg2 from stack.
 		pop ecx  ; Restore.
@@ -216,6 +217,7 @@ mini___M_inplace_merge_RX:  ; void mini___M_inplace_merge(const struct ip_cs *cs
 		dec edx  ; i--;
 .lowercont:	shr edx, 1
 		jmp short .lowernext
+.ree:		jmp short .re  ; Just a trampoline for .re, to save a byte of code.
 
 .upper:		mov ebp, ecx
 		sub ebp, ebx
@@ -277,7 +279,7 @@ mini___M_inplace_merge_RX:  ; void mini___M_inplace_merge(const struct ip_cs *cs
 		pop ecx
 		pop ebx
 		pop eax
-		jmp near .re  ; mini___M_inplace_merge_RX(cs, b, q, c);
+		jmp short .ree  ; mini___M_inplace_merge_RX(cs, b, q, c);
 
 %ifdef CONFIG_PIC  ; Already position-independent code.
 %endif

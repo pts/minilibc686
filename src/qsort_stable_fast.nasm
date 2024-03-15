@@ -2,7 +2,7 @@
 ; written by pts@fazekas.hu at Fri Mar 15 03:38:43 CET 2024
 ; Compile to i386 ELF .o object: nasm -O999999999 -w+orphan-labels -f elf -o qsort_stable_fast.o qsort_stable_fast.nasm
 ;
-; Code size: 0x4c bytes for i686, 0x4d bytes for i386.
+; Code size: 0x3e bytes for i686, 0x3f bytes for i386.
 ;
 ; Based on ip_merge (C, simplest) at https://stackoverflow.com/a/22839426/97248
 ; Based on ip_merge in test/test_qstort_stable_mini.c.
@@ -38,8 +38,9 @@ section .bss align=1
 section .text
 
 ; /* Constant state for ip_merge and ip_mergesort. */
-; struct ip_cs {
+; struct ip_cs {  /* Same memory layout as the qsort arguments on the stack. */
 ;   const void *base;
+;   size_t unused_n;
 ;   size_t item_size;
 ;   int CMPDECL (*cmp)(const void*, const void*);
 ; };
@@ -79,7 +80,7 @@ mini_qsort_stable_fast:  ; void mini_qsort_stable_fast(void *base, size_t n, siz
 ; Uses O(log(n)) memory, mostly recursive calls to mini___M_inplace_merge_RX(...). Call
 ; depth is less than log(n)/log(4/3)+2.
 ;
-; void ip_mergesort(void *base, size_t n, size_t item_size, int CMPDECL (*cmp)(const void *, const void *)) {
+; void mini_qsort_stable_fast(void *base, size_t n, size_t item_size, int CMPDECL (*cmp)(const void *, const void *)) {
 ;   size_t a, b, d;
 ;   struct ip_cs cs;
 ;   cs.base = base; cs.item_size = item_size; cs.cmp = cmp;
@@ -91,13 +92,10 @@ mini_qsort_stable_fast:  ; void mini_qsort_stable_fast(void *base, size_t n, siz
 ;   }
 ; }
 		; Register allocation: ESI: cs; EAX: a; EBX: b and various temporaries; ECX: n; EDX: d.
-		mov ecx, [esp+8]  ; ECX := n.
 		push esi  ; Save.
 		push ebx  ; Save.
-		push dword [esp+16+8]  ; cs.cmp := cmp.
-		push dword [esp+16+8]  ; cs.item_size := item_size.
-		push dword [esp+12+8]  ; cs.base := base.
-		mov esi, esp  ; ESI := &cs.
+		lea esi, [esp+12]  ; cs.
+		mov ecx, [esi+4]  ; ECX := n.
 		xor edx, edx
 		inc edx
 .next:		test edx, edx
@@ -129,8 +127,7 @@ mini_qsort_stable_fast:  ; void mini_qsort_stable_fast(void *base, size_t n, siz
 		jmp short .nextin
 .donein:	add edx, edx
 		jmp short .next
-.done:		add esp, byte 12  ; Clean up cs.
-		pop ebx  ; Restore.
+.done:		pop ebx  ; Restore.
 		pop esi  ; Restore.
 		ret
 
