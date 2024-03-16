@@ -964,5 +964,7 @@ This section is mostly an FYI, it doesn't affter minilibc686 users directly.
 * Add `-fno-ident` to PCC.
 * Add `-falign-functions=1` to PCC.
 * Strip local (`t') symbols from libc/minilibc/libc.i[36]86.a
+* Unify string literals to CONST/CONST2 correctly with OpenWatcom *wcc386*
+  (see directory `unify_str_literal`).
 
 __END__
