@@ -35,8 +35,10 @@
  * Different from the Practical In-Place Merging algorithm (https://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.88.1155&rep=rep1&type=pdf) also explained in a C++ code comment in https://keithschwarz.com/interesting/code/?dir=inplace-merge
  * Different from imsort based in Practical In-Place Merging, implemented in C: https://github.com/liuxinyu95/AlgoXY/blob/4488cd0654ccd2425b3cc0a34d2996b61025c372/sorting/merge-sort/src/mergesort.c#L81
  * Different from the non-stable algorithm in https://www.geeksforgeeks.org/in-place-merge-sort/
- * Different from block merge sort explained in Ratio based stable in-place merging article: https://github.com/BonzaiThePenguin/WikiSort/blob/master/tamc2008.pdf
+ * Different from Fast Stable Merging and Sorting in Constant Extra Space (1989-1992) (http://comjnl.oxfordjournals.org/content/35/6/643.full.pdf) by B-C. Huang and M. A. Langston
+ * Different from block merge sort (2008) explained in Ratio based stable in-place merging article: https://github.com/BonzaiThePenguin/WikiSort/blob/master/tamc2008.pdf
  * Different from WikiSort (based on Ratio based stable in-place merging), uses a cache buffer by default: https://github.com/BonzaiThePenguin/WikiSort
+ * Different from GrailSort (based on Ratio based stable in-place merging, Fast Stable Merging and Sorting in Constant Extra Space), by Andrey Astrelin, https://github.com/Mrrl/GrailSort , rewritten in many languages in https://github.com/HolyGrailSortProject/Rewritten-Grailsort
  *
  * TODO(pts): Which one is faster: Practical In-Place Merging; Ratio based stable in-place merging; this?
  *
