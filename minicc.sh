@@ -171,7 +171,7 @@ case "$1" in
  exec) CMD=exec; shift ;;
  busybox | uname | env) CMD="$MYDIR/shbin/$1"; shift ;;
  nasm | ndisasm) CMD="$MYDIR/tools/$1-0.98.39"; shift ;;
- ar) CMD="$MYDIR/tools/tiny_libmaker"; shift ;;
+ ar | tiny_libmaker) CMD="$MYDIR/tools/tiny_libmaker"; shift ;;
  pts-tcc | miniutcc) CMD="$MYDIR/tools/miniutcc"; shift ;;  # Just run the bundled TinyCC compiler (tools/miniutcc), with its the original arguments.
  as | ld | elfnostack | elfoxifx | elfxfix | mktmpf | omf2elf | wcc386 | tiny_libmaker) CMD="$MYDIR/tools/$1"; shift ;;
  tool)
