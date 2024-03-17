@@ -411,7 +411,7 @@ if test "$MINICC_LD" = ///gcc; then
   fi
 fi
 LDBASE="/${MINICC_LD##*/}"
-case "$LDBASE" in *[-/._]tcc*) IS_TCCLD=1 ;; *) IS_TCCLD= ;; esac
+case "$LDBASE" in *[-/._]tcc* | *[-/._]miniutcc*) IS_TCCLD=1 ;; *) IS_TCCLD= ;; esac
 if test "$TCC" && test "$IS_TCCLD"; then  # $TCCLD should work with $GCC
   if test "$MINICC_LD" != "$TCC"; then
     echo "fatal: conflicting combination of --tcc=... and --tccld=..." >&2
