@@ -162,7 +162,7 @@ CMD=minicc
 case "$1" in
  "" | -* | *.[aocisShHCmMfFd] | *.c[cp] | *.[ch]pp | *.cxx | *.asm | *.[nw]asm | *.m[im] | *.mii | *.ii | *.c++ | *.[CH]PP | *.h[hp] | *.hxx | *.hpp | *.h++ | *.tcc | *.for | *.ftn | *.FOR | *.fpp | *.FPP | *.FTN | *.[fF][0-9][0-9] | *.go | *.brig | *.java | *.ad[sb] | *.d[id] | *.sx | *.obj) ;;  # A flag or a source file name is not a program name.
  .) ;;  # An escape to prevent the next source file from being interpreted as a compiler command.
- utcc) GCC=; TCC="$MYDIR"/tools/miniutcc; USE_UTCC=1; shift ;;  # Same as: --utcc
+ utcc) GCC=; TCC="$MYDIR"/tools/miniutcc; USE_UTCC=1; shift ;;  # Same as: --utcc: Use the bundled TinyCC compiler (tools/miniutcc) for both compilation, libc (the uClibc bundled within it) and linking.
  diet) LIBC=dietlibc; shift ;;  # Same as: --dietlibc
  xstatic) LIBC=uclibc; shift  ;;  # Same as: --uclibc. Please note that this is not perfect, some .a and .h files are missing from pts-xstatic.
  owcc) GCC="$MYDIR/tools/wcc386"; TCC=; shift ;;
@@ -172,7 +172,7 @@ case "$1" in
  busybox | uname | env) CMD="$MYDIR/shbin/$1"; shift ;;
  nasm | ndisasm) CMD="$MYDIR/tools/$1-0.98.39"; shift ;;
  ar) CMD="$MYDIR/tools/tiny_libmaker"; shift ;;
- pts-tcc) CMD="$MYDIR/tools/miniutcc"; shift ;;
+ pts-tcc | miniutcc) CMD="$MYDIR/tools/miniutcc"; shift ;;  # Just run the bundled TinyCC compiler (tools/miniutcc), with its the original arguments.
  as | ld | elfnostack | elfoxifx | elfxfix | mktmpf | omf2elf | wcc386 | tiny_libmaker) CMD="$MYDIR/tools/$1"; shift ;;
  tool)
   if test -z "$2"; then echo "fatal: missing tool name argument" >&2; exit 1; fi
@@ -264,13 +264,13 @@ for ARG in "$@"; do
    --gcc=*) TCC=; GCC="${ARG#*=}" ;;
    --wcc | --wcc386 | --watcom) GCC="$MYDIR/tools/wcc386"; TCC= ;;  # Specify --gcc=.../wcc386 to use a specific OpenWatcom compiler.
    --pcc) GCC="$MYDIR"/tools/pts-pcc; TCC= ;;
-   --tcc) GCC=; TCC="$MYDIR"/tools/miniutcc ;;
+   --tcc) GCC=; TCC="$MYDIR"/tools/miniutcc ;;  # Use the bundled TinyCC compiler (tools/miniutcc) for compilation and linking. Don't select the libc. To use the bundled TinyCC compiler (tools/miniutcc) for compilation and the bundled GNU ld(1) (tools/ld) for linking, specify `--tcc --minild'.
    --tcc=*) GCC=; TCC="${ARG#*=}" ;;
-   --utcc) GCC=; TCC="$MYDIR"/tools/miniutcc; USE_UTCC=1 ;;
+   --utcc) GCC=; TCC="$MYDIR"/tools/miniutcc; USE_UTCC=1 ;;  # Use the bundled TinyCC compiler (tools/miniutcc) for both compilation, libc (the uClibc bundled within it) and linking.
    --utcc=*) GCC=; TCC="${ARG#*=}"; USE_UTCC=1 ;;
    --tccld) MINICC_LD="$MYDIR"/tools/miniutcc ;;
    --ld=* | --tccld=*) MINICC_LD="${ARG#*=}" ;;
-   --minild) MINICC_LD="$MYDIR"/tools/ld ;;
+   --minild) MINICC_LD="$MYDIR"/tools/ld ;;  # Use the bundled GNU ld(1) (tools/ld) for linking.
    --gccld) MINICC_LD=///gcc ;;
    --uclibc) LIBC=uclibc ;;
    --dietlibc | --diet | --libc=diet) LIBC=dietlibc ;;
