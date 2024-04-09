@@ -37,5 +37,11 @@ __LIBC_FUNC(int, ffsl, (long i), __LIBC_NOATTR);
 __LIBC_FUNC(__extension__ int, ffsll, (long long i), __LIBC_NOATTR);
 
 __LIBC_FUNC(char *, strerror, (int errnum), __LIBC_NOATTR);
+#ifdef __MINILIBC686__
+/* It is like strerror(...), but contains much fewer error messages, mostly
+ * about files. It returns "?" for those which it doesn't support.
+ */
+__LIBC_FUNC(char *, strerror_few, (int errnum), __LIBC_NOATTR);
+#endif  /* __MINILIBC686__ */
 
 #endif  /* _STRING_H */

@@ -230,7 +230,9 @@ mini_strerror:  ; char *strerror(int errnum);
 		pop edi
 		ret
 
-%ifdef CONFIG_PIC  ; Already position-independent code.
+%ifdef CONFIG_PIC
+%error Not PIC because it uses the global errmsgs constant.
+times 1/0 nop
 %endif
 
 ; __END__
