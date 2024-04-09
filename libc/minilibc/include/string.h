@@ -13,6 +13,7 @@ __LIBC_FUNC(char *, rindex,  (const char *s, int c), __LIBC_NOATTR);
 __LIBC_FUNC(size_t, strlen, (const char *s), __LIBC_NOATTR);
 __LIBC_FUNC(char *, strtok, (char *__restrict__ s, const char *__restrict__ sep), __LIBC_NOATTR);
 __LIBC_FUNC(char *, strcpy, (char *dest, const char *src), __LIBC_NOATTR);
+__LIBC_FUNC(char *, strncpy, (char *dest, const char *src, size_t n), __LIBC_NOATTR);
 __LIBC_FUNC(char *, strcat, (char *dest, const char *src), __LIBC_NOATTR);
 __LIBC_FUNC(int, strcmp, (const char *s1, const char *s2), __LIBC_NOATTR);
 __LIBC_FUNC(char *, strstr, (const char *haystack, const char *needle), __LIBC_NOATTR);

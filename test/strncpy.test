@@ -1,0 +1,2 @@
+_utcc_nasm2 strncpy.nasm -o test_strncpy.prog "$TESTDIR"/test_strncpy.c
+./test_strncpy.prog
