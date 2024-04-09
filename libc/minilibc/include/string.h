@@ -4,6 +4,8 @@
 
 #include <sys/types.h>
 
+#define NULL ((void*)0)  /* Defined in multiple .h files: https://en.cppreference.com/w/c/types/NULL */
+
 __LIBC_FUNC(int, strcasecmp, (const char *l, const char *r), __LIBC_NOATTR);
 __LIBC_FUNC(int, strncasecmp, (const char *l, const char *r, size_t n), __LIBC_NOATTR);
 __LIBC_FUNC(char *, strchr,  (const char *s, int c), __LIBC_NOATTR);
