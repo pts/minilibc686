@@ -734,6 +734,9 @@ else is under GPL v2 (GNU General Public License, Version 2).
   embedded into the
   [pngouta.nasm](https://github.com/pts/pts-pngout-20150319-i386) file.
 
+* [mw386as](https://github.com/pts/pts-mw386as-linux), a port of
+  the Mark Williams 80386 assembler to Linux i386.
+
 ## PCC history
 
 Development history:
