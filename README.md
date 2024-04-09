@@ -391,6 +391,10 @@ Design limitations:
 * No errno for libc functions. libc functions strtol(3) and strtod(3) don't
   set errno. Syscall wrappers (even when called from libc functions) do set
   it.
+* The number of open `FILE *` files opened by fopen(3) (not including stdin,
+  stdout and stderr) is limited at compile time. The default limit is 2. To
+  increase it, specify `-mfiles=...`. The number of files opened by
+  open(2) is not limited by minilibc.
 * No locale support: isalpha(3), tolower(3), strncasecmp(3) etc. are
   ASCII-only (equivalent of LC_ALL=C).
 * No wide character support, only the 8-bit string functions are provided.

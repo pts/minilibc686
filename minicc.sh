@@ -246,6 +246,7 @@ PRINTF_PLUS=1
 PRINTF_OCTAL=1
 PRINTF_LONG=1
 PRINTF_LONGLONG=1
+FILE_CAPACITY=
 
 SKIPARG=
 ARGS=
@@ -320,6 +321,7 @@ for ARG in "$@"; do
    -mno-printf-long | -mno-printf-l) PRINTF_LONG= ;;
    -mprintf-longlong | -mprintf-long-long | -mprintf-ll) PRINTF_LONGLONG=1 ;;
    -mno-printflonglong | -mno-printf-long-long | -mno-printf-ll) PRINTF_LONGLONG= ;;
+   -mfiles=[1-9]* | -mfiles=) FILE_CAPACITY="${ARG#*=}" ;;
    -Wno-no) DO_WKEEP= ;;  # Disable warnings. GCC and Clang accept and ignore it. GCC ignores it.
    -Wkeep | -Wno-no-no) DO_WKEEP=1 ;;  # This is not a GCC flag, it's a minicc extension. GCC ignores -Wno-no-no, but Clang warns.
    -Wno-*) ARGS="$ARGS$NL$ARG" ;;
@@ -694,6 +696,19 @@ test "$PRINTF_PLUS"     || DEF_ARG="$DEF_ARG$NL-DCONFIG_VFPRINTF_NO_PLUS"
 test "$PRINTF_OCTAL"    || DEF_ARG="$DEF_ARG$NL-DCONFIG_VFPRINTF_NO_OCTAL"
 test "$PRINTF_LONG"     || DEF_ARG="$DEF_ARG$NL-DCONFIG_VFPRINTF_NO_LONG"
 test "$PRINTF_LONGLONG" || DEF_ARG="$DEF_ARG$NL-DCONFIG_VFPRINTF_NO_LONGLONG"
+if test "$FILE_CAPACITY"; then
+  if test "$LIBC" = minilibc; then  # Other libcs have unlimited open files.
+    if test "$DO_SMART" = 0; then
+      echo "fatal: -mfiles=... doesn't work with -mno-smart" >&2
+      exit 3
+    fi
+    #if test "$LIBC" != minilibc; then
+    #  echo "fatal: -mfiles=... works only with --libc=minilibc, not --libc=$LIBC" >&2
+    #  exit 3
+    #fi
+  fi
+  DEF_ARG="$DEF_ARG$NL-DCONFIG_FILE_CAPACITY=$FILE_CAPACITY"  # Respected by src/stdio_medium_flush_opened.nasm.
+fi
 if test "$IS_WATCOM" || test "$IS_CC1" = 3 || test "$TCC"; then
   # Add some -D.. flags which GCC (>=1) already defines. These flags affect EGLIBC on other compilers.
   test "$HAD_OPTIMIZE" && DEF_ARG="$DEF_ARG$NL-D__OPTIMIZE__"

@@ -29,7 +29,10 @@ section .bss align=4
 
 SIZEOF_STRUCT_SMS_FILE equ 0x24   ; It matches struct _SMS_FILE defined in c_stdio_medium.c. sizeof(struct _SMS_FILE).
 BUF_SIZE equ 0x1000  ; It matches BUF_SIZE defined in c_stdio_medium.c.
-FILE_CAPACITY equ 2
+%ifndef CONFIG_FILE_CAPACITY
+  %define CONFIG_FILE_CAPACITY 2
+%endif
+FILE_CAPACITY equ CONFIG_FILE_CAPACITY
 
 section .text
 mini___M_start_flush_opened:

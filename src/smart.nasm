@@ -920,7 +920,7 @@ start.mini___M_start_flush_stdout:
 		call mini_fflush
 		pop edx  ; Clean up the argument of mini_fflush from the stack.
 %endif
-		_call_extern_if_needed mini___M_start_flush_opened
+		_call_if_needed mini___M_start_flush_opened
 		; Fall through.
 %endif  ; NEED_cleanup
 %ifdef __NEED_mini_sys_exit
@@ -1255,6 +1255,10 @@ mini_putchar_RP3:  ; int REGPARM3 mini_putchar_RP3(int c);
   %include "src/stdio_medium_vfprintf.nasm"
   %undef __NEED_mini_vfprintf  ; Don't %include it again.
   %undef __NEED_mini___M_vfsprintf  ; Don't %include it again.
+%endif
+
+%ifdef __NEED_mini___M_start_flush_opened
+  %include "src/stdio_medium_flush_opened.nasm"
 %endif
 
 %if ___NEED_strtofld_count>1
