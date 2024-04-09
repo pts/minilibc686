@@ -5,6 +5,8 @@ set -ex
 
 test "${0%/*}" = "$0" || cd "${0%/*}"
 
+# -DCONFIG_LD96
+# --eglibc can make a difference, it has a more accurate strtold(...) implementation.
 ../pts-pcc/compile.sh "$PWD"/pathbin/minicc --gcc=4.8 -Wadd=shadow -march=i686 -ansi -pedantic -Wno-long-long -Wno-format -DCONFIG_NO_FERROR -DCONFIG_SIGNAL_BSD -DCONFIG_STAT64 -DCONFIG_MALLOC_FROM_STDLIB_H
 upx.pts --brute --no-lzma -f -o tools/pts-pcc ../pts-pcc/pccbin/pcc
 

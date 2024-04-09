@@ -1,0 +1,2 @@
+_utcc -o test_float_conv.prog "$TESTDIR"/test_float_conv.c
+./test_float_conv.prog

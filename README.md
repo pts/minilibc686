@@ -966,5 +966,9 @@ This section is mostly an FYI, it doesn't affter minilibc686 users directly.
 * Strip local (`t') symbols from libc/minilibc/libc.i[36]86.a
 * Unify string literals to CONST/CONST2 correctly with OpenWatcom *wcc386*
   (see directory `unify_str_literal`).
+* Fix printf accuracy of floating point types with `--diet`, see
+  `test/test_float_conv.c`.
+* Make strtold(3) more accurate, e.g. for 2.22507385850720138309e-308ll.
+  It's accurate enough in EGLIBC (and maybe also in musl?).
 
 __END__
