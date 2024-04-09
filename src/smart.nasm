@@ -255,6 +255,7 @@ _need mini_fflush, mini_write
 ;_need mini_fflush, mini___M_discard_buf
 _need mini_getc, mini_fread
 _need mini_fgetc, mini_fread
+_need mini_fgets, mini_fread
 _need mini___M_fgetc_fallback_RP3, mini_fread
 _need mini_fread, mini_read
 _need mini_fread, mini___M_discard_buf
