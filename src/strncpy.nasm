@@ -2,7 +2,7 @@ V;
 ; written by pts@fazekas.hu at Tue Apr  9 21:17:17 CEST 2024
 ; Compile to i386 ELF .o object: nasm -O999999999 -w+orphan-labels -f elf -o strncpy.o strncpy.nasm
 ;
-; Code size: 0x24 bytes.
+; Code size: 0x20 bytes.
 ;
 ; Uses: %ifdef CONFIG_PIC
 ;
@@ -26,24 +26,22 @@ section .bss align=1
 
 section .text
 mini_strncpy:  ; char *mini_strncpy(char *dest, const char *src, size_t n);
+		push edi  ; Save.
+		mov edi, [esp+8]  ; Argument dest.
+		mov ecx, [esp+0x10]  ; Argument n.
+		mov edx, [esp+0xc]  ; Argument src.
 		push edi
-		mov edi, [esp+8]
-		mov ecx, [esp+0x10]
-		test ecx, ecx
-		mov edx, [esp+0xc]
-		push edi
-		jz short .4
-.1:		mov al, [edx]
+.1:		test ecx, ecx
+		jz short .2
+		dec ecx
+		mov al, [edx]
 		stosb
 		inc edx
 		test al, al
-		jnz short .3
-		dec ecx
-		rep stosb  ; 0.
-		jmp short .4
-.3:		loop .1
-.4:		pop eax  ; Result: pointer to dest.
-		pop edi
+		jnz short .1
+		rep stosb  ; Fill the rest of dest with \0.
+.2:		pop eax  ; Result: pointer to dest.
+		pop edi  ; Restore.
 		ret
 
 ; __END__
