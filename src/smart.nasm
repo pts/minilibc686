@@ -295,6 +295,9 @@ _need mini_stdout, .bss
   %ifdef __NEED_mini_printf
     %undef __NEED_mini___M_vfsprintf  ; mini_vfprintf(...) will do it instead.
   %endif
+  %ifdef __NEED_mini_fprintf
+    %undef __NEED_mini___M_vfsprintf  ; mini_vfprintf(...) will do it instead.
+  %endif
 %endif
 ;
 %assign ___NEED_strtofld_count 0

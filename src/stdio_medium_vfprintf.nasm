@@ -433,6 +433,7 @@ str_null:
 		db '(null)', 0
 %endif
 
+%undef CONFIG_VFPRINTF_IS_FOR_S_PRINTF_ONLY
 %undef mini_vfprintf
 
 ; __END__
