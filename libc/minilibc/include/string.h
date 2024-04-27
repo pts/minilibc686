@@ -29,6 +29,7 @@ __LIBC_FUNC(int, memcmp, (const void *s1, const void *s2, size_t n), __LIBC_NOAT
 __LIBC_FUNC(int, strncmp, (const char *s1, const char *s2, size_t n), __LIBC_NOATTR);
 __LIBC_FUNC(void *, memset, (void *s, int c, size_t n), __LIBC_NOATTR);
 __LIBC_FUNC(char *, memchr, (const char *s, int c, size_t n), __LIBC_NOATTR);
+__LIBC_FUNC(size_t, strspn, (const char *s, const char *accept), __LIBC_NOATTR);
 
 #if defined(__MINILIBC686__)
   __LIBC_FUNC_RP3(void, memswap, (void *a, void *b, size_t size), __LIBC_NOATTR);  /* Not part of standard C. */
