@@ -137,6 +137,10 @@ mini___M_jmp_syscall_return:
 		; jns .final_result
 		cmp eax, -0x100  ; Treat very large (e.g. <-0x100; with Linux 5.4.0, 0x85 seems to be the smallest) non-negative return values as success rather than errno. This is needed by time(2) when it returns a negative timestamp. uClibc has -0x1000 here.
 		jna .final_result
+%ifndef CONFIG_START_STDOUT_ONLY
+		neg eax
+		mov dword [mini_errno], eax
+%endif
 		or eax, byte -1  ; EAX := -1 (error).
 .final_result:
 WEAK..mini___M_start_isatty_stdin:   ; Fallback, tools/elfofix will convert it to a weak symbol.
@@ -166,6 +170,8 @@ mini_ioctl:	mov al, 54  ; __NR_ioctl.
 %ifndef CONFIG_START_STDOUT_ONLY
 section .bss
 mini_environ:	resd 1  ; char **mini_environ;
+global mini_errno
+mini_errno:	resd 1  ; int mini_errno;
 %endif
 
 %ifdef CONFIG_PIC

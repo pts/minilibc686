@@ -1096,7 +1096,7 @@ mini_syscall:  ; long mini_syscall(long nr, ...);  /* Supports up to 6 arguments
 		jna .final_result
   %ifdef __NEED_mini_errno  ; TODO(pts): More syscalls should set errno.
 		neg eax
-		mov dword [mini_errno], eax  ; TODO(pts): Add this to -mno-smart.
+		mov dword [mini_errno], eax
   %endif
 		or eax, byte -1  ; EAX := -1 (error).
   .final_result: ret
@@ -1132,7 +1132,7 @@ _define_alias_syms ALIASES  ; Must be called after alias targets have been defin
 
 %ifdef __NEED_mini_errno  ; !! TODO(pts): Make strtok and strtod populate errno, but -fno-math-errno.
 section .bss
-global mini_errno  ; TODO(pts): Add this (including populating it in syscalls) to -mno-smart.
+global mini_errno
 mini_errno:	resd 1  ; int mini_errno;
 section .text
 %ifdef CONFIG_PIC
