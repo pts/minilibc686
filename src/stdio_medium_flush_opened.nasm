@@ -19,8 +19,14 @@ section .rodata align=1
 section .data align=1
 section .bss align=4
 mini_fflush equ +0x12345678
+mini___M_global_files equ +0x12345679
+mini___M_global_files_end equ +0x1234567a
+mini___M_global_file_bufs equ +0x1234567b
 %else
 extern mini_fflush
+extern mini___M_global_files
+extern mini___M_global_files_end
+extern mini___M_global_file_bufs
 section .text align=1
 section .rodata align=4
 section .data align=4
@@ -30,7 +36,7 @@ section .bss align=4
 SIZEOF_STRUCT_SMS_FILE equ 0x24   ; It matches struct _SMS_FILE defined in c_stdio_medium.c. sizeof(struct _SMS_FILE).
 BUF_SIZE equ 0x1000  ; It matches BUF_SIZE defined in c_stdio_medium.c.
 %ifndef CONFIG_FILE_CAPACITY
-  %define CONFIG_FILE_CAPACITY 2
+  %define CONFIG_FILE_CAPACITY 999  ; Large enough for the %ifs below.
 %endif
 FILE_CAPACITY equ CONFIG_FILE_CAPACITY
 
@@ -75,12 +81,6 @@ mini___M_start_flush_opened:
 %ifidn __OUTPUT_FORMAT__, bin  ; Affects start_stdio_medium_linux.nasm %included()d later: it won't try to redefine these symbols.
   %define mini___M_start_flush_opened mini___M_start_flush_opened
 %endif
-
-section .bss
-		alignb 4
-mini___M_global_files: times FILE_CAPACITY resb SIZEOF_STRUCT_SMS_FILE
-mini___M_global_files_end:
-mini___M_global_file_bufs: times FILE_CAPACITY resb BUF_SIZE
 
 %ifdef CONFIG_PIC
 %error Not PIC because it uses global variables.

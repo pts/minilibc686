@@ -1,6 +1,6 @@
 # Similar to test_stdio_file_simple_unbuffered.sh .
 
-OBJS="stdio_medium_fread.o stdio_medium_fwrite.o stdio_medium_fgetc.o stdio_medium_ftell.o stdio_medium_fseek.o stdio_medium_fgetc_fallback.o stdio_medium_fputc.o stdio_medium_fopen.o stdio_medium_freopen.o stdio_medium_fclose.o stdio_medium_fileno.o stdio_medium_flush_opened.o stdio_medium_fflush.o stdio_medium_discard_buf.o stdio_medium_fputc_rp3.o"
+OBJS="stdio_medium_fread.o stdio_medium_fwrite.o stdio_medium_fgetc.o stdio_medium_ftell.o stdio_medium_fseek.o stdio_medium_fgetc_fallback.o stdio_medium_fputc.o stdio_medium_fopen.o stdio_medium_freopen.o stdio_medium_fclose.o stdio_medium_fileno.o stdio_medium_flush_opened.o stdio_medium_fflush.o stdio_medium_discard_buf.o stdio_medium_fputc_rp3.o stdio_medium_global_files.o"
 _nasm $OBJS
 _nasm2 stdio_medium_jmp_freopen_low.o
 OBJS="$OBJS stdio_medium_jmp_freopen_low.o start_stdio_medium_linux.o"

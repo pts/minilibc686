@@ -241,6 +241,9 @@ _need mini_isatty, mini_ioctl
 _need start.mini___M_start_flush_stdout, mini_fflush
 _need mini___M_start_flush_stdout, mini_fflush
 _need mini___M_start_flush_opened, mini_fflush
+_need mini___M_start_flush_opened, mini___M_global_files
+_need mini___M_start_flush_opened, mini___M_global_files_end
+_need mini___M_start_flush_opened, mini___M_global_file_bufs
 _need mini_fclose, mini_fflush
 _need mini_fwrite, mini_fflush
 _need mini_fseek, mini_fflush
@@ -1262,6 +1265,13 @@ mini_putchar_RP3:  ; int REGPARM3 mini_putchar_RP3(int c);
 
 %ifdef __NEED_mini___M_start_flush_opened
   %include "src/stdio_medium_flush_opened.nasm"
+%endif
+%ifdef __NEED_mini___M_global_files
+  %include "src/stdio_medium_global_files.nasm"
+%elifdef __NEED_mini___M_global_files_end
+  %include "src/stdio_medium_global_files.nasm"
+%elifdef __NEED_mini___M_global_file_bufs
+  %include "src/stdio_medium_global_files.nasm"
 %endif
 
 %if ___NEED_strtofld_count>1
