@@ -1,0 +1,2 @@
+_utcc_nasm2 strcspn.nasm -o test_strcspn.prog "$TESTDIR"/test_strcspn.c
+./test_strcspn.prog
