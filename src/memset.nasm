@@ -2,7 +2,7 @@
 ; written by pts@fazekas.hu at Wed May 24 18:16:17 CEST 2023
 ; Compile to i386 ELF .o object: nasm -O999999999 -w+orphan-labels -f elf -o memset.o memset.nasm
 ;
-; Code size: 0x1d bytes.
+; Code size: 0x13 bytes.
 ;
 ; This is the fast implementation (using `repne scasb'), but the slow
 ; implementation isn't shorter either.
@@ -34,9 +34,8 @@ mini_memset:  ; void *mini_memset(void *s, int c, size_t n);
 		mov al, [esp+0xc]  ; Argument c.
 		mov ecx, [esp+0x10]  ; Argument n.
 		push edi
-		jecxz .done
 		rep stosb
-.done:		pop eax  ; Result is argument s.
+		pop eax  ; Result is argument s.
 		pop edi
 		ret
 

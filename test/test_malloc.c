@@ -16,12 +16,24 @@
   extern void mini_free(void *ptr);  /* Function under test. */
   extern void *mini_calloc(size_t nmemb, size_t size);  /* Function under test. */
 #endif
+void *mini_memset(void *s, int c, size_t n);
 
 static const char start_msg[] = "Start of block.";
 static const char end_msg[] = "End of block.";
 
 static void fill_block(char *p, unsigned size) {
-  memset(p, '*', size);
+  mini_memset(p, '*', size);
+  mini_memset(p, 'X', 0);
+  if (size > 0) {  /* A test for mini_memset(...). */
+    if (p[size - 1] != '*') exit(100);
+    if (p[0] != '*') exit(101);
+    mini_memset(p, 'X', 1);
+    if (p[0] != 'X') exit(102);
+    if (size > 1) {
+      if (p[1] != '*') exit(103);
+    }
+    p[0] = '*';
+  }
   memcpy(p, start_msg, sizeof(start_msg));
   memcpy(p + size - sizeof(end_msg), end_msg, sizeof(end_msg));
 }

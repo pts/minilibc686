@@ -1335,6 +1335,7 @@ my @cflags;
 my $srcfn;
 my $is_i686_enabled = 1;
 my $is_owcc_enabled = 1;
+my $is_gcc_enabled = 1;
 my $data_alignment = 4;
 {
   my $i = 0;
@@ -1349,6 +1350,10 @@ my $data_alignment = 4;
       $is_owcc_enabled = 1;
     } elsif ($arg eq "-mno-owcc") {
       $is_owcc_enabled = 0;
+    } elsif ($arg eq "-mgcc") {
+      $is_gcc_enabled = 1;
+    } elsif ($arg eq "-mno-gcc") {
+      $is_gcc_enabled = 0;
     } elsif ($arg eq "-march=i386") {
       $is_i686_enabled = 0;
     } elsif ($arg =~ m@-malign=(.*)\Z(?!\n)@) {  # Data section alignment.
@@ -1516,8 +1521,10 @@ my @owcc_cmds = (  # OpenWatcom C compiler. Good or optimizing for size.
 
 $best_code_size = $best_cmd_ary = $best_cmd_type = undef;
 print STDERR "info: running compilers to find best for: $srcfn\n";
-for my $cmd_ary (@gcc_cmds) {
-  run_cmd($cmd_ary, "gcc");
+if ($is_gcc_enabled) {
+  for my $cmd_ary (@gcc_cmds) {
+    run_cmd($cmd_ary, "gcc");
+  }
 }
 if ($is_owcc_enabled) {
   for my $cmd_ary (@owcc_cmds) {
