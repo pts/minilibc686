@@ -38,7 +38,7 @@ static const char *format_ll_dec(long long i) {
   *p = '\0';
   do {
     *--p = (char)(u % 10) + '0';
-#if 0
+#if 0  /* It should work either way. */
     u /= 10;
 #else
     *(long long*)&u /= 10;

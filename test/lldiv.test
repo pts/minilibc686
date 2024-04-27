@@ -1,0 +1,7 @@
+OBJS="lldiv.o ldiv.o i64_udivdi3.o i64_umoddi3.o i64_divdi3.o i64_moddi3.o i64_u8d.o i64_i8d.o m_flushall_dummy.o strlen.o"
+OBJS1="tcc_alloca.o"
+_nasm $OBJS1
+_nasm2 $OBJS
+_nasm_start start_stdio_file_linux.o
+_mtcc -o test_lldiv.prog "$TESTDIR"/test_lldiv.c $OBJS $OBJS1 start_stdio_file_linux.o
+./test_lldiv.prog

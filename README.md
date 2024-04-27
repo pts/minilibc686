@@ -977,5 +977,6 @@ This section is mostly an FYI, it doesn't affter minilibc686 users directly.
   `test/test_float_conv.c`.
 * Make strtold(3) more accurate, e.g. for 2.22507385850720138309e-308ll.
   It's accurate enough in EGLIBC (and maybe also in musl?).
+* bugfix: TinyCC generates code for memcpy (not mini_memcpy) in test_lldiv.c
 
 __END__

@@ -40,6 +40,44 @@ __LIBC_FUNC(float, strtof, (const char *nptr, char **endptr), __LIBC_NOATTR);
 __LIBC_FUNC(double, strtod, (const char *nptr, char **endptr), __LIBC_NOATTR);
 __LIBC_FUNC(long double, strtold, (const char *nptr, char **endptr), __LIBC_NOATTR);
 
+typedef struct { int quot, rem; } div_t;
+typedef struct { long quot, rem; } ldiv_t;
+typedef struct { __extension__ long long quot, rem; } lldiv_t;
+#ifdef __WATCOMC__  /* __WATOMC__ does a `ret' instead of `ret 4', so it's ABI-incompatible with functions returning a struct. */
+#  ifdef __MINILIBC696__
+    div_t div(int numerator, int denominator);
+    ldiv_t ldiv(long numerator, long denominator);
+    lldiv_t lldiv(long long numerator, long long denominator);
+#    pragma aux div "_mini_div_RP0W"
+#    pragma aux ldiv "_mini_ldiv_RP0W"
+#    pragma aux lldiv "_mini_lldiv_RP0W"
+#  else
+    /* TODO(pts): Add a better, inline assembly version. Can that return a struct? */
+    static __inline div_t div(int numerator, int denominator) {
+      div_t x;
+      x.quot=numerator/denominator;
+      x.rem=numerator-x.quot*denominator;
+      return x;
+    }
+    static __inline ldiv_t ldiv(long numerator, long denominator) {
+      ldiv_t x;
+      x.quot=numerator/denominator;
+      x.rem=numerator-x.quot*denominator;
+      return x;
+    }
+    __extension__ static __inline lldiv_t lldiv(long long numerator, long long denominator) {
+      lldiv_t x;
+      x.quot=numerator/denominator;
+      x.rem=numerator-x.quot*denominator;
+      return x;
+    }
+#  endif
+#else
+  __LIBC_FUNC(div_t, div, (int numerator, int denominator), __LIBC_NOATTR);
+  __LIBC_FUNC(ldiv_t, ldiv, (long numerator, long denominator), __LIBC_NOATTR);
+  __LIBC_FUNC(__extension__ lldiv_t, lldiv, (long long numerator, long long denominator), __LIBC_NOATTR);
+#endif  /* __WATCOMC__ */
+
 #ifndef CONFIG_LIBC_NO_MALLOC
 #  if defined(CONFIG_MALLOC_MMAP) && defined(__MINILIBC686__)
     /* This implementation does an mmap(2) call for each allocation, and
