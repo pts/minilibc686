@@ -219,7 +219,7 @@ DO_ADD_INCLUDEDIR=1
 DO_LINK=1
 NEED_GCC_AS=1
 SFLAG=
-STRIP_MODE=2  # 0: Don't strip, don't chage he ELF OSABI (-g00); 1: change the ELF OSABI to Linux and fix first section alignment (-g0); 2: change the ELF OSABI to Linux and strip.
+STRIP_MODE=2  # 0: Don't strip, don't chage he ELF OSABI (-g00); 1: change the ELF OSABI to Linux and fix first section alignment (-g0); 2: change the ELF OSABI to Linux and strip; 3: change the ELF OSABI to Linux, strip only symbols, keep relocations (-g0r)
 WFLAGS="-W$NL-Wall$NL-Werror-implicit-function-declaration"
 DO_WKEEP=1
 HAD_OFLAG=
@@ -338,6 +338,7 @@ for ARG in "$@"; do
    -O*) ARGS="$ARGS$NL$ARG"; HAD_OFLAG=1; HAD_OPTIMIZE=1 ;;
    -g00) STRIP_MODE=0 ;;
    -g0) STRIP_MODE=1 ;;
+   -g0r) STRIP_MODE=3 ;;
    -g*) ARGS="$ARGS$NL$ARG"; STRIP_MODE=0 ;;
    -nostdlib | -nodefaultlibs) DO_ADD_LIB= ;;
    -nostdinc) DO_ADD_INCLUDEDIR= ;;
@@ -626,7 +627,8 @@ unset OLD_PATH
 
 if test "$STRIP_MODE" = 0 || test -z "$DO_LINK"; then STRIP_MODE=0
 elif test "$STRIP_MODE" = 1; then :
-else STRIP_MODE=2; SFLAG=-s
+elif test "$STRIP_MODE" = 3; then SFLAG=  # By stripping symbols and keeping relocations at the same time (`ld -s -q'), GNU ld(1) fails for some complicated programs. So we don't strip symbols.
+else test "$STRIP_MODE" || STRIP_MODE=2; SFLAG=-s
 fi
 
 #if ! "$GCC" "$GCC_BARG" -print-search-dirs >/dev/null 2>&1; then  # Also works with Clang.
@@ -837,10 +839,16 @@ TMPOFILES=
 if test "$GCC" || test -z "$IS_TCCLD"; then
   # TCC accepts all these flags (and ignores `-m elf_i386' if passed).
   LDARGS="$MINICC_LD$NL-nostdlib$NL-static"
-  if test -z "$IS_TCCLD"; then
+  if test "$IS_TCCLD"; then
+    if test "$STRIP_MODE" = 3; then
+      echo "fatal: -g0r doesn't work with --tccld" >&2
+      exit 3
+    fi
+  else
     # `-e _start' is needed, because without it GNU gold(1) wouldn't fail to link if _start is not defined.
     # `--fatal-warnings' is needed, because without it GNU ld(1) would happily create an executable without _start.
     LDARGS="$LDARGS$NL-m${NL}elf_i386$NL-z${NL}norelro$NL-e${NL}_start$NL--fatal-warnings"
+    test "$STRIP_MODE" = 3 && LDARGS="$LDARGS$NL-q"  # GNU ld(1) flag -q to keep relocations.
   fi
   CCARGS="$GCC"
   test "$TCC" && CCARGS="$TCC"
@@ -1309,13 +1317,16 @@ else
   test "$EC" = 0 || exit "$EC"
 fi
 
-if test "$STRIP_MODE" = 1; then
+if test "$STRIP_MODE" = 0; then
+  :
+elif test "$STRIP_MODE" = 1; then
   EFARGS="$MYDIR/tools/elfxfix$NL-l$NL-a$NL$HAD_V$NL--$NL$OUTFILE"
   $EFARGS; EC="$?"
   test "$HAD_V" && echo "info: fixing ELF executable:" $EFARGS >&2
   test "$TMPOFILES" && rm -f $TMPOFILES
   test "$EC" = 0 || exit "$EC"
-elif test "$STRIP_MODE" = 2; then
+else  # 2 or 3.
+  ELFXFIX_SFLAG="$SFLAG"
   FIX_O_FN=
   if ! test "$IS_TCCLD"; then
     FIX_O_FN="$("$MYDIR"/tools/mktmpf "$TMPDIR"/elfxfix.@@@@@@.o)"  # Already creates the file.
@@ -1325,7 +1336,7 @@ elif test "$STRIP_MODE" = 2; then
   fi
   PARGS=
   test "$FIX_O_FN" && PARGS="-p$NL$FIX_O_FN"
-  EFARGS="$MYDIR/tools/elfxfix$NL-l$NL-a$NL-s$NL$PARGS$NL$HAD_V$NL--$NL$OUTFILE"
+  EFARGS="$MYDIR/tools/elfxfix$NL-l$NL-a$NL$ELFXFIX_SFLAG$NL$PARGS$NL$HAD_V$NL--$NL$OUTFILE"
   test "$HAD_V" && echo "info: running extra strip:" $EFARGS >&2
   if test "$FIX_O_FN"; then
     $EFARGS; EC="$?"
@@ -1340,7 +1351,7 @@ elif test "$STRIP_MODE" = 2; then
       $ARGS; EC="$?"
       if test "$EC" = 0; then
         PARGS="-r$NL$FIX_O_FN"
-        EFARGS="$MYDIR/tools/elfxfix$NL-l$NL-a$NL-s$NL$PARGS$NL$HAD_V$NL--$NL$OUTFILE"
+        EFARGS="$MYDIR/tools/elfxfix$NL-l$NL-a$NL$ELFXFIX_SFLAG$NL$PARGS$NL$HAD_V$NL--$NL$OUTFILE"
         test "$HAD_V" && echo "info: running extra strip again:" $EFARGS >&2
         $EFARGS; EC="$?"
       fi
