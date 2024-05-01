@@ -36,7 +36,9 @@ mini_fputc_RP3:  ; int REGPARM3 mini_fputc_RP3(int c, FILE *filep);
 ;     }
 ;   }
 ;   *filep->buf_write_ptr++ = uc;
-;   if (uc == '\n' && filep->dire == FD_WRITE_LINEBUF) mini_fflush(filep);
+;   if (uc == '\n' && filep->dire == FD_WRITE_LINEBUF) {
+;     if (mini_fflush(filep)) return EOF;
+;   }
 ;   return uc;
 ; }
 		push ebx  ; Save EBX.
@@ -50,7 +52,7 @@ mini_fputc_RP3:  ; int REGPARM3 mini_fputc_RP3(int c, FILE *filep);
 		call mini_fflush
 		pop edx
 		test eax, eax
-		jne .20
+		jnz .err
 		mov eax, [ebx+0x4]
 		cmp [ebx], eax
 		jne .16
@@ -61,9 +63,7 @@ mini_fputc_RP3:  ; int REGPARM3 mini_fputc_RP3(int c, FILE *filep);
 		call mini_write
 		add esp, byte 0xc
 		dec eax
-		jz .done
-.20:		pop eax
-		push byte -1  ; Return value := -1.
+		jnz .err
 		jmp short .done
 .16:		mov edx, [ebx]
 		inc edx
@@ -79,6 +79,10 @@ mini_fputc_RP3:  ; int REGPARM3 mini_fputc_RP3(int c, FILE *filep);
 		push ebx
 		call mini_fflush
 		pop edx  ; Clean up the argument of mini_fflush from the stack. The pop register can be any of: EBX, ECX, EDX, ESI, EDI, EBP.
+		test eax,  eax
+		jz .done
+.err:		pop eax
+		push byte -1  ; Return value := -1.
 .done:		pop eax  ; Remove zero-extended local variable uc from the stack, and use it as return value.
 		pop ebx  ; Restore EBX.
 		ret
