@@ -27,6 +27,7 @@ section .rodata align=1
 section .data align=4
 section .bss align=4
 %endif
+%define CONFIG_SECTIONS_DEFINED
 
 section .text
 mini___M_start_isatty_stdout:

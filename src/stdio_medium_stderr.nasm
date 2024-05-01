@@ -21,6 +21,7 @@ section .rodata align=4
 section .data align=4
 section .bss align=4
 %endif
+%define CONFIG_SECTIONS_DEFINED
 
 section .data
 mini_stderr:	dd mini_stderr_struct
