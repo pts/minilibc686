@@ -50,11 +50,8 @@ mini_fputc_RP3:  ; int REGPARM3 mini_fputc_RP3(int c, FILE *filep);
 		call mini_fflush
 		pop edx
 		test eax, eax
-		je .17
-.20:		pop eax
-		push byte -1  ; Return value := -1.
-		jmp short .done
-.17:		mov eax, [ebx+0x4]
+		jne .20
+		mov eax, [ebx+0x4]
 		cmp [ebx], eax
 		jne .16
 		mov eax, esp  ; Address of local variable uc.
@@ -64,7 +61,9 @@ mini_fputc_RP3:  ; int REGPARM3 mini_fputc_RP3(int c, FILE *filep);
 		call mini_write
 		add esp, byte 0xc
 		dec eax
-		jnz .20
+		jz .done
+.20:		pop eax
+		push byte -1  ; Return value := -1.
 		jmp short .done
 .16:		mov edx, [ebx]
 		inc edx
