@@ -1,0 +1,10 @@
+OBJS="stdio_medium_fputc.o stdio_medium_fputc_rp3.o stdio_medium_fflush.o stdio_medium_discard_buf.o stdio_medium_stdout.o stdio_medium_stderr.o isatty_linux.o"
+_nasm $OBJS
+OBJS="$OBJS start_stdio_medium_linux.o"
+_nasm_start start_stdio_medium_linux.o
+_mtcc -DTEST_NO_MINI_WRITE -o test_fputc.prog "$TESTDIR"/test_fputc.c $OBJS
+./test_fputc.prog
+nl="
+"
+test "$(./test_fputc.prog 2>/dev/null)" = "$nl"o
+test "$(./test_fputc.prog 2>&1 >/dev/null)" = AB"$nl"C

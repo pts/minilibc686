@@ -26,6 +26,19 @@ section .bss align=4
 section .text
 
 mini_fputc_RP3:  ; int REGPARM3 mini_fputc_RP3(int c, FILE *filep);
+; #define _STDIO_SUPPORTS_EMPTY_BUFFERS 1
+; int mini_fputc_calling_fwrite(int c, FILE *filep) {
+;   const unsigned char uc = c;
+;   if (filep->buf_write_ptr == filep->buf_end) {
+;     if (mini_fflush(filep)) return EOF;  /* Also returns EOF if !IS_FD_ANY_WRITE(filep->dire). Good, because we don't want to write. */
+;     if (_STDIO_SUPPORTS_EMPTY_BUFFERS && filep->buf_write_ptr == filep->buf_end) {
+;       return mini_write(filep->fd, &uc, 1) == 1 ? uc : EOF;
+;     }
+;   }
+;   *filep->buf_write_ptr++ = uc;
+;   if (uc == '\n' && filep->dire == FD_WRITE_LINEBUF) mini_fflush(filep);
+;   return uc;
+; }
 		push ebx  ; Save EBX.
 		mov ebx, edx
 		movzx eax, al  ; Local variable uc will become argument c.
@@ -51,11 +64,11 @@ mini_fputc_RP3:  ; int REGPARM3 mini_fputc_RP3(int c, FILE *filep);
 		call mini_write
 		add esp, byte 0xc
 		dec eax
-		jne .20
-		inc dword [ebx+0x20]
+		jnz .20
+		jmp short .done
 .16:		mov edx, [ebx]
 		inc edx
-		mov [ebx], edx
+		mov [ebx], edx  ; ++filep->buf_write_ptr++;
 		dec edx
 		pop eax  ; Local variable uc.
 		push eax

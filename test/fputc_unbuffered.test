@@ -1,2 +1,6 @@
-_utcc_nasm2 fputc_unbuffered.nasm -o test_fputc_unbuffered.prog "$TESTDIR"/test_fputc_unbuffered.c
+_utcc_nasm2 fputc_unbuffered.nasm -o test_fputc_unbuffered.prog "$TESTDIR"/test_fputc.c
 ./test_fputc_unbuffered.prog
+nl="
+"
+test "$(./test_fputc_unbuffered.prog 2>/dev/null)" = "$nl"o
+test "$(./test_fputc_unbuffered.prog 2>&1 >/dev/null)" = AB"$nl"C
