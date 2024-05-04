@@ -32,6 +32,7 @@ __LIBC_FUNC(off_t, lseek, (int fd, off_t offset, int whence), __LIBC_NOATTR);  /
 __LIBC_FUNC(off64_t, lseek64, (int fd, off64_t offset, int whence), __LIBC_NOATTR);
 __LIBC_FUNC(long, syscall, (long nr, ...), __LIBC_NOATTR);
 __LIBC_FUNC(int, unlink, (const char *pathname), __LIBC_NOATTR);
+__LIBC_FUNC(int, rename, (const char *oldpath, const char *newpath), __LIBC_NOATTR);  /* Typically rename(2) is defined in <stdio.h>, bu we are lenient are and define in <unistd.h> as well. */
 /* Limitation: it doesn't always set errno in minilibc686. */
 __LIBC_FUNC(int, isatty, (int fd), __LIBC_NOATTR);
 __LIBC_FUNC(int, ftruncate, (int fd, off_t length), __LIBC_NOATTR);  /* 32-bit length. */
