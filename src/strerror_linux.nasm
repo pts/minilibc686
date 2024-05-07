@@ -53,7 +53,7 @@ unknown_error:	db 'Unknown error', 0  ; uClibc 0.9.30.1 and libc 2.27 return e.g
 ; Message pointers would be 0x218 bytes.
 ;
 ; TODO(pts): Provide a shorter implementation with the most common file I/O messages.
-errmsgs:	errmsg 'Success', 0
+errmsgs:	errmsg '', 0  ; 'Success', 0  ; Match glibc with the empty strings.
 		errmsg 'Operation not permitted', 1
 		errmsg 'No such file or directory', 2
 		errmsg 'No such process', 3

@@ -30,27 +30,27 @@ errmsgs_from_1:
 		db 'No such file or directory', 0	     ; ENOENT
 		db 'No such process', 0			     ; ESRCH
 		db 'Interrupted system call', 0		     ; EINTR
-		db 'I/O error', 0			     ; EIO
+		db 'Input/output error', 0		     ; EIO
 		db 'No such device or address', 0	     ; ENXIO
 		db 'Argument list too long', 0		     ; E2BIG
 		db 'Exec format error', 0		     ; ENOEXEC
-		db 'Bad file number', 0			     ; EBADF
+		db 'Bad file desecriptor', 0		     ; EBADF
 		db 'No child processes', 0		     ; ECHILD
-		db 'Try again', 0			     ; EAGAIN
-		db 'Out of memory', 0			     ; ENOMEM
+		db 'Resource temporarily unavailable', 0     ; EAGAIN
+		db 'Cannot allocate memory', 0		     ; ENOMEM
 		db 'Permission denied', 0		     ; EACCES
 		db 'Bad address', 0			     ; EFAULT
 		db 'Block device required', 0		     ; ENOTBLK
 		db 'Device or resource busy', 0		     ; EBUSY
 		db 'File exists', 0			     ; EEXIST
-		db 'Cross-device link', 0		     ; EXDEV
+		db 'Invalid cross-device link', 0	     ; EXDEV
 		db 'No such device', 0			     ; ENODEV
 		db 'Not a directory', 0			     ; ENOTDIR
 		db 'Is a directory', 0			     ; EISDIR
 		db 'Invalid argument', 0		     ; EINVAL
-		db 'File table overflow', 0		     ; ENFILE
+		db 'Too many open files in system', 0	     ; ENFILE
 		db 'Too many open files', 0		     ; EMFILE
-		db 'Not a typewriter', 0		     ; ENOTTY
+		db 'Inappropriate ioctl for device', 0	     ; ENOTTY
 		db 'Text file busy', 0			     ; ETXTBSY
 		db 'File too large', 0			     ; EFBIG
 		db 'No space left on device', 0		     ; ENOSPC
@@ -60,9 +60,9 @@ errmsgs_from_1:
 		db 'Broken pipe', 0			     ; EPIPE
 		db 'Numerical argument out of domain', 0     ; EDOM
 		db 'Numerical result out of range', 0	     ; ERANGE
-		db '?', 0				     ; EDEADLK ; 'Resource deadlock avoided'.
+		db '?', 0				     ; EDEADLK ; 'Resource deadlock avoided'. This is not common enough.
 		db 'File name too long', 0		     ; ENAMETOOLONG
-		db 'No record locks available', 0	     ; ENOLCK
+		db 'No locks available', 0		     ; ENOLCK
 		db 'Function not implemented', 0	     ; ENOSYS
 		db 'Directory not empty', 0		     ; ENOTEMPTY
 		db 'Too many symbolic links encountered', 0  ; ELOOP == 40

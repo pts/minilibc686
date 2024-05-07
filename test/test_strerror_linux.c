@@ -14,7 +14,7 @@ static char expect(int errnum, const char *expected) {
 int main(int argc, char **argv) {
   int exit_code = 0;
   (void)argc; (void)argv;
-  if (!expect(0, "Success")) exit_code |= 1;
+  if (!expect(0, "")) exit_code |= 1;
   if (!expect(EPERM, "Operation not permitted")) exit_code |= 1;
   if (!expect(ENOENT, "No such file or directory")) exit_code |= 1;
   if (!expect(EHWPOISON, "Memory page has hardware error")) exit_code |= 1;
