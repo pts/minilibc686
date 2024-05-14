@@ -56,6 +56,7 @@ __LIBC_FUNC(int, fclose, (FILE *filep), __LIBC_NOATTR);
 __LIBC_FUNC(size_t, fread, (void *ptr, size_t size, size_t nmemb, FILE *filep), __LIBC_NOATTR);
 __LIBC_FUNC(size_t, fwrite, (const void *ptr, size_t size, size_t nmemb, FILE *filep), __LIBC_NOATTR);
 __LIBC_FUNC(int, fseek, (FILE *filep, off_t offset, int whence), __LIBC_NOATTR);  /* Only 32-bit off_t. */
+__LIBC_FUNC(void, rewind, (FILE *filep), __LIBC_NOATTR);
 __LIBC_FUNC(off_t, ftell, (FILE *filep), __LIBC_NOATTR);  /* Only 32-bit off_t */
 __LIBC_FUNC(int, fputs, (const char *s, FILE *filep), __LIBC_NOATTR);
 __LIBC_FUNC(char *, fgets, (char *s, int size, FILE *filep), __LIBC_NOATTR);
