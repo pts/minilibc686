@@ -41,8 +41,8 @@ __LIBC_VAR(extern FILE *, stderr);
 
 __LIBC_FUNC(int, printf, (const char *format, ...), __attribute__((__format__(__printf__, 1, 2))));
 __LIBC_FUNC(int, vprintf, (const char *format, __libc__va_list ap), __attribute__((__format__(__printf__, 1, 0))));
-__LIBC_FUNC(int, fprintf, (FILE *stream, const char *format, ...), __attribute__((__format__(__printf__, 2, 3))));
-__LIBC_FUNC(int, vfprintf, (FILE *f, const char *format, __libc__va_list ap), __attribute__((__format__(__printf__, 2, 0))));
+__LIBC_FUNC(int, fprintf, (FILE *filep, const char *format, ...), __attribute__((__format__(__printf__, 2, 3))));
+__LIBC_FUNC(int, vfprintf, (FILE *filep, const char *format, __libc__va_list ap), __attribute__((__format__(__printf__, 2, 0))));
 __LIBC_FUNC(int, sprintf, (char *str, const char *format, ...), __attribute__((__format__(__printf__, 2, 3))));
 __LIBC_FUNC(int, vsprintf, (char *str, const char *format, __libc__va_list ap), __attribute__((__format__(__printf__, 2, 0))));
 __LIBC_FUNC(int, snprintf, (char *str, size_t size, const char *format, ...), __attribute__((__format__(__printf__, 3, 4))));
@@ -115,7 +115,7 @@ __LIBC_FUNC(int, remove, (const char *pathname), __LIBC_NOATTR);
 __LIBC_FUNC(int, rename, (const char *oldpath, const char *newpath), __LIBC_NOATTR);  /* Typically rename(2) is defined in <stdio.h>, bu we are lenient are and define in <unistd.h> as well. */
 
 #if defined(__UCLIBC__) || defined(__GLIBC__) || defined(__dietlibc__)
-  __LIBC_FUNC(int, ferror, (FILE *stream), __LIBC_NOATTR);
+  __LIBC_FUNC(int, ferror, (FILE *filep), __LIBC_NOATTR);
 #endif
 
 #endif  /* _STDIO_H */
