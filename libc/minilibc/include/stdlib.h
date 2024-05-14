@@ -4,6 +4,8 @@
 
 #include <sys/types.h>
 
+#include <alloca.h>
+
 #define NULL ((void*)0)
 
 #define EXIT_SUCCESS 0
