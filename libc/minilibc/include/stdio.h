@@ -18,6 +18,12 @@
 #define STDOUT_FILENO 1
 #define STDERR_FILENO 2
 
+#ifdef __OSI__
+#  define FILENAME_MAX 255
+#else
+#  define FILENAME_MAX 4095
+#endif
+
 typedef struct _SFS_FILE FILE;  /* Different from _FILE. */
 
 __LIBC_VAR(extern FILE *, stdin);
