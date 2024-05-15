@@ -39,6 +39,7 @@ section .bss
 mini___M_global_files: times SMGF_FILE_CAPACITY resb SMGF_SIZEOF_STRUCT_SMS_FILE
 mini___M_global_files_end:
 mini___M_global_file_bufs: times SMGF_FILE_CAPACITY resb SMGF_BUF_SIZE
+section .text  ; Switch back, for inclusion from smart.nasm.
 
 %ifdef CONFIG_PIC
 %error Not PIC because it defines global variables.
