@@ -134,8 +134,14 @@
 #  endif  /* C compiler */
 #  ifdef __MINILIBC686__
 #    define __LIBC_FUNC_MINIRP3(type, name, args, gcc_attrs) __LIBC_FUNC_RP3(type, name, args, gcc_attrs)
+#    ifdef CONFIG_NO_RP3
+#      define __LIBC_FUNC_MAYBE_MINIRP3(type, name, args, gcc_attrs) __LIBC_FUNC(type, name, args, gcc_attrs)
+#    else
+#      define __LIBC_FUNC_MAYBE_MINIRP3(type, name, args, gcc_attrs) __LIBC_FUNC_RP3(type, name, args, gcc_attrs)
+#    endif
 #  else
 #    define __LIBC_FUNC_MINIRP3(type, name, args, gcc_attrs) __LIBC_FUNC(type, name, args, gcc_attrs)
+#    define __LIBC_FUNC_MAYBE_MINIRP3(type, name, args, gcc_attrs) __LIBC_FUNC(type, name, args, gcc_attrs)
 #  endif
 #  define __LIBC_STATIC_ASSERT(name, value) typedef char __static_assert_##name[(value) ? 1 : -1]
 #endif  /* _PREINCL_H */
