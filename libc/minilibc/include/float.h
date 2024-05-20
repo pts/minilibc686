@@ -70,17 +70,17 @@
 #    undef  LDBL_DIG
 #    define LDBL_DIG 18
 #    undef  LDBL_EPSILON
-#    define LDBL_EPSILON 1.08420217248550443401e-19L
+#    define LDBL_EPSILON 1.0842021724855044340e-19L
 #    undef  LDBL_MIN_EXP
 #    define LDBL_MIN_EXP (-16381)
 #    undef  LDBL_MIN
-#    define LDBL_MIN 3.36210314311209350626e-4932L
+#    define LDBL_MIN 3.3621031431120935062e-4932L
 #    undef  LDBL_MIN_10_EXP
 #    define LDBL_MIN_10_EXP (-4931)
 #    undef  LDBL_MAX_EXP
 #    define LDBL_MAX_EXP 16384
 #    undef  LDBL_MAX
-#    define LDBL_MAX 1.18973149535723176502e+4932L
+#    define LDBL_MAX 1.1897314953572317650e+4932L
 #    undef  LDBL_MAX_10_EXP
 #    define LDBL_MAX_10_EXP 4932
 #  endif

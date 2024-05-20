@@ -310,11 +310,11 @@ _need mini_stdout, .bss
 %ifdef __NEED_mini_strtol
   %assign ___NEED_strtofld_count ___NEED_strtofld_count+1
 %endif
-%ifdef __NEED_mini_strtold
+%ifdef __NEED_mini_strtold_inaccurate
   %assign ___NEED_strtofld_count ___NEED_strtofld_count+1
 %endif
 %if ___NEED_strtofld_count>1
-  %define __NEED_mini_strtold
+  %define __NEED_mini_strtold_inaccurate
 %endif
 ;
 _need_aliases ALIASES  ; Must be called after _alias.
@@ -1275,17 +1275,17 @@ mini_putchar_RP3:  ; int REGPARM3 mini_putchar_RP3(int c);
 %endif
 
 %if ___NEED_strtofld_count>1
-  __smart_extern mini_strtold
+  __smart_extern mini_strtold_inaccurate
   %ifdef __NEED_mini_strtof
     global mini_strtof
     mini_strtof:  ; float mini_strtof(const char *str, char **endptr);
 		push dword [esp+2*4]  ; Argument endptr.
 		push dword [esp+2*4]  ; Argument str.
-		call mini_strtold
+		call mini_strtold_inaccurate
 		fstp dword [esp]
 		fld dword [esp]  ; By doing this fstp+fld combo, we round the result to f32.
     mini_strtof.done:
-		times 2 pop edx  ; Clean up arguments of mini_strtold from the stack.
+		times 2 pop edx  ; Clean up arguments of mini_strtold_inaccurate from the stack.
 		ret
   %endif
   %ifdef __NEED_mini_strtod
@@ -1293,13 +1293,13 @@ mini_putchar_RP3:  ; int REGPARM3 mini_putchar_RP3(int c);
     mini_strtod:  ; double mini_strtod(const char *str, char **endptr);
 		push dword [esp+2*4]  ; Argument endptr.
 		push dword [esp+2*4]  ; Argument str.
-		call mini_strtold
+		call mini_strtold_inaccurate
 		fstp qword [esp]
 		fld qword [esp]  ; By doing this fstp+fld combo, we round the result to f64.
     %ifdef __NEED_mini_strtof
 		jmp strict short mini_strtof.done
     %else
-		times 2 pop edx  ; Clean up arguments of mini_strtold from the stack.
+		times 2 pop edx  ; Clean up arguments of mini_strtold_inaccurate from the stack.
 		ret
     %endif
   %endif

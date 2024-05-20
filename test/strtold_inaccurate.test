@@ -1,0 +1,2 @@
+_utcc_nasm2 strtold_inaccurate.nasm -o test_strtold_inaccurate.prog "$TESTDIR"/test_strtold_inaccurate.c
+./test_strtold_inaccurate.prog

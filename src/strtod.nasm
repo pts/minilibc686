@@ -8,7 +8,7 @@
 ; Uses: %ifdef CONFIG_I386
 ; Uses: %ifdef CONFIG_THIS_STRTOF
 ; Uses: %ifdef CONFIG_THIS_STRTOD
-; Uses: %ifdef CONFIG_THIS_STRTOLD
+; Uses: %ifdef CONFIG_THIS_STRTOLD_INACCURATE
 ;
 ; Limitation: it doesn't set errno, see -D_STDTOD_ERRNO c_strtod.c for that.
 ;
@@ -19,7 +19,7 @@
 
 %ifndef CONFIG_THIS_STRTOF
   %ifndef CONFIG_THIS_STRTOD
-    %ifndef CONFIG_THIS_STRTOLD
+    %ifndef CONFIG_THIS_STRTOLD_INACCURATE
       %define CONFIG_THIS_STRTOD  ; Default.
     %endif
   %endif
@@ -36,8 +36,8 @@ cpu 686
   global mini_strtof
 %elifdef CONFIG_THIS_STRTOD
   global mini_strtod
-%elifdef CONFIG_THIS_STRTOLD
-  global mini_strtold
+%elifdef CONFIG_THIS_STRTOLD_INACCURATE
+  global mini_strtold_inaccurate
 %else
   %error Missing CONFIG_THIS_...
   times 1/0 nop
@@ -59,8 +59,8 @@ section .text
   mini_strtof:  ; float mini_strtof(const char *str, char **endptr);
 %elifdef CONFIG_THIS_STRTOD
   mini_strtod:  ; double mini_strtod(const char *str, char **endptr);
-%elifdef CONFIG_THIS_STRTOLD
-  mini_strtold:  ; long double mini_strtold(const char *str, char **endptr);
+%elifdef CONFIG_THIS_STRTOLD_INACCURATE
+  mini_strtold_inaccurate:  ; long double mini_strtold_inaccurate(const char *str, char **endptr);
 %endif
 %define VAR_TMP_DIGIT 0  ; 4 bytes.
 %define VAR_F32_10 4  ; 4 bytes f32.
@@ -217,7 +217,7 @@ MAX_ALLOWED_EXP equ 4973
 %elifdef CONFIG_THIS_STRTOD
 		fstp qword [esp]
 		fld qword [esp]  ; By doing this fstp+fld combo, we round the result to f64.
-%elifdef CONFIG_THIS_STRTOLD
+%elifdef CONFIG_THIS_STRTOLD_INACCURATE
 		; No need for rounding.
 %endif
 		times 2 pop ebp  ; Just `add esp, byte VARS_SIZE'.

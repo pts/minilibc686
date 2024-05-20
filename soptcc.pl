@@ -416,6 +416,7 @@ sub fix_reg($) {
 # hand-written .as files also work.
 #
 # !! Rename local labels (L_* and also non-.globl F_) by file: L1_* F2_*.
+# !! fildq  ->  fild qword [...]
 sub as2nasm($$$$$$$$$$) {
   my($srcfh, $outfh, $first_line, $lc, $rodata_strs, $is_win32, $undefineds, $define_when_defined, $common_by_label, $is_start_found_ref) = @_;
   my %unknown_directives;

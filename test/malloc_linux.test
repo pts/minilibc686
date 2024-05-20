@@ -5,7 +5,8 @@ _nasm malloc_simple_unaligned_linux.nasm
 _nasm memset.nasm
 _nasm memcpy.nasm
 _nasm memcmp.nasm
+_nasm errno.nasm
 _nasm_start start_stdio_medium_linux.nasm
 _nasm2 realloc.nasm
-_mtcc -o test_malloc_linux.prog "$TESTDIR"/test_malloc.c realloc.o malloc.o free.o calloc.o malloc_simple_unaligned_linux.o memset.o memcpy.o memcmp.o start_stdio_medium_linux.o
+_mtcc -o test_malloc_linux.prog "$TESTDIR"/test_malloc.c realloc.o malloc.o free.o calloc.o malloc_simple_unaligned_linux.o memset.o memcpy.o memcmp.o start_stdio_medium_linux.o errno.o
 ./test_malloc_linux.prog

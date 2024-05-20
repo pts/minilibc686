@@ -1,2 +1,3 @@
-_utcc_nasm2 strtold.nasm -o test_strtold.prog "$TESTDIR"/test_strtold.c
+_nasm errno.nasm
+_utcc_nasm2 strtold.nasm -o test_strtold.prog "$TESTDIR"/test_strtold.c errno.o
 ./test_strtold.prog

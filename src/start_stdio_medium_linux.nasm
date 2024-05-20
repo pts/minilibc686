@@ -49,6 +49,9 @@ section .rodata align=4
 section .data align=4
 section .bss align=4
 main equ +0x12345678
+%ifndef CONFIG_START_STDOUT_ONLY
+mini_errno equ +0x12345679
+%endif
 %else
 extern main
 ; These will be converted to weak symbols by tools/elfofix.
@@ -57,6 +60,7 @@ section .rodata align=1
 section .data align=1
 %ifndef CONFIG_START_STDOUT_ONLY
 section .bss align=4
+extern mini_errno
 %else
 section .bss align=1
 %endif
@@ -170,8 +174,6 @@ mini_ioctl:	mov al, 54  ; __NR_ioctl.
 %ifndef CONFIG_START_STDOUT_ONLY
 section .bss
 mini_environ:	resd 1  ; char **mini_environ;
-global mini_errno
-mini_errno:	resd 1  ; int mini_errno;
 %endif
 
 %ifdef CONFIG_PIC

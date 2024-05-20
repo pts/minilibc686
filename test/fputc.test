@@ -1,4 +1,4 @@
-OBJS="stdio_medium_fputc.o stdio_medium_fflush.o stdio_medium_discard_buf.o stdio_medium_stdout.o stdio_medium_stderr.o isatty_linux.o"
+OBJS="stdio_medium_fputc.o stdio_medium_fflush.o stdio_medium_discard_buf.o stdio_medium_stdout.o stdio_medium_stderr.o isatty_linux.o errno.o"
 _nasm $OBJS
 OBJS="$OBJS start_stdio_medium_linux.o"
 _nasm_start start_stdio_medium_linux.o

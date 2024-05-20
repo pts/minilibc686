@@ -37,22 +37,28 @@ __LIBC_FUNC(int,       atoi,  (const char *nptr), __LIBC_NOATTR);
 __LIBC_FUNC(long,      atol,  (const char *nptr), __LIBC_NOATTR);
 __LIBC_FUNC(__extension__ long long, atoll, (const char *nptr), __LIBC_NOATTR);
 
-/* Limitation: they don't set errno on overflow in minilibc686. */
+/* Limitation: it doesn't set errno. */
 __LIBC_FUNC(float, strtof, (const char *nptr, char **endptr), __LIBC_NOATTR);
+/* Limitation: it doesn't set errno. */
 __LIBC_FUNC(double, strtod, (const char *nptr, char **endptr), __LIBC_NOATTR);
+#ifdef __MINILIBC686__
+  /* Limitation: the last few digits of the result is inaccurate (but it's much shorter than strtold), it doesn't set errno. */
+  __LIBC_FUNC(long double, strtold_inaccurate, (const char *nptr, char **endptr), __LIBC_NOATTR);
+#endif
+/* It sets errno, its result is accurate, implementation is very long. */
 __LIBC_FUNC(long double, strtold, (const char *nptr, char **endptr), __LIBC_NOATTR);
 
 typedef struct { int quot, rem; } div_t;
 typedef struct { long quot, rem; } ldiv_t;
 typedef struct { __extension__ long long quot, rem; } lldiv_t;
 #ifdef __WATCOMC__  /* __WATOMC__ does a `ret' instead of `ret 4', so it's ABI-incompatible with functions returning a struct. */
-#  ifdef __MINILIBC696__
+#  ifdef __MINILIBC686__
     div_t div(int numerator, int denominator);
     ldiv_t ldiv(long numerator, long denominator);
     lldiv_t lldiv(long long numerator, long long denominator);
 #    pragma aux div "_mini_div_RP0W"
 #    pragma aux ldiv "_mini_ldiv_RP0W"
-#    pragma aux lldiv "_mini_lldiv_RP0W"
+#    pragma aux lldiv "_mini_ldiv_RP0W"  /* TODO(pts): Not using _mini_lldiv_RP0W, because in __WATCOMC__ sizeof(double) == sizeof(long double). */
 #  else
     /* TODO(pts): Add a better, inline assembly version. Can that return a struct? */
     static __inline div_t div(int numerator, int denominator) {
