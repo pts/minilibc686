@@ -40,7 +40,6 @@ int main(int argc, char **argv) {
   printf("is_ok=%d u0=0x%x u1=0x%x\n", is_ok, x.u[0], x.u[1]);
 #endif
 
-#ifndef __TINYC__  /* !! TCC (long double) --> (double) conversion bug. GCC and PCC work fine. */
   x.ld = (double)ldbl_min.ld;
   is_all_ok &= (is_ok = x.ld == 0.0L);
   printf("is_ok=%d u0=0x%x u1=0x%x u2=0x%x\n", is_ok, x.u[0], x.u[1], x.u[2] & 0xffff);
@@ -52,7 +51,6 @@ int main(int argc, char **argv) {
   x.ld = mini_strtold("2.2250738585072014e-308", 0);
   is_all_ok &= (is_ok = (double)x.ld == dbl_mind.d);
   printf("is_ok=%d u0=0x%x u1=0x%x u2=0x%x\n", is_ok, x.u[0], x.u[1], x.u[2] & 0xffff);
-#endif
 
   x.ld = (double)3.3621031431120935062e-4932L;
   is_all_ok &= (is_ok = x.ld == 0.0L);
