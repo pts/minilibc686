@@ -1367,7 +1367,7 @@ my $data_alignment = 4;
       $data_alignment = $value > 1 ? $value : 1;
     } elsif ($arg =~ m@\A-[DU][_A-Za-z]\w*\Z(?!\n)@) {
       push @cflags, $arg;
-    } elsif ($arg =~ m@\A-O@) {
+    } elsif ($arg =~ m@\A-[OW]@) {
       push @oflags, $arg;
     } else {
       die "fatal: unknown flag: $arg\n";
