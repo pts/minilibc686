@@ -524,7 +524,7 @@ case "$TCC" in "") ;; */*) ;; *)  # Resolve $TCC on $OLD_PATH. Useful for --noen
   case "$LOOKUP" in
    *\ is\ /*)  LOOKUP="/${LOOKUP#*\ is\ /}"  ;;
    *\ for\ /*) LOOKUP="/${LOOKUP#*\ for\ /}" ;;  # ksh(1).
-   *) echo "fatal: tcc command not found: $GCC" >&2; exit 6 ;;
+   *) echo "fatal: tcc command not found: $TCC" >&2; exit 6 ;;
   esac
   TCC="$LOOKUP"
 esac
@@ -533,7 +533,7 @@ case "$MINICC_LD" in "") ;; */*) ;; *)  # Resolve $MINICC_LD on $OLD_PATH. Usefu
   case "$LOOKUP" in
    *\ is\ /*)  LOOKUP="/${LOOKUP#*\ is\ /}"  ;;
    *\ for\ /*) LOOKUP="/${LOOKUP#*\ for\ /}" ;;  # ksh(1).
-   *) echo "fatal: --tccld command not found: $GCC" >&2; exit 6 ;;
+   *) echo "fatal: --tccld command not found: $MINICC_LD" >&2; exit 6 ;;
   esac
   MINICC_LD="$LOOKUP"
 esac
