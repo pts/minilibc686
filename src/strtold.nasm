@@ -10,6 +10,13 @@
 bits 32
 cpu 386
 
+%ifdef __UCLIBC__
+  %define mini_errno __errno_location
+  %ifndef mini_strtold
+    %define mini_strtold strtold
+  %endif
+%endif
+
 global mini_strtold
 %ifidn __OUTPUT_FORMAT__, bin
 section .text align=1
@@ -23,6 +30,19 @@ section .rodata align=4
 section .data align=4
 section .bss align=4
 extern mini_errno
+%endif
+
+%ifdef __UCLIBC__
+  %macro set_errno 1
+		push eax
+		call __errno_location
+		mov dword [eax], %1
+		pop eax
+  %endm
+%else
+  %macro set_errno 1
+		mov dword [mini_errno], %1
+  %endm
 %endif
 
 section .text
@@ -312,7 +332,7 @@ decfloat:  ; static long double decfloat(struct sfile *f, int c, int sign);
 		mov [eax], edx
 .36:		cmp dword [ebp-0x40], byte 0x0
 		jne .37
-		mov dword [mini_errno], 0x16
+		set_errno 0x16
 		mov eax, [ebx]
 		mov edx, [eax+0x4]
 		mov eax, [ebx]
@@ -363,7 +383,7 @@ decfloat:  ; static long double decfloat(struct sfile *f, int c, int sign);
 		cmp dword [ebp-0x30], 0x201e
 		jbe .43
 .116:
-.45:		mov dword [mini_errno], 0x22
+.45:		set_errno 0x22
 		fild dword [ebx+0x8]
 		fld tword [const3]
 		fmulp st1, st0
@@ -376,7 +396,7 @@ decfloat:  ; static long double decfloat(struct sfile *f, int c, int sign);
 		jl .110
 		cmp dword [ebp-0x30], -0x40bd
 		jnb .46
-.110:		mov dword [mini_errno], 0x22
+.110:		set_errno 0x22
 		fild dword [ebx+0x8]
 		fld tword [const4]
 		fmulp st1, st0
@@ -1266,7 +1286,7 @@ hexfloat:  ; static long double hexfloat(struct sfile *f, int sign);
 		jg .167
 		cmp dword [ebp-0x60], 0x403d
 		jbe .149
-.167:		mov dword [mini_errno], 0x22
+.167:		set_errno 0x22
 		fild dword [ebx+0x4]
 		fld tword [const3]
 		fmulp st1, st0
@@ -1279,7 +1299,7 @@ hexfloat:  ; static long double hexfloat(struct sfile *f, int sign);
 		jl .168
 		cmp dword [ebp-0x60], -0x40bd
 		jnb .153
-.168:		mov dword [mini_errno], 0x22
+.168:		set_errno 0x22
 		fild dword [ebx+0x4]
 		fld tword [const4]
 		fmulp st1, st0
@@ -1410,7 +1430,7 @@ hexfloat:  ; static long double hexfloat(struct sfile *f, int sign);
 		mov [ebp-0x20], edx
 		mov [ebp-0x1c], ecx
 		jmp short .163
-.162:		mov dword [mini_errno], 0x22
+.162:		set_errno 0x22
 .163:		fld tword [ebp-0x24]
 .141:		lea esp, [ebp-0x10]
 		pop ecx
@@ -1583,7 +1603,7 @@ mini_strtold:  ; long double mini_strtold(const char *s, char **p);
 		mov eax, [ebp-0x20]
 		dec eax
 		mov [ebp-0x20], eax
-		mov dword [mini_errno], 0x16
+		set_errno 0x16
 		mov eax, [ebp-0x1c]
 		mov [ebp-0x20], eax
 		fldz
