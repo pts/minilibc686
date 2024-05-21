@@ -1,14 +1,19 @@
 /* Based on musl-1.2.5/src/locale/strtod_l.c */
 
+typedef char assert_long_double_size[sizeof(long double) == 10 || sizeof(long double) == 12 || sizeof(long double) == 16 ? 1 : -1];
+
 #if defined(USE_MINILIBC) && defined(__i386__)
 #  define EINVAL 22
 #  define ERANGE 34
   extern int mini_errno;
 #  define errno mini_errno
+#  define strtold mini_strtold
   typedef unsigned size_t;
   typedef unsigned uint32_t;
   typedef int int32_t;
   typedef unsigned long long uint64_t;
+#  define INFINITY  (__builtin_inff())
+#  define NAN (__builtin_nan(""))
 #else
 #  include <errno.h>
 #  include <float.h>  /* FLT_MIN etc. */
@@ -16,6 +21,54 @@
 #  include <stdint.h>  /* uint32_t, int32_t. */
 #endif
 
+/* !! It produces incorrect results __PCC__. __TINYCC_ has: error: unknown constraint 't' */
+#if defined(__i386__) && defined(__GNUC__) && !defined(__PCC__) && !defined(__TINYC__)
+  static __attribute__((noinline)) long double my_ldexpl(long double x, int exp) {
+    register long double result;
+    __asm__ __volatile__ ("fscale" : "=t" (result) : "0" (x), "u" ((long double) exp));
+    return result;
+  }
+
+  static __inline__ __attribute__((always_inline)) long double my_fabsl(long double x) {
+    register long double result;
+    __asm__ __volatile__ ("fabs" : "=t" (result) : "0" (x));
+    return result;
+  }
+
+  static __attribute__((noinline)) long double my_fmodl(long double x, long double y) {  /* TODO(pts): Is it smaller without __inline__. */
+    register long double value;
+    __asm__ __volatile__ ("M1: fprem\n\t" "fnstsw %%ax\n\t" "sahf\n\t" "jp M1" : "=t" (value) : "0" (x), "u" (y) : "ax", "cc");
+    return value;
+  }
+#else
+#  if defined(__amd64__) && defined(__GNUC__) && !defined(__PCC__) && !defined(__TINYC__)
+    static __inline__ long double my_ldexpl(long double x, int exp) {
+      register long double result;
+      __asm__ __volatile__ ("fscale" : "=t"(result) : "0"(x), "u"((long double) exp));
+      return result;
+    }
+    static __inline__ long double my_fabsl(long double x) {
+      __asm__ __volatile__ ("fabs" : "+t"(x));
+      return x;
+    }
+    static __inline__ long double my_fmodl(long double x, long double y) {
+      unsigned short fpsr;
+      do __asm__ __volatile__ ("fprem; fnstsw %%ax" : "+t"(x), "=a"(fpsr) : "u"(y));
+      while (fpsr & 0x400);
+      return x;
+    }
+#    define INFINITY  (__builtin_inff())
+#    define NAN (__builtin_nan(""))
+#  else
+#    include <math.h>  /* NAN, INFINITY, ldexpl(...), fabsl(...), fmodl(...). */
+    long double ldexpl(long double x, int exp);
+    long double fmodl(long double x, long double y);
+    long double fabsl(long double x);
+#    define my_ldexpl(x, exp) ldexpl(x, exp)
+#    define my_fabsl(x) fabsl(x)
+#    define my_fmodl(x, y) fmodl(x, y)
+#  endif
+#endif
 
 #ifdef FORCE_UNDEF
 #  undef LDBL_MAX
@@ -27,60 +80,6 @@
 #  undef DBL_MIN
 #  undef __DBL_MIN__
 #endif
-
-/*#ifdef __MINILIBC686__
-static __inline__*/
-/* !! It produces incorrect results __PCC__. __TINYCC_ has: error: unknown constraint 't' */
-#if defined(__i386__) && defined(__GNUC__) && !defined(__PCC__) && !defined(__TINYC__)
-static __attribute__((noinline)) long double my_ldexpl(long double x, int exp) {
-  register long double result;
-  __asm__ __volatile__ ("fscale" : "=t" (result) : "0" (x), "u" ((long double) exp));
-  return result;
-}
-
-static __inline__ __attribute__((always_inline)) long double my_fabsl(long double x) {
-  register long double result;
-  __asm__ __volatile__ ("fabs" : "=t" (result) : "0" (x));
-  return result;
-}
-
-static __attribute__((noinline)) long double my_fmodl(long double x, long double y) {  /* TODO(pts): Is it smaller without __inline__. */
-  register long double value;
-  __asm__ __volatile__ ("M1: fprem\n\t" "fnstsw %%ax\n\t" "sahf\n\t" "jp M1" : "=t" (value) : "0" (x), "u" (y) : "ax", "cc");
-  return value;
-}
-#define INFINITY  (__builtin_inff())
-#define NAN (__builtin_nan(""))
-#else
-#if defined(__amd64__) && defined(__GNUC__) && !defined(__PCC__) && !defined(__TINYC__)
-static __inline__ long double my_ldexpl(long double x, int exp) {
-  register long double result;
-  __asm__ __volatile__ ("fscale" : "=t"(result) : "0"(x), "u"((long double) exp));
-  return result;
-}
-static __inline__ long double my_fabsl(long double x) {
-  __asm__ __volatile__ ("fabs" : "+t"(x));
-  return x;
-}
-static __inline__ long double my_fmodl(long double x, long double y) {
-  unsigned short fpsr;
-  do __asm__ __volatile__ ("fprem; fnstsw %%ax" : "+t"(x), "=a"(fpsr) : "u"(y));
-  while (fpsr & 0x400);
-  return x;
-}
-#define INFINITY  (__builtin_inff())
-#define NAN (__builtin_nan(""))
-#else
-#include <math.h>  /* NAN, INFINITY, ldexpl(...), fabsl(...), fmodl(...). */
-long double ldexpl(long double x, int exp);
-long double fmodl(long double x, long double y);
-long double fabsl(long double x);
-#define my_ldexpl(x, exp) ldexpl(x, exp)
-#define my_fabsl(x) fabsl(x)
-#define my_fmodl(x, y) fmodl(x, y)
-#endif
-#endif
-
 #if defined(__i386__) && !defined(__LDBL_MANT_DIG__)
 #  define __LDBL_MANT_DIG__ 64
 #endif
@@ -533,7 +532,7 @@ static long double hexfloat(struct sfile *f, int sign) {
 	return y;
 }
 
-long double mini_strtold(const char *s, char **p) {
+long double strtold(const char *s, char **p) {
 	struct sfile f = { s, s };
 	long double y;
 	int sign = 1;
@@ -602,233 +601,3 @@ long double mini_strtold(const char *s, char **p) {
 	if (p) *p = (char*)f.p;
 	return y;
 }
-
-/* --- */
-
-#ifdef USE_LIBC_STRTOLD
-long double strtold(const char *nptr, char **endptr);
-#define my_strtold strtold
-#endif
-
-#ifdef DO_MAIN_TEST
-#include <stdio.h>
-
-int signbitlp(const long double *ld) {  /* !! Must return int, not char. */
-  return ((const unsigned char*)ld)[9] >> 7;
-}
-
-/*#define my_signbit(ld) signbit((long double)ld)*/  /* signbitlp(&(ld)) */
-#define my_signbit(ld) signbitlp(&(ld))
-
-float fadd2(long double a, long double b) {
-  return a + b;
-}
-
-int main(int argc, char **argv) {
-  /*const char is_ok = (long double)DBL_MIN == 2.22507385850720138309e-308l;*/
-  union { unsigned u[3]; long double ld; } x;
-  char is_ok, is_all_ok = 1;
-  (void)argc; (void)argv;
-  x.u[2] = 0;
-
-  x.ld = (double)LDBL_MIN;
-  is_all_ok &= (is_ok = x.ld == 0.0L);
-  printf("is_ok=%d u0=0x%x u1=0x%x u2=0x%x\n", is_ok, x.u[0], x.u[1], x.u[2] & 0xffff);
-
-  x.ld = (float)1.000000000000001L;
-  is_all_ok &= (is_ok = x.ld == 1.0L);
-  printf("is_ok=%d u0=0x%x u1=0x%x u2=0x%x\n", is_ok, x.u[0], x.u[1], x.u[2] & 0xffff);
-
-  x.ld = fadd2(1, 1.000000000000001L);
-  is_all_ok &= (is_ok = x.ld == 2.0L);  /* !! TCC bug. GCC and PCC work file. */
-  printf("is_ok=%d u0=0x%x u1=0x%x u2=0x%x\n", is_ok, x.u[0], x.u[1], x.u[2] & 0xffff);
-
-  x.ld = my_strtold("2.22507385850720138309e-308", 0);
-  is_all_ok &= (is_ok = x.ld == (long double)DBL_MIN && x.ld == DBL_MIN && (double)x.ld == DBL_MIN);
-  printf("is_ok=%d u0=0x%x u1=0x%x u2=0x%x\n", is_ok, x.u[0], x.u[1], x.u[2] & 0xffff);
-
-  x.ld = my_strtold("2.2250738585072014e-308", 0);
-  is_all_ok &= (is_ok = (double)x.ld == DBL_MIN && x.ld > (long double)DBL_MIN && x.u[0] == 0x46 && x.u[1] == 0x80000000U && (x.u[2] & 0xffff) == 0x3c01);
-  printf("is_ok=%d u0=0x%x u1=0x%x u2=0x%x\n", is_ok, x.u[0], x.u[1], x.u[2] & 0xffff);
-
-  x.ld = my_strtold("inf", 0);
-  is_all_ok &= (is_ok = x.ld > 0.0L && x.ld > LDBL_MAX && x.ld == x.ld * .5);
-  printf("is_ok=%d u0=0x%x u1=0x%x u2=0x%x\n", is_ok, x.u[0], x.u[1], x.u[2] & 0xffff);
-
-  x.ld = my_strtold("infinity", 0);
-  is_all_ok &= (is_ok = x.ld > 0.0L && x.ld > LDBL_MAX && x.ld == x.ld * .5);
-  printf("is_ok=%d u0=0x%x u1=0x%x u2=0x%x\n", is_ok, x.u[0], x.u[1], x.u[2] & 0xffff);
-
-  x.ld = my_strtold("-infinity", 0);
-  is_all_ok &= (is_ok = x.ld < 0.0L && x.ld < -LDBL_MAX && x.ld == x.ld * .5);
-  printf("is_ok=%d u0=0x%x u1=0x%x u2=0x%x\n", is_ok, x.u[0], x.u[1], x.u[2] & 0xffff);
-
-  x.ld = my_strtold("1.18973149535723176502126385303097021e+4932", 0);
-  is_all_ok &= (is_ok = x.ld == LDBL_MAX);
-  printf("is_ok=%d u0=0x%x u1=0x%x u2=0x%x\n", is_ok, x.u[0], x.u[1], x.u[2] & 0xffff);
-
-  x.ld = my_strtold("1.189731495357231765e+4932", 0);
-  is_all_ok &= (is_ok = x.ld == LDBL_MAX);
-  printf("is_ok=%d u0=0x%x u1=0x%x u2=0x%x\n", is_ok, x.u[0], x.u[1], x.u[2] & 0xffff);
-
-  x.ld = my_strtold("1.1897314953572317650E4932", 0);
-  is_all_ok &= (is_ok = x.ld == LDBL_MAX);
-  printf("is_ok=%d u0=0x%x u1=0x%x u2=0x%x\n", is_ok, x.u[0], x.u[1], x.u[2] & 0xffff);
-
-  x.ld = my_strtold("1.18973149535723176498902e+4932", 0);
-  is_all_ok &= (is_ok = x.ld == LDBL_MAX);
-  printf("is_ok=%d u0=0x%x u1=0x%x u2=0x%x\n", is_ok, x.u[0], x.u[1], x.u[2] & 0xffff);
-
-  x.ld = my_strtold("1.18973149535723176498901e+4932", 0);
-  is_all_ok &= (is_ok = x.ld > 0.0L && x.ld < LDBL_MAX);
-  printf("is_ok=%d u0=0x%x u1=0x%x u2=0x%x\n", is_ok, x.u[0], x.u[1], x.u[2] & 0xffff);
-
-  x.ld = my_strtold("1.189731495357231766e+4932", 0);
-  is_all_ok &= (is_ok = x.ld > LDBL_MAX && x.ld == x.ld * .5);  /* Infinity. */
-  printf("is_ok=%d u0=0x%x u1=0x%x u2=0x%x\n", is_ok, x.u[0], x.u[1], x.u[2] & 0xffff);
-
-  x.ld = my_strtold(" \t3.36210314311209350626267781732175260e-4932", 0);
-  is_all_ok &= (is_ok = x.ld > 0.0L && x.ld == LDBL_MIN && x.ld < DBL_MIN);
-  printf("is_ok=%d u0=0x%x u1=0x%x u2=0x%x\n", is_ok, x.u[0], x.u[1], x.u[2] & 0xffff);
-
-  x.ld = my_strtold("3.36210314311209350626267781732175260e-4932", 0);  /* "%.36Lg". */
-  is_all_ok &= (is_ok = x.ld == LDBL_MIN);
-  printf("is_ok=%d u0=0x%x u1=0x%x u2=0x%x\n", is_ok, x.u[0], x.u[1], x.u[2] & 0xffff);
-
-  x.ld = my_strtold("3.3621031431120935060e-4932", 0);
-  is_all_ok &= (is_ok = x.ld < LDBL_MIN);
-  printf("is_ok=%d u0=0x%x u1=0x%x u2=0x%x\n", is_ok, x.u[0], x.u[1], x.u[2] & 0xffff);
-
-  x.ld = my_strtold("3.3621031431120935061e-4932", 0);  /* "%.20Lg". */
-  is_all_ok &= (is_ok = x.ld == LDBL_MIN);
-  printf("is_ok=%d u0=0x%x u1=0x%x u2=0x%x\n", is_ok, x.u[0], x.u[1], x.u[2] & 0xffff);
-
-  x.ld = my_strtold("3.3621031431120935062e-4932", 0);
-  is_all_ok &= (is_ok = x.ld == LDBL_MIN);
-  printf("is_ok=%d u0=0x%x u1=0x%x u2=0x%x\n", is_ok, x.u[0], x.u[1], x.u[2] & 0xffff);
-
-  x.ld = my_strtold("3.3621031431120935064e-4932", 0);
-  is_all_ok &= (is_ok = x.ld == LDBL_MIN);
-  printf("is_ok=%d u0=0x%x u1=0x%x u2=0x%x\n", is_ok, x.u[0], x.u[1], x.u[2] & 0xffff);
-
-  x.ld = my_strtold("3.3621031431120935065e-4932", 0);
-  is_all_ok &= (is_ok = x.ld > LDBL_MIN);
-  printf("is_ok=%d u0=0x%x u1=0x%x u2=0x%x\n", is_ok, x.u[0], x.u[1], x.u[2] & 0xffff);
-
-  x.ld = LDBL_EPSILON;
-  is_all_ok &= (is_ok = x.ld == LDBL_EPSILON);
-  printf("is_ok=%d u0=0x%x u1=0x%x u2=0x%x\n", is_ok, x.u[0], x.u[1], x.u[2] & 0xffff);
-
-  x.ld = my_strtold("1.08420217248550443400745280086994171e-19", 0);
-  is_all_ok &= (is_ok = x.ld == LDBL_EPSILON);
-  printf("is_ok=%d u0=0x%x u1=0x%x u2=0x%x\n", is_ok, x.u[0], x.u[1], x.u[2] & 0xffff);
-
-  x.ld = my_strtold("1.0842021724855044340E-19", 0);
-  is_all_ok &= (is_ok = x.ld == LDBL_EPSILON);
-  printf("is_ok=%d u0=0x%x u1=0x%x u2=0x%x\n", is_ok, x.u[0], x.u[1], x.u[2] & 0xffff);
-
-  x.ld = my_strtold("3.64519953188247460252840593361941982e-4951", 0);
-  is_all_ok &= (is_ok = x.u[0] == 1 && x.u[1] == 0 && (x.u[2] & 0xffff) == 0);
-  printf("is_ok=%d u0=0x%x u1=0x%x u2=0x%x\n", is_ok, x.u[0], x.u[1], x.u[2] & 0xffff);
-
-  x.ld = my_strtold("2e-4951", 0);
-  is_all_ok &= (is_ok = x.u[0] == 1 && x.u[1] == 0 && (x.u[2] & 0xffff) == 0);
-  printf("is_ok=%d u0=0x%x u1=0x%x u2=0x%x\n", is_ok, x.u[0], x.u[1], x.u[2] & 0xffff);
-
-  x.ld = my_strtold("3e-4951", 0);
-  is_all_ok &= (is_ok = x.u[0] == 1 && x.u[1] == 0 && (x.u[2] & 0xffff) == 0);
-  printf("is_ok=%d u0=0x%x u1=0x%x u2=0x%x\n", is_ok, x.u[0], x.u[1], x.u[2] & 0xffff);
-
-  x.ld = my_strtold("4e-4951", 0);
-  is_all_ok &= (is_ok = x.u[0] == 1 && x.u[1] == 0 && (x.u[2] & 0xffff) == 0);
-  printf("is_ok=%d u0=0x%x u1=0x%x u2=0x%x\n", is_ok, x.u[0], x.u[1], x.u[2] & 0xffff);
-
-  x.ld = my_strtold("1.8226e-4951", 0);
-  is_all_ok &= (is_ok = x.u[0] == 1 && x.u[1] == 0 && (x.u[2] & 0xffff) == 0);
-  printf("is_ok=%d u0=0x%x u1=0x%x u2=0x%x\n", is_ok, x.u[0], x.u[1], x.u[2] & 0xffff);
-
-  x.ld = my_strtold("-1.8226e-4951", 0);
-  is_all_ok &= (is_ok = x.u[0] == 1 && x.u[1] == 0 && (x.u[2] & 0xffff) == 0x8000);
-  printf("is_ok=%d u0=0x%x u1=0x%x u2=0x%x\n", is_ok, x.u[0], x.u[1], x.u[2] & 0xffff);
-
-  x.ld = my_strtold("+1.8225e-4951", 0);
-  is_all_ok &= (is_ok = x.ld == 0.0L && !my_signbit(x.ld));
-  printf("is_ok=%d u0=0x%x u1=0x%x u2=0x%x\n", is_ok, x.u[0], x.u[1], x.u[2] & 0xffff);
-
-  x.ld = my_strtold("-1.8225E-4951", 0);
-  is_all_ok &= (is_ok = x.ld == 0.0L && my_signbit(x.ld));  /* !! */
-  printf("is_ok=%d u0=0x%x u1=0x%x u2=0x%x\n", is_ok, x.u[0], x.u[1], x.u[2] & 0xffff);
-
-  x.ld = my_strtold("  \t4567", 0);
-  is_all_ok &= (is_ok = x.u[0] == 0x0&& x.u[1] == 0x8eb80000&& (x.u[2] & 0xffff) == 0x400b);
-  printf("is_ok=%d u0=0x%x u1=0x%x u2=0x%x\n", is_ok, x.u[0], x.u[1], x.u[2] & 0xffff);
-
-  x.ld = my_strtold("12.25", 0);
-  is_all_ok &= (is_ok = x.u[0] == 0x0&& x.u[1] == 0xc4000000 && (x.u[2] & 0xffff) == 0x4002);
-  printf("is_ok=%d u0=0x%x u1=0x%x u2=0x%x\n", is_ok, x.u[0], x.u[1], x.u[2] & 0xffff);
-
-  x.ld = my_strtold("inf", 0);
-  is_all_ok &= (is_ok = x.u[0] == 0x0 && x.u[1] == 0x80000000 && (x.u[2] & 0xffff) == 0x7fff);
-  printf("is_ok=%d u0=0x%x u1=0x%x u2=0x%x\n", is_ok, x.u[0], x.u[1], x.u[2] & 0xffff);
-
-  x.ld = my_strtold("  -0.0000", 0);
-  is_all_ok &= (is_ok = x.u[0] == 0x0 && x.u[1] == 0x0 && (x.u[2] & 0xffff) == 0x8000);
-  printf("is_ok=%d u0=0x%x u1=0x%x u2=0x%x\n", is_ok, x.u[0], x.u[1], x.u[2] & 0xffff);
-
-  x.ld = my_strtold(" 000", 0);
-  is_all_ok &= (is_ok = x.u[0] == 0x0 && x.u[1] == 0x0 && (x.u[2] & 0xffff) == 0x0);
-  printf("is_ok=%d u0=0x%x u1=0x%x u2=0x%x\n", is_ok, x.u[0], x.u[1], x.u[2] & 0xffff);
-
-  x.ld = my_strtold("\t-InfINity", 0);
-  is_all_ok &= (is_ok = x.u[0] == 0x0 && x.u[1] == 0x80000000 && (x.u[2] & 0xffff) == 0xffff);
-  printf("is_ok=%d u0=0x%x u1=0x%x u2=0x%x\n", is_ok, x.u[0], x.u[1], x.u[2] & 0xffff);
-
-  x.ld = my_strtold("+NaN", 0);
-  is_all_ok &= (is_ok = x.u[0] == 0x0 && x.u[1] == 0xc0000000 && (x.u[2] & 0xffff) == 0x7fff);
-  printf("is_ok=%d u0=0x%x u1=0x%x u2=0x%x\n", is_ok, x.u[0], x.u[1], x.u[2] & 0xffff);
-
-  x.ld = my_strtold("-NaN", 0);  /* Negative NaN is the same as NaN. */
-  is_all_ok &= (is_ok = x.u[0] == 0x0 && x.u[1] == 0xc0000000 && (x.u[2] & 0xffff) == 0x7fff);
-  printf("is_ok=%d u0=0x%x u1=0x%x u2=0x%x\n", is_ok, x.u[0], x.u[1], x.u[2] & 0xffff);
-
-  x.ld = my_strtold("  -12.345e-67", 0);
-  is_all_ok &= (is_ok = x.u[0] == 0x4dde0c28 && x.u[1] == 0x8520d2ce && (x.u[2] & 0xffff) == 0xbf24);
-  printf("is_ok=%d u0=0x%x u1=0x%x u2=0x%x\n", is_ok, x.u[0], x.u[1], x.u[2] & 0xffff);
-
-  x.ld = my_strtold("  +12.345678901234567E67", 0);
-  is_all_ok &= (is_ok = x.u[0] == 0x5fda11f1 && x.u[1] == 0x92895a8d && (x.u[2] & 0xffff) == 0x40e1);
-  printf("is_ok=%d u0=0x%x u1=0x%x u2=0x%x\n", is_ok, x.u[0], x.u[1], x.u[2] & 0xffff);
-
-  x.ld = my_strtold("  -1.0345e-4932", 0);
-  is_all_ok &= (is_ok = x.u[0] == 0xfbf7ea34 && x.u[1] == 0x276286ee && (x.u[2] & 0xffff) == 0x8000);
-  printf("is_ok=%d u0=0x%x u1=0x%x u2=0x%x\n", is_ok, x.u[0], x.u[1], x.u[2] & 0xffff);
-
-  x.ld = my_strtold("  +1.0345678901234567E4932", 0);
-  is_all_ok &= (is_ok = x.u[0] == 0xff618ea && x.u[1] == 0xde9cdc14 && (x.u[2] & 0xffff) == 0x7ffe);
-  printf("is_ok=%d u0=0x%x u1=0x%x u2=0x%x\n", is_ok, x.u[0], x.u[1], x.u[2] & 0xffff);
-
-  x.ld = my_strtold("+infhello", 0);
-  is_all_ok &= (is_ok = x.u[0] == 0x0 && x.u[1] == 0x80000000 && (x.u[2] & 0xffff) == 0x7fff);
-  printf("is_ok=%d u0=0x%x u1=0x%x u2=0x%x\n", is_ok, x.u[0], x.u[1], x.u[2] & 0xffff);
-
-  x.ld = my_strtold("+inhello", 0);
-  is_all_ok &= (is_ok = x.u[0] == 0x0 && x.u[1] == 0x0 && (x.u[2] & 0xffff) == 0x0);
-  printf("is_ok=%d u0=0x%x u1=0x%x u2=0x%x\n", is_ok, x.u[0], x.u[1], x.u[2] & 0xffff);
-
-  x.ld = my_strtold("+infiniTyLong", 0);
-  is_all_ok &= (is_ok = x.u[0] == 0x0 && x.u[1] == 0x80000000 && (x.u[2] & 0xffff) == 0x7fff);
-  printf("is_ok=%d u0=0x%x u1=0x%x u2=0x%x\n", is_ok, x.u[0], x.u[1], x.u[2] & 0xffff);
-
-  x.ld = my_strtold("+0xf00.ba4p16000", 0);
-  is_all_ok &= (is_ok = x.u[0] == 0x0 && x.u[1] == 0xf00ba400 && (x.u[2] & 0xffff) == 0x7e8a);
-  printf("is_ok=%d u0=0x%x u1=0x%x u2=0x%x\n", is_ok, x.u[0], x.u[1], x.u[2] & 0xffff);
-
-  x.ld = my_strtold("\r -0xf00.ba4p-16000", 0);
-  is_all_ok &= (is_ok = x.u[0] == 0x0 && x.u[1] == 0xf00ba400 && (x.u[2] & 0xffff) == 0x818a);
-  printf("is_ok=%d u0=0x%x u1=0x%x u2=0x%x\n", is_ok, x.u[0], x.u[1], x.u[2] & 0xffff);
-
-  /* !! Test endptr and errno. */
-
-  return !is_all_ok;
-}
-#endif  /* DO_MAIN_TEST */
