@@ -1,6 +1,22 @@
-/* Based on musl-1.2.5/src/locale/strtod_l.c */
+/*
+ * fyi/c_strtold.c: strtold(...) for x86 f80 long double
+ * improved by pts@fazekas.hu at Wed May 22 01:07:18 CEST 2024
+ *
+ * Based on musl-1.2.5/src/locale/strtod_l.c
+ *
+ * This implementation is believed to be correct and accurate. See accuracy
+ * tests in tests/test_strtold.c. The alternative Python implementation in
+ * fyi/strtold.py passes the same accuracy tests. The i386 32-bit assembly
+ * implementation in fyi/c_strtold.c passes the same tests.
+ *
+ * TODO(pts): Make it work with `gcc -ansi' (-std=c89). Currently it compiles, but many tests fail. It succeeds with -std=c99.
+ */
 
 typedef char assert_long_double_size[sizeof(long double) == 10 || sizeof(long double) == 12 || sizeof(long double) == 16 ? 1 : -1];
+
+#ifdef __PCC__  /* This passes only with --gcc instead of --pcc: minicc --pcc --eglibc -m32 -s -W -Wall -o t test/test_strtold.c fyi/c_strtold.c && ./t */
+#  error There is something wrong if compiled with PCC.
+#endif
 
 #if defined(USE_MINILIBC) && defined(__i386__)
 #  define EINVAL 22
@@ -11,14 +27,23 @@ typedef char assert_long_double_size[sizeof(long double) == 10 || sizeof(long do
   typedef unsigned size_t;
   typedef unsigned uint32_t;
   typedef int int32_t;
+  typedef long long int64_t;
   typedef unsigned long long uint64_t;
 #  define INFINITY  (__builtin_inff())
 #  define NAN (__builtin_nan(""))
 #else
 #  include <errno.h>
+#  include <math.h>  /* INFINITY, NAN. */
 #  include <float.h>  /* FLT_MIN etc. */
 #  include <stddef.h>  /* size_t. */
 #  include <stdint.h>  /* uint32_t, int32_t. */
+#endif
+
+#ifndef INFINITY
+#  define INFINITY  (__builtin_inff())  /* __GNUC__. */
+#endif
+#ifndef NAN
+#  define NAN (__builtin_nan(""))  /* __GNUC__. */
 #endif
 
 /* !! It produces incorrect results __PCC__. __TINYCC_ has: error: unknown constraint 't' */
@@ -57,8 +82,6 @@ typedef char assert_long_double_size[sizeof(long double) == 10 || sizeof(long do
       while (fpsr & 0x400);
       return x;
     }
-#    define INFINITY  (__builtin_inff())
-#    define NAN (__builtin_nan(""))
 #  else
 #    include <math.h>  /* NAN, INFINITY, ldexpl(...), fabsl(...), fmodl(...). */
     long double ldexpl(long double x, int exp);
@@ -145,39 +168,31 @@ typedef char assert_long_double_size[sizeof(long double) == 10 || sizeof(long do
 #error Unsupported long double representation
 #endif
 
-#define MASK (KMAX-1)
-
-#define MY_LLONG_MAX (long long)(-1ULL >> 1)
-#define MY_LLONG_MIN (long long)(1ULL << (sizeof(unsigned long long) - 1))
-#define MY_INT_MAX (int)(-1U >> 1)
-
 struct sfile {
-  const char *p;
-  const char *p0;
+	const char *p;
+	const char *p0;
 };
-#define shunget(f) (--(f)->p)
-#define shgetc(f) (*(f)->p++)
 
 static int32_t scanexp(struct sfile *f) {
 	unsigned char c;
 	uint32_t x;
 	int neg = 0;
 	
-	c = shgetc(f);
+	c = *f->p++;
 	if (c=='+' || c=='-') {
 		neg = (c=='-');
-		c = shgetc(f);
-		if (c-'0'+0U>=10U) shunget(f);  /* Unget the sign character. */
+		c = *f->p++;
+		if (c-'0'+0U>=10U) --f->p;  /* Unget the sign character. */
 	}
 	if (c-'0'+0U>=10U) {
-		shunget(f);  /* Unget the digit. */
-		shunget(f);  /* Unget the 'e'. */
+		--f->p;  /* Unget the digit. */
+		--f->p;  /* Unget the 'e'. */
 		return 0;
 	}
-	for (x=0; c-'0'+0U<10U && x<0x7fffffff/10; c = shgetc(f))
+	for (x=0; c-'0'+0U<10U && x<0x7fffffff/10; c = *f->p++)
 		x = 10*x + c-'0';
-	for (; c-'0'+0U<10U; c = shgetc(f));
-	shunget(f);
+	for (; c-'0'+0U<10U; c = *f->p++);
+	--f->p;
 	return neg ? -x : x;
 }
 
@@ -189,7 +204,7 @@ static long double decfloat(struct sfile *f, int c, int sign) {
 	uint32_t x[KMAX];
 	static const uint32_t th[] = { LD_B1B_MAX };
 	int i, j, k, a, z;
-	long long lrp=0, dc=0;
+	int64_t lrp=0, dc=0;
 	int lnz = 0;
 	int gotdig = 0, gotrad = 0;
 	int rp;
@@ -204,14 +219,14 @@ static long double decfloat(struct sfile *f, int c, int sign) {
 	k=0;
 
 	/* Don't let leading zeros consume buffer space */
-	for (; c=='0'; c = shgetc(f)) gotdig=1;
+	for (; c=='0'; c = *f->p++) gotdig=1;
 	if (c=='.') {
 		gotrad = 1;
-		for (c = shgetc(f); c=='0'; c = shgetc(f)) gotdig=1, lrp--;
+		for (c = *f->p++; c=='0'; c = *f->p++) gotdig=1, lrp--;
 	}
 
 	x[0] = 0;
-	for (; c-'0'+0U<10U || c=='.'; c = shgetc(f)) {
+	for (; c-'0'+0U<10U || c=='.'; c = *f->p++) {
 		if (c == '.') {
 			if (gotrad) break;
 			gotrad = 1;
@@ -239,7 +254,7 @@ static long double decfloat(struct sfile *f, int c, int sign) {
 	if (gotdig && (c|32)=='e') {
 		lrp += scanexp(f);
 	} else if (c>=0) {
-		shunget(f);
+		--f->p;
 	}
 	if (!gotdig) {
 		errno = EINVAL;
@@ -296,7 +311,7 @@ static long double decfloat(struct sfile *f, int c, int sign) {
 			x[k] = x[k]/p10 + carry;
 			carry = 1000000000/p10 * tmp;
 			if (k==a && !x[k]) {
-				a = ((a+1) & MASK);
+				a = ((a+1) & (KMAX-1));
 				rp -= 9;
 			}
 		}
@@ -308,7 +323,7 @@ static long double decfloat(struct sfile *f, int c, int sign) {
 	while (rp < 9*LD_B1B_DIG || (rp == 9*LD_B1B_DIG && x[a]<th[0])) {
 		uint32_t carry = 0;
 		e2 -= 29;
-		for (k=((z-1) & MASK); ; k=((k-1) & MASK)) {
+		for (k=((z-1) & (KMAX-1)); ; k=((k-1) & (KMAX-1))) {
 			uint64_t tmp = ((uint64_t)x[k] << 29) + carry;
 			if (tmp > 1000000000) {  /* TODO(pts): Shouldn't this be `>='? Is this a bug? */
 #if (defined(__i386__) || defined(__amd64__)) && (defined(__GNUC__) || defined(__TINYC__))  /* tmp <= 2305843010982666050, the result never overflows. */
@@ -321,15 +336,15 @@ static long double decfloat(struct sfile *f, int c, int sign) {
 				carry = 0;
 				x[k] = tmp;
 			}
-			if (k==((z-1) & MASK) && k!=a && !x[k]) z = k;
+			if (k==((z-1) & (KMAX-1)) && k!=a && !x[k]) z = k;
 			if (k==a) break;
 		}
 		if (carry) {
 			rp += 9;
-			a = ((a-1) & MASK);
+			a = ((a-1) & (KMAX-1));
 			if (a == z) {
-				z = ((z-1) & MASK);
-				x[(z-1) & MASK] |= x[z];
+				z = ((z-1) & (KMAX-1));
+				x[(z-1) & (KMAX-1)] |= x[z];
 			}
 			x[a] = carry;
 		}
@@ -340,39 +355,39 @@ static long double decfloat(struct sfile *f, int c, int sign) {
 		uint32_t carry = 0;
 		int sh = 1;
 		for (i=0; i<LD_B1B_DIG; i++) {
-			k = ((a+i) & MASK);
+			k = ((a+i) & (KMAX-1));
 			if (k == z || x[k] < th[i]) {
 				i=LD_B1B_DIG;
 				break;
 			}
-			if (x[(a+i) & MASK] > th[i]) break;
+			if (x[(a+i) & (KMAX-1)] > th[i]) break;
 		}
 		if (i==LD_B1B_DIG && rp==9*LD_B1B_DIG) break;
 		/* FIXME: find a way to compute optimal sh */
 		if (rp > 9+9*LD_B1B_DIG) sh = 9;
 		e2 += sh;
-		for (k=a; k!=z; k=((k+1) & MASK)) {
+		for (k=a; k!=z; k=((k+1) & (KMAX-1))) {
 			uint32_t tmp = x[k] & ((1<<sh)-1);
 			x[k] = (x[k]>>sh) + carry;
 			carry = (1000000000>>sh) * tmp;
 			if (k==a && !x[k]) {
-				a = ((a+1) & MASK);
+				a = ((a+1) & (KMAX-1));
 				i--;
 				rp -= 9;
 			}
 		}
 		if (carry) {
-			if (((z+1) & MASK) != a) {
+			if (((z+1) & (KMAX-1)) != a) {
 				x[z] = carry;
-				z = ((z+1) & MASK);
-			} else x[(z-1) & MASK] |= 1;
+				z = ((z+1) & (KMAX-1));
+			} else x[(z-1) & (KMAX-1)] |= 1;
 		}
 	}
 
 	/* Assemble desired bits into floating point variable */
 	for (y=i=0; i<LD_B1B_DIG; i++) {
-		if (((a+i) & MASK)==z) x[(z=((z+1) & MASK))-1] = 0;
-		y = 1000000000.0L * y + x[(a+i) & MASK];
+		if (((a+i) & (KMAX-1))==z) x[(z=((z+1) & (KMAX-1)))-1] = 0;
+		y = 1000000000.0L * y + x[(a+i) & (KMAX-1)];
 	}
 
 	y *= sign;
@@ -394,14 +409,14 @@ static long double decfloat(struct sfile *f, int c, int sign) {
 	}
 
 	/* Process tail of decimal input so it can affect rounding */
-	if (((a+i) & MASK) != z) {
-		uint32_t t = x[(a+i) & MASK];
-		if (t < 500000000 && (t || ((a+i+1) & MASK) != z))
+	if (((a+i) & (KMAX-1)) != z) {
+		uint32_t t = x[(a+i) & (KMAX-1)];
+		if (t < 500000000 && (t || ((a+i+1) & (KMAX-1)) != z))
 			frac += 0.25*sign;
 		else if (t > 500000000)
 			frac += 0.75*sign;
 		else if (t == 500000000) {
-			if (((a+i+1) & MASK) == z)
+			if (((a+i+1) & (KMAX-1)) == z)
 				frac += 0.5*sign;
 			else
 				frac += 0.75*sign;
@@ -435,25 +450,25 @@ static long double hexfloat(struct sfile *f, int sign) {
 	long double scale = 1;
 	long double bias = 0;
 	int gottail = 0, gotrad = 0, gotdig = 0;
-	long long rp = 0;  /* TODO(pts): int32_t. */
-	long long dc = 0;
-	long long e2 = 0;  /* TODO(pts): int32_t. Check for overflow in rp and e2. */
+	int64_t rp = 0;  /* TODO(pts): int32_t. */
+	int64_t dc = 0;
+	int64_t e2 = 0;  /* TODO(pts): int32_t. Check for overflow in rp and e2. */
 	int d;
 	int c;
 
-	c = shgetc(f);
+	c = *f->p++;
 
 	/* Skip leading zeros */
-	for (; c=='0'; c = shgetc(f)) gotdig = 1;
+	for (; c=='0'; c = *f->p++) gotdig = 1;
 
 	if (c=='.') {
 		gotrad = 1;
-		c = shgetc(f);
+		c = *f->p++;
 		/* Count zeros after the radix point before significand */
-		for (rp=0; c=='0'; c = shgetc(f), rp--) gotdig = 1;
+		for (rp=0; c=='0'; c = *f->p++, rp--) gotdig = 1;
 	}
 
-	for (; c-'0'+0U<10U || (c|32)-'a'+0U<6U || c=='.'; c = shgetc(f)) {
+	for (; c-'0'+0U<10U || (c|32)-'a'+0U<6U || c=='.'; c = *f->p++) {
 		if (c=='.') {
 			if (gotrad) break;
 			rp = dc;
@@ -474,9 +489,9 @@ static long double hexfloat(struct sfile *f, int sign) {
 		}
 	}
 	if (!gotdig) {
-		shunget(f);
-		shunget(f);
-		if (gotrad) shunget(f);
+		--f->p;
+		--f->p;
+		if (gotrad) --f->p;
 		return sign * 0.0;
 	}
 	if (!gotrad) rp = dc;
@@ -484,7 +499,7 @@ static long double hexfloat(struct sfile *f, int sign) {
 	if ((c|32)=='p') {
 		e2 = scanexp(f);
 	} else {
-		shunget(f);
+		--f->p;
 	}
 	e2 += 4*rp - 32;
 
@@ -539,37 +554,37 @@ long double strtold(const char *s, char **p) {
 	size_t i;
 	int c;
 
-	while ((c = shgetc(&f)) == ' ' || c-'\t'+0U <= '\r'-'\t'+0U) {}  /* isspace(...); */
+	while ((c = *f.p++) == ' ' || c-'\t'+0U <= '\r'-'\t'+0U) {}  /* isspace(...); */
 
 	if (c=='+' || c=='-') {
 		if (c == '-') sign = -1;
-		c = shgetc(&f);
+		c = *f.p++;
 	}
 
 	for (i=0; i<8 && (c|32)=="infinity"[i]; i++)  /* !! Smarter parsing. */
-		if (i<7) c = shgetc(&f);
+		if (i<7) c = *f.p++;
 	if (i==3 || i==8 || (i>3)) {
 		if (i!=8) {
-			shunget(&f);
-			for (; i>3; i--) shunget(&f);
+			--f.p;
+			for (; i>3; i--) --f.p;
 		}
 		y = sign * INFINITY;
 		goto done;
 	}
 	if (!i) for (i=0; i<3 && (c|32)=="nan"[i]; i++)
-		if (i<2) c = shgetc(&f);
+		if (i<2) c = *f.p++;
 	if (i==3) {
-		if (shgetc(&f) != '(') {
-			shunget(&f);
+		if (*f.p++ != '(') {
+			--f.p;
 			goto do_nan;
 		} else {
 			for (i=1; ; i++) {
-				c = shgetc(&f);
+				c = *f.p++;
 				if (c-'0'+0U<10U || c-'A'+0U<26U || c-'a'+0U<26U || c=='_')
 					continue;
 				if (c==')') break;
-				shunget(&f);
-				while (i--) shunget(&f);
+				--f.p;
+				while (i--) --f.p;
 				break;
 			}
 		}
@@ -579,7 +594,7 @@ long double strtold(const char *s, char **p) {
 	}
 
 	if (i) {
-		shunget(&f);
+		--f.p;
 		errno = EINVAL;
 		f.p = f.p0;
 		y = 0;
@@ -587,9 +602,9 @@ long double strtold(const char *s, char **p) {
 	}
 
 	if (c=='0') {
-		c = shgetc(&f);
+		c = *f.p++;
 		if ((c|32) != 'x') {
-			shunget(&f);
+			--f.p;
 			c = '0';
 			goto do_dec;
 		}
