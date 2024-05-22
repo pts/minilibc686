@@ -33,6 +33,35 @@ int main(int argc, char **argv) {
   printf("exp 1.0842021724855044340e-19\n");
 #endif
 
+#if 0
+  x.u[0] = 2; x.u[1] = 0x80000000U; x.u[2] = 1;
+  printf("VX %.20Lg\n", x.ld);  /* VX 3.3621031431120935071e-4932 */
+  x.u[0] = 0; x.u[1] = 0x80000000U; x.u[2] = 1;
+  printf("VY %.20Lg\n", x.ld);  /* VX 3.3621031431120935065e-4932 */  /* This should be less, printf is wrong. */
+  x.u[0] = -1; x.u[1] = 0x7fffffff; x.u[2] = 0;
+  printf("VB %.20Lg\n", x.ld);  /* VB 3.3621031431120935062e-4932 */
+  x.u[0] = -1; x.u[1] = -1; x.u[2] = 0;
+  printf("VA %.20Lg\n", x.ld);  /* VA 6.7242062862241870124e-4932 */
+  x.u[0] = 0x45642acfU; x.u[1] = 0x87c6e6c9U; x.u[2] = 0x7f94;
+  printf("VL %.20Lg\n", x.ld);  /* VL 7.7777777777777777775e+4899 */
+#endif
+
+#if 0  /* EGLIBC printf("%.20Lg") and minilibc strtold values don't match, printf is slightly inaccurate! */
+  {
+    unsigned u;
+    char buf[32];
+    for (u = 52; u <= 77; ++u) {
+      sprintf(buf, "3.36210314311209350%02ue-4932L", u);
+      x.ld = strtold(buf, 0);  /* Random negative large value. */
+      printf("%s e/h/l=0x%04x/0x%08x/0x%08x\n", buf, x.u[2] & 0xffff, x.u[1], x.u[0]);
+    }
+    for (u = 0; u <= 5; ++u) {
+      x.u[2] = 1; x.u[1] = 0x80000000U; x.u[0] = u;
+      printf("prlg=%.20Lg e/h/l=0x%04x/0x%08x/0x%08x\n", x.ld, x.u[2] & 0xffff, x.u[1], x.u[0]);
+    }
+  }
+#endif
+
 #ifndef __PCC__  /* !! Is it PCC uClibc 0.9.30.1 strtod(...) and strtold(...) bug. */
   x.ld = 1.0842021724855044340e-19L;  /* LDBL_EPSILON. */
   is_all_ok &= (is_ok = x.u[0] == 0 && x.u[1] == 0x80000000U && (x.u[2] & 0xffff) == 0x3fc0);

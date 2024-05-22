@@ -103,12 +103,32 @@ def strtold(s, _c=decimal.Context(prec=5500), _c130=decimal.Context(prec=130), _
         raise ValueError('Bad exponent syntax.')
     else:
       exp = i = 0
-    exp += s2[:i].find('.') + 1  # Now exp becomes the approximate base 10 exponent.
+    if s2.startswith('.'):  # Remove leading zeros after the '.', for better estimation of `exp' below.
+      j = 1
+      while len(s2) > j and s2[j] == '0':
+        j += 1
+      if j > 1:
+        s2 = '.' + s2[j:]
+        i -= j - 1
+        exp -= j - 1
+    j = s2[:i].find('.')
+    exp += j + 1  # Now exp becomes the approximate base 10 exponent.
     if exp <= -5000:
       return struct.pack('<LLH', 0, 0, sign)  # Round down to zero.
     if exp >= 5000:
       return struct.pack('<LLH', 0, 0x80000000, 0x7fff | sign)  # Round to infinity.
+    if i > 5100:  # Truncate very long significand: we don't need that much precision, and _c doesn't support that much precision.
+      if j < 0:  # No dot.
+        s2 = '%se%d' % (s2[:5100], exp + i - 5100)
+      elif j <= 5100:  # It contains a '.' in the first 5101 characters.
+        s2 = '%se%d' % (s2[:5100], exp - j - 1)  # Truncate some digits after the dot.
+      else:  # It contains a '.' after the first 5101 characters.
+        if s2[j + 1:].find('.') >= 0:
+          raise ValueError('Significand contains multiple dots.')
+        s2 = '%se%d' % (s2[:5100], exp - 5101)
     s = s2
+    if s == '.':
+      s = '0'
     if sign:
       s = '-' + s
   v = _c.create_decimal(s)  # This may raise any exception.
@@ -205,6 +225,23 @@ if __name__ == '__main__':  # Tests.
   #u = struct.unpack('<LLH', strtold('3.3621031431120935060e-4932L'))
   #print('u0=0x%x u1=0x%x u2=0x%x' % (u[0], u[1], u[2]))
   #import sys; sys.exit(5)
+
+  # Test very long significands.
+  u = struct.unpack('<LLH', strtold('7' * 7777 + 'e-2877'))
+  print('u0=0x%x u1=0x%x u2=0x%x' % (u[0], u[1], u[2]))
+  assert u == (0x45642acf, 0x87c6e6c9, 0x7f94)
+  u = struct.unpack('<LLH', strtold('7' * 7777 + '.5678e-2877'))
+  print('u0=0x%x u1=0x%x u2=0x%x' % (u[0], u[1], u[2]))
+  assert u == (0x45642acf, 0x87c6e6c9, 0x7f94)
+  u = struct.unpack('<LLH', strtold('7' * 5040 + '.' + '8' * 2737 + 'e-140'))
+  print('u0=0x%x u1=0x%x u2=0x%x' % (u[0], u[1], u[2]))
+  assert u == (0x45642acf, 0x87c6e6c9, 0x7f94)
+  u = struct.unpack('<LLH', strtold('.' + '7' * 7777 + 'e4900'))
+  print('u0=0x%x u1=0x%x u2=0x%x' % (u[0], u[1], u[2]))
+  assert u == (0x45642acf, 0x87c6e6c9, 0x7f94)
+  u = struct.unpack('<LLH', strtold('0' * 3456 + '.' + '0' * 10000 + '7' * 7777 + 'e14900'))
+  print('u0=0x%x u1=0x%x u2=0x%x' % (u[0], u[1], u[2]))
+  assert u == (0x45642acf, 0x87c6e6c9, 0x7f94)
 
   u = struct.unpack('<LLH', strtold('2'))
   print('u0=0x%x u1=0x%x u2=0x%x' % (u[0], u[1], u[2]))
