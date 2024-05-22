@@ -1,8 +1,6 @@
 /*
  * test_strtold.c: accuracy tests for strtold(...) for x86 f80 long double
  * by pts@fazekas.hu at Wed May 22 00:23:55 CEST 2024
- *
- * !! TODO(pts): Fix the failures in fyi/strtold.py , maybe the C implementation is wrong.
  */
 
 #include <ctype.h>
@@ -65,6 +63,34 @@ int main(int argc, char **argv) {
   expect("a_small", "+1.8000320949558996187e-4837", 0x013b, 0xcd557719U, 0xcab669c7U);
   expect("a_neg_large", "-9.0245045105257814454e+4926", 0xffed, 0xfe857a4fU, 0xaa1d633bU);
 
+  /* Near the subnormal boundary. */
+  expect("", "3.3621031431120935052e-4932L", 0, 0x7fffffffU, 0xfffffffdU);
+  expect("", "3.3621031431120935053e-4932L", 0, 0x7fffffffU, 0xfffffffdU);
+  expect("", "3.3621031431120935054e-4932L", 0, 0x7fffffffU, 0xfffffffeU);
+  expect("", "3.3621031431120935055e-4932L", 0, 0x7fffffffU, 0xfffffffeU);
+  expect("", "3.3621031431120935056e-4932L", 0, 0x7fffffffU, 0xfffffffeU);
+  expect("", "3.3621031431120935057e-4932L", 0, 0x7fffffffU, 0xfffffffeU);
+  expect("", "3.3621031431120935058e-4932L", 0, 0x7fffffffU, 0xffffffffU);
+  expect("", "3.3621031431120935059e-4932L", 0, 0x7fffffffU, 0xffffffffU);
+  expect("", "3.3621031431120935060e-4932L", 0, 0x7fffffffU, 0xffffffffU);
+  expect("", "3.3621031431120935061e-4932L", 1, 0x80000000U, 0);
+  expect("", "3.3621031431120935062e-4932L", 1, 0x80000000U, 0);
+  expect("", "3.3621031431120935063e-4932L", 1, 0x80000000U, 0);
+  expect("", "3.3621031431120935064e-4932L", 1, 0x80000000U, 0);
+  expect("", "3.3621031431120935065e-4932L", 1, 0x80000000U, 1);
+  expect("", "3.3621031431120935066e-4932L", 1, 0x80000000U, 1);
+  expect("", "3.3621031431120935067e-4932L", 1, 0x80000000U, 1);
+  expect("", "3.3621031431120935068e-4932L", 1, 0x80000000U, 1);
+  expect("", "3.3621031431120935069e-4932L", 1, 0x80000000U, 2);
+  expect("", "3.3621031431120935070e-4932L", 1, 0x80000000U, 2);
+  expect("", "3.3621031431120935071e-4932L", 1, 0x80000000U, 2);
+  expect("", "3.3621031431120935072e-4932L", 1, 0x80000000U, 3);
+  expect("", "3.3621031431120935073e-4932L", 1, 0x80000000U, 3);
+  expect("", "3.3621031431120935074e-4932L", 1, 0x80000000U, 3);
+  expect("", "3.3621031431120935075e-4932L", 1, 0x80000000U, 3);
+  expect("", "3.3621031431120935076e-4932L", 1, 0x80000000U, 4);
+  expect("", "3.3621031431120935077e-4932L", 1, 0x80000000U, 4);
+
   expect("FLT_EPSILON", "1.19209290e-07F", 0x3fe8, 0x80000008U, 0x17a7e462U);
   expect("FLT_MIN", "1.17549435e-38F", 0x3f80, 0xfffffffcU, 0xfedd426eU);
   expect("FLT_MAX", "3.40282347e+38F", 0x407e, 0xffffff04U, 0x8ff9eb4eU);
@@ -75,18 +101,15 @@ int main(int argc, char **argv) {
   expect("LDBL_EPSILON", "1.0842021724855044340e-19L", 0x3fc0, 0x80000000U, 0);
   expect("LDBL_EPSILON_long", "1.08420217248550443400745280086994171e-19L", 0x3fc0, 0x80000000U, 0);
   expect("LDBL_MIN", "3.3621031431120935062e-4932L", 0x0001, 0x80000000U, 0);
-  expect("LDBL_MIN_same1", "3.3621031431120935061e-4932L", 0x0001, 0x80000000U, 0);  /* !! TODO(pts): This should be 1 smaller. */
-  expect("LDBL_MIN_same2", "3.3621031431120935064e-4932L", 0x0001, 0x80000000U, 0);
-  expect("LDBL_MIN_smaller", "3.3621031431120935060e-4932L", 0x0000, 0x7fffffffU, 0xffffffffU);  /* !! TODO(pts): This should have 0xffffffff instead of 0x7fffffff. */
-  expect("LDBL_MIN_larger", "3.3621031431120935065e-4932L", 0x0001, 0x80000000U, 1);
+  expect("LDBL_MIN_twice", "6.7242062862241870124e-4932L", 2, 0x80000000U, 0);
   expect("LDBL_MIN_long", "3.36210314311209350626267781732175260e-4932L", 0x0001, 0x80000000U, 0);
-  expect("LDBL_small_subnormal1", "3.64519953188247460252840593361941982e-4951", 0, 0, 1);
-  expect("LDBL_small_subnormal2", "2e-4951", 0, 0, 1);
-  expect("LDBL_small_subnormal3", "3e-4951", 0, 0, 1);
-  expect("LDBL_small_subnormal4", "4e-4951", 0, 0, 1);
-  expect("LDBL_small_subnormal5", "1.8226e-4951", 0, 0, 1);
-  expect("LDBL_small_subnormal6", "-1.8226e-4951", 0x8000, 0, 1);
   expect("LDBL_small_zero", "1.8225e-4951", 0, 0, 0);
+  expect("LDBL_small_subnormal1", "1.8226e-4951", 0, 0, 1);
+  expect("LDBL_small_subnormal2", "-1.8226e-4951", 0x8000, 0, 1);
+  expect("LDBL_small_subnormal3", "2e-4951", 0, 0, 1);
+  expect("LDBL_small_subnormal4", "3e-4951", 0, 0, 1);
+  expect("LDBL_small_subnormal5", "3.64519953188247460252840593361941982e-4951", 0, 0, 1);
+  expect("LDBL_small_subnormal6", "4e-4951", 0, 0, 1);
   expect("LDBL_MAX", "1.1897314953572317650e+4932L", 0x7ffe, 0xffffffffU, 0xffffffffU);
   expect("LDBL_MAX_short", "1.189731495357231765e+4932L", 0x7ffe, 0xffffffffU, 0xffffffffU);
   expect("LDBL_MAX_long1", "1.18973149535723176498902e+4932", 0x7ffe, 0xffffffffU, 0xffffffffU);

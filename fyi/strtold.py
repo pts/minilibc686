@@ -26,9 +26,7 @@ except NameError:
 
 
 def strtold(s, _c=decimal.Context(prec=5500), _c130=decimal.Context(prec=130), _p63=[], _prs=[]):
-  # TODO(pts): Add proper implementation.
-  #
-  # This implementations is much slower in Python 2.7 than Python 3.
+  # This implementation is correct, but it is much slower in Python 2.7 than Python 3.
   if isinstance(s, str):
     s = s.lstrip().lower()
     sign, s2 = 0, s
@@ -143,6 +141,7 @@ def strtold(s, _c=decimal.Context(prec=5500), _c130=decimal.Context(prec=130), _
     return struct.pack('<LLH', 0, 0x80000000, 0x7fff | sign)
   if _c.is_zero(v):
     return struct.pack('<LLH', 0, 0, sign)
+  # !! TODO(pts): Alternative implementation: mutliply the Decimal by (1 << 0x4000), and then do integer arithmetics only.
   if not _p63:
     _p63[:1] = (_c130.create_decimal(1 << 63),)  # Thread-safe append.
   v = _c.normalize(v)
@@ -188,23 +187,29 @@ def strtold(s, _c=decimal.Context(prec=5500), _c130=decimal.Context(prec=130), _
         w = _c.multiply(w, _prs[i][0])
         exp -= 1 << i
         assert w > _prs[i][1]  # TODO(pts): Simplify the loop.
-    #assert 1 < w + w <= 2  # !! Allow a small rounding error near 2.
+    #assert 1 < w + w <= 2  # !! TODO(pts): Doe we really want to allow a small rounding error near 2?
     if w < 1:
       w = _c.add(w, w)
       exp -= 1
   assert 1 <= w < 2
-  if -0x40 < exp < 0:  # Subnormal.
-    w = _c130.multiply(_c130.normalize(w), 1 << (63 + exp))  # Multiply by 1 << less_than_63.
+  #print ('  ', exp, str(w)[:100])
+  if -0x3f < exp <= 0:  # Subnormal.
+    w = _c130.multiply(_c130.normalize(w), 1 << (62 + exp))  # Multiply by 1 << less_than_63.
+    exp = 0
+  elif exp == -0x3f:  # Subnormal with only the lowest bit set.
+    w = _c130.multiply(_c130.normalize(w), _c130.create_decimal('.5'))
     exp = 0
   else:
     w = _c130.multiply(_c130.normalize(w), _p63[0])  # Multiply by 1 << 63.
-  #print(w, exp)
   wi = int(_c130.to_integral_value(w))
+  #print('  ', exp, '0x%016x' % wi, w)
   if wi >> 64:
     if wi != 0x10000000000000000:  # We can get this because of a rounding error in .to_integral_value(...) above.
       raise AssertError('Significand too large.')
     wi >>= 1
     exp += 1
+  elif exp == 0 and wi >> 63:
+    exp = 1  # It ends up being non-subnormal.
   if exp >= 0x7fff:  # Round to infinity.
     exp, wi = 0x7fff, 1 << 63
   elif exp < 0:  # Round down to zero.
@@ -218,10 +223,14 @@ if __name__ == '__main__':  # Tests.
   #w = _c.multiply(v, _c.power(_c.create_decimal(2), 0x403e))
   #print(str(w)[:200])
   #print(1<<64)
-  #u = struct.unpack('<LLH', strtold('3.3621031431120935061e-4932L'))
-  #print('u0=0x%x u1=0x%x u2=0x%x' % (u[0], u[1], u[2]))
+  #for s in ('3.3621031431120935052e-4932L', '3.3621031431120935053e-4932L', '3.3621031431120935054e-4932L', '3.3621031431120935055e-4932L', '3.3621031431120935056e-4932L', '3.3621031431120935057e-4932L',
+  #          '3.3621031431120935058e-4932L', '3.3621031431120935059e-4932L', '3.3621031431120935060e-4932L', '3.3621031431120935061e-4932L', '3.3621031431120935062e-4932L', '3.3621031431120935063e-4932L', '3.3621031431120935064e-4932L', '3.3621031431120935065e-4932L', '3.3621031431120935066e-4932L',
+  #          '3.3621031431120935067e-4932L', '3.3621031431120935068e-4932L', '3.3621031431120935069e-4932L', '3.3621031431120935070e-4932L', '3.3621031431120935071e-4932L', '3.3621031431120935072e-4932L', '3.3621031431120935073e-4932L', '3.3621031431120935074e-4932L', '3.3621031431120935075e-4932L',
+  #          '3.3621031431120935076e-4932L', '3.3621031431120935077e-4932L',):
+  #for s in ("1.8225e-4951", "1.8226e-4951", "-1.8226e-4951", "2e-4951", "3e-4951", "3.64519953188247460252840593361941982e-4951", "4e-4951"):
+  #  u = struct.unpack('<LLH', strtold(s))
+  #  print('%s e/h/l=0x%04x/0x%08x/0x%08x' % (s, u[2], u[1], u[0]))
   #import sys; sys.exit(5)
-
   #u = struct.unpack('<LLH', strtold('3.3621031431120935060e-4932L'))
   #print('u0=0x%x u1=0x%x u2=0x%x' % (u[0], u[1], u[2]))
   #import sys; sys.exit(5)
