@@ -1,9 +1,8 @@
 # A survey of x86 strtold implementations
 
 x86 (8087 FPU, 80387 FPU, i586, i686 etc.) supports a [80-bit
-extended-precision floating
-point](https://en.wikipedia.org/wiki/Extended_precision#x86_extended_precision_format)
-numbers (x86 f80). In fact, internally all (non-MMX, non-SIMD) floating-point
+extended-precision floating-point numbers](https://en.wikipedia.org/wiki/Extended_precision#x86_extended_precision_format)
+(x86 f80). In fact, internally all (non-MMX, non-SIMD) floating-point
 calculations are done at that precison and the result can be converted a to
 [32-bit, 64-bit](https://en.wikipedia.org/wiki/IEEE_754) or 80-bit number in
 memory. The corresponding C type is typically *long double* with a size of
@@ -19,6 +18,15 @@ The test program
 [test_strtold.c](https://github.com/pts/minilibc686/blob/master/test/test_strtold.c)
 is compiled and run.
 
+Relevant standards:
+
+* [IEE 754](https://en.wikipedia.org/wiki/IEEE_754-1985)
+* [x86 80-bit extended-precision floation-point numbers](https://en.wikipedia.org/wiki/Extended_precision#x86_extended_precision_format)
+
+Relevant docs:
+
+* [How to convert strings to floats with perfect accuracy?](https://stackoverflow.com/questions/2174012/how-to-convert-strings-to-floats-with-perfect-accuracy) on StackOverflow.com
+
 ## Survey results
 
 Accurate implementations:
@@ -26,7 +34,8 @@ Accurate implementations:
 * glibc 2.19 (2014-02-07) and 2.27 (2018-02-01)
 * musl 1.1.16 (2017-01-01), musl 1.2.4 (2023-05-02) and musl 1.2.5 (2024-03-01)
 * EGLIBC 2.19 (2014-09-29)
-* FreeBSD 9.3 (2014-07-16) libc: It implements *strtold* using *strtold\_l*, using *strtorx\_l*, which is part of the bundled [gdtoa](https://github.com/jwiegley/gdtoa) library by David M. Gay.
+* FreeBSD 9.3 (2014-07-16) libc: It implements *strtold* using *strtold\_l*, using *strtorx\_l*, which is part of the bundled [gdtoa](https://github.com/jwiegley/gdtoa) library, based on dtoa.c by David M. Gay.
+* David M. Gay's [strtod(...) in dtoa.c in netlib](https://www.netlib.org/fp/dtoa.c) (last change 2024-02-24): It directly supports only *double*, but can be patched (see e.g. FreeBSD).
 * minilibc686 [strtold.nasm](https://github.com/pts/minilibc686/blob/40d3704c294ff532c8cc2a88ab18a8241e5fb484/src/strtold.nasm) (2024-05-20): based on musl 1.2.5.
 
 Inaccurate implementations:
