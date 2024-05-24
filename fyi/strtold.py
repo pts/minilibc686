@@ -134,7 +134,7 @@ def strtold(s):
   j = s2[:i].find('.')
   if j >= 0:  # Remove '.'.
     exp -= i - (j + 1)
-    s2 = '%s%se%d' % (s2[:j], s2[j + 1 : i], exp)
+    s2 = s2[:j] + s2[j + 1 : i]   # We don't need the exp at the end.
     i -= 1
   assert '.' not in s2, (s2, i, j)
   assert not s2.startswith('0'), (s2, i, j)
