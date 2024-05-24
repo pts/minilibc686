@@ -194,7 +194,6 @@ def strtold(s):
       wi >>= 1
       exp += 1
     assert wi >> 63 == 1
-    return struct.pack('<LLH', wi & 0xffffffff, wi >> 32, exp | sign)
   elif exp <= 0:  # Fix subnormal.
     #print('exp=%d wi=%d' % (exp, wi))
     assert not j  # It's only possible to get subnormal with j == 0 (negative power of 10 exp).
@@ -204,16 +203,14 @@ def strtold(s):
       exp = 0
       if wi >> 63:
         exp = 1
-      return struct.pack('<LLH', wi & 0xffffffff, wi >> 32, exp | sign)
     else:  # !! TODO(pts): Test this. Is it even possible?
       exp = 2
       wi = (wi + 1) >> 1  # Round. !! TODO(pts): Test rounding towards even?
-      return struct.pack('<LLH', wi & 0xffffffff, wi >> 32, exp | sign)
   else:
     assert j >= exp
     wi <<= j - exp
     assert wi >> 63 == 1
-    return struct.pack('<LLH', wi & 0xffffffff, wi >> 32, exp | sign)
+  return struct.pack('<LLH', wi & 0xffffffff, wi >> 32, exp | sign)
 
 
 if __name__ == '__main__':  # Tests.
