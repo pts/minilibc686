@@ -8,7 +8,8 @@
 # This implementation is believed to be correct and accurate. See accuracy
 # tests in tests/test_strtold.c. The alternative Python implementation in
 # fyi/strtold.py passes the same accuracy tests. The C implementation in
-# fyi/c_strtold.c passes the same tests.
+# fyi/c_strtold.c passes the same tests. musl 1.1.16, musl 1.2.4, musl
+# 1.2.5, EGLIBC 2.19, glibc 2.19, glibc 2.27 pass the same tests.
 #
 
 import struct
@@ -33,7 +34,35 @@ except AttributeError:
 
 
 def strtold(s):
-  # This implementation is correct, but it is much slower in Python 2.7 than Python 3.
+  """Converts string to x86 80-bit extended precision floating-point number.
+
+  This implementation is believed to be correct and accurate. See accuracy
+  tests in tests/test_strtold.c. The alternative Python implementation in
+  fyi/strtold.py passes the same accuracy tests. The C implementation in
+  fyi/c_strtold.c passes the same tests. musl 1.1.16, musl 1.2.4, musl
+  1.2.5, EGLIBC 2.19, glibc 2.19, glibc 2.27 pass the same tests.
+
+  This is an independent implementation written from scratch, it's not based
+  on any existing code.
+
+  This implementation allows and ignores some junk characters after the
+  literal, but not anything. The C strtold(3) function allows and returns
+  any junk string. Apart from this difference, this implementation does the
+  same as a C strold(3).
+
+  Args:
+    s: ASCII string containing a floating point literal as base 10 decimal
+        (with an optional fraction starting with '.'), base 10 scientific
+        notation or base 16 (hex) floating point notation.
+  Returns:
+    A byte string of size 10 containing the equivalent x86 80-bit
+    floating-point number
+    (https://en.wikipedia.org/wiki/Extended_precision#x86_extended_precision_format).
+    It may be rounded.
+  Raises:
+    ValueError: .
+    TypeError: .
+  """
   if isinstance(s, (list, tuple, dict)) or s is None:
     raise TypeError
   s = str(s).lstrip().lower()
@@ -165,7 +194,7 @@ def strtold(s):
   must_rshift = False
   if exp >= 0:
     j = 0x403e + exp
-    wi = s2 * (5 ** exp)  # This is slow. TODO(pts): Do it with smaller integers.
+    wi = s2 * (5 ** exp)  # This uses large integers and is slow. TODO(pts): Do it with smaller integers.
   else:
     assert -exp < 0x403e
     j = 0
@@ -176,7 +205,7 @@ def strtold(s):
       j += b_min - 65
       must_rshift = True  # Trigger the asertion below.
     # Max i value in the tests: 11510.
-    wi = (s2 << i) // (5 ** -exp)  # This is slow. Round down (this seems to match glibc and musl). TODO(pts): Which rounding is correct?
+    wi = (s2 << i) // (5 ** -exp)  # This use large integers and is slow. Round down (this seems to match glibc and musl). TODO(pts): Which rounding is correct?
     if not wi:
       return struct.pack('<LLH', 0, 0, sign)  # Round down to zero.
   b = bit_length(wi)
