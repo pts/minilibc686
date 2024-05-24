@@ -141,7 +141,11 @@ int main(int argc, char **argv) {
   expect("infinity", " inFInity", 0x7fff, 0x80000000, 0);
   expect("-infinity", "-iNFINitY", 0xffff, 0x80000000, 0);
   expect("nan", "NaN", 0x7fff, 0xc0000000, 0);
+#ifdef USE_TEST_NEGATIVE_NAN  /* FreeBSD, gdtoa by David M. Gay. */
+  expect("-nan", "\t -naN", 0xffff, 0xc0000000, 0);  /* Positive, even if - is specified. */
+#else  /* Linux glibc, musl. */
   expect("-nan", "\t -naN", 0x7fff, 0xc0000000, 0);  /* Positive, even if - is specified. */
+#endif
   expect("+nan", "\t +NaN", 0x7fff, 0xc0000000, 0);
 
   expect("", "0x1p-1", 0x3ffeU, 0x80000000U, 0);
