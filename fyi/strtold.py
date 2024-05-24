@@ -170,11 +170,21 @@ def strtold(s):
   assert len(s2) == i or s2[i] == 'e', (s2, i, j)
   if i == 0:  # Zero.
     return struct.pack('<LLH', 0, 0, sign)
-  r = 24  # !! TODO(pts): What's wrong with 23, 22, 21 and 20? A few tests fail. What is a safe value?
+  # 1000 is an arbitrary high limit here to prevent wasting time with overly
+  # long significands.
+  #
+  # It's possible to (uniquely) represent an x86 80-bit floating-point
+  # number with r == 20 significant decimal digits.
+  #
+  # However, when parsing decimal digits, truncating (or rounding) to any
+  # number of digits (even as much as 1000) may change the result: see the
+  # LDBL_MAX_long* tests for examples where the last digit influences the
+  # result, thus rounding to r == 21, 22, 23, 24, 25, 26 or 27 digits would
+  # yield a different result.
+  r = 1000
   if i > r:  # Round long significand.
-    #print('A', s2)
     j = int(s2[:r])
-    if s2[r] >= '5':  # Round. !! TODO(pts): Test rounding towards even?
+    if s2[r] >= '5':  # Round. !! TODO(pts): Should we round towards even? Should we round towards nearest?
       j += 1
     exp += i - r
     s2, i = j, r
@@ -201,8 +211,12 @@ def strtold(s):
     i = 0x403e + exp  # Left shift amout before division.
     b_min = bit_length(s2) + i - ((23219281 * -exp + 9999999) // 10000000)  # 2.3219281 is an upper bound for log(5)/log(2).
     if b_min >= 65:  # Speed and integer size optimization for the division below.
-      i -= b_min - 65
-      j += b_min - 65
+      if i >= b_min - 65:
+        i -= b_min - 65
+        j += b_min - 65
+      else:  # Prevent negative shift amount in i.
+        j += i
+        i = 0
       must_rshift = True  # Trigger the asertion below.
     # Max i value in the tests: 11510.
     wi = (s2 << i) // (5 ** -exp)  # This use large integers and is slow. Round down (this seems to match glibc and musl). TODO(pts): Which rounding is correct?
@@ -338,6 +352,7 @@ if __name__ == '__main__':  # Tests.
           e = None
         except ValueError:
           e = repr(sys.exc_info()[1])
+          #raise
         except:
           print((name, s))
           raise

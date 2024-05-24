@@ -112,9 +112,25 @@ int main(int argc, char **argv) {
   expect("LDBL_small_subnormal6", "4e-4951", 0, 0, 1);
   expect("LDBL_MAX", "1.1897314953572317650e+4932L", 0x7ffe, 0xffffffffU, 0xffffffffU);
   expect("LDBL_MAX_short", "1.189731495357231765e+4932L", 0x7ffe, 0xffffffffU, 0xffffffffU);
-  expect("LDBL_MAX_long1", "1.18973149535723176498902e+4932", 0x7ffe, 0xffffffffU, 0xffffffffU);
-  expect("LDBL_MAX_long1_smaller", "1.18973149535723176498901e+4932", 0x7ffe, 0xffffffffU, 0xfffffffeU);
-  expect("LDBL_MAX_long2", "1.18973149535723176502126385303097021e+4932L", 0x7ffe, 0xffffffffU, 0xffffffffU);
+  expect("LDBL_MAX_long19a", "1.189731495357231765e+4932", 0x7ffe, 0xffffffffU, 0xffffffffU);
+  expect("LDBL_MAX_long19t", "1.189731495357231764e+4932", 0x7ffe, 0xffffffffU, 0xffffffefU);
+  expect("LDBL_MAX_long20a", "1.1897314953572317650e+4932", 0x7ffe, 0xffffffffU, 0xffffffffU);
+  expect("LDBL_MAX_long20t", "1.1897314953572317649e+4932", 0x7ffe, 0xffffffffU, 0xfffffffdU);
+  expect("LDBL_MAX_long21a", "1.18973149535723176499e+4932", 0x7ffe, 0xffffffffU, 0xffffffffU);
+  expect("LDBL_MAX_long21s", "1.18973149535723176498e+4932", 0x7ffe, 0xffffffffU, 0xfffffffeU);
+  expect("LDBL_MAX_long22a", "1.189731495357231764990e+4932", 0x7ffe, 0xffffffffU, 0xffffffffU);
+  expect("LDBL_MAX_long22s", "1.189731495357231764989e+4932", 0x7ffe, 0xffffffffU, 0xfffffffeU);
+  expect("LDBL_MAX_long23a", "1.1897314953572317649891e+4932", 0x7ffe, 0xffffffffU, 0xffffffffU);
+  expect("LDBL_MAX_long23s", "1.1897314953572317649890e+4932", 0x7ffe, 0xffffffffU, 0xfffffffeU);
+  expect("LDBL_MAX_long24a", "1.18973149535723176498902e+4932", 0x7ffe, 0xffffffffU, 0xffffffffU);
+  expect("LDBL_MAX_long24s", "1.18973149535723176498901e+4932", 0x7ffe, 0xffffffffU, 0xfffffffeU);
+  expect("LDBL_MAX_long25a", "1.189731495357231764989017e+4932", 0x7ffe, 0xffffffffU, 0xffffffffU);
+  expect("LDBL_MAX_long25s", "1.189731495357231764989016e+4932", 0x7ffe, 0xffffffffU, 0xfffffffeU);
+  expect("LDBL_MAX_long26a", "1.1897314953572317649890162e+4932", 0x7ffe, 0xffffffffU, 0xffffffffU);
+  expect("LDBL_MAX_long26s", "1.1897314953572317649890161e+4932", 0x7ffe, 0xffffffffU, 0xfffffffeU);
+  expect("LDBL_MAX_long27a", "1.18973149535723176498901612e+4932", 0x7ffe, 0xffffffffU, 0xffffffffU);
+  expect("LDBL_MAX_long27s", "1.18973149535723176498901611e+4932", 0x7ffe, 0xffffffffU, 0xfffffffeU);
+  expect("LDBL_MAX_long3", "1.18973149535723176502126385303097021e+4932L", 0x7ffe, 0xffffffffU, 0xffffffffU);
   expect("LDBL_MAX_more1", "1.189731495357231765054e+4932L", 0x7fff, 0x80000000U, 0);  /* Same as infinity. */
   expect("LDBL_MAX_more2", "1.189731495357231766e+4932", 0x7fff, 0x80000000U, 0);  /* Same as infinity. */
 
