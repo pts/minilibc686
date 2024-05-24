@@ -9,7 +9,7 @@
 
 typedef char assert_long_double_size[sizeof(long double) == 10 || sizeof(long double) == 12 || sizeof(long double) == 16 ? 1 : -1];
 
-static int exit_code = 0;
+static unsigned goodc, badc;
 
 static char expect(const char *name, const char *s, unsigned exp, unsigned high, unsigned low) {
   union { unsigned u[3]; long double ld; } x;
@@ -28,7 +28,11 @@ static char expect(const char *name, const char *s, unsigned exp, unsigned high,
   }
   putchar('\n');
   fflush(stdout);
-  if (!is_ok) exit_code |= 1;
+  if (is_ok) {
+    ++goodc;
+  } else {
+    ++badc;
+  }
   return is_ok;
 }
 
@@ -204,6 +208,7 @@ int main(int argc, char **argv) {
   expect("hex_subnormalb", "0x5.7p-16445", 0, 0, 5);
   expect("hex_subnormalc", "0x5.8p-16445", 0, 0, 6);  /* Rounds up to nearest even. */
   expect("hex_subnormald", "0x5.9p-16445", 0, 0, 6);
-  printf("is_all_ok=%d\n", !exit_code);
-  return exit_code;
+
+  printf("is_all_ok=%d bad_count=%u ok_count=%u\n", badc == 0, badc, goodc);
+  return badc != 0;
 }
