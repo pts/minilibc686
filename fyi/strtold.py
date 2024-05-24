@@ -162,22 +162,40 @@ def strtold(s):
   # Now: -5000 + r >= 5000 + i > -exp > -5000 - i.
   #assert -5000 + r < exp < 5000  # Since i >= 0 and exp + i < 5000.
   i = j = None  # Save memory and clear temporaries.
+  must_rshift = False
   if exp >= 0:
-    j = 0x4040 - 2
-    wi = s2 * (10 ** exp)  # This is slow. TODO(pts): Do it with smaller integers.
+    j = 0x403e + exp
+    wi = s2 * (5 ** exp)  # This is slow. TODO(pts): Do it with smaller integers.
   else:
-    assert -exp < 0x4040 - 2
+    assert -exp < 0x403e
     j = 0
-    #b = 10 ** -exp
-    #wi = ((s2 << 0x4040) + (b >> 1)) // b  # This is slow. Round.
-    wi = (s2 << (0x4040 - 2 + exp)) // (5 ** -exp)  # This is slow. Round down (this seems to match glibc and musl). TODO(pts): Which rounding is correct?
-  if not wi:
-    return struct.pack('<LLH', 0, 0, sign)  # Round down to zero.
-  i = bit_length(wi) + j + 2
-  exp = i - 66
+    i = 0x403e + exp  # Left shift amout before division.
+    b_min = bit_length(s2) + i - ((23219281 * -exp + 9999999) // 10000000)  # 2.3219281 is an upper bound for log(5)/log(2).
+    if b_min >= 65:  # Speed and integer size optimization for the division below.
+      i -= b_min - 65
+      j += b_min - 65
+      must_rshift = True  # Trigger the asertion below.
+    # Max i value in the tests: 11510.
+    wi = (s2 << i) // (5 ** -exp)  # This is slow. Round down (this seems to match glibc and musl). TODO(pts): Which rounding is correct?
+    if not wi:
+      return struct.pack('<LLH', 0, 0, sign)  # Round down to zero.
+  b = bit_length(wi)
+  assert not must_rshift or b >= 65
+  exp = b + j - 64
   if exp > 0x7ffe:
     return struct.pack('<LLH', 0, 0x80000000, 0x7fff | sign)  # Round to infinity.
-  if exp <= 0:  # Fix subnormal.
+  assert (j < exp) == (b >= 65)
+  if j < exp:  # Same as: if b >= 65:
+    assert exp - j - 1 == b - 65
+    wi >>= exp - j - 1
+    assert wi >> 64 == 1
+    wi = (wi + 1) >> 1  # Round. !! TODO(pts): Test rounding towards even?
+    if wi >> 64:
+      wi >>= 1
+      exp += 1
+    assert wi >> 63 == 1
+    return struct.pack('<LLH', wi & 0xffffffff, wi >> 32, exp | sign)
+  elif exp <= 0:  # Fix subnormal.
     #print('exp=%d wi=%d' % (exp, wi))
     assert not j  # It's only possible to get subnormal with j == 0 (negative power of 10 exp).
     #wi <<= j  # Not needed since j == 0.
@@ -190,18 +208,10 @@ def strtold(s):
     else:  # !! TODO(pts): Test this. Is it even possible?
       exp = 2
       wi = (wi + 1) >> 1  # Round. !! TODO(pts): Test rounding towards even?
-  elif j + 2 >= i - 65 + 1:
-    wi <<= j + 2 - i + 65 - 1
-    assert wi >> 63 == 1
-    return struct.pack('<LLH', wi & 0xffffffff, wi >> 32, exp | sign)
+      return struct.pack('<LLH', wi & 0xffffffff, wi >> 32, exp | sign)
   else:
-    #assert (i - 65) - (j + 2) == bit_length(wi) - 65
-    wi >>= (i - 65) - (j + 2)
-    assert wi >> 64 == 1
-    wi = (wi + 1) >> 1  # Round. !! TODO(pts): Test rounding towards even?
-    if wi >> 64:
-      wi >>= 1
-      exp += 1
+    assert j >= exp
+    wi <<= j - exp
     assert wi >> 63 == 1
     return struct.pack('<LLH', wi & 0xffffffff, wi >> 32, exp | sign)
 
