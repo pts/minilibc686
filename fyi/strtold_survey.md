@@ -19,14 +19,15 @@ The test program
 [test_strtold.c](https://github.com/pts/minilibc686/blob/master/test/test_strtold.c)
 is compiled and run.
 
-## Survery results
+## Survey results
 
 Accurate implementations:
 
 * glibc 2.19 (2014-02-07) and 2.27 (2018-02-01)
 * musl 1.1.16 (2017-01-01), musl 1.2.4 (2023-05-02) and musl 1.2.5 (2024-03-01)
 * EGLIBC 2.19 (2014-09-29)
-* minilibc686 [strtold.nasm](https://github.com/pts/minilibc686/blob/40d3704c294ff532c8cc2a88ab18a8241e5fb484/src/strtold.nasm) (2024-05-20)
+* FreeBSD 9.3 (2014-07-16) libc: It implements *strtold* using *strtold\_l*, using *strtorx\_l*, which is part of the bundled [gdtoa](https://github.com/jwiegley/gdtoa) library by David M. Gay.
+* minilibc686 [strtold.nasm](https://github.com/pts/minilibc686/blob/40d3704c294ff532c8cc2a88ab18a8241e5fb484/src/strtold.nasm) (2024-05-20): based on musl 1.2.5.
 
 Inaccurate implementations:
 
@@ -51,7 +52,7 @@ Missing implementations:
 Untested libcs:
 
 * newlib 4.4.0 (2023-12-31)
-* FreeBSD 9.3 libc: It implements *strtold* using *strtold\_l*, using *strtorx\_l*, which is part of the bundled [gdtoa](https://github.com/jwiegley/gdtoa) library by David M. Gay.
+* earlier glibc, musl and FreeBSD versions
 
 Untested C compilers (maybe they don't have a libc):
 
