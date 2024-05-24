@@ -50,6 +50,10 @@ def strtold(s):
   any junk string. Apart from this difference, this implementation does the
   same as a C strold(3).
 
+  This implementation uses only integer arithmetic, thus it's
+  architecture-independent. It uses large integers (up to 3800 decimal
+  digits) though.
+
   Args:
     s: ASCII string containing a floating point literal as base 10 decimal
         (with an optional fraction starting with '.'), base 10 scientific
@@ -204,6 +208,7 @@ def strtold(s):
   if exp >= 0:
     j = 0x403e + exp
     wi = s2 * (5 ** exp)  # This uses large integers and is slow. TODO(pts): Do it with smaller integers.
+    #print(len(str(wi)))
   else:
     assert -exp < 0x403e
     j = 0
@@ -217,6 +222,8 @@ def strtold(s):
         j += i
         i = 0
       must_rshift = True  # Trigger the asertion below.
+    #print(len(str(s2 << i)))
+    #print(len(str(5 ** -exp)))
     # Max i value in the tests: 11510.
     wi = (s2 << i) // (5 ** -exp)  # This use large integers and is slow. Round down (this seems to match glibc and musl). TODO(pts): Which rounding is correct?
     if not wi:
