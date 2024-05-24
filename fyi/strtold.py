@@ -110,9 +110,7 @@ def strtold(s):
       if exp + 0x403e <= 0:  # Subnormal.
         i = -(exp + 0x403d)
         assert i >= 1  # `1 << (a - 1)' below needs it in C.
-        is_up = (s2 >> (i - (s2 & ((1 << (i)) - 1) != 1 << (i - 1)))) & 1  # For rounding middle towards even.
-        s2 >>= i
-        s2 += is_up
+        s2 = (((s2 - (not ((s2 >> i) & 1))) >> (i - 1)) + 1) >> 1  # Like s2 >>= i, but round middle towards even.  https://stackoverflow.com/a/78525418
         assert not (s2 >> 63)  # This implies from `i >= 1' above.
         return struct.pack('<LLH', s2 & 0xffffffff, s2 >> 32, sign)
     else:  # Significand of s2 is long. Round s2 down to 64 bits.
@@ -123,10 +121,7 @@ def strtold(s):
         a = i - 64
       assert a >= 1  # `1 << (a - 1)' below needs it in C.
       exp += a
-      is_up = (s2 >> (a - (s2 & ((1 << (a)) - 1) != 1 << (a - 1)))) & 1  # For rounding middle towards even.
-      # is_up = (s2 >> (a - 1)) & 1  # For rounding.
-      s2 >>= a
-      s2 += is_up
+      s2 = (((s2 - (not ((s2 >> a) & 1))) >> (a - 1)) + 1) >> 1  # Like s2 >>= a, but round middle towards even.  https://stackoverflow.com/a/78525418
       if is_subnormal:
         assert s2 >> 63 <= 1  # We can't get >= (1 >> 64) even with is_up.
         return struct.pack('<LLH', s2 & 0xffffffff, s2 >> 32, (s2 >> 63) | sign)
