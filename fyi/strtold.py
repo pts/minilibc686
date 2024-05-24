@@ -165,6 +165,10 @@ def strtold(s):
   assert len(s2) == i or s2[i] == 'e', (s2, i, j)
   if i == 0:  # Zero.
     return struct.pack('<LLH', 0, 0, sign)
+  if s2.endswith('0'):  # Optimization to remove trailing '0' digits.
+    s3 = s2.rstrip('0')
+    exp += len(s2) - len(s3)
+    s2, s3 = s3, None
   # 1000 is an arbitrary high limit here to prevent wasting time with overly
   # long significands.
   #
