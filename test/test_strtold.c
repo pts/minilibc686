@@ -142,6 +142,14 @@ int main(int argc, char **argv) {
   expect("", "0x100000000000008.00p0", 0x4037U, 0x80000000U, 0x00000400U);
   expect("", "0x10000000000000800p0", 0x403fU, 0x80000000U, 0x00000400U);
   expect("", "0x10000000000000801p0", 0x403fU, 0x80000000U, 0x00000400U);
+  expect("", "0x800000000000ab120p32", 0x4062U, 0x80000000U, 0x0000ab12U);
+  expect("", "0x800000000000ab127p32", 0x4062U, 0x80000000U, 0x0000ab12U);
+  expect("", "0x800000000000ab128p32", 0x4062U, 0x80000000U, 0x0000ab12U);  /* Rounds down to nearest even. */
+  expect("", "0x800000000000ab129p32", 0x4062U, 0x80000000U, 0x0000ab13U);
+  expect("", "0x800000000000ab130p-64", 0x4002U, 0x80000000U, 0x0000ab13U);
+  expect("", "0x800000000000ab137p-64", 0x4002U, 0x80000000U, 0x0000ab13U);
+  expect("", "0x800000000000ab138p-64", 0x4002U, 0x80000000U, 0x0000ab14U);  /* Rounds up to nearest even. */
+  expect("", "0x800000000000ab139p-64", 0x4002U, 0x80000000U, 0x0000ab14U);
   expect("", "0x10000000000000800.0000000000001p0", 0x403fU, 0x80000000U, 0x00000400U);
   expect("", "0x10000000000001800p0", 0x403fU, 0x80000000U, 0x00000c00U);
   expect("", "0x1.fffffep126", 0x407dU, 0xffffff00U, 0);
@@ -156,7 +164,26 @@ int main(int argc, char **argv) {
   expect("", "0x1.ffffffffffffffffp16382", 0x7ffeU, 0x80000000U, 0);  /* Rounds up for long double. */
   expect("", "0x1.fffffffffffffffep16383", 0x7ffeU, 0xffffffffU, 0xffffffffU);
   expect("", "0x1.ffffffffffffffffp16383", 0x7fffU, 0x80000000U, 0);  /* Rounds up to INFINITY for long double. */
-
+  expect("hex_large_subnormal1", "0x7fffffffffffffffp-16446", 0, 0x40000000U, 0);
+  expect("hex_large_subnormal2", "0x7fffffffffffffffp-16445", 0, 0x7fffffffU, 0xffffffffU);
+  expect("hex_large_subnormal3", "0x7fffffffffffffff.7p-16445", 0, 0x7fffffffU, 0xffffffffU);
+  expect("hex_large_subnormal4", "0x7fffffffffffffff.8p-16445", 1, 0x80000000U, 0);  /* Rounds up to nearest even. */
+  expect("hex_large_subnormal5", "0x7fffffffffffffff.fp-16445", 1, 0x80000000U, 0);
+  expect("hex_large_subnormal6", "0x7fffffffffffffff.7p-16445", 0, 0x7fffffffU, 0xffffffffU);
+  expect("hex_subnormal0", "0x1p-16445", 0, 0, 1);
+  expect("hex_subnormal1", "0x2p-16445", 0, 0, 2);
+  expect("hex_subnormal2", "0x4p-16445", 0, 0, 4);
+  expect("hex_subnormal3", "0x7p-16449", 0, 0, 0);  /* Rounds down. */
+  expect("hex_subnormal4", "0x8p-16449", 0, 0, 0);  /* Rounds down to nearest even. */
+  expect("hex_subnormal5", "0x9p-16449", 0, 0, 1);  /* Rounds up. */
+  expect("hex_subnormal6", "0xfp-16449", 0, 0, 1);  /* Rounds up. */
+  expect("hex_subnormal7", "0xf.fffffffffffffff8p-16449", 0, 0, 1);  /* Rounds up. */
+  expect("hex_subnormal8", "0x4.7p-16445", 0, 0, 4);
+  expect("hex_subnormal9", "0x4.8p-16445", 0, 0, 4);  /* Rounds down to nearest even. */
+  expect("hex_subnormala", "0x4.9p-16445", 0, 0, 5);
+  expect("hex_subnormalb", "0x5.7p-16445", 0, 0, 5);
+  expect("hex_subnormalc", "0x5.8p-16445", 0, 0, 6);  /* Rounds up to nearest even. */
+  expect("hex_subnormald", "0x5.9p-16445", 0, 0, 6);
   printf("is_all_ok=%d\n", !exit_code);
   return exit_code;
 }
