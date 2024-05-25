@@ -23,9 +23,10 @@ Relevant standards:
 * [IEE 754](https://en.wikipedia.org/wiki/IEEE_754-1985)
 * [x86 80-bit extended-precision floation-point numbers](https://en.wikipedia.org/wiki/Extended_precision#x86_extended_precision_format)
 
-Relevant docs:
+Relevant links:
 
 * [How to convert strings to floats with perfect accuracy?](https://stackoverflow.com/questions/2174012/how-to-convert-strings-to-floats-with-perfect-accuracy) on StackOverflow.com
+* [Ryu](https://github.com/ulfjack/ryu): C++ and Java code for converting binary floating-point numbers to their shortest decimal string form.
 
 ## Survey results
 
