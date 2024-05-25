@@ -53,7 +53,7 @@ Inaccurate implementations:
 
 * diet libc 0.34 (2018-09-24, latest): 32 inaccuracies. It contains a simplistic implementation with many intermediate rounding errors.
 * uClibc 0.9.30.1 (2009-03-02), 0.9.33.2 (2012-05-15, latest): 18 inaccuracies. It contains a simplistic implementation with many intermediate rounding errors.
-* picolibc 1.8.6 (2024-01-21): Inaccurate. It contains a simplistic implementation with intermediate rounding errors.
+* picolibc 1.8.6 (2024-01-21): Inaccurate. It contains a simplistic implementation with intermediate rounding errors. It has a [https://keithp.com/blogs/picolibc-string-float/](blog post).
 * Digital Mars C/C++ 8.57c libc (2020-09-01, latest): 19 inaccuracies
 * Borland C++ 5.5.1 (2000-06-27): 33 inaccuracies
 * newlib 4.1.0 (2020-12-18): 27 inaccuracies. It contains code
