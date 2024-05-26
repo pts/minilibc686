@@ -40,7 +40,11 @@ def strtold(s):
   tests in tests/test_strtold.c. The alternative Python implementation in
   fyi/strtold.py passes the same accuracy tests. The C implementation in
   fyi/c_strtold.c passes the same tests. musl 1.1.16, musl 1.2.4, musl
-  1.2.5, EGLIBC 2.19, glibc 2.19, glibc 2.27 pass the same tests.
+  1.2.5, EGLIBC 2.19, glibc 2.19, glibc 2.27, gdtoa in FreeBSD 9.3 libc pass
+  the same tests.
+
+  As in the other implementations above, this implementation does rounding
+  (both binary and decimal) with ties resolved towards even.
 
   This is an independent implementation written from scratch, it's not based
   on any existing code.
@@ -173,8 +177,9 @@ def strtold(s):
     s3 = s2.rstrip('0')
     exp += len(s2) - len(s3)
     s2, s3 = s3, None
-  # 1000 is an arbitrary high limit here to prevent wasting time with overly
-  # long significands.
+  # 16500 is an arbitrary high limit here to prevent wasting time with
+  # overly long significands. A limit larger than 16446 is needed by tests
+  # rounding_subnormal... .
   #
   # It's possible to (uniquely) represent an x86 80-bit floating-point
   # number with r == 20 significant decimal digits.
@@ -184,7 +189,7 @@ def strtold(s):
   # LDBL_MAX_long* tests for examples where the last digit influences the
   # result, thus rounding to r == 21, 22, 23, 24, 25, 26 or 27 digits would
   # yield a different result.
-  r = 1000
+  r = 16500
   if i > r:  # Round long significand.
     j = int(s2[:r])
     if s2[r] >= '5':  # Round. !! TODO(pts): Should we round towards even? Should we round towards nearest?
@@ -194,9 +199,9 @@ def strtold(s):
   else:
     s2 = int(s2[:i])
   assert s2  # We've already handled zero above.
-  if exp + i <= -5000:
+  if exp + i <= -4951:  # This is sharp. If we allow -4951 here, `assert -exp <= 0x403e' below may fail.
     return struct.pack('<LLH', 0, 0, sign)  # Round down to zero.
-  if exp + i >= 5000:
+  if exp + i >= 5000:  # This is not sharp, but that's fine, because `if exp >= 0x7ffe' below will check it accurately.
     return struct.pack('<LLH', 0, 0x80000000, 0x7fff | sign)  # Round to infinity.
   # Now: -5000 < exp + i < 5000.
   # Now: -5000 - i < exp < 5000 < 5000 + i.
@@ -208,9 +213,10 @@ def strtold(s):
   if exp >= 0:
     j = 0x403e + exp
     wi = s2 * (5 ** exp)  # This uses large integers and is slow. TODO(pts): Do it with smaller integers.
+    is_divisible = True
     #print(len(str(wi)))
   else:
-    assert -exp < 0x403e
+    assert -exp <= 0x403e, (-exp, 0x403e)
     j = 0
     i = 0x403e + exp  # Left shift amout before division.
     b_min = bit_length(s2) + i - ((23219281 * -exp + 9999999) // 10000000)  # 2.3219281 is an upper bound for log(5)/log(2).
@@ -225,7 +231,8 @@ def strtold(s):
     #print(len(str(s2 << i)))
     #print(len(str(5 ** -exp)))
     # Max i value in the tests: 11510.
-    wi = (s2 << i) // (5 ** -exp)  # This use large integers and is slow. Round down (this seems to match glibc and musl). TODO(pts): Which rounding is correct?
+    wi, is_divisible = divmod(s2 << i, 5 ** -exp)  # This use large integers and is slow. Round down (this seems to match glibc and musl). TODO(pts): Which rounding is correct?
+    is_divisible = not is_divisible
     if not wi:
       return struct.pack('<LLH', 0, 0, sign)  # Round down to zero.
   b = bit_length(wi)
@@ -236,9 +243,13 @@ def strtold(s):
   assert (j < exp) == (b >= 65)
   if j < exp:  # Same as: if b >= 65:
     assert exp - j - 1 == b - 65
+    is_divisible = is_divisible and (wi & ((1 << (exp - j)) - 1)) == 1 << (exp - j - 1)
     wi >>= exp - j - 1
     assert wi >> 64 == 1
-    wi = (wi + 1) >> 1  # Round. !! TODO(pts): Test rounding towards even?
+    if is_divisible and (wi & 3) == 1:
+      wi >>= 1   # Round down towards even.
+    else:
+      wi = (wi + 1) >> 1  # Round.
     if wi >> 64:
       wi >>= 1
       exp += 1
@@ -247,7 +258,11 @@ def strtold(s):
     #print('exp=%d wi=%d' % (exp, wi))
     assert not j  # It's only possible to get subnormal with j == 0 (negative power of 10 exp).
     #wi <<= j  # Not needed since j == 0.
-    wi = (wi + 1) >> 1 # Round. !! TODO(pts): Test rounding towards even?
+    is_divisible = is_divisible and wi & 1
+    if is_divisible and (wi & 3) == 1:
+      wi >>= 1   # Round down towards even.
+    else:
+      wi = (wi + 1) >> 1  # Round.
     if not (wi >> 64):
       exp = 0
       if wi >> 63:
@@ -334,7 +349,7 @@ if __name__ == '__main__':  # Tests.
   try:
     for line in iter(f.readline, ''):
       line = line.strip()
-      if line.startswith('expect(') and ';' in line:
+      if line.startswith('expect(') and ';' in line and 'IGNORE_IN_PYTHON' not in line:
         line = line[line.find('('):]
         line = line[:line.find(';')]
         line = line.replace('U', '')
