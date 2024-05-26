@@ -21,11 +21,23 @@ static char expect(const char *name, const char *s, unsigned exp, unsigned high,
   x.u[2] &= 0xffff;
   is_ok = x.u[0] == low && x.u[1] == high && x.u[2] == exp;
   if (!name || !name[0]) name = s2;
+#if defined(__GNUC__) && !defined(__PCC__)
+#  pragma GCC diagnostic push
+#  pragma GCC diagnostic ignored "-Wformat"
+#endif
+#ifdef __MINILIBC686__
+#  define FMT_LG "0x%08x:0x%08x:0x%08x"
+#else
+#  define FMT_LG "%.20Lg"
+#endif
   if (is_ok) {
-    printf("is_ok=%d name=%s input=%s output=%.20Lg expected=e/h/l=0x%04x/0x%08x/0x%08x", is_ok, name, s2, x.ld, x.u[2], x.u[1], x.u[0]);
+    printf("is_ok=%d name=%s input=%s output=" FMT_LG " expected=e/h/l=0x%04x/0x%08x/0x%08x", is_ok, name, s2, x.ld, x.u[2], x.u[1], x.u[0]);
   } else {
-    printf("is_ok=%d name=%s input=%s output=%.20Lg expected:e/h/l=0x%04x/0x%08x/0x%08x got:e/h/l=0x%04x/0x%08x/0x%08x", is_ok, name, s2, x.ld, exp, high, low, x.u[2], x.u[1], x.u[0]);
+    printf("is_ok=%d name=%s input=%s output=" FMT_LG " expected:e/h/l=0x%04x/0x%08x/0x%08x got:e/h/l=0x%04x/0x%08x/0x%08x", is_ok, name, s2, x.ld, exp, high, low, x.u[2], x.u[1], x.u[0]);
   }
+#if defined(__GNUC__) && !defined(__PCC__)
+#  pragma GCC diagnostic pop
+#endif
   putchar('\n');
   fflush(stdout);
   if (is_ok) {
