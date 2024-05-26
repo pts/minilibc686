@@ -42,13 +42,17 @@ Accurate implementations:
   2012-04-10](https://git.musl-libc.org/cgit/musl/commit/src/internal/floatscan.c?id=415c4cd7fdb3e8b7476fbb2be2390f4592cf5165)
   by Rich Felker, stable part of musl since 0.9.8 (2012-11-26), last update on
   [2019-10-18](https://git.musl-libc.org/cgit/musl/commit/src/internal/floatscan.c?id=bff78954995b115e469aadb7636357798978fffd).
+* David M. Gay's [strtod(...) in dtoa.c in netlib](https://www.netlib.org/fp/dtoa.c) (last change 2024-02-24): It directly supports only *double*, but can be patched (see e.g. FreeBSD). It's also quite large, containing multiple large tables.
+* minilibc686 [strtold.nasm](https://github.com/pts/minilibc686/blob/40d3704c294ff532c8cc2a88ab18a8241e5fb484/src/strtold.nasm) (2024-05-20): It is based on musl 1.2.5.
+
+Almost always accurate implementations:
+
 * FreeBSD 9.3 (2014-07-16) libc: It implements *strtold* using *strtold\_l*,
   using *strtorx\_l*, which is part of the bundled
   [gdtoa](https://github.com/jwiegley/gdtoa) library by David M. Gay, based on dtoa.c by
   David M. Gay. The behavior matches glibc and musl except for a minor
-  difference that `-nan` returns a negative NaN value.
-* David M. Gay's [strtod(...) in dtoa.c in netlib](https://www.netlib.org/fp/dtoa.c) (last change 2024-02-24): It directly supports only *double*, but can be patched (see e.g. FreeBSD). It's also quite large, containing multiple large tables.
-* minilibc686 [strtold.nasm](https://github.com/pts/minilibc686/blob/40d3704c294ff532c8cc2a88ab18a8241e5fb484/src/strtold.nasm) (2024-05-20): It is based on musl 1.2.5.
+  difference that `-nan` returns a negative NaN value and a bug
+  (USE_TEST_NO_GDTOA_BUG1).
 
 Inaccurate implementations:
 
