@@ -91,3 +91,4 @@ Untested C compilers (maybe they don't have a libc):
 * [andrewchambers/c](https://github.com/andrewchambers/c)
 * [lacc](https://github.com/larmel/lacc)
 * [SCC](http://www.simple-cc.org/)
+* [lcc](https://github.com/drh/lcc)
