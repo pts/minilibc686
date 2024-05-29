@@ -9,6 +9,7 @@ SECTIONS
   {
     CREATE_OBJECT_SYMBOLS
     *(.text)
+    *(.rodata .rodata.*)
     _etext = .;
     __etext = .;
   }
@@ -16,7 +17,6 @@ SECTIONS
   .data :
   {
     *(.data)
-    *(.rodata .rodata.*)
     CONSTRUCTORS
     _edata  =  .;
     __edata  =  .;
