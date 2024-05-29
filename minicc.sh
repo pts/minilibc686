@@ -247,6 +247,7 @@ PRINTF_OCTAL=1
 PRINTF_LONG=1
 PRINTF_LONGLONG=1
 FILE_CAPACITY=
+IS_AOUT=  # Output file format is Linux i386 a.out QMAGIC executable.
 
 SKIPARG=
 ARGS=
@@ -322,6 +323,7 @@ for ARG in "$@"; do
    -mprintf-longlong | -mprintf-long-long | -mprintf-ll) PRINTF_LONGLONG=1 ;;
    -mno-printflonglong | -mno-printf-long-long | -mno-printf-ll) PRINTF_LONGLONG= ;;
    -mfiles=[1-9]* | -mfiles=) FILE_CAPACITY="${ARG#*=}" ;;
+   -maout | -Wl,-m,i386linux) IS_AOUT=1 ;;
    -Wno-no) DO_WKEEP= ;;  # Disable warnings. GCC and Clang accept and ignore it. GCC ignores it.
    -Wkeep | -Wno-no-no) DO_WKEEP=1 ;;  # This is not a GCC flag, it's a minicc extension. GCC ignores -Wno-no-no, but Clang warns.
    -Wno-*) ARGS="$ARGS$NL$ARG" ;;
@@ -423,6 +425,14 @@ if test "$TCC" && test "$IS_TCCLD"; then  # $TCCLD should work with $GCC
     exit 1
   fi
   MINICC_LD=  # Don't do $PATH lookup below.
+fi
+if test "$IS_AOUT" && test "$IS_TCCLD"; then
+  echo "fatal: conflicting combination of -maout and --tccld=..." >&2
+  exit 1
+fi
+if test "$IS_AOUT" && test "$STRIP_MODE" = 3; then
+  echo "fatal: conflicting combination of -maout and -g0r" >&2
+  exit 1
 fi
 if test "$TCC" && test "$GCC"; then
   echo "fatal: conflicting compilers, both --tcc=... and --gcc=..." >&2
@@ -846,6 +856,8 @@ if test "$GCC" || test -z "$IS_TCCLD"; then
       echo "fatal: -g0r doesn't work with --tccld" >&2
       exit 3
     fi
+  elif test "$IS_AOUT"; then
+    LDARGS="$LDARGS$NL-T$MYDIR/tools/i386linux.x$NL-e${NL}_start$NL--fatal-warnings"
   else
     # `-e _start' is needed, because without it GNU gold(1) wouldn't fail to link if _start is not defined.
     # `--fatal-warnings' is needed, because without it GNU ld(1) would happily create an executable without _start.
@@ -1314,13 +1326,15 @@ else
   test "$HAD_V" && echo "info: running $WHAT:" $ARGS >&2  # GCC also writes to stderr.
   $ARGS >&2; EC="$?"  # Redirect linker stdout to stderr.
   if test "$STRIP_MODE" = 0 || test "$EC" != 0; then
-    rm -f $TMPOFILES
+    test "$TMPOFILES" && rm -f $TMPOFILES
   fi
   test "$EC" = 0 || exit "$EC"
 fi
 
 if test "$STRIP_MODE" = 0; then
   :
+elif test "$IS_AOUT"; then
+  test "$TMPOFILES" && rm -f $TMPOFILES
 elif test "$STRIP_MODE" = 1; then
   EFARGS="$MYDIR/tools/elfxfix$NL-l$NL-a$NL$HAD_V$NL--$NL$OUTFILE"
   $EFARGS; EC="$?"
