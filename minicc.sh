@@ -327,6 +327,8 @@ for ARG in "$@"; do
    -Wno-*) ARGS="$ARGS$NL$ARG" ;;
    -Werror[-=]implicit-function-declaration) ARGS="$ARGS$NL-Werror-implicit-function-declaration"; DO_WKEEP= ;;  # GCC 4.1 supports only -Werror-implicit-function-declaration, GCC >=4.2 supports it and also -Werror=implicit-function-declaration.
    -Wadd=*) ARGS="$ARGS$NL-W${ARG#*=}" ;;  # This doesn't set DO_WKEEP="". This is a minicc extension.
+   -Wl,*) ARGS="$ARGS$NL$ARG" ;;
+   -W[a-z],*) echo "fatal: unsupported tool flag: $ARG" >&2; exit 1 ;;
    -W*) ARGS="$ARGS$NL$ARG"; DO_WKEEP= ;;
    -fno-inline) ARGS="$ARGS$NL$ARG"; HAD_NOINLINE=1 ;;
    -finline) ARGS="$ARGS$NL$ARG"; HAD_NOINLINE= ;;
