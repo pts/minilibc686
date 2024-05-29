@@ -34,16 +34,28 @@ int main(int argc, char **argv) {
   expect("sizeof_long_long_at_least_8", sizeof(long long) >= 8);
   expect("int_negative", -0x7fffffff < 0);
   if (sizeof(int) == 4) expect("int_positive", -0x80000000 > 0);
-#ifndef __TINYC__
-  expect("int_hex_back_negative", -0x80000000ll < 0);  /* !! --tcc is broken. */
-  expect("int_dec_back_negative", -2147483648ll < 0);  /* !! --tcc is broken. */
+  expect("int_hex_back_negative", -0x80000000 > 0);  /* !! --tcc is broken. */
+  expect("int_hex_l_back_negative", -0x80000000L > 0);  /* !! --tcc is broken. */
+#if !defined(__TINYC__) && !defined(__WATCOMC__)
+  expect("int_dec_p_back_negative", -(2147483648) < 0);  /* !! --tcc and --wcc are broken. */
+  expect("int_dec_lp_back_negative", -(2147483648L) < 0);  /* !! --tcc and --wcc are broken. */
+  expect("int_dec_back_negative", -2147483648 < 0);  /* !! --tcc and --wcc are broken. */
+  expect("int_dec_l_back_negative", -2147483648L < 0);  /* !! --tcc and --wcc are broken. */
 #endif
-  expect("long_long_negative", -0x7fffffffffffffffll < 0);
-  expect("long_long_positive", -0x8000000000000000ll > 0);
-  expect("long_long_back_negative", (long long)-0x8000000000000000ll < 0);
+#if !defined(__TINYC__)
+  expect("int_hex_ll_back_negative", -0x80000000LL < 0);  /* !! --tcc is broken. */
+  expect("int_dec_ll_back_negative", -2147483648LL < 0);  /* !! --tcc is broken. */
+  expect("int_hex_ll0ll_back_negative", -0x80000000LL < 0LL);  /* !! --tcc is broken. */
+  expect("int_dec_ll0ll_back_negative", -2147483648LL < 0LL);  /* !! --tcc is broken. */
+#endif
+  expect("long_long_negative", -0x7fffffffffffffffLL < 0);
+  expect("long_long_positive", -0x8000000000000000LL > 0);
+  expect("long_long_back_negative", (long long)-0x8000000000000000LL < 0);
   expect("nonzero_float", FLT_MIN > 0.0f);
   expect("nonzero_double", DBL_MIN > 0.0);
+#ifndef __WATCOMC__
   expect("nonzero_long_double", LDBL_MIN != 0.0l);
+#endif
   expect("convert_double_to_float", (float)DBL_MIN == 0.0f);
   expect("convert_long_double_to_double", (double)LDBL_MIN == 0.0);
   expect("convert_long_double_to_float", (float)LDBL_MIN == 0.0f);
@@ -54,16 +66,10 @@ int main(int argc, char **argv) {
   expect("convert_nonzero_double_to_long_double", (long double)DBL_MIN > 0.0l);
   expect("convert_nonzero_float_to_long_double", (long double)FLT_MIN > 0.0l);
   expect("convert_min_float_to_double", (double)FLT_MIN == 1.1754943508222875e-38);
-#if 1
-  expect("convert_min_double_to_long_double1", (long double)DBL_MIN == 2.22507385850720138309e-308l);  /* !! --pcc --uclibc and --pcc --diet and --pcc --minilibc are broken, --pcc --eglibc is good, because strtold is only accurate in --eglibc. !! --tcc is broken. */
-#endif
-#ifndef __PCC__  /* !! --pcc compiler segmentation fault */
-  expect("convert_min_double_to_long_double2", (long double)DBL_MIN == 2.22507385850720138e-308l + 0.00000000000000000309e-308l);  /* !! --pcc --uclibc and --pcc --diet and --pcc --minilibc are broken, --pcc --eglibc is good, because strtold is only accurate in --eglibc. !! --tcc is broken. */
-#endif
-  expect("convert_min_double_to_long_double3", (long double)DBL_MIN == 2.22507385850720138e-308l + 309e-328l);  /* !! --pcc --uclibc and --pcc --diet and --pcc --minilibc are broken, --pcc --eglibc is good, because strtold is only accurate in --eglibc. !! --tcc is broken. */
-#ifndef __PCC__
+  expect("convert_min_double_to_long_double1", (long double)DBL_MIN == 2.22507385850720138309e-308l);  /* --pcc --uclibc and --pcc --diet and --pcc --minilibc are broken, --pcc --eglibc is good, because strtold is only accurate in --eglibc. */
+  expect("convert_min_double_to_long_double2", (long double)DBL_MIN == 2.22507385850720138e-308l + 0.00000000000000000309e-308l);  /* !! --pcc --uclibc and --pcc --diet and --pcc --minilibc are broken, --pcc --eglibc is good, because strtold is only accurate in --eglibc. */
+  expect("convert_min_double_to_long_double3", (long double)DBL_MIN == 2.22507385850720138e-308l + 309e-328l);  /* !! --pcc --uclibc and --pcc --diet and --pcc --minilibc are broken, --pcc --eglibc is good, because strtold is only accurate in --eglibc. */
   expect("convert_min_float_to_long_double", (long double)FLT_MIN == 1.17549435082228750797e-38l);
-#endif
   expect("convert_double_to_min_float", FLT_MIN == (float)1.1754943508222875e-38);
   expect("convert_long_double_to_min_double", DBL_MIN == (double)2.22507385850720138309e-308l);
   expect("convert_long_double_to_min_float", FLT_MIN == (float)1.17549435082228750797e-38l);
@@ -80,12 +86,16 @@ int main(int argc, char **argv) {
   >>> struct.unpack('<d', struct.pack('<LL',  0,1138753536))
   (9.223372036854776e+18,)
   */
+#ifndef __WATCOMC__
   expect("convert_max_long_long_to_long_double", (long long)(long double)0x7fffffffffffffffll == 0x7fffffffffffffffll);  /* >=63 significant bits. */
+#endif
   expect("convert_int_to_min_float_significant", (int)(float)-0x800001 == -0x800001);  /* 24 significant bits. */
   expect("convert_long_long_to_min_double_significant", (long long)(double)-0x10000000000001ll == -0x10000000000001ll);  /* 53 significant bits. */
   expect("convert_min_long_long_to_long_double", (long long)(long double)(long long)-0x8000000000000000ll == (long long)-0x8000000000000000ll);  /* >=63 significant bits. */  /* The 2nd (long long) conversion is needed, see https://stackoverflow.com/q/78175534 . */
   expect("convert_unsigned__to_max_float_significant", (unsigned)(float)0x800001u == 0x800001u);  /* 24 significant bits. */
   expect("convert_unsigned_long_long_to_max_double_significant", (unsigned long long)(double)0x10000000000001ull == 0x10000000000001ull);  /* 53 significant bits. */
+#ifndef __WATCOMC__
   expect("convert_unsigned_long_long_to_max_long_double", (unsigned long long)(long double)0xffffffffffffffffull == 0xffffffffffffffffull);  /* 64 significant bits. */
+#endif
   return exit_code;
 }
