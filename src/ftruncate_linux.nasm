@@ -2,7 +2,7 @@
 ; written by pts@fazekas.hu at Sun May 21 21:00:32 CEST 2023
 ; Compile to i386 ELF .o object: nasm -O999999999 -w+orphan-labels -f elf -o ftruncate_linux.o ftruncate_linux.nasm
 ;
-; Code size: 0x1d bytes.
+; Code size: 0x7 bytes.
 ;
 ; Uses: %ifdef CONFIG_PIC
 ;
