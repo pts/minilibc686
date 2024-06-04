@@ -226,7 +226,6 @@ HAD_OFLAG=
 HAD_V=
 HAD_OFILE=
 HAD_SSFILE=
-ARCH=i686
 GCC_BARG=-pipe  # Harmless default.
 LIBC=
 DO_SMART=
@@ -295,14 +294,14 @@ for ARG in "$@"; do
    -shared | -dynamic | -Bshared | -Bdynamic | -Bshareable | -rpath* | -dy | -call-shared | -shared-libgcc | -rdynamic) echo "fatal: unsupported shared library flag: $ARG" >&2; exit 1 ;;
    --sysroot | --sysroot= | -B | -B* | --gcc-toolchain | --gcc-toolchain | -target | -target=* | -sysld*) echo "fatal: unsupported toolchain flag: $ARG" >&2; exit 1 ;; # These are GCC and/or clang flags.
    -p | -pg | --profile) echo "fatal: unsupported profiling flag: $ARG" >&2; exit 1 ;;
-   -m64 | -march=x86_64 | -imultiarch) echo "fatal: unsupported 64-bit flag: $ARG" >&2; exit 1 ;;
+   -m64 | -march=x86[_-]64 | -march=amd64 | -imultiarch) echo "fatal: unsupported 64-bit flag: $ARG" >&2; exit 1 ;;
    -pie | -fpic | -fPIC | -fpie | -fPIE) echo "fatal: unsupported position-independent code flag: $ARG" >&2; exit 1 ;;  # TODO(pts): Add support. It is not useful anyway for static linking, it just adds bloat.
    -idirafter | -imultilib | -iplugindir* | -iquote | -isysroot | -system | -iwithprefix | -iwithprefixbefore) echo "fatal: unsupported include dir flag, use -I instead: $ARG" >&2; exit 1 ;;
    -include | -imacros | -iprefix) echo "fatal: unsupported include file flag: $ARG" >&2; exit 1 ;;  # TODO(pts): Adding support is relatively easy, we just have to pass these to GCC.
    -mregparm=0) ;;  # Default GCC cdecl calling convention.
    -mregparm=* | -msseregparm | -mrtd | -mno-rtd) echo "fatal: unsupported calling convention flag: $ARG" >&2; exit 1 ;;  # FYI owcc -mregparm=1 ... -mregparm=3 activate __watcall rather than __regparm__(3).
    # TODO(pts): Try to adjust -malign-data=type and -mlarge-data-threshold=threshold to avoid alignment of some arrays to 0x20 bytes.
-   -march=i[36]86) ARCH="${ARG#*=}" ;;
+   -march=i[3456]86) ARCH="${ARG#*=}" ;;
    -march=*) echo "fatal: unsupported minicc arch flag: $ARG" >&2; exit 1 ;;
    -msmart) DO_SMART=1 ;;  # Enable smart linking.
    -mforce-smart) DO_SMART=2 ;;  # Force smart linking even for self-contained programs without undefined symbols. Most users need -msmart instead, that's faster.
@@ -453,7 +452,7 @@ if test "$USE_UTCC" && test "$DO_ADD_LIB"; then
     exit 1
   fi
 fi
-if test "$USE_UTCC" && test "$ARCH" = i386; then
+if test "$USE_UTCC" && test "$DO_ADD_LIB" && test "$ARCH" != i686; then
   echo "fatal: the --utcc bundled uClibc doesn't work on i386, it needs -march=i686" >&2
   exit 1
 fi
@@ -739,7 +738,10 @@ if test "$TCC"; then
    -std=c* | -ansi) ANSIFLAG=-D__STRICT_ANSI__ ;;
    *) ANSIFLAG= ;;
   esac
-  ARGS="$TCC$NL-m32$NL-march=$ARCH$NL-static$NL-nostdlib$NL-nostdinc$NL$SFLAG$NL$OFLAG_ARGS$NL$ANSIFLAG$NL$WFLAGS$NL$DEF_ARG$NL$DEF_CMDARG$NL$ARGS$NL$INCLUDEDIR_ARG$NL$OUTFILE_ARG"
+  DARCHFLAG=
+  test "$ARCH" = i386 || DARCHFLAG="-D__${ARCH}__"  # Just a C #define, it doesn't affect TinyCC code generation.
+  ARGS="$TCC$NL-m32$NL-march=$ARCH$NL$DARCHFLAG$NL-static$NL-nostdlib$NL-nostdinc$NL$SFLAG$NL$OFLAG_ARGS$NL$ANSIFLAG$NL$WFLAGS$NL$DEF_ARG$NL$DEF_CMDARG$NL$ARGS$NL$INCLUDEDIR_ARG$NL$OUTFILE_ARG"
+  DARCHFLAG=  # Prevent reuse later.
 else
   # This also works with TCC, but it's too much cruft.
   # Add $INCLUDEDIR_ARG last, so that -I... specified by the user takes precedence. !! TODO(pts): Does GCC do this or the opposite?
@@ -751,6 +753,7 @@ else
   # !! TODO(pts): Document -Wl,-N for merging sections .text and .data.
   ARGS="$TCC$NL$GCC$NL$GCC_BARG$NL-m32$NL-march=$ARCH$NL-static$NL-fno-pic$NL-U_FORTIFY_SOURCE$NL-fcommon$NL-fno-stack-protector$NL-fno-unwind-tables$NL-fno-asynchronous-unwind-tables$NL-fno-builtin$NL-fno-ident$NL-fsigned-char$NL-ffreestanding$NL-nostdlib$NL-nostdinc$NL$SFLAG$NL$OFLAG_ARGS$NL$ANSIFLAG$NL$WFLAGS$NL$DEF_ARG$NL$DEF_CMDARG$NL$ARGS$NL$INCLUDEDIR_ARG$NL$OUTFILE_ARG"
 fi
+ANSIFLAG= ;  # Prevent reuse later.
 NEED_LIBMINITCC1=
 if test "$DO_ADD_LIB"; then
   LIBWL=
@@ -764,12 +767,19 @@ if test "$DO_ADD_LIB"; then
     LIBFN="$MYDIR/libc/$LIBC/libc.$ARCH.a"
     if ! test -f "$LIBFN"; then
       if test "$LIBC" = minilibc; then
-        if "$MYDIR/build.sh" && test -f "$LIBFN"; then :; else
-          echo "fatal: failed to build libc .a: $LIBFN" >&2
-          exit 3
+        if test "$ARCH" = i586 || test "$ARCH" = i486; then
+          LIBFN="$MYDIR/libc/$LIBC/libc.i386.a"
+        fi
+        if ! test -f "$LIBFN"; then
+          if "$MYDIR/build.sh" && test -f "$LIBFN"; then :; else
+            echo "fatal: failed to build libc .a: $LIBFN" >&2
+            exit 3
+          fi
         fi
       else
-        if test -f "$MYDIR/libc/$LIBC/libc.i686.a"; then
+        if test -f "$MYDIR/libc/$LIBC/libc.i386.a"; then  # Use libc precompiled for older arch.
+          LIBFN="$MYDIR/libc/$LIBC/libc.i386.a"
+        elif test -f "$MYDIR/libc/$LIBC/libc.i686.a"; then  # Example: minicc --uclibc -march=i386
           echo "fatal: the libc wasn't compiled for -march=$ARCH, use -march=i686" >&2
           exit 3
         else
@@ -820,14 +830,14 @@ if test "$DO_ADD_LIB"; then
   else NEED_LIBMINITCC1=
   fi
   if test "$NEED_LIBMINITCC1"; then
-    LIBFN="$MYDIR/helper_lib/libminitcc1.a"
-    if ! test -f "$LIBFN"; then
-      if "$MYDIR/build.sh" && test -f "$LIBFN"; then :; else
-       echo "fatal: failed to build libtcc1 .a: $LIBFN" >&2
+    LIBMTFN="$MYDIR/helper_lib/libminitcc1.a"
+    if ! test -f "$LIBMTFN"; then
+      if "$MYDIR/build.sh" && test -f "$LIBMTFN"; then :; else
+       echo "fatal: failed to build libtcc1 .a: $LIBMTFN" >&2
         exit 3
       fi
     fi
-    test "$DO_SMART" = 0 && ARGS="$ARGS$NL$LIBFN"
+    test "$DO_SMART" = 0 && ARGS="$ARGS$NL$LIBMTFN"
   fi
   if test "$USE_UTCC"; then
     # OBJFN="$MYDIR/helper_lib/start_uclibc_linux.o"  # Not needed.
@@ -968,6 +978,8 @@ if test "$GCC" || test -z "$IS_TCCLD"; then
        -fno-signed-char | -funsigned-char) WJFLAG=-D__CHAR_UNSIGNED__ ;;  # For GCC compatibility.
        -finline-fp-rounding) WARGS="$WARGS$NL-zri" ;;  # To prevent the call to __CHP.
        -march=i386) WARGS="$WARGS$NL-3r" ;;
+       -march=i486) WARGS="$WARGS$NL-4r" ;;
+       -march=i586) WARGS="$WARGS$NL-5r" ;;
        -march=i686) WARGS="$WARGS$NL-6r" ;;  # !! TODO(pts): Does it generate larger code? Then change the default with -Os.
        -mconst-seg) WECFLAG=; WOSSFLAG=-oss; WARGS="$WARGS$NL-fpc" ;;  # Put string literals to segment CONST. As a side-effect, -fpc (-msoft-float) must also be enabled. This is not a GCC flag, it's `minicc --wcc' only.
        -mno-80387 | -msoft-float) WARGS="$WARGS$NL-fpc" ;;  # Useful for string merging in .rodata.str1.1.
@@ -1314,7 +1326,7 @@ if test "$DO_SMART" != 0; then  # Smart linking.
     fi
     # /usr/bin/objdump -d "$OUTFILE.smart.o"
     # /usr/bin/nm "$OUTFILE.smart.o" | grep -v ' [dtbr] '
-    ARGS="$ARGS$NL$OUTFILE.smart.o$NL$MYDIR/libc/$LIBC/libc.$ARCH.a$NL$LIBMINITCC1"
+    ARGS="$ARGS$NL$OUTFILE.smart.o$NL$LIBFN$NL$LIBMINITCC1"
     test "$HAD_V" && echo "info: running $WHAT again:" $ARGS >&2  # GCC also writes to stderr.
     $ARGS >&2; EC="$?"  # Redirect linker stdout to stderr.
     if test "$STRIP_MODE" != 0 && test "$EC" = 0; then :
