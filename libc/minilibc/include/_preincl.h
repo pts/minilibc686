@@ -111,7 +111,13 @@
 #    define __LIBC_PACKED_STRUCT _Packed
 #    define __LIBC_PACKED
 #    define __GNUC_PREREQ(maj, min) 0
-#  else  /* GCC, Clang, TinyCC. */
+#  else  /* GCC, Clang, TinyCC. GCC doesn't define __i586__ if __i686__ is defined etc. */
+#    if !defined(__i386__)
+#      error This libc requires i386.
+#    endif
+#    if defined(__MMX__) && !defined(__i586__) && !defined(__i686__)  /* gcc -march=...: pentium4 pentium4m prescott nocona core2 nehalem westmere sandybridge ivybridge haswell broadwell skylake bonnell silvermont knl skylake-avx512 k6 k6-2 k6-3 athlon athlon-tbird athlon-4 athlon-xp athlon-mp k8 opteron athlon64 athlon-fx k8-sse3 opteron-sse3 athlon64-sse3 amdfam10 barcelona bdver1 bdver2 bdver3 bdver4 znver1 btver1 btver2 eden-x2 eden-x4 nano nano-1000 nano-2000 nano-3000 nano-x2 nano-x4 geode */
+#      define __i686__ 1
+#    endif
 #    if defined(__GNUC__) && defined(__GNUC_MINOR__)
 #      define __GNUC_PREREQ(maj, min) ((__GNUC__ << 16) + __GNUC_MINOR__ >= ((maj) << 16) + (min))
 #    else
