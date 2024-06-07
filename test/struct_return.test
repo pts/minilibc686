@@ -1,0 +1,2 @@
+_utcc -o test_struct_return.prog "$TESTDIR"/test_struct_return.c
+./test_struct_return.prog

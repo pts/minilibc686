@@ -1,0 +1,2 @@
+_utcc -o test_vla.prog "$TESTDIR"/test_vla.c
+./test_vla.prog

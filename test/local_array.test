@@ -1,0 +1,2 @@
+_utcc -o test_local_array.prog "$TESTDIR"/test_local_array.c
+./test_local_array.prog

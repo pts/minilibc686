@@ -1,0 +1,2 @@
+_utcc -o test_tcc26_func_refs.prog "$TESTDIR"/test_tcc26_func_refs.c
+./test_tcc26_func_refs.prog
