@@ -30,7 +30,7 @@ export LC_ALL=C  # For consistency. With Busybox we don't need it, because the e
 # Some gcc flags: -Werror=implicit-function-declaration -freestanding -ansi -pedantic
 # Out of this TinyCC rejects -ansi.
 _utcc() { "$TESTTCC" -s -Os -W -Wall -Werror=implicit-function-declaration -nostdinc -I"$INCLUDE" -D"__asm__(x)=" -D__UCLIBC__ "$@"; }
-_mtcc() { "$TESTTCC" -s -Os -W -Wall -Werror=implicit-function-declaration -nostdlib -nostdinc -I"$INCLUDE" -D__MINILIBC686__ "$@"; }
+_mtcc() { "$TESTTCC" -s -Os -W -Wall -Werror=implicit-function-declaration -nostdlib -nostdinc -I"$INCLUDE" -U__UCLIBC__ -D__MINILIBC686__ "$@"; }
 _nasm() {
   local FNASM FBASE DEFINES=
   while test "${1%-[DU]?*}" != "$1"; do DEFINES="$DEFINES $1"; shift; done

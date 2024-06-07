@@ -159,7 +159,7 @@ fi
 
 GCC="$MYDIR/tools/wcc386"  # Use the OpenWatcom C compiler by default.
 TCC=
-USE_UTCC=
+USE_UTCC=  # Use the uClibc bundled within miniutcc.
 CMD=minicc
 case "$1" in
  "" | -* | *.[aocisShHCmMfFd] | *.c[cp] | *.[ch]pp | *.cxx | *.asm | *.[nw]asm | *.m[im] | *.mii | *.ii | *.c++ | *.[CH]PP | *.h[hp] | *.hxx | *.hpp | *.h++ | *.tcc | *.for | *.ftn | *.FOR | *.fpp | *.FPP | *.FTN | *.[fF][0-9][0-9] | *.go | *.brig | *.java | *.ad[sb] | *.d[id] | *.sx | *.obj) ;;  # A flag or a source file name is not a program name.
@@ -720,6 +720,7 @@ if test -z "$HAD_OFLAG"; then  # Add some size-optimizing flags.
 fi
 INCLUDEDIR_ARG=
 DEF_ARG=
+test "$TCC" && test -z "$USE_UTCC" && DEF_ARG="-U__UCLIBC__" # If not using the bundled libc, then cancel predefined macro __UCLIBC__ in miniutcc.
 NASM_DEF_ARG=
 test "$ARCH" = i686 || NASM_DEF_ARG=-DCONFIG_I386
 
