@@ -999,6 +999,8 @@ if test "$GCC" || test -z "$IS_TCCLD"; then
        -Wno-unused-parameter) WARGS="$WARGS$NL-wcd=303" ;;
        -Wunused-variable) WARGS="$WARGS$NL-wce=202" ;;
        -Wno-unused-variable) WARGS="$WARGS$NL-wcd=202" ;;
+       -Wnewline-eof) WARGS="$WARGS$NL-wce=138" ;;  # Clang (not GCC).
+       -Wno-newline-eof) WARGS="$WARGS$NL-wcd=138" ;;
        -Wpointer-sign) WARGS="$WARGS$NL-wce=1180$NL-wce=1181" ;;
        -Wno-pointer-sign) WARGS="$WARGS$NL-wcd=1180$NL-wcd=1181" ;;
        -Wmissing-field-initializers | -Wno-missing-field-initializers | -Wunused-local-typedefs | -Wno-unused-local-typedefs) ;;  # Silently ignore.
