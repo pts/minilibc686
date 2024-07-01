@@ -997,6 +997,8 @@ if test "$GCC" || test -z "$IS_TCCLD"; then
        -Wformat | -Wno-format) ;;  # Silently ignore.
        -Wunused-parameter) WARGS="$WARGS$NL-wce=303" ;;
        -Wno-unused-parameter) WARGS="$WARGS$NL-wcd=303" ;;
+       -Wunused-variable) WARGS="$WARGS$NL-wce=202" ;;
+       -Wno-unused-variable) WARGS="$WARGS$NL-wcd=202" ;;
        -Wpointer-sign) WARGS="$WARGS$NL-wce=1180$NL-wce=1181" ;;
        -Wno-pointer-sign) WARGS="$WARGS$NL-wcd=1180$NL-wcd=1181" ;;
        -Wmissing-field-initializers | -Wno-missing-field-initializers) ;;  # Silently ignore.
