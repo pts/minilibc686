@@ -1512,7 +1512,7 @@ my @gcc_cmds = (  # GCC and Clang C compilers.
     ["clang", "-march=i686", "-fomit-frame-pointer", @clang_flags, @cflags],
 );
 @gcc_cmds = grep { !grep { $_ eq "-march=i686" } @$_ } @gcc_cmds if !$is_i686_enabled;
-my @owcc_flags = qw(-blinux -Os -fno-stack-check -fsigned-char -march=i386 -mabi=cdecl -W -Wall -Wextra -Werror);
+my @owcc_flags = qw(-blinux -Os -fno-stack-check -fsigned-char -fno-short-enum -march=i386 -mabi=cdecl -W -Wall -Wextra -Werror);
 my @owcc_cmds = (  # OpenWatcom C compiler. Good or optimizing for size.
     ["owcc", @owcc_flags, @cflags],
     ["owcc", "-frerun-optimizer", @owcc_flags, @cflags],

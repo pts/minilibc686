@@ -934,6 +934,7 @@ if test "$GCC" || test -z "$IS_TCCLD"; then
     WFFLAG=-of+  # GCC -fno-omit-frame-pointer default.
     WSFLAG=
     WJFLAG=-j  # `signed char' is GCC default.
+    WEIFLAG=-ei  # -fno-short-enums is GCC default.
     WECFLAG=-ec
     WOSSFLAG=  # Flag for tools/omf2emf.
     # Not specifying -zls makes wcc386 insert these extern symbols:
@@ -976,6 +977,8 @@ if test "$GCC" || test -z "$IS_TCCLD"; then
        -mautosym) WAUTOSYMFLAG= ;;  # minicc-specific.
        -fsigned-char | -fno-unsigned-char) WJFLAG=-j ;;
        -fno-signed-char | -funsigned-char) WJFLAG=-D__CHAR_UNSIGNED__ ;;  # For GCC compatibility.
+       -fshort-enums) WEIFLAG=-em ;;
+       -fno-short-enums) WEIFLAG=-ei ;;
        -finline-fp-rounding) WARGS="$WARGS$NL-zri" ;;  # To prevent the call to __CHP.
        -march=i386) WARGS="$WARGS$NL-3r" ;;
        -march=i486) WARGS="$WARGS$NL-4r" ;;
@@ -1027,7 +1030,7 @@ if test "$GCC" || test -z "$IS_TCCLD"; then
       esac
     done
     test "$HAD_NOINLINE" && WARGS="$WARGS$NL-oe0"
-    CCARGS="$GCC$NL$WSFLAG$NL$WJFLAG$NL$WFFLAG$NL$WAFLAG$NL$WAUTOSYMFLAG$NL$WECFLAG$NL$WARGS"; WARGS=
+    CCARGS="$GCC$NL$WSFLAG$NL$WJFLAG$NL$WEIFLAG$NL$WFFLAG$NL$WAFLAG$NL$WAUTOSYMFLAG$NL$WECFLAG$NL$WARGS"; WARGS=
     # TODO(pts): Add -m... flag for string optimizations (like in minilibc32).
   elif test "$IS_CC1"; then  # If $IS_CC1, convert $CCARGS for GCC cc1.
     SKIPARG=
