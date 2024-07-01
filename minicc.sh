@@ -1001,7 +1001,7 @@ if test "$GCC" || test -z "$IS_TCCLD"; then
        -Wno-unused-variable) WARGS="$WARGS$NL-wcd=202" ;;
        -Wpointer-sign) WARGS="$WARGS$NL-wce=1180$NL-wce=1181" ;;
        -Wno-pointer-sign) WARGS="$WARGS$NL-wcd=1180$NL-wcd=1181" ;;
-       -Wmissing-field-initializers | -Wno-missing-field-initializers) ;;  # Silently ignore.
+       -Wmissing-field-initializers | -Wno-missing-field-initializers | -Wunused-local-typedefs | -Wno-unused-local-typedefs) ;;  # Silently ignore.
        -Wunused-result | -Wno-unused-result) ;;  # Silently ignore.
        -Wshift-negative-value | -Wno-shift-negative-value)  ;;  # Silently ignore.
        -Wall) test "$WHADWEXTRA" || WARGS="$WARGS$NL-w4$NL-wcd=303" ;;
