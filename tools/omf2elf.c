@@ -2,7 +2,7 @@
  * omf2elf.c: convert i386 OMF .obj object file to i386 ELF relocatable .o object file
  * by pts@fazekas.hu at Thu Jun  1 14:22:39 CEST 2023
  *
- * Compile: minicc -o tools/omf2elf tools/omf2elf.c
+ * Compile: pathbin/minicc --noenv -o tools/omf2elf tools/omf2elf.c
  *
  * This program was only tested on OMF .obj files created by OpenWatcom
  * wcc386. It will probably fail on the output of assemblers or other C

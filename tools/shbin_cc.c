@@ -1,6 +1,6 @@
 /* by pts@fazekas.hu at Fri Jun  9 13:11:03 CEST 2023
  *
- * Compile: ./minicc --gcc=4.8 -o shbin/cc tools/shbin_cc.c
+ * Compile: pathbin/minicc --noenv --gcc=4.8 -o shbin/cc tools/shbin_cc.c
  *
  * This program is roughly equivalent to this shell script (with #!/bin/sh):
  *

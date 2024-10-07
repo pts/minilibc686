@@ -2,7 +2,7 @@
  * sstrip: strip parts of ELF executables not needed for execution
  * by pts@fazekas.hu at Wed May 24 02:20:35 CEST 2023
  *
- * Compile: ./minicc --noenv --gcc=4.8 -o tools/sstrip tools/sstrip.c
+ * Compile: pathbin/minicc --noenv --gcc=4.8 -o tools/sstrip tools/sstrip.c
  *
  * The command-line flags tend to be compatible with GNU strip(1) and
  * [ELF Kickers](https://www.muppetlabs.com/~breadbox/software/elfkickers.html)

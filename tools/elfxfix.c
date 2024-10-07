@@ -2,7 +2,7 @@
  * elfxfix: do various fixes on ELF executables
  * by pts@fazekas.hu at Wed May 24 02:20:35 CEST 2023
  *
- * Compile: minicc --noenv --gcc=4.8 -o tools/elfxfix.new tools/elfxfix.c
+ * Compile: pathbin/minicc --noenv --gcc=4.8 -o tools/elfxfix.new tools/elfxfix.c
  */
 
 #include <fcntl.h>
