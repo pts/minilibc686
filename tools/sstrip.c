@@ -283,6 +283,7 @@ int main(int argc, char **argv) {
   last_off = ehdr.e_phoff + want;
   for (phdr = phdrs; phdr != phdr_end; ++phdr) {
     if (phdr->p_type == PT_LOAD) {
+      if (flag_a && phdr->p_paddr == 0) phdr->p_paddr = phdr->p_vaddr;
       if (flag_a && is_first_pt_load && phdr->p_offset < phdr->p_align &&
           phdr->p_offset > 0 &&
           (phdr->p_offset & (phdr->p_align - 1)) == (phdr->p_vaddr & (phdr->p_align - 1))) {
