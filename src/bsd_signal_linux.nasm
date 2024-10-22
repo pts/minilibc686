@@ -26,18 +26,18 @@ section .bss align=1
 
 section .text
 mini_bsd_signal:  ; sighandler_t bsd_signal(int signum, sighandler_t handler);
-		enter 0x20, 0
+		enter 0x20, 0  ; 0x20 == 2 * 0x10: first act at &[ebp-0x20], then oldact at &[ebp-0x10].
 		mov eax, [ebp+0xc]
-		mov [ebp-0x20], eax  ; handler.
-		mov dword [ebp-0x1c], 0x10000000  ; SA_RESTART.
+		mov [ebp-0x20+0*4], eax  ; handler.
+		mov dword [ebp-0x20+2*4], 0x10000000  ; sa_flags := SA_RESTART.
 		xor eax, eax
-		mov [ebp-0x14], eax  ; act.sa_mask.sig[0] := 0.
-		lea eax, [ebp-0x10]  ; Argument oldact of sys_sigaction(2).
+		mov [ebp-0x20+1*4], eax  ; act.sa_mask.sig[0] := 0. sizeof(sa_mask) is always 4 for Linux i386 SYS_sigaction.
+		lea eax, [ebp-0x10]  ; Argument oldact of SYS_sigaction.
 		push eax
 		lea eax, [ebp-0x20]
 		push eax  ; Argument act of sys_sigaction(2).
-		push dword [ebp+0x8]  ; Argument sig of sys_sigaction(2).
-		mov al, 67  ; __NR_sigaction for sys_sigaction(2). Shorter code (because fewer arguments) than __NR_sys_sigaction.
+		push dword [ebp+0x8]  ; Argument sig of SYS_sigaction.
+		mov al, 67  ; SYS_sigaction for sigaction(2). Shorter code (because fewer arguments) than SYS_rt_sigaction. It also uses a different struct sigaction (both size and layout).
 		call mini_syscall3_AL
 		test eax, eax
 		jnz .done  ; EAX == SIG_ERR == -1.
