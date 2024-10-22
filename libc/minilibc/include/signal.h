@@ -6,7 +6,7 @@
   typedef sighandler_t sig_t;  /* For BSD. */
 
 #  define __WANT_POSIX1B_SIGNALS__
-#  define NSIG 32  /* Unused, use _NSIG instead. */
+#  define NSIG 32  /* SYS_rt_sigaction uses _NSIG instead. */
 
 #  define SIG_DFL ((sighandler_t)0L)
 #  define SIG_IGN ((sighandler_t)1L)
@@ -29,7 +29,7 @@
 #  define SIG_SETMASK 2
 
 #  if defined(__i386__) || defined(__386__) || defined(_M_IX86) || defined(__amd64__) || defined(__x86_64__) || defined(_M_X64) || defined(_M_AMD64) || defined(__X86_64__)
-#    define _NSIG 65
+#    define _NSIG 65  /* It's actually 64 signals whose mask fits to an uint64_t. Only relevant for SYS_rt_sigaction, which would fail with a different value. */
 #    define SIGHUP 1
 #    define SIGINT 2
 #    define SIGQUIT 3
@@ -68,37 +68,42 @@
 #    define SIGLOST SIGPWR
 #    define SIGRTMIN 32
 #    define SIGRTMAX (_NSIG-1)
-    typedef struct sigset_t {
-      unsigned long sig[(_NSIG - 1 + 8 * sizeof(unsigned long) + (8 * sizeof(unsigned long) - 1)) / (8 * sizeof(unsigned long))];
-    } sigset_t;
-    struct siginfo_t;
-    struct sigaction {
-      union {
-        sighandler_t _sa_handler;
-        void (*_sa_sigaction)(int, struct siginfo_t*, void*);
-      } _u;
-      unsigned long sa_flags;
-      void (*sa_restorer)(void);
-      sigset_t sa_mask;
-    };
-#    define sa_handler _u._sa_handler
-#    define sa_sigaction _u._sa_sigaction
+#    ifdef __MINILIBC686__  /* Other libcs have a different layout for `struct sigaction' and different size for sa_mask. */
+      typedef struct sigset_t {
+        /* unsigned long sig[1]; */  /* This is only valid for SYS_sigaction. The __MINILIBC686__ sigaction(...) function calls SYS_rt_sigaction. */
+        unsigned long sig[(_NSIG - 1 + (8 * sizeof(unsigned long) - 1)) / (8 * sizeof(unsigned long))];  /* This is only valid for SYS_rt_sigaction, called by the __MINILIBC686__ sigaction(...) function. */
+      } sigset_t;
+      struct siginfo_t;
+      struct sigaction {  /* Matches the Linux i386 kernel layout for SYS_rt_sigaction. */
+        union {
+          sighandler_t _sa_handler;
+          void (*_sa_sigaction)(int, struct siginfo_t*, void*);
+        } _u;
+        unsigned long sa_flags;
+        void (*sa_restorer)(void);
+        sigset_t sa_mask;  /* Always 32 bits for Linux i386 SYS_sigaction. For SYS_rt_sigaction, it would be 64 bits. */
+      };
+#      define sa_handler _u._sa_handler
+#      define sa_sigaction _u._sa_sigaction
+#    endif
 #  else  /* else i386 or amd64 */
 #    error Unsupported architecture for <signal.h>.
 #  endif  /* else i386 or amd64 */
 
   __LIBC_FUNC(int, raise, (int sig), __LIBC_NOATTR);
-  __LIBC_FUNC(int, sigaction, (int signum, const struct sigaction *act, struct sigaction *oldact), __LIBC_NOATTR);
-  __LIBC_FUNC(int, sigemptyset, (sigset_t *set), __LIBC_NOATTR);
-  __LIBC_FUNC(int, sigfillset, (sigset_t *set), __LIBC_NOATTR);
-  __LIBC_FUNC(int, sigaddset, (sigset_t *set, int signum), __LIBC_NOATTR);
-  __LIBC_FUNC(int, sigdelset, (sigset_t *set, int signum), __LIBC_NOATTR);
-  __LIBC_FUNC(int, sigismember, (const sigset_t *set, int signum), __LIBC_NOATTR);
+#  ifdef __MINILIBC686__  /* Other libcs have a different layout for `struct sigaction' and different size for sa_mask. */
+    __LIBC_FUNC(int, sigaction, (int signum, const struct sigaction *act, struct sigaction *oldact), __LIBC_NOATTR);
+    __LIBC_FUNC(int, sigemptyset, (sigset_t *set), __LIBC_NOATTR);
+    __LIBC_FUNC(int, sigfillset, (sigset_t *set), __LIBC_NOATTR);
+    __LIBC_FUNC(int, sigaddset, (sigset_t *set, int signum), __LIBC_NOATTR);
+    __LIBC_FUNC(int, sigdelset, (sigset_t *set, int signum), __LIBC_NOATTR);
+    __LIBC_FUNC(int, sigismember, (const sigset_t *set, int signum), __LIBC_NOATTR);
+#  endif
 #  if defined(__UCLIBC__) || defined(__GLIBC__) || defined(__MINILIBC686__)  /* On __dietlibc__, don't use signal(...), it's .sa_flags are unreliable. Use sigaction(...) instead with .sa_flags == SA_RESTART. */
     __LIBC_FUNC(sighandler_t, bsd_signal,  (int signum, sighandler_t handler), __LIBC_NOATTR);  /* BSD semantics: .sa_flags == SA_RESTART. */
     __LIBC_FUNC(sighandler_t, sysv_signal, (int signum, sighandler_t handler), __LIBC_NOATTR);  /* SYSV semantics: .sa_flags == SA_RESETHAND | SA_NODEFER. */
 #    ifdef __MINILIBC686__
-      __LIBC_FUNC(sighandler_t, sys_signal,  (int signum, sighandler_t handler), __LIBC_NOATTR);  /* SYSV semantics: .sa_flags == SA_RESETHAND | SA_NODEFER. Linux-specific. */
+      __LIBC_FUNC(sighandler_t, sys_signal,  (int signum, sighandler_t handler), __LIBC_NOATTR);  /* SYSV semantics: .sa_flags == SA_RESETHAND | SA_NODEFER. Linux-specific, qemu-i386 doesn't support it. */
 #    else
 #      include <features.h>
 #    endif
