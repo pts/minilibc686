@@ -93,6 +93,7 @@
   __LIBC_FUNC(int, sigfillset, (sigset_t *set), __LIBC_NOATTR);
   __LIBC_FUNC(int, sigaddset, (sigset_t *set, int signum), __LIBC_NOATTR);
   __LIBC_FUNC(int, sigdelset, (sigset_t *set, int signum), __LIBC_NOATTR);
+  __LIBC_FUNC(int, sigismember, (const sigset_t *set, int signum), __LIBC_NOATTR);
 #  if defined(__UCLIBC__) || defined(__GLIBC__) || defined(__MINILIBC686__)  /* On __dietlibc__, don't use signal(...), it's .sa_flags are unreliable. Use sigaction(...) instead with .sa_flags == SA_RESTART. */
     __LIBC_FUNC(sighandler_t, bsd_signal,  (int signum, sighandler_t handler), __LIBC_NOATTR);  /* BSD semantics: .sa_flags == SA_RESTART. */
     __LIBC_FUNC(sighandler_t, sysv_signal, (int signum, sighandler_t handler), __LIBC_NOATTR);  /* SYSV semantics: .sa_flags == SA_RESETHAND | SA_NODEFER. */
