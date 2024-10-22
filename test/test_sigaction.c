@@ -32,11 +32,11 @@ static sighandler_t my_bsd_signal(int sig, sighandler_t handler) {
   act.sa_flags = SA_RESTART;
   if (1) { /* Not needed, just check that mini_sigemptyset(...) below works. */
     act.sa_mask.sig[0] = -1UL;
-    if (_NSIG - 1 >= 8 * sizeof(unsigned long)) {
+    if (_NSIG - 1 > 8 * sizeof(unsigned long)) {
       act.sa_mask.sig[1] = -1UL;  /* Only 4+4 bytes to clear for i386. */
-      if (_NSIG - 1 >= 2 * 8 * sizeof(unsigned long)) {
+      if (_NSIG - 1 > 2 * 8 * sizeof(unsigned long)) {
         act.sa_mask.sig[2] = -1UL;
-        if (_NSIG - 1 >= 3 * 8 * sizeof(unsigned long)) {
+        if (_NSIG - 1 > 3 * 8 * sizeof(unsigned long)) {
           act.sa_mask.sig[3] = -1UL;
         }
       }
@@ -44,8 +44,8 @@ static sighandler_t my_bsd_signal(int sig, sighandler_t handler) {
   }
   mini_sigemptyset(&act.sa_mask);
   if (1) {  /* Not needed, just for checking mini_sigaddset(...) later. */
-    if (sig - 1 < sizeof(unsigned long) * 8) act.sa_mask.sig[0] |= 1 << (sig - 1);
-    if (64 - 1 >= sizeof(unsigned long) * 8) act.sa_mask.sig[1] |= 1 << ((64 - 1) - sizeof(unsigned long) * 8);
+    if (sig - 1 < 8 * sizeof(unsigned long)) act.sa_mask.sig[0] |= 1 << (sig - 1);
+    if (64 - 1 >= 8 * sizeof(unsigned long)) act.sa_mask.sig[1] |= 1 << ((64 - 1) - sizeof(unsigned long) * 8);
   }
   if (mini_sigaction(sig, &act, &oact) < 0) return SIG_ERR;
   return oact.sa_handler;
@@ -81,11 +81,11 @@ int main(int argc, char **argv) {
   if (!is_sigset_eq(&se, &oact.sa_mask)) return 121;
   if (mini_sigfillset(&oact.sa_mask) != 0) return 122;
   se.sig[0] = -1UL;
-  if (_NSIG - 1 >= 8 * sizeof(unsigned long)) {
+  if (_NSIG - 1 > 8 * sizeof(unsigned long)) {
     se.sig[1] = -1UL;  /* Only 4+4 bytes to clear for i386. */
-    if (_NSIG - 1 >= 2 * 8 * sizeof(unsigned long)) {
+    if (_NSIG - 1 > 2 * 8 * sizeof(unsigned long)) {
       se.sig[2] = -1UL;
-      if (_NSIG - 1 >= 3 * 8 * sizeof(unsigned long)) {
+      if (_NSIG - 1 > 3 * 8 * sizeof(unsigned long)) {
         se.sig[3] = -1UL;
       }
     }
