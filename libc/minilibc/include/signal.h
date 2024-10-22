@@ -101,6 +101,7 @@
 #  endif
 #  if defined(__UCLIBC__) || defined(__GLIBC__) || defined(__MINILIBC686__)  /* On __dietlibc__, don't use signal(...), it's .sa_flags are unreliable. Use sigaction(...) instead with .sa_flags == SA_RESTART. */
     __LIBC_FUNC(sighandler_t, bsd_signal,  (int signum, sighandler_t handler), __LIBC_NOATTR);  /* BSD semantics: .sa_flags == SA_RESTART. */
+    /* !! TODO(pts): Add sysv_signal_compat(...) which uses SYS_sigaction. SYS_signal is not supported by qemu-i386. */
     __LIBC_FUNC(sighandler_t, sysv_signal, (int signum, sighandler_t handler), __LIBC_NOATTR);  /* SYSV semantics: .sa_flags == SA_RESETHAND | SA_NODEFER. */
 #    ifdef __MINILIBC686__
       __LIBC_FUNC(sighandler_t, sys_signal,  (int signum, sighandler_t handler), __LIBC_NOATTR);  /* SYSV semantics: .sa_flags == SA_RESETHAND | SA_NODEFER. Linux-specific, qemu-i386 doesn't support it. */
