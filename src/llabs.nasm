@@ -2,7 +2,7 @@
 ; written by pts@fazekas.hu at Thu Oct 24 23:48:55 CEST 2024
 ; Compile to i386 ELF .o object: nasm -O999999999 -w+orphan-labels -f elf -o llabs.o llabs.nasm
 ;
-; Code size: 0x16 bytes.
+; Code size: 0x14 bytes.
 ;
 ; Uses: %ifdef CONFIG_PIC
 ;
@@ -27,14 +27,13 @@ section .bss align=1
 section .text
 mini_llabs:  ; long long mini_llabs(long long x);
 		mov edx, [esp+8]
-		mov ecx, edx
-		sar ecx, 0x1f
 		mov eax, [esp+4]
-		add eax, ecx
-		adc edx, ecx
-		xor edx, ecx
-		xor eax, ecx
-		ret
+		test edx, edx
+		jns .done
+		neg eax  ; Also sets CF := (EAX was 0).
+		adc edx, byte 0
+		neg edx
+.done:		ret
 
 %ifdef CONFIG_PIC  ; Already position-independent code.
 %endif
