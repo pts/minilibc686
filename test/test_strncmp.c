@@ -1,9 +1,9 @@
 typedef unsigned long size_t;
 
+extern int mini_strncmp(const char *s1, const char *s2, size_t n);  /* Function under test. */
+
 #if 0
 #define mini_strncmp MMM
-
-extern int mini_strncmp(const char *s1, const char *s2, size_t n);  /* Function under test. */
 
 int mini_strncmp(const char *s1, const char *s2, size_t n) {
   register const unsigned char* a=(const unsigned char*)s1;
