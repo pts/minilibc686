@@ -1,0 +1,5 @@
+_nasm2 abs.o
+_nasm2 llabs.o
+_nasm_start start_linux.o
+_mtcc -o test_abs.prog "$TESTDIR"/test_abs.c abs.o llabs.o start_linux.o
+./test_abs.prog

@@ -42,7 +42,7 @@
 #  define INFINITY  (__extension__ (float)0x1.0p255)
 #  define NAN       (__extension__ ((union { unsigned __i;            float __f; })  { 0x7fc00000U }).__f)
 #elif defined(__GNUC__) || defined(__TINYC__)
-#  define HUGE_VAL  (__extension__ ((union { unsigned long long __ll; double __d; }) { 0x7ff0000000000000ULL }).__d)
+#  define HUGE_VAL  (__extension__ ((union { __extension__ unsigned long long __ll; double __d; }) { 0x7ff0000000000000ULL }).__d)
 #  define HUGE_VALF (__extension__ ((union { unsigned __i;            float __f; })  { 0x7f800000U }).__f)
 #  define HUGE_VALL ((long double) HUGE_VAL)
 #  define INFINITY  (__extension__ ((union { unsigned __i;            float __f; })  { 0x7f800000U }).__f)  /* Same as HUFE_VALF. */
@@ -57,7 +57,7 @@
 #  define NAN       __float_nan
 #endif
 #if 0 && defined(__i386__)  /* Works in __GNUC__, __TINYC__ and __WATCOMC__, but it is a bit inefficient. */
-static __inline__ double __get_huge_val(void) { static union { unsigned long long __ll; double __d; } __u = { 0x7ff0000000000000ULL }; return __u.__d; }
+static __inline__ double __get_huge_val(void) { static union { __extension__ unsigned long long __ll; double __d; } __u = { 0x7ff0000000000000ULL }; return __u.__d; }
 static __inline__ float __get_huge_valf(void) { static union { unsigned __i; float __f; } __u = { 0x7f800000U }; return __u.__f; }
 #  define HUGE_VAL  (__get_huge_val())
 #  define HUGE_VALF (__get_huge_valf))

@@ -37,6 +37,10 @@ __LIBC_FUNC(int,       atoi,  (const char *nptr), __LIBC_NOATTR);
 __LIBC_FUNC(long,      atol,  (const char *nptr), __LIBC_NOATTR);
 __LIBC_FUNC(__extension__ long long, atoll, (const char *nptr), __LIBC_NOATTR);
 
+__LIBC_FUNC(int, abs, (int x), __LIBC_NOATTR);
+__LIBC_FUNC(long, labs, (long x), __LIBC_NOATTR);
+__LIBC_FUNC(__extension__ long long int, llabs, (long long x), __LIBC_NOATTR);
+
 /* Limitation: it doesn't set errno. */
 __LIBC_FUNC(float, strtof, (const char *nptr, char **endptr), __LIBC_NOATTR);
 /* Limitation: it doesn't set errno. */
@@ -55,7 +59,7 @@ typedef struct { __extension__ long long quot, rem; } lldiv_t;
 #  ifdef __MINILIBC686__
     div_t div(int numerator, int denominator);
     ldiv_t ldiv(long numerator, long denominator);
-    lldiv_t lldiv(long long numerator, long long denominator);
+    lldiv_t lldiv(__extension__ long long numerator, long long denominator);
 #    pragma aux div "_mini_div_RP0W"
 #    pragma aux ldiv "_mini_ldiv_RP0W"
 #    pragma aux lldiv "_mini_ldiv_RP0W"  /* TODO(pts): Not using _mini_lldiv_RP0W, because in __WATCOMC__ sizeof(double) == sizeof(long double). */
