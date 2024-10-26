@@ -1,0 +1,4 @@
+_nasm_start start_linux.o
+_nasm2 pow.o
+_mtcc -o test_pow.prog pow.o "$TESTDIR"/test_pow.c start_linux.o
+./test_pow.prog
