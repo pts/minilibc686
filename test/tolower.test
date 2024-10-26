@@ -1,0 +1,9 @@
+_nasm_start start_linux.o
+_nasm2 tolower.o
+_nasm2 tolower_rp3.o
+_nasm2 toupper.o
+_nasm2 toupper_rp3.o
+_mtcc -o test_tolower.prog tolower.o toupper.o "$TESTDIR"/test_tolower.c start_linux.o
+./test_tolower.prog
+_mtcc -o test_tolower_rp3.prog -DDO_TEST_RP3 tolower_rp3.o toupper_rp3.o "$TESTDIR"/test_tolower.c start_linux.o
+./test_tolower_rp3.prog
