@@ -24,6 +24,8 @@
 #  define FILENAME_MAX 4095
 #endif
 
+#define BUFSIZ 4096
+
 typedef struct _SFS_FILE FILE;  /* Different from _FILE. */
 
 __LIBC_VAR(extern FILE *, stdin);

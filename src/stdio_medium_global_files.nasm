@@ -28,7 +28,7 @@ section .bss align=4
 ; Using the SMGF_ prefix to avoid `equ' conflict with
 ; stdio_medium_flush_opened.nasm, both us and them included from smart.nasm.
 SMGF_SIZEOF_STRUCT_SMS_FILE equ 0x24   ; It matches struct _SMS_FILE defined in c_stdio_medium.c. sizeof(struct _SMS_FILE).
-SMGF_BUF_SIZE equ 0x1000  ; It matches BUF_SIZE defined in c_stdio_medium.c.
+SMGF_BUF_SIZE equ 0x1000  ; It matches BUFSIZ defined in <stdio.h>. It matches BUF_SIZE defined in c_stdio_medium.c.
 %ifndef CONFIG_FILE_CAPACITY
   %define CONFIG_FILE_CAPACITY 20
 %endif
