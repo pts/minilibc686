@@ -267,6 +267,10 @@ _need mini___M_start_flush_opened, mini_fflush
 _need mini___M_start_flush_opened, mini___M_global_files
 _need mini___M_start_flush_opened, mini___M_global_files_end
 _need mini___M_start_flush_opened, mini___M_global_file_bufs
+_need mini_rewind, mini_fseek
+_need mini_freopen, mini___M_jmp_freopen_low
+_need mini_freopen, mini_fclose
+_need mini_fclose, mini_close
 _need mini_fclose, mini_fflush
 _need mini_fwrite, mini_fflush
 _need mini_fseek, mini_fflush
@@ -278,7 +282,7 @@ _need mini_fputc, mini_fputc_RP3
 _need mini_fputc_RP3, mini_write
 _need mini_fputc_RP3, mini_fflush
 _need mini_fflush, mini_write
-;_need mini_fflush, mini___M_discard_buf
+;_need mini_fflush, mini___M_discard_buf  ; Not needed because CONFIG_FLUSH_INLINE_DISCARD_BUF.
 _need mini_getc, mini_fread
 _need mini_fgetc, mini_fread
 _need mini_fgets, mini_fread
@@ -289,6 +293,8 @@ _need mini_fopen, mini___M_discard_buf
 _need mini_fseek, mini___M_discard_buf
 _need mini_exit, mini__exit
 _need mini_fopen, mini_open
+_need mini___M_jmp_freopen_low, mini_open
+_need mini___M_jmp_freopen_low, mini___M_discard_buf
 _need mini_fclose, mini_close
 _need mini_mq_getattr, mini_syscall3_RP1
 _need mini_malloc_simple_unaligned, mini_syscall3_AL
