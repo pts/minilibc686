@@ -198,6 +198,29 @@ _define_needs UNDEFSYMS  ; Must be called before _need and _alias.
 ; src/start_stdio_medium_linux.nasm (read(2), write(2), open(2), close(2),
 ; lseek(2), ioctl(2)), otherwise there will be duplicate symbols.
 ;
+; Definition order: If C needs B and B needs A (transitive), then declar
+; `_need C, B' first, then `_need B, A'.
+;
+; How to resolve dependency errors manually (!! TODO(pts): Better.):
+;
+; 1. Check that `-mno-smart' is a workaround. If not, then it's not a dependency error.
+; 2. Example useless dependency error reported by GNU ld(1):
+;    libc/minilibc/libc.i686.a(start_stdio_medium_linux.o): In function `mini_exit':
+;    src/start_stdio_medium_linux.nasm:(.text+0x21): multiple definition of `mini_exit'
+;    ....smart.o:/home/pts/prg/trusty.i386.dir/tmp/minilibc686/libc/minilibc/smart.nasm:(.text+0x26): first defined here
+;    libc/minilibc/libc.i686.a(start_stdio_medium_linux.o): In function `mini__exit':
+;    ...
+;    libc/minilibc/libc.i686.a(start_stdio_medium_linux.o): In function `mini_ioctl':
+;    src/start_stdio_medium_linux.nasm:(.text+0x66): multiple definition of `mini_ioctl'
+;    ....smart.o:/home/pts/prg/trusty.i386.dir/tmp/minilibc686/libc/minilibc/smart.nasm:(.text+0x67): first defined here
+; 3. Removed start_stdio_medium_linux.o temporarily from build.sh in `LIB_OBJS_SPECIAL_ORDER="stdio_medium_flush_opened.o start_stdio_medium_linux.o"'.
+; 4.  Now GNU ld(1) reports the real error:
+;    .../libc/minilibc/libc.i686.a(stdio_medium_fseek.o): In function `mini_fseek.4':
+;    src/stdio_medium_fseek.nasm:(.text+0x52): undefined reference to `mini_lseek'
+; 5.  Fixed by adding `_need mini_rewind, mini_fseek' (mini_rewind was guessed), and
+;    then running `./build.sh'.
+; 6. Changed `./build.sh' back and rerun `./build.sh'.
+;
 ; TODO(pts): Autogenerate these dependencies.
 _need _start, mini__start
 _need mini_getchar, mini_stdin
