@@ -40,7 +40,7 @@ mini_fclose:
 		jbe .3
 		push ebx
 		call mini_fflush
-		mov esi, eax
+		xchg esi, eax  ; ESI := EAX; EAX := junk.
 		pop edx
 .3:		push dword [ebx+0x10]
 		call mini_close
@@ -53,7 +53,7 @@ mini_fclose:
 		mov [ebx], eax  ; filep->buf_write_ptr = filep->buf_end;  /* Sentinel for future calls to mini_fputc(..., filep). */
 		mov eax, [ebx+0xc]
 		mov [ebx+8], eax  ; filep->buf_read_ptr = filep->buf_last;  /* Sentinel for future calls to mini_fgetc(filep). */
-.1:		mov eax, esi
+.1:		xchg eax, esi  ; EAX := ESI; ESI := junk.
 		pop ebx
 		pop esi
 		ret
