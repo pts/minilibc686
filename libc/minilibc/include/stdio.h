@@ -26,6 +26,8 @@
 
 #define BUFSIZ 4096
 
+#define P_tmpdir "/tmp"
+
 typedef struct _SFS_FILE FILE;  /* Different from _FILE. */
 
 __LIBC_VAR(extern FILE *, stdin);
