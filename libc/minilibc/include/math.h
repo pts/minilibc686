@@ -77,6 +77,10 @@ __LIBC_FUNC(double, pow, (double x, double y), __LIBC_NOATTR);
 
 __LIBC_FUNC(double, ldexp, (double x, int exp), __LIBC_NOATTR);
 
+__LIBC_FUNC(double, floor, (double x), __LIBC_NOATTR);
+
+__LIBC_FUNC(double, ceil, (double x), __LIBC_NOATTR);
+
 #if defined(__UCLIBC__) || defined(__GLIBC__)
   __LIBC_FUNC(int, __isnanf, (float x), __LIBC_NOATTR);
   __LIBC_FUNC(int, __isnan, (double x), __LIBC_NOATTR);

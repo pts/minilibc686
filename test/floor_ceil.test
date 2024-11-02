@@ -1,0 +1,4 @@
+_nasm_start start_linux.o
+_nasm2 floor_ceil.o
+_mtcc -o test_floor_ceil.prog floor_ceil.o "$TESTDIR"/test_floor_ceil.c start_linux.o
+./test_floor_ceil.prog
