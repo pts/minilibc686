@@ -2,7 +2,10 @@
 #define _SYS_TIME_H
 #include <_preincl.h>
 
-typedef long int time_t;
+#ifndef __LIBC_TIME_T_DEFINED
+#  define __LIBC_TIME_T_DEFINED
+  typedef long int time_t;  /* Also defined in <time.h> and <sys/time.h>. */
+#endif
 typedef long int suseconds_t;
 
 struct timeval {

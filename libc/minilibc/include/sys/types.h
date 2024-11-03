@@ -15,6 +15,9 @@ typedef int pid_t;
 typedef int id_t;
 __extension__ typedef long long quad_t;  /* Always 64-bit. */
 __extension__ typedef unsigned long long u_quad_t;  /* Always 64-bit. */
-typedef long int time_t;  /* Also defined in <time.h> and <sys/time.h>. */
+#ifndef __LIBC_TIME_T_DEFINED
+#  define __LIBC_TIME_T_DEFINED
+  typedef long int time_t;  /* Also defined in <time.h> and <sys/time.h>. */
+#endif
 
 #endif  /* _SYS_TYPES_H */
