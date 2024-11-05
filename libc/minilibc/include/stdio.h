@@ -47,6 +47,9 @@ __LIBC_FUNC(int, printf, (const char *format, ...), __attribute__((__format__(__
 __LIBC_FUNC(int, vprintf, (const char *format, __libc__va_list ap), __attribute__((__format__(__printf__, 1, 0))));
 __LIBC_FUNC(int, fprintf, (FILE *filep, const char *format, ...), __attribute__((__format__(__printf__, 2, 3))));
 __LIBC_FUNC(int, vfprintf, (FILE *filep, const char *format, __libc__va_list ap), __attribute__((__format__(__printf__, 2, 0))));
+#ifdef __MINILIBC686__
+  __LIBC_FUNC(void, vfprintf_simple, (FILE *filep, const char *format, __libc__va_list ap), __attribute__((__format__(__printf__, 2, 0))));
+#endif
 __LIBC_FUNC(int, sprintf, (char *str, const char *format, ...), __attribute__((__format__(__printf__, 2, 3))));
 __LIBC_FUNC(int, vsprintf, (char *str, const char *format, __libc__va_list ap), __attribute__((__format__(__printf__, 2, 0))));
 __LIBC_FUNC(int, snprintf, (char *str, size_t size, const char *format, ...), __attribute__((__format__(__printf__, 3, 4))));
