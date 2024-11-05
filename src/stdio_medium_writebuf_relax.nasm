@@ -25,19 +25,19 @@ section .bss align=4
 section .text
 
 mini___M_writebuf_relax_RP1:
-		cmp byte [eax+0x14], 0x4
+		cmp byte [eax+0x14], 4  ; FD_WRITE.
 		jne .23
 		mov edx, [eax+0x1c]
 		mov ecx, [eax+0x4]
 		cmp edx, ecx
 		jbe .23
-		mov byte [eax+0x14], 0x5
+		inc byte [eax+0x14]  ; FD_WRITE_RELAXED.
 		mov [eax+0x1c], ecx
 		mov [eax+0x4], edx
 .23:		ret
 
 mini___M_writebuf_unrelax_RP1:
-		cmp byte [eax+0x14], 0x5
+		cmp byte [eax+0x14], 5  ; FD_WRITE_RELAXED.
 		jne .27
 		push ebx
 		mov ebx, eax
@@ -45,7 +45,7 @@ mini___M_writebuf_unrelax_RP1:
 		call mini_fflush
 		mov edx, [ebx+0x1c]
 		mov ecx, [ebx+0x4]
-		xor byte [ebx+0x14], 0x1
+		dec byte [ebx+0x14]  ; FD_WRITE.
 		mov [ebx+0x4], edx
 		mov [ebx+0x1c], ecx
 		pop edx
