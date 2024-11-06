@@ -2,7 +2,7 @@
 ; written by pts@fazekas.hu at Fri Jun 23 17:01:32 CEST 2023
 ; Compile to i386 ELF .o object: nasm -O999999999 -w+orphan-labels -f elf -o strncmp.o strncmp.nasm
 ;
-; Code size: 0x29 bytes.
+; Code size: 0x26 bytes.
 ;
 ; Uses: %ifdef CONFIG_PIC
 ;
@@ -27,20 +27,19 @@ section .bss align=1
 section .text
 mini_strncmp:  ; int mini_strncmp(const void *s1, const void *s2, size_t n);
 ; Optimized for size. EAX == s1, EDX == s2, EBX(watcall) == n, ECX(rp3) == n.
+		mov ecx, [esp+0xc]  ; n.
+.in_ecx:  ; TODO(pts): Make mini_strcmp(...) call mini_strncmp(?, ?, -1) as mini_strncmp.in_ecx from smart.nasm if both functions are present.
 		push esi
 		push edi
 		mov esi, [esp+0xc]  ; s1.
 		mov edi, [esp+0x10]  ; s2.
-		mov ecx, [esp+0x14]
 		; TODO(pts): Make the code below shorter.
-		xor eax, eax
-		jecxz .done
+		jecxz .equal
 .next:		lodsb
 		scasb
 		je .same_char
-		mov al, 1  ; The highest 24 bits of EAX are already 0.
-		jnc .done
-		neg eax
+		sbb eax, eax
+		sbb eax, byte -1  ; With the previous instruction: EAX := (CF ? -1 : 1).
 		jmp short .done
 .same_char:	test al, al
 		jz .equal
