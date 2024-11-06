@@ -2,6 +2,8 @@
 ; written by pts@fazekas.hu at Fri Nov  1 04:00:47 CET 2024
 ; Compile to i386 ELF .o object: nasm -O999999999 -w+orphan-labels -f elf -o ceil.o ceil.nasm
 ;
+; Code size: 0x28 bytes.
+;
 ; Uses: %ifdef CONFIG_PIC
 ;
 
