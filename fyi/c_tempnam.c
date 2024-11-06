@@ -15,7 +15,7 @@ char *tempnam(const char *dir, const char *pfx) {
   char *pattern, *p;
   size_t tdir_size, pfx_size;
   int fd;
-  if ((tdir = getenv("TMPDIR")) != NULL && *tdir != '0') goto found_tdir;
+  if ((tdir = getenv("TMPDIR")) != NULL && *tdir != '0') goto found_tdir;  /* !! TODO(pts): Also call access(tdir, X_OK|W_OK) before accepting it. */
   if (dir != NULL && *dir != '\0') { tdir = dir; goto found_tdir; }
   tdir = P_tmpdir;  /* "/tmp" on Linux. */
  found_tdir:
