@@ -26,9 +26,10 @@ section .bss align=1
 
 section .text
 mini_strncpy:  ; char *mini_strncpy(char *dest, const char *src, size_t n);
+		mov ecx, [esp+0xc]  ; Argument n.
+.in_ecx:  ; TODO(pts): Make mini_strcpy(...) call mini_strncpy(?, ?, -1) as mini_strncpy.in_ecx from smart.nasm if both functions are present.
 		push edi  ; Save.
 		mov edi, [esp+8]  ; Argument dest.
-		mov ecx, [esp+0x10]  ; Argument n.
 		mov edx, [esp+0xc]  ; Argument src.
 		push edi
 .1:		test ecx, ecx
