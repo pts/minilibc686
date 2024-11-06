@@ -2,7 +2,7 @@
 ; written by pts@fazekas.hu at Fri Nov  1 04:00:47 CET 2024
 ; Compile to i386 ELF .o object: nasm -O999999999 -w+orphan-labels -f elf -o ceil.o ceil.nasm
 ;
-; Code size: 0x28 bytes.
+; Code size: 0x25 bytes.
 ;
 ; Uses: %ifdef CONFIG_PIC
 ;
@@ -28,27 +28,32 @@ section .text
 
 mini_floor:  ; double mini_floor(double x);
 		; As indicated in README.md, we can assume that an FPU is present. Even a 80387 provides fldexp, so we are good.
+%if 1  ; TODO(pts): Use smart linking to make this code 5 bytes shorter if only mini_floor(...) or mini_ceil(...) are used, like this.
 	        mov ch, 4  ; Rounding mode for floor. ROUND_DOWN<<2.
 	        jmp short mini_ceil.both  ; No way to shorten this to one-byte, skipping over the next instruction.
-	        ; TODO(pts): Use smart linking to make this code 4 bytes shorter if only mini_floor(...) or mini_ceil(...) are used.
 mini_ceil:  ; double mini_ceil(double x);
 		mov ch, 8  ; Rounding mode for ceil. ROUND_UP<<2.
-.both:		lea edx, [esp+4]
+%endif
+.both:		push eax  ; Make room for local variable.
+		fnstcw word [esp]  ; Save FPU control word.
+		pop eax  ; AX would have been enough, but using EAX makes the instructions shorter.
 		push eax
-		fstcw word [esp]  ; Get FPU control word to `word [esp]'.
-		pop eax  ; We only need the low word (AX).
+		and ah, ~12
+%if 1
+		or ah, ch  ; Set rounding mode within AX.
+%else  ; With smart.nasm, if only mini_floor(...) is used.
+		or ah, 4  ; Set rounding mode within AX: ROUND_DOWN<<2.
+%endif
 		push eax
-		and ah, ~12  ; Keep all bits except for precision control bits.
-		or ah, ch
-		push eax
-		fldcw word [esp]  ; Set FPU control word from `word [esp+6]'.
-		pop eax
-		fld qword [edx]
+		mov eax, esp
+		fld qword [eax+3*4]  ; x.
+		fldcw word [eax] ; Set rounding mode in FPU control word.
 		frndint
-		fldcw word [esp]  ; Restore FPU control word from `word [esp]'.
-		pop eax
-		fstp qword [edx]
-		fld qword [edx]  ; Round result to double.
+		fldcw word [eax+4]  ; Restore old FPU control word.
+		fstp qword [eax]
+		fld qword [eax]  ; Round result to double.
+		pop eax  ; Clean up local variable.
+		pop eax  ; Clean up local variable.
 		ret
 
 %ifdef CONFIG_PIC  ; Already position-independent code.
