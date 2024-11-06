@@ -310,7 +310,7 @@ Other projects with tiny libc functions:
 * [aligrudi/neatlibc](https://github.com/aligrudi/neatlibc) has
   [some functions in 386 assembly]((https://github.com/aligrudi/neatlibc/tree/master/x86).
 * [sebastiencs/asm_minilibc](https://github.com/sebastiencs/asm_minilibc/tree/master/x86)
-  targets i386 and amd64. It implements a few mem* str* functions. The code
+  targets i386 and amd64. It implements a few mem\* and str\* functions. The code
   doesn't look too much optimized for size.
 * [tinyprintf](http://www.sparetimelabs.com/tinyprintf/tinyprintf.php) by
   Kustaa Nyholm contains a printf implementation in C, of size 0x25f bytes in
@@ -328,6 +328,12 @@ Other projects with tiny libc functions:
 * The Zortech C++ compiler (e.g. version 3.1 from 1992) contains its libc
   source. Some parts of the libc are written in C, other parts are written
   in assembly 8086 (16-bit).
+* [ronanboiteau/MiniLibC](https://github.com/ronanboiteau/MiniLibC)
+  is in assembly targeting amd64. It implements a few mem\* and str\*
+  functions. The code doesn't look too much optimized for size.
+* [MaelDrapier/asm-minilibc](https://github.com/MaelDrapier/asm-minilibc)
+  is in assembly targetning amd64. It implements a few mem\* and str\*
+  functions. The code doesn't look at all optimized for size.
 
 Other tiny libc projects targeting Windows:
 
