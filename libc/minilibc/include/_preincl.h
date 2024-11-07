@@ -133,7 +133,7 @@
 #      define __LIBC_VAR(type, name) type name
 #      define __LIBC_MINI ""
 #    endif
-#    define __LIBC_NORETURN __attribute__((noreturn, nothrow))
+#    define __LIBC_NORETURN __attribute__((__noreturn__, __nothrow__))
 #    define __LIBC_NOATTR __attribute__(())  /* To prevent an empty `gcc_attrs' argument for `gcc -ansi'. */
 #    define __LIBC_PACKED_STRUCT
 #    define __LIBC_PACKED __attribute__((__packed__))
