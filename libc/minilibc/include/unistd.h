@@ -47,6 +47,7 @@ __LIBC_FUNC(pid_t, fork, (void), __LIBC_NOATTR);
 __LIBC_FUNC(void *, sys_brk, (void *addr), __LIBC_NOATTR);
 __LIBC_FUNC(int, execve, (const char *filename, char *const argv[], char *const envp[]), __LIBC_NOATTR);
 __LIBC_FUNC(int, execvp, (const char *file, char *const argv[]), __LIBC_NOATTR);
+__LIBC_FUNC(pid_t, setsid, (void), __LIBC_NOATTR);
 
 __LIBC_FUNC(ssize_t, readlink, (const char *pathname, char *buf, size_t bufsiz), __LIBC_NOATTR);
 __LIBC_FUNC(char *, getcwd, (char *buf, size_t size), __LIBC_NOATTR);  /* Limitation: if argument buf is NULL, then it returns NULL, it doesn't allocate memory dynamically. */
