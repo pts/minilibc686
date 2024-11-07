@@ -53,6 +53,8 @@ __LIBC_FUNC(int, dup2, (int oldfd, int newfd), __LIBC_NOATTR);
 __LIBC_FUNC(ssize_t, readlink, (const char *pathname, char *buf, size_t bufsiz), __LIBC_NOATTR);
 __LIBC_FUNC(char *, getcwd, (char *buf, size_t size), __LIBC_NOATTR);  /* Limitation: if argument buf is NULL, then it returns NULL, it doesn't allocate memory dynamically. */
 __LIBC_FUNC(int, access, (const char *name, int type), __LIBC_NOATTR);
+__LIBC_FUNC(void, sync, (void), __LIBC_NOATTR);
+__LIBC_FUNC(int, syncfs, (int fd), __LIBC_NOATTR);
 
 __LIBC_VAR(extern int, optind);
 __LIBC_VAR(extern int, opterr);
