@@ -70,6 +70,7 @@ __LIBC_FUNC(char *, fgets, (char *s, int size, FILE *filep), __LIBC_NOATTR);
 __LIBC_FUNC(int, puts, (const char *s), __LIBC_NOATTR);
 __LIBC_FUNC_MAYBE_MINIRP3(int, fgetc, (FILE *filep), __LIBC_NOATTR);  /* Use `gcc -ffreestanding' or `gcc -fno-builtin' to avoid the compilation error here. */
 __LIBC_FUNC_MAYBE_MINIRP3(int, fputc, (int c, FILE *filep), __LIBC_NOATTR);  /* Use `gcc -ffreestanding' or `gcc -fno-builtin' to avoid the compilation error here. */
+__LIBC_FUNC_MAYBE_MINIRP3(int, ungetc, (int c, FILE *filep), __LIBC_NOATTR);  /* Use `gcc -ffreestanding' or `gcc -fno-builtin' to avoid the compilation error here. */
 #if !defined(__MINILIBC686__) || defined(CONFIG_FUNC_GETC_PUTC) || !(defined(CONFIG_INLINE_GETC_PUTC) || defined(CONFIG_MACRO_GETC_PUTC))
 #  ifdef __WATCOMC__
 #    ifdef __MINILIBC686__

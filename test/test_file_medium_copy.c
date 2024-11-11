@@ -53,6 +53,10 @@ int main(int argc, char **argv) {
     } else {  /* mode == 'c' || mode == 'd'. */
       got = mode == 'c' ? fgetc(fin) : getc(fin);
       if (got == EOF) break;
+      if (got == 'L') {
+        if (ungetc('x', fin) != 'x') return 61;
+        if ((mode == 'c' ? fgetc(fin) : getc(fin)) != 'x') return 62;
+      }
       buf[0] = got;
       got = 1;
     }
