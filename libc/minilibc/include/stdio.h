@@ -121,6 +121,11 @@ __LIBC_FUNC_MAYBE_MINIRP3(int, fputc, (int c, FILE *filep), __LIBC_NOATTR);  /* 
 __LIBC_FUNC(int, remove, (const char *pathname), __LIBC_NOATTR);
 __LIBC_FUNC(int, rename, (const char *oldpath, const char *newpath), __LIBC_NOATTR);  /* Typically rename(2) is defined in <stdio.h>, bu we are lenient are and define in <unistd.h> as well. */
 
+__LIBC_FUNC(char *, tempnam, (const char *dir, const char *pfx), __LIBC_NOATTR);
+#ifdef __MINILIBC686__
+  __LIBC_FUNC(char *, tempnam_noremove, (const char *dir, const char *pfx), __LIBC_NOATTR);
+#endif
+
 #if defined(__UCLIBC__) || defined(__GLIBC__) || defined(__dietlibc__)
   __LIBC_FUNC(int, ferror, (FILE *filep), __LIBC_NOATTR);
 #endif
