@@ -11,6 +11,8 @@ cpu 386
 
 global mini_getc
 global mini_fgetc
+global mini_getc_RP3
+global mini_fgetc_RP3
 %ifdef CONFIG_SECTIONS_DEFINED
 %elifidn __OUTPUT_FORMAT__, bin
 section .text align=1
@@ -32,8 +34,8 @@ mini_getc:  ; int mini_getc(FILE *stream);
 mini_fgetc:  ; int mini_fgetc(FILE *stream);
 		mov eax, [esp+4]  ; Argument stream.
 		; Fall through to mini_fgetc_RP3.
-;mini_getc_RP3:  ; int mini_getc_RP3(FILE *stream) __attribute__((__regparm__(3)));
-;mini_fgetc_RP3:  ; int mini_fgetc_RP3(FILE *stream) __attribute__((__regparm__(3)));
+mini_getc_RP3:  ; int mini_getc_RP3(FILE *stream) __attribute__((__regparm__(3)));
+mini_fgetc_RP3:  ; int mini_fgetc_RP3(FILE *stream) __attribute__((__regparm__(3)));
 		; TODO(pts): With smart.nasm, omit the mini_fgetc(...) code if not used, saving 4 bytes above.
 		mov edx, [eax+0x8]
 		cmp edx, [eax+0xc]

@@ -1,5 +1,5 @@
 _nasm_start start_stdio_file_linux.o
-_mtcc -o test_c_stdio_file_simple_unbuffered.prog "$MYDIRP"fyi/c_stdio_file_simple_unbuffered.c "$TESTDIR"/test_file_simple_copy.c start_stdio_file_linux.o
+_mtcc -o test_c_stdio_file_simple_unbuffered.prog -DCONFIG_NO_RP3 "$MYDIRP"fyi/c_stdio_file_simple_unbuffered.c "$TESTDIR"/test_file_simple_copy.c start_stdio_file_linux.o
 
 echo foobar >f1.tmp.dat
 : t1

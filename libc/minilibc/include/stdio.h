@@ -68,15 +68,22 @@ __LIBC_FUNC(off_t, ftell, (FILE *filep), __LIBC_NOATTR);  /* Only 32-bit off_t *
 __LIBC_FUNC(int, fputs, (const char *s, FILE *filep), __LIBC_NOATTR);
 __LIBC_FUNC(char *, fgets, (char *s, int size, FILE *filep), __LIBC_NOATTR);
 __LIBC_FUNC(int, puts, (const char *s), __LIBC_NOATTR);
-__LIBC_FUNC(int, fgetc, (FILE *filep), __LIBC_NOATTR);
+__LIBC_FUNC_MAYBE_MINIRP3(int, fgetc, (FILE *filep), __LIBC_NOATTR);  /* Use `gcc -ffreestanding' or `gcc -fno-builtin' to avoid the compilation error here. */
 __LIBC_FUNC_MAYBE_MINIRP3(int, fputc, (int c, FILE *filep), __LIBC_NOATTR);  /* Use `gcc -ffreestanding' or `gcc -fno-builtin' to avoid the compilation error here. */
 #if !defined(__MINILIBC686__) || defined(CONFIG_FUNC_GETC_PUTC) || !(defined(CONFIG_INLINE_GETC_PUTC) || defined(CONFIG_MACRO_GETC_PUTC))
 #  ifdef __WATCOMC__
 #    ifdef __MINILIBC686__
-      int getc(FILE *filep);
-      int putc(int c, FILE *filep);
-#      pragma aux getc "_mini_fgetc"
-#      pragma aux putc "_mini_fputc"
+#      ifdef CONFIG_NO_RP3
+        int getc(FILE *filep);
+        int putc(int c, FILE *filep);
+#        pragma aux getc "_mini_fgetc"
+#        pragma aux putc "_mini_fputc"
+#      else  /* CONFIG_NO_RP3 */
+        int __fortran getc(FILE *filep);
+        int __fortran putc(int c, FILE *filep);
+#        pragma aux getc "_mini_fgetc_RP3"
+#        pragma aux putc "_mini_fputc_RP3"
+#      endif
 #    else  /* __MINILIBC686__ */
       int getc(FILE *filep);
       int putc(int c, FILE *filep);
@@ -84,12 +91,17 @@ __LIBC_FUNC_MAYBE_MINIRP3(int, fputc, (int c, FILE *filep), __LIBC_NOATTR);  /* 
 #      pragma aux putc "_fputc"
 #    endif  /* else __MINILIBC686__ */
 #  else  /* __WATCOMC__ */
-    int getc(FILE *filep) __asm__(__LIBC_MINI "fgetc");
-    int putc(int c, FILE *filep) __asm__(__LIBC_MINI "fputc");
+#    if defined(CONFIG_NO_RP3) || !defined(__MINILIBC686__)
+      int getc(FILE *filep) __asm__(__LIBC_MINI "fgetc");
+      int putc(int c, FILE *filep) __asm__(__LIBC_MINI "fputc");
+#    else  /* CONFIG_NO_RP3 */
+      int getc(FILE *filep) __asm__(__LIBC_MINI "fgetc_RP3") __attribute__((__regparm__(3)));
+      int putc(int c, FILE *filep) __asm__(__LIBC_MINI "fputc_RP3") __attribute__((__regparm__(3)));
+#    endif  /* else CONFIG_NO_RP3 */
 #  endif  /* else __WATCOMC__ */
   __LIBC_FUNC(int, getchar, (void), __LIBC_NOATTR);
   __LIBC_FUNC_MAYBE_MINIRP3(int, putchar, (int c), __LIBC_NOATTR);  /* Use `gcc -ffreestanding' or `gcc -fno-builtin' to avoid the compilation error here. */
-#else  /* !!! */
+#else
   __LIBC_FUNC_MINIRP3(int, __M_fgetc_fallback, (FILE *filep), __LIBC_NOATTR);
 #  if defined(CONFIG_MACRO_GETC_PUTC) && !defined(__WATCOMC__)  /* This only works with stdio_medium of minilibc686. It is disabled for __WATCOMC__, because it doesn't support ({...}). For __WATCOMC__, we fall back to CONFIG_INLINE_GETC_PUTC below. */
     /* These macros work in GCC, Clang and TinyCC. TODO(pts): Why should we use a macro rather than an inline function? The inline code is a few bytes shorter than the macro code. */

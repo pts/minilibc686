@@ -2,7 +2,7 @@
 
 _nasm2 stdio_file_simple_buffered.o
 _nasm_start start_stdio_file_linux.o
-_mtcc -o test_stdio_file_simple_buffered.prog stdio_file_simple_buffered.o "$TESTDIR"/test_file_simple_copy.c start_stdio_file_linux.o
+_mtcc -o test_stdio_file_simple_buffered.prog -DCONFIG_NO_RP3 stdio_file_simple_buffered.o "$TESTDIR"/test_file_simple_copy.c start_stdio_file_linux.o
 
 echo foobar >f1.tmp.dat
 : t1

@@ -12,6 +12,7 @@ _nasm_start start_stdio_medium_linux.o
 #qq xstatic gcc -o test_stdio_medium_file.prog -ansi "$TESTDIR"/test_file_medium_copy.c $OBJS
 _mtcc -o test_stdio_medium_file.macro.prog -DCONFIG_MACRO_GETC_PUTC -DCONFIG_MACRO_FILENO "$TESTDIR"/test_file_medium_copy.c $OBJS
 _mtcc -o test_stdio_medium_file.inline.prog -DCONFIG_INLINE_GETC_PUTC -DCONFIG_INLINE_FILENO "$TESTDIR"/test_file_medium_copy.c $OBJS
+_mtcc -o test_stdio_medium_file.norp3.prog -DCONFIG_NO_RP3 "$TESTDIR"/test_file_medium_copy.c $OBJS
 _mtcc -o test_stdio_medium_file.prog -DCONFIG_MACRO_GETC_PUTC -DCONFIG_MACRO_FILENO "$TESTDIR"/test_file_medium_copy.c $OBJS
 
 echo foobar >f1.tmp.dat
@@ -64,6 +65,11 @@ rm -f f2.tmp.dat
 ./test_stdio_medium_file.inline.prog f1.tmp.dat f2.tmp.dat q  # Copies long file f1.tmp.dat to f2.tmp.dat.
 ./test_stdio_medium_file.inline.prog f1.tmp.dat f2.tmp.dat q  # Copies long file f1.tmp.dat to f2.tmp.dat.
 cmp f1.tmp.dat f2.tmp.dat
+: t10 putc norp3
+rm -f f2.tmp.dat
+./test_stdio_medium_file.norp3.prog f1.tmp.dat f2.tmp.dat q  # Copies long file f1.tmp.dat to f2.tmp.dat.
+./test_stdio_medium_file.norp3.prog f1.tmp.dat f2.tmp.dat q  # Copies long file f1.tmp.dat to f2.tmp.dat.
+cmp f1.tmp.dat f2.tmp.dat
 : t11 getc
 rm -f f2.tmp.dat
 ./test_stdio_medium_file.prog f1.tmp.dat f2.tmp.dat d  # Copies long file f1.tmp.dat to f2.tmp.dat.
@@ -78,6 +84,11 @@ cmp f1.tmp.dat f2.tmp.dat
 rm -f f2.tmp.dat
 ./test_stdio_medium_file.inline.prog f1.tmp.dat f2.tmp.dat d  # Copies long file f1.tmp.dat to f2.tmp.dat.
 ./test_stdio_medium_file.inline.prog f1.tmp.dat f2.tmp.dat d  # Copies long file f1.tmp.dat to f2.tmp.dat.
+cmp f1.tmp.dat f2.tmp.dat
+: t14 getc norp3
+rm -f f2.tmp.dat
+./test_stdio_medium_file.norp3.prog f1.tmp.dat f2.tmp.dat d  # Copies long file f1.tmp.dat to f2.tmp.dat.
+./test_stdio_medium_file.norp3.prog f1.tmp.dat f2.tmp.dat d  # Copies long file f1.tmp.dat to f2.tmp.dat.
 cmp f1.tmp.dat f2.tmp.dat
 : t15 fseek
 rm -f f2.tmp.dat
