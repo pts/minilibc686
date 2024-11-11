@@ -9,6 +9,7 @@ extern mini_prng_mix3_RP3(uint32_t key) __attribute__((__regparm__(3)));  /* Fun
  * https://stackoverflow.com/a/54708697 , https://stackoverflow.com/a/70960914
  */
 static uint32_t good_prng_mix3(uint32_t key) {
+  if (!key) ++key;
   key ^= (key << 13);
   key ^= (key >> 17);
   key ^= (key << 5);

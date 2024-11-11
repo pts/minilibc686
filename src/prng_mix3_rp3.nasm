@@ -2,7 +2,7 @@
 ; written by pts@fazekas.hu at Mon Nov 11 15:19:31 CET 2024
 ; Compile to i386 ELF .o object: nasm -O999999999 -w+orphan-labels -f elf -o prng_mix3_rp3.o prng_mix3_rp3.nasm
 ;
-; Code size: 0x16 bytes.
+; Code size: 0x1b bytes.
 ;
 ; This is the fast implementation (using `repne scasb'), but the slow
 ; implementation isn't shorter either.
@@ -33,11 +33,15 @@ mini_prng_mix3_RP3:  ; uint32_t mini_prng_mix3_RP3(uint32_t key) __attribute__((
 ;
 ; https://stackoverflow.com/a/54708697 , https://stackoverflow.com/a/70960914
 ;
+; if (!key) ++key;
 ; key ^= (key << 13);
 ; key ^= (key >> 17);
 ; key ^= (key << 5);
 ; return key;
-		mov edx, eax
+		test eax, eax
+		jnz .nz
+		inc eax
+.nz:		mov edx, eax
 		shl edx, 13
 		xor eax, edx
 		mov edx, eax
