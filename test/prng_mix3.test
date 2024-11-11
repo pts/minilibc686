@@ -1,0 +1,2 @@
+_utcc_nasm2 prng_mix3_rp3.nasm -o test_prng_mix3.prog "$TESTDIR"/test_prng_mix3.c
+./test_prng_mix3.prog

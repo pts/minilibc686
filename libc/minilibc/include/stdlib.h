@@ -226,4 +226,8 @@ __LIBC_FUNC(void, qsort, (void *base, size_t n, size_t size, int (*cmp)(const vo
   __LIBC_FUNC(void *, malloc_simple_unaligned, (size_t size), __LIBC_NOATTR);
 #endif  /* __MINiLIBC686__ */
 
+#ifdef __MINILIBC686__
+  __LIBC_FUNC_RP3(unsigned, mini_prng_mix3_RP3, (unsigned key), __LIBC_NOATTR);  /* unsigned is uint32_t here. */
+#endif
+
 #endif  /* _STDLIB_H */
