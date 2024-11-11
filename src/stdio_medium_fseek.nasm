@@ -28,7 +28,7 @@ section .bss align=1
 
 section .text
 
-mini_fseek:
+mini_fseek:  ; int mini_fseek(FILE *stream, long offset, int whence);
 		push edi
 		push esi
 		push ebx

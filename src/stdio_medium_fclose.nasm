@@ -26,7 +26,7 @@ section .bss align=1
 
 section .text
 
-mini_fclose:
+mini_fclose:  ; int mini_fclose(FILE *stream);
 		push esi
 		push ebx
 		mov ebx, [esp+0xc]

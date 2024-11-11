@@ -26,7 +26,7 @@ section .bss align=1
 
 section .text
 
-mini_fread:
+mini_fread:  ; size_t mini_fread(void *ptr, size_t size, size_t nmemb, FILE *stream);
 		push ebp
 		mov ebp, esp
 		push ebx
@@ -36,17 +36,17 @@ mini_fread:
 		imul ebx, [ebp+0xc]
 		xor eax, eax
 		test ebx, ebx
-		je .BB0_6
+		je .6
 		mov edi, [ebp+0x14]
 		mov cl, [edi+0x14]
 		dec cl
 		cmp cl, 0x2
-		ja .BB0_6
+		ja .6
 		mov esi, [ebp+0x8]
-.BB0_3:		mov eax, [edi+0x8]
+.3:		mov eax, [edi+0x8]
 		mov ecx, [edi+0xc]
 		cmp eax, ecx
-		jne .BB0_4
+		jne .4
 		sub ecx, [edi+0x18]
 		add [edi+0x20], ecx
 		push edi
@@ -62,21 +62,21 @@ mini_fread:
 		add esp, byte 0xc
 		lea ecx, [eax+0x1]
 		cmp ecx, byte 2
-		jb .BB0_5
+		jb .5
 		add [edi+0xc], eax
-		jmp short .BB0_3
-.BB0_4:		lea ecx, [eax+0x1]
+		jmp short .3
+.4:		lea ecx, [eax+0x1]
 		mov [edi+0x8], ecx
 		mov al, [eax]
 		mov [esi], al
 		inc esi
 		dec ebx
-		jne .BB0_3
-.BB0_5:		sub esi, [ebp+0x8]
+		jne .3
+.5:		sub esi, [ebp+0x8]
 		xor edx, edx
 		mov eax, esi
 		div dword [ebp+0xc]
-.BB0_6:		pop esi
+.6:		pop esi
 		pop edi
 		pop ebx
 		pop ebp

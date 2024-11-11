@@ -25,7 +25,7 @@ section .bss align=4
 
 section .text
 
-mini_fputc_RP3:  ; int REGPARM3 mini_fputc_RP3(int c, FILE *filep);
+mini_fputc_RP3:  ; int mini_fputc_RP3(int c, FILE *filep) __attribute__((__regparm__(3)));
 ; #define _STDIO_SUPPORTS_EMPTY_BUFFERS 1
 ; int mini_fputc_calling_fwrite(int c, FILE *filep) {
 ;   const unsigned char uc = c;

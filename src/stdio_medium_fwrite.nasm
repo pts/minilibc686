@@ -26,7 +26,7 @@ section .bss align=1
 
 section .text
 
-mini_fwrite:
+mini_fwrite:  ; size_t mini_fwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream);
 		push ebp
 		push edi
 		push esi

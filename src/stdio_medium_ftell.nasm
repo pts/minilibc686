@@ -22,7 +22,7 @@ section .bss align=1
 
 section .text
 
-mini_ftell:
+mini_ftell:  ; long mini_ftell(FILE *stream);
 		mov edx, [esp+0x4]
 		mov cl, [edx+0x14]
 		lea eax, [ecx-0x1]
