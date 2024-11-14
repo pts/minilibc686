@@ -2,7 +2,7 @@
 ; stdio_medium_simple_vfprintf.nasm: a very simple (%s, %c, %u) vfprintf implementation
 ; Compile to i386 ELF .o object: nasm -O999999999 -w+orphan-labels -f elf -o stdio_medium_simplevfprintf.o stdio_medium_simplevfprintf.nasm
 ;
-; Code+data size: ?? bytes.
+; Code+data size: 0x95 bytes.
 ;
 ; Limitation: It supports only format specifiers %s, %c, %u.
 ; Limitation: It doesn't work as a backend of snprintf(...) and vsnprintf(...) because it doesn't support FD_WRITE_SATURATE.
@@ -101,8 +101,7 @@ mini_vfprintf_simple:  ; void mini_vfprintf_simple(FILE *filep, const char *form
 		ret
 .call_mini_fputc:
 		; movsx eax, al : Not needed, mini_fputc ignores the high 24 bits anyway.
-		call mini_fputc_RP3  ; With extra smart linking, we could hardcore an EOF (-1) return if only mini_snprintf(...) etc., bur no mini_fprintf(...) etc. is used.
-		ret
+		jmp strict near mini_fputc_RP3  ; With extra smart linking, we could hardcore an EOF (-1) return if only mini_snprintf(...) etc., bur no mini_fprintf(...) etc. is used.
 		
 %ifdef CONFIG_PIC  ; Already position-independent code.
 %endif
