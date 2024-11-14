@@ -22,6 +22,9 @@ FILE *mini_fopen(const char *pathname, const char *mode) {
       filep->buf_off = 0;
       filep->buf_start = buf;
       filep->buf_capacity_end = filep->buf_end = buf + BUF_SIZE;
+      /* filep->buf_read_ptr = filep->buf_write_ptr = filep->buf_last = filep->buf_start;
+       * if (IS_FD_ANY_READ(filep->dire)) filep->buf_write_ptr = filep->buf_end;  / * Sentinel. * /
+       */
       mini___M_discard_buf(filep);
       return filep;
     }
