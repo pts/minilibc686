@@ -121,7 +121,7 @@ int main(int argc, char **argv) {
   const char *arg;
   char **argp;
   char c;
-  char flag_l = 0, flag_a = 1, flag_s = 1, is_verbose = 0;
+  char flag_l = 0, flag_a = 1, flag_s = 1, flag_h = 1, is_verbose = 0;
   const char flag_z = 0;
   char phdr_has_changed = 0, ehdr_has_changed = 1;
   char is_first_pt_load = 1;
@@ -134,6 +134,8 @@ int main(int argc, char **argv) {
             "-l: change the ELF OSABI to Linux\n"
             "-a: align the early PT_LOAD phdr to page size (enabled by default)\n"
             "-na: disable -a\n"
+            "-h: fix ELF section header size (enabled by default)\n"
+            "-nh: disable -h\n"
             "-s: strip beyond the last PT_LOAD (sstrip) (strip default, enabled by default)\n"
             "-ns: disable -s\n"
             "-z: discard trailing zero bytes (sstrip flag) (not implemented)\n",
@@ -153,6 +155,8 @@ int main(int argc, char **argv) {
         flag_a = 0;
       } else if (arg[2] == 's') {
         flag_s = 0;
+      } else if (arg[2] == 'h') {
+        flag_h = 0;
       } else {
         goto unknown_flag;
       }
@@ -166,6 +170,8 @@ int main(int argc, char **argv) {
       flag_a = 1;
     } else if (c == 's') {
       flag_s = 1;
+    } else if (c == 'h') {
+      flag_h = 1;
     } else if (c == 'z') {
       /* Ignored for ELF Kickers strip(1) compatibility. */
       /* TODO(pts): Implement this instead of ignoring it. */
@@ -278,6 +284,12 @@ int main(int argc, char **argv) {
   if ((size_t)read(fd, phdrs, want) != (size_t)want) {
     fprintf(stderr, "fatal: error reading ELF phdr: %s\n", filename);
     return 16;
+  }
+  if (flag_h) {
+    if (ehdr.e_shentsize == 0) {
+      ehdr.e_shentsize = 0x28;
+      ehdr_has_changed = 1;
+    }
   }
   phdr_end = phdrs + ehdr.e_phnum;
   last_off = ehdr.e_phoff + want;
