@@ -1,6 +1,8 @@
 /*
  * elfnostack.c: disables the .note.GNU-stack section in an ELF .o file
  * by pts@fazekas.hu at Wed May 24 00:01:12 CEST 2023
+ *
+ * Compile with: pathbin/minicc --gcc -march=i386 -o tools/elfnostack tools/elfnostack.c
  */
 
 #include <fcntl.h>
@@ -9,6 +11,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+
+#ifndef __MINILIBC686__
+#define malloc_simple_unaligned malloc
+#endif
 
 /* --- ELF file format. */
 
@@ -83,7 +89,7 @@ int main(int argc, char **argv) {
   Elf32_Ehdr ehdr;
   Elf32_Shdr shdr;
   off_t off;
-  static char shstrtab[0x1000];
+  char *shstrtab;
   (void)argc; (void)argv;
   if (!argv[0] || !argv[1] || argv[2]) {
     fprintf(stderr, "Usage: %s <elfobj.o>\n", argv[0]);
@@ -152,8 +158,8 @@ int main(int argc, char **argv) {
     fprintf(stderr, "fatal: zero ELF .shstrtab sh_size: %s\n", filename);
     return 16;
   }
-  if (shdr.sh_size >= sizeof(shstrtab)) {
-    fprintf(stderr, "fatal: ELF .shstrtab data too large: %s\n", filename);
+  if (!(shstrtab = malloc_simple_unaligned(shdr.sh_size + 1))) {
+    fprintf(stderr, "fatal: out of memory for ELF .shstrtab: %s\n", filename);
     return 17;
   }
   off = shdr.sh_offset;
