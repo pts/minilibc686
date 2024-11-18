@@ -258,6 +258,7 @@ ARGS=
 for ARG in "$@"; do
   if test "$SKIPARG"; then
     test "$SKIPARG" = -o && OUTFILE="$ARG"
+    test "$SKIPARG" = -include && ARGS="$ARGS$NL-include$NL$ARG"
     SKIPARG=
     continue
   fi
@@ -302,7 +303,10 @@ for ARG in "$@"; do
    -m64 | -march=x86[_-]64 | -march=amd64 | -imultiarch) echo "fatal: unsupported 64-bit flag: $ARG" >&2; exit 1 ;;
    -pie | -fpic | -fPIC | -fpie | -fPIE) echo "fatal: unsupported position-independent code flag: $ARG" >&2; exit 1 ;;  # TODO(pts): Add support. It is not useful anyway for static linking, it just adds bloat.
    -idirafter | -imultilib | -iplugindir* | -iquote | -isysroot | -system | -iwithprefix | -iwithprefixbefore) echo "fatal: unsupported include dir flag, use -I instead: $ARG" >&2; exit 1 ;;
-   -include | -imacros | -iprefix) echo "fatal: unsupported include file flag: $ARG" >&2; exit 1 ;;  # TODO(pts): Adding support is relatively easy, we just have to pass these to GCC.
+   -include=*) ARGS="$ARGS$NL-include$NL${ARG#*=}" ;;  # Not valid gcc(1) syntax, but we support it.
+   -include) SKIPARG="$ARG" ;;  # Typical and valid gcc(1) and pcc(1) syntax. TinyCC doesn't support -include, it fails explicitly. For wcc386, we will replace `-include ...' with `-fi=...'.
+   -include*) ARGS="$ARGS$NL-include$NL${ARG#-include}" ;;  # Valid but ugly gcc(1) syntax.
+   #-imacros | -iprefix) echo "fatal: unsupported include file flag: $ARG" >&2; exit 1 ;;  # TODO(pts): Adding support is relatively easy, we just have to pass these to GCC.
    -mregparm=0) ;;  # Default GCC cdecl calling convention.
    -mregparm=* | -msseregparm | -mrtd | -mno-rtd) echo "fatal: unsupported calling convention flag: $ARG" >&2; exit 1 ;;  # FYI owcc -mregparm=1 ... -mregparm=3 activate __watcall rather than __regparm__(3).
    # TODO(pts): Try to adjust -malign-data=type and -mlarge-data-threshold=threshold to avoid alignment of some arrays to 0x20 bytes.
@@ -334,6 +338,7 @@ for ARG in "$@"; do
    -Werror[-=]implicit-function-declaration) ARGS="$ARGS$NL-Werror-implicit-function-declaration"; DO_WKEEP= ;;  # GCC 4.1 supports only -Werror-implicit-function-declaration, GCC >=4.2 supports it and also -Werror=implicit-function-declaration.
    -Wadd=*) ARGS="$ARGS$NL-W${ARG#*=}" ;;  # This doesn't set DO_WKEEP="". This is a minicc extension.
    -Wl,*) ARGS="$ARGS$NL$ARG" ;;
+   #-Wp,*) ;;  #  Works with the gcc(1) driver, but not with cc1(1).
    -W[a-z],*) echo "fatal: unsupported tool flag: $ARG" >&2; exit 1 ;;
    -W*) ARGS="$ARGS$NL$ARG"; DO_WKEEP= ;;
    -fno-inline) ARGS="$ARGS$NL$ARG"; HAD_NOINLINE=1 ;;
@@ -889,12 +894,16 @@ if test "$GCC" || test -z "$IS_TCCLD"; then
   SKIPARG=
   CCMODE=
   for ARG in --skiparg $ARGS; do
-    if test "$SKIPARG"; then SKIPARG=; continue; fi
+    if test "$SKIPARG"; then
+      test "$SKIPARG" = -include && CCARGS="$CCARGS$NL$ARG"
+      SKIPARG=; continue
+    fi
     case "$ARG" in
      *"$NL"*) echo "fatal: unexpected newline in minicc generated argument" >&2; exit 7 ;;
      "") echo "fatal: empty minicc generated argument" >&2; exit 7 ;;
      --skiparg) SKIPARG=1 ;;
      -o) SKIPARG="$ARG" ;;
+     -include) SKIPARG="$ARG"; CCARGS="$CCARGS$NL$ARG" ;;
      -Wl,) ;;
      -Wl,-*)
        ARG="${ARG#-Wl,}"
@@ -958,7 +967,10 @@ if test "$GCC" || test -z "$IS_TCCLD"; then
     unset WATCOM  # Don't let wcc386 find any system #include etc. file.
     SKIPARG=
     for ARG in --skiparg $CCARGS; do
-      if test "$SKIPARG"; then SKIPARG=; continue; fi
+      if test "$SKIPARG"; then
+        test "$SKIPARG" = -include && WARGS="$WARGS$NL-fi=$ARG"  # -fi=_preincl.h is automatic, and is included before this.
+        SKIPARG=; continue
+      fi
       case "$ARG" in
        *"$NL"*) echo "fatal: unexpected newline in minicc wcc386 argument" >&2; exit 5 ;;
        "") echo "fatal: empty minicc wcc386 argument" >&2; exit 5 ;;
@@ -1037,6 +1049,7 @@ if test "$GCC" || test -z "$IS_TCCLD"; then
        -momf) WISOMF=1 ;;  # minicc-specific. Generate the object file in OMF format (OpenWatcom native) rather than ELF-32.
        -[DUI]?*) WARGS="$WARGS$NL$ARG" ;;
        -g*) echo "fatal: debug generation not supported by minicc wcc386" >&2; exit 5 ;;
+       -include) SKIPARG="$ARG" ;;
        -*) echo "fatal: unsupported minicc wcc386 flag (try it with --gcc?): $ARG" >&2; exit 5 ;;
        *) echo "fatal: assert: input file not allowed: $ARG" >&2; exit 5 ;;
       esac
@@ -1055,7 +1068,10 @@ if test "$GCC" || test -z "$IS_TCCLD"; then
       test "$HAD_V" && CC1ARGS="$CC1ARGS$NL-v$NL-version"
     fi
     for ARG in --skiparg $CCARGS; do  # !! TODO(pts): Check that -S and -E work.
-      if test "$SKIPARG"; then SKIPARG=; continue; fi
+      if test "$SKIPARG"; then
+        test "$SKIPARG" = -include && CC1ARGS="$CC1ARGS$NL$ARG"
+        SKIPARG=; continue
+      fi
       case "$ARG" in
        *"$NL"*) echo "fatal: unexpected newline in minicc wcc386 argument" >&2; exit 5 ;;
        "") echo "fatal: empty minicc wcc386 argument" >&2; exit 5 ;;
@@ -1063,6 +1079,7 @@ if test "$GCC" || test -z "$IS_TCCLD"; then
        -B?*) ;;  # Just to be sure. minicc doesn't add it for wcc386.
        -v) ;;  # Already processed as $HAD_V above.
        -[csS] | -static | -nostdlib) ;;
+       -include) SKIPARG="$ARG" && CC1ARGS="$CC1ARGS$NL$ARG" ;;
        -*) CC1ARGS="$CC1ARGS$NL$ARG" ;;
        *) echo "fatal: assert: input file not allowed: $ARG" >&2; exit 5 ;;
       esac
