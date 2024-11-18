@@ -33,6 +33,10 @@ if test "$1" = --sh-script; then  # This is the fast path.
   # the $PATH. System tools (such as with `--gcc=...') will be excplicitly
   # looked up on the old $PATH.
   test "$1" = --noenv && shift && exec env -i PATH="$MYDIR/ccshbin" TMPDIR="$TMPDIR" sh -- "$MYPROG" --sh-script --boxed-path "$PATH" "$@"
+  # Use BusyBox (if available) for consistent shell and coreutils.
+  if test -f "$MYDIR/ccshbin/sh" && test -x "$MYDIR/ccshbin/sh"; then
+    case "$PATH": in "$MYDIR/ccshbin":) ;; *) export PATH="$MYDIR/ccshbin:$PATH" ;; esac
+  fi
 else
   # Rerun ourselves ($0) with the bundled `busybox sh'. This a hack and a
   # fallback. Most users should use the `shbin/minicc' ELF program to run
