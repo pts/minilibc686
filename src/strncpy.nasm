@@ -44,8 +44,6 @@ mini_strncpy:  ; char *mini_strncpy(char *dest, const char *src, size_t n);
 		pop edi  ; Restore.
 		ret
 
-; __END__
-
 %ifdef CONFIG_PIC  ; Already position-independent code.
 %endif
 
