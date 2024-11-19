@@ -217,6 +217,8 @@ __LIBC_FUNC(void, qsort, (void *base, size_t n, size_t size, int (*cmp)(const vo
   __LIBC_FUNC(void, qsort_stable_fast_shortcut, (void *base, size_t n, size_t size, int (*cmp)(const void*, const void*)), __LIBC_NOATTR);
 #endif
 
+__LIBC_FUNC(void *, bsearch, (const void *key, const void *base, size_t nmemb, size_t size, int (*compar)(const void*, const void*)), __LIBC_NOATTR);
+
 #ifdef __MINILIBC686__
   /* Returns an unaligned pointer. There is no API to free it. Suitable for
    * many small allocations. Be careful: if you use this with unaligned

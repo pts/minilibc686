@@ -1,0 +1,2 @@
+_utcc_nasm2 bsearch.nasm -o test_bsearch.prog "$TESTDIR"/test_bsearch.c
+./test_bsearch.prog
