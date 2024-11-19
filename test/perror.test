@@ -1,0 +1,2 @@
+_utcc_nasm2 perror.nasm -o test_perror.prog "$TESTDIR"/test_perror.c
+./test_perror.prog
