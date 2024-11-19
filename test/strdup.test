@@ -1,0 +1,2 @@
+_utcc_nasm2 strdup.nasm -o test_strdup.prog "$TESTDIR"/test_strdup.c
+./test_strdup.prog

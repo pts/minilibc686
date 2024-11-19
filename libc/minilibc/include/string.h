@@ -32,6 +32,7 @@ __LIBC_FUNC(void *, memset, (void *s, int c, size_t n), __LIBC_NOATTR);
 __LIBC_FUNC(char *, memchr, (const char *s, int c, size_t n), __LIBC_NOATTR);
 __LIBC_FUNC(size_t, strspn, (const char *s, const char *accept), __LIBC_NOATTR);
 __LIBC_FUNC(size_t, strcspn, (const char *s, const char *reject), __LIBC_NOATTR);
+__LIBC_FUNC(char *, strdup,  (const char *s), __LIBC_NOATTR);
 
 #if defined(__MINILIBC686__)
   __LIBC_FUNC_RP3(void, memswap, (void *a, void *b, size_t size), __LIBC_NOATTR);  /* Not part of standard C. */
