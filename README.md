@@ -224,6 +224,9 @@ The following components are included in *minilibc686*:
   then *minicc* runs the linker (either GNU ld(1) or the TinyCC linker).
   PCC has a long and amazing history, see blow.
 
+  Please note that using PCC for production is not recommended, because it
+  has some code generation bugs, see in the section below.
+
 * tools/wcc386: OpenWatcom C compiler (released on 2023-03-04). It's
   convenient to use it with *minicc* (see below). It is also the default C
   compiler for *minicc*: to build a program, run `minicc -o prog prog.c`.
@@ -878,6 +881,45 @@ prog prog.c`. *minicc* will download these executables from here for you.
   miniutcc before 0.9.26-2 expect the caller to do it. Conclusion: don't
   return a struct from a function if you want binary compatibility with
   OpenWatcom. minilibc686 doesn't have such a libc function.
+
+## PCC code generation bugs
+
+Using PCC for production is not recommended, because it has some code
+generation bugs. We've discovered some below:
+
+* It may call the same function multiple times if the result is used for
+  anything other than assignment. Example:
+
+  ```
+  #include <stdio.h>
+  int call_count;
+  int *func(void) { static int i; puts("func() called."); ++call_count; return &i; }
+  int main(int argc, char **argv) {
+    (void)argc; (void)argv;
+    func()[0]++;  /* PCC 1.1.0 BUG: calls func() 3 times. */
+    return call_count != 1;  /* Expected correct behavior: call_count == 1. */
+  }
+  ```
+
+  Workaround: Save the result of `func()` to a local variable `v`, and do `v[0]++`.
+
+* It uses the wrong struct argument if both struct arguments were returned
+  by a function. Example:
+
+  ```
+  #include <stdio.h>
+  struct s { int i; };
+  struct s snew(int i) { struct s s; s.i = i; return s; }
+  struct s sadd(struct s a, struct s b) { struct s s; s.i = a.i + b.i; return s; }
+  int main(int argc, char **argv) {
+    struct s s = sadd(snew(3), snew(5));
+    printf("result: %d\n", s.i);  /* PCC 1.1.0 BUG: result: 6 */
+    return s.i != 3 + 5;  /* Expected correct result: 3 + 5. */
+  }
+  ```
+
+  Workaround: Save the result of `snew(3)' or `snew(5)` (or both) to a local
+  variable first.
 
 ## Linker problems
 
