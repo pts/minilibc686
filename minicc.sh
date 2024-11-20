@@ -182,7 +182,7 @@ case "$1" in
   if test -z "$2"; then echo "fatal: missing tool name argument" >&2; exit 1; fi
   CMD="$MYDIR/tools/$2"  # E.g. miniutcc.
   shift; shift ;;
- *)
+ *)  # Interpret $1 as a compiler command (TCC or GCC-like).
   BASENAME="${1##*/}"
   case "$BASENAME" in
    *tcc*) TCC="$1"; GCC= ;;
