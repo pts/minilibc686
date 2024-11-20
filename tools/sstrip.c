@@ -31,7 +31,7 @@
 #include <unistd.h>
 
 #if defined(__i386) || defined(__i386__) || defined(__amd64__) || defined(__x86_64__) || defined(_M_X64) || defined(_M_AMD64) || defined(__386) || \
-    defined(__X86_64__) || defined(_M_I386) || defined(_M_I86) || defined(_M_X64) || defined(_M_AMD64) || defined(_M_IX86) || defined(__386) || \
+    defined(__X86_64__) || defined(_M_I386) || defined(_M_I86) || defined(_M_X64) || defined(_M_AMD64) || defined(_M_IX86) || defined(__386__) || \
     defined(__X86__) || defined(__I86__) || defined(_M_I86) || defined(_M_I8086) || defined(_M_I286)
 #  define IS_X86 1
 #endif
@@ -220,13 +220,17 @@ int main(int argc, char **argv) {
   }
 #if defined(__BIG_ENDIAN__) || (defined(__BYTE_ORDER__) && defined(__ORDER_LITTLE_ENDIAN__) && __BYTE_ORDER__ != __ORDER_LITTLE_ENDIAN__) || \
     defined(__ARMEB__) || defined(__THUMBEB__) || defined(__AARCH64EB__) || defined(_MIPSEB) || defined(__MIPSEB) || defined(__MIPSEB__) || \
-    defined(__powerpc__) || defined(_M_PPC) || defined(__m68k__)
-#  error This program requires a little-endian system for ELF.  /* Otherwise we would have to do byte order conversion on Elf32_Ehdr etc. */
+    defined(__powerpc__) || defined(_M_PPC) || defined(__m68k__) || defined(_ARCH_PPC) || defined(__PPC__) || defined(__PPC) || defined(PPC) || \
+    defined(__powerpc) || defined(powerpc) || (defined(__BIG_ENDIAN) && (!defined(__BYTE_ORDER) || __BYTE_ORDER == __BIG_ENDIAN +0)) || \
+    defined(_BIG_ENDIAN)
+#  error This program requires a little-endian system for ELF.  /* Otherwise we would have to do byte order conversion on header fields. */
 #endif
 #if defined(__LITTLE_ENDIAN__) || (defined(__BYTE_ORDER__) && defined(__ORDER_LITTLE_ENDIAN__) && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__) || \
     defined(__ARMEL__) || defined(__THUMBEL__) || defined(__AARCH64EL__) || defined(_MIPSEL) || defined (__MIPSEL) || defined(__MIPSEL__) || \
-    defined(__ia64__) || IS_X86
+    defined(__ia64__) || defined(__LITTLE_ENDIAN) || defined(_LITTLE_ENDIAN) || defined(MSDOS) || defined(__MSDOS__) || IS_X86
   /* Known good little-endian system. */
+#else
+#  error This program requires a little-endian system. Endianness not detected by C macros.
 #endif
   if (ehdr.e_type != ET_EXEC) {
     if (ehdr.e_type == ET_EXEC << 8) {
