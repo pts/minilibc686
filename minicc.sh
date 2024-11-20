@@ -177,6 +177,7 @@ case "$1" in
  nasm | ndisasm) CMD="$MYDIR/tools/$1-0.98.39"; shift ;;
  ar | tiny_libmaker) CMD="$MYDIR/tools/tiny_libmaker"; shift ;;
  pts-tcc | miniutcc) CMD="$MYDIR/tools/miniutcc"; shift ;;  # Just run the bundled TinyCC compiler (tools/miniutcc), with its the original arguments.
+ pts-pcc) CMD="$MYDIR/tools/$1"; shift ;;
  as | ld | elfnostack | elfofix | elfxfix | mktmpf | omf2elf | wcc386 | sstrip) CMD="$MYDIR/tools/$1"; shift ;;
  tool)
   if test -z "$2"; then echo "fatal: missing tool name argument" >&2; exit 1; fi
