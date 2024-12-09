@@ -44,9 +44,10 @@ AR=tools/tiny_libmaker
 
 export LC_ALL=C  # For consistency. With Busybox we don't need it, because the environment is empty.
 
-OUTFNS='libmini386.a libmini686.a libminitcc1.a need_start.o need_uclibc_main.o start_uclibc_linux.o'
+OUTFNS='libmini386.a libmini686.a libmina386.a libminitcc1.a need_start.o need_uclibc_main.o start_uclibc_linux.o'
 OUTDIR=helper_lib
 LIBI386_OBJS=
+LIBA386_OBJS=
 LIBI686_OBJS=
 if ! test -f src/start_stdio_medium_linux.nasm; then
   echo "fatal: missing: src/start_stdio_medium_linux.nasm" >&2
@@ -115,10 +116,12 @@ for F in src/[a-zA-Z0-9_]*.nasm; do
       diff -U3 "$BFA".ndisasm "$BFA".o0.ndisasm
     fi
     set +ex
-    if test -z "$LA"; then :
-    elif test -z "$ARCH_I686"; then LIBI386_OBJS="$LIBI386_OBJS ${BFA#build_tmp/}.o"; LIBI686_OBJS="$LIBI686_OBJS ${BFA#build_tmp/}.o"
-    elif test "$ARCH" = i386; then LIBI386_OBJS="$LIBI386_OBJS ${BFA#build_tmp/}.o"
-    else LIBI686_OBJS="$LIBI686_OBJS ${BFA#build_tmp/}.o"
+    if test "$LA"; then
+      if test -z "$ARCH_I686"; then LIBI386_OBJS="$LIBI386_OBJS ${BFA#build_tmp/}.o"; LIBI686_OBJS="$LIBI686_OBJS ${BFA#build_tmp/}.o"
+      elif test "$ARCH" = i386; then LIBI386_OBJS="$LIBI386_OBJS ${BFA#build_tmp/}.o"
+      else LIBI686_OBJS="$LIBI686_OBJS ${BFA#build_tmp/}.o"
+      fi
+      case "$F" in *_linux.nasm) ;; *) LIBA386_OBJS="$LIBA386_OBJS ${BFA#build_tmp/}.o" ;; esac
     fi
     # !! TODO(pts): Strip the .o file (strip -S -x -R .comment start.o), and remove empty sections. Unfortunately we don't have strip(1) available here.
   done
@@ -133,7 +136,8 @@ cp -a src/tcc_float.o src/tcc_bcheck.o build_tmp/
 # rather than the full implementation in another .o file).
 #
 # TODO(pts): Does GNU ld(1) have the same behavior?
-LIB_OBJS_SPECIAL_ORDER="stdio_medium_flush_opened.o start_stdio_medium_linux.o"
+LIBA_OBJS_SPECIAL_ORDER="stdio_medium_flush_opened.o"
+LIBC_OBJS_SPECIAL_ORDER="$LIBA_OBJS_SPECIAL_ORDER start_stdio_medium_linux.o"
 LIB_OBJS_TCC1="$(for F in build_tmp/tcc_*.o; do echo "${F#build_tmp/}"; done)"
 ARB="$AR"
 test "${ARB#/}" = "$ARB" && ARB=../"$ARB"
@@ -143,8 +147,9 @@ for OUTFN in $OUTFNS; do
   case "$OUTFN" in
    *.a)
     if test "$OUTFN" = libminitcc1.a; then LIB_OBJS="$LIB_OBJS_TCC1"
-    elif test "$OUTFN" = libmini386.a; then LIB_OBJS="$LIBI386_OBJS $LIB_OBJS_SPECIAL_ORDER"; OUTPN=libc/minilibc/libc.i386.a
-    elif test "$OUTFN" = libmini686.a; then LIB_OBJS="$LIBI686_OBJS $LIB_OBJS_SPECIAL_ORDER"; OUTPN=libc/minilibc/libc.i686.a
+    elif test "$OUTFN" = libmini386.a; then LIB_OBJS="$LIBI386_OBJS $LIBC_OBJS_SPECIAL_ORDER"; OUTPN=libc/minilibc/libc.i386.a
+    elif test "$OUTFN" = libmina386.a; then LIB_OBJS="$LIBA386_OBJS $LIBA_OBJS_SPECIAL_ORDER"; OUTPN=libc/minilibc/libca.i386.a  # Only those parts which work with any operating system (not only Linux).
+    elif test "$OUTFN" = libmini686.a; then LIB_OBJS="$LIBI686_OBJS $LIBC_OBJS_SPECIAL_ORDER"; OUTPN=libc/minilibc/libc.i686.a
     else echo "fatal: unknown output library: $OUTFN" >&2; exit 3
     fi
     rm -f "$OUTDIR/$OUTFN"  # Some versions of ar(1) such as GNU ar(1) do something different if the .a file already exists.
