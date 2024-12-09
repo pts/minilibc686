@@ -253,6 +253,7 @@ PRINTF_LONGLONG=1
 FILE_CAPACITY=
 IS_AOUT=  # Output file format is Linux i386 a.out QMAGIC executable.
 DO_SFIX=  # Do we have to fix the output of GNU as(1)?
+DO_GET_CONFIG=
 
 SKIPARG=
 ARGS=
@@ -368,6 +369,7 @@ for ARG in "$@"; do
    -o?*) echo "fatal: unsupported minicc -o flag: $ARG" >&2; exit 1 ;;
    -o) SKIPARG="$ARG" ;;
    --download) SKIPARG="$ARG" ;;
+   --get-config) DO_GET_CONFIG=1 ;;
    -L*) echo "fatal: unsupported minicc library path flag: $ARG" >&2; exit 1 ;;
    -l*) echo "fatal: unsupported minicc library flag: $ARG" >&2; exit 1 ;;
    -*) echo "fatal: unsupported minicc flag: $ARG" >&2; exit 1 ;;
@@ -540,7 +542,7 @@ case "$GCC" in
   case "$LOOKUP" in
    *\ is\ /*)  LOOKUP="/${LOOKUP#*\ is\ /}"  ;;
    *\ for\ /*) LOOKUP="/${LOOKUP#*\ for\ /}" ;;  # ksh(1).
-   *) echo "fatal: gcc command not found: $GCC" >&2; exit 6 ;;
+   *) if test -z "$DO_GET_CONFIG"; then echo "fatal: gcc command not found: $GCC" >&2; exit 6; fi; LOOKUP="$GCC" ;;
   esac
   test "$IS_BOXED" && GCC="$LOOKUP" && GCC_BARG="-B${GCC%/*}"  # Don't mess with $GCC paths unless --noenv or --boxed is specified.
 esac
@@ -864,6 +866,22 @@ test "$DO_SMART" || DO_SMART=0  # Fallback.
 test "$TMPDIR" || TMPDIR=/tmp
 test "${TMPDIR#-}" = "$TMPDIR" || TMPDIR="./$TMPDIR"  # Make it not a command-line flag (-...).
 export TMPDIR
+
+if test "$DO_GET_CONFIG"; then
+  # The values are not escaped.
+  echo "MINICC=v1"
+  echo "GCC=$GCC"
+  echo "TCC=$TCC"
+  echo "IS_TCCLD=$IS_TCCLD"
+  echo "USE_UTCC=$USE_UTCC"
+  echo "LIBC=$LIBC"
+  echo "DO_SMART=$DO_SMART"
+  echo "DO_LINK=$DO_LINK"
+  echo "LIBFN=$LIBFN"
+  echo "OBJFN=$OBJFN"
+  exit
+fi
+
 
 IFS="$NL"  # Argument splitting will happen over newlines only.
 if test "$DO_LINK"; then
