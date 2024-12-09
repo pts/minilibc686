@@ -2,6 +2,6 @@ _nasm_start start_stdio_file_linux.nasm
 _nasm m_flushall_dummy.nasm
 _nasm memcmp.nasm
 _nasm syscall_linux.nasm
-_nasm jmp_mov_syscall.nasm
-_mtcc -o test_mmap_syscall_linux.prog "$TESTDIR"/test_mmap_syscall_linux.c start_stdio_file_linux.o m_flushall_dummy.o memcmp.o syscall_linux.o jmp_mov_syscall.o
+_nasm jmp_mov_syscall_linux.nasm
+_mtcc -o test_mmap_syscall_linux.prog "$TESTDIR"/test_mmap_syscall_linux.c start_stdio_file_linux.o m_flushall_dummy.o memcmp.o syscall_linux.o jmp_mov_syscall_linux.o
 ./test_mmap_syscall_linux.prog
