@@ -77,6 +77,7 @@ typedef struct {
 #define ELFOSABI_SYSV		0	/* Alias.  */
 #define ELFOSABI_GNU		3	/* Object uses GNU ELF extensions.  */
 #define ELFOSABI_LINUX		ELFOSABI_GNU /* Compatibility alias.  */
+#define ELFOSABI_FREEBSD	9
 
 #define PT_LOAD		1		/* Loadable program segment */
 
@@ -136,7 +137,8 @@ int main(int argc, char **argv) {
   Elf32_Phdr *phdr, *phdr_end, *phdrl0, *phdr2;
   const char *arg;
   char **argp;
-  char flag_l = 0, flag_a = 0, flag_s = 0, flag_p = 0, flag_r = 0, is_verbose = 0;
+  unsigned char osabi = (unsigned char)-1;
+  char flag_a = 0, flag_s = 0, flag_p = 0, flag_r = 0, is_verbose = 0;
   char phdr_has_changed = 0, ehdr_has_changed = 1;
   char is_first_pt_load = 1;
   char can_fix;
@@ -147,7 +149,9 @@ int main(int argc, char **argv) {
   if (!argv[0] || !argv[1] || strcmp(argv[1], "--help") == 0) {
     fprintf(stderr, "Usage: %s [<flag>...] <elfprog>\nFlags:\n"
             "-v: verbose operation, write info to stderr\n"
-            "-l: change the ELF OSABI to Linux\n"
+            "-l or -ll: change the ELF OSABI to Linux\n"
+            "-lf: change the ELF OSABI to FreeBSD\n"
+            "-ls: change the ELF OSABI to SYSV\n"
             "-a: align the early PT_LOAD phdr to page size\n"
             "-s: strip beyond the last PT_LOAD (sstrip)\n"
             "-p <fix.o>: detect the GNU ld .data padding bug\n"
@@ -161,12 +165,22 @@ int main(int argc, char **argv) {
     if (arg[1] == '-' && arg[2] == '\0') {
       ++argp;
       break;
+    } else if (arg[1] == 'l' && arg[2] != '\0' && arg[3] == '\0') {
+      if (arg[2] == 'l') {
+        osabi = ELFOSABI_LINUX;
+      } else if (arg[2] == 'f') {
+        osabi = ELFOSABI_FREEBSD;
+      } else if (arg[2] == 's') {
+        osabi = ELFOSABI_SYSV;
+      } else {
+        goto unknown_flag;
+      }
     } else if (arg[2] != '\0') {
       goto unknown_flag;
     } else if (arg[1] == 'v') {
       is_verbose = 1;
     } else if (arg[1] == 'l') {
-      flag_l = 1;
+      osabi = ELFOSABI_LINUX;
     } else if (arg[1] == 'a') {
       flag_a = 1;
     } else if (arg[1] == 's') {
@@ -222,8 +236,8 @@ int main(int argc, char **argv) {
     fprintf(stderr, "fatal: bad ELF e_version: %s\n", filename);
     return 8;
   }
-  if (flag_l && ehdr.e_ident[EI_OSABI] != ELFOSABI_LINUX) {
-    ehdr.e_ident[EI_OSABI] = new_char[0] = ELFOSABI_LINUX;
+  if (osabi != (unsigned char)-1 && ehdr.e_ident[EI_OSABI] != osabi) {
+    ehdr.e_ident[EI_OSABI] = new_char[0] = osabi;
     ehdr_has_changed = 1;
     if (!flag_s && !flag_a && !flag_p) {
       off = EI_OSABI;
