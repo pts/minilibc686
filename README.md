@@ -655,6 +655,13 @@ How to run *minicc*:
   the bundled BusyBox). This makes it slower, and it makes the reproducibility
   weaker, because shells have subtle differences.
 
+*minicc* provides the following convenience features:
+
+* In addition to the GNU assembler source files with *.s* and *.S*
+  (preprocessed) extensions, *minicc* accepts NASM assembly source files
+  with the *.nasm* extension. It will compile them using a bundled copy of
+  NASM 0.98.39.
+
 ## Testing
 
 minilibc686 has some unit tess. Run all of them by running `./test.sh`.
