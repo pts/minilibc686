@@ -224,7 +224,7 @@ DO_ADD_INCLUDEDIR=1
 DO_LINK=1
 NEED_GCC_AS=1
 SFLAG=
-STRIP_MODE=2  # 0: Don't strip, don't chage he ELF OSABI (-g00); 1: change the ELF OSABI to Linux and fix first section alignment (-g0); 2: change the ELF OSABI to Linux and strip; 3: change the ELF OSABI to Linux, strip only symbols, keep relocations (-g0r)
+STRIP_MODE=2  # 0: Don't strip, don't chage he ELF OSABI (-g00); 1: change the ELF OSABI (typically to Linux) and fix first section alignment (-g0); 2: change the ELF OSABI and strip; 3: change the ELF OSABI, strip only symbols, keep relocations (-g0r)
 WFLAGS="-W$NL-Wall$NL-Werror-implicit-function-declaration"
 DO_WKEEP=1
 HAD_OFLAG=
@@ -254,6 +254,7 @@ FILE_CAPACITY=
 IS_AOUT=  # Output file format is Linux i386 a.out QMAGIC executable.
 DO_SFIX=  # Do we have to fix the output of GNU as(1)?
 DO_GET_CONFIG=
+OS=linux
 
 SKIPARG=
 ARGS=
@@ -358,6 +359,8 @@ for ARG in "$@"; do
    -g*) ARGS="$ARGS$NL$ARG"; STRIP_MODE=0 ;;
    -nostdlib | -nodefaultlibs) DO_ADD_LIB= ;;
    -nostdinc) DO_ADD_INCLUDEDIR= ;;
+   -blinux) OS=linux ;;  # Compatible with `owcc -blinux'.
+   -bany) OS=any ;;  # Choose libc/minilibc/libca.i386.a.
    -[cSE])
      if test "$DO_MODE" && test "$DO_MODE" != "$ARG"; then echo "fatal: conflicting combination of $ARG and $DO_MODE" >&2; exit 1; fi
      test -z "$DO_MODE" && ARGS="$ARGS$NL$ARG"
@@ -716,6 +719,7 @@ if test "$DO_ADD_INCLUDEDIR"; then
     done
   fi
 fi
+test "$OS" = any && DEF_ARG="$DEF_ARG$NL-D__ANYOS__"  # Don't mess with -D__linux__ or -D__LINUX__.
 test "$DO_MAIN_AUTO" && DEF_ARG="$DEF_ARG$NL-DCONFIG_MAIN_ARGS_AUTO"
 if test "$DO_ARGC" = 0; then DEF_ARG="$DEF_ARG$NL-DCONFIG_MAIN_NO_ARGC_ARGV_ENVP"
 elif test "$DO_ARGV" = 0; then DEF_ARG="$DEF_ARG$NL-DCONFIG_MAIN_NO_ARGV_ENVP"
@@ -780,7 +784,18 @@ if test "$DO_ADD_LIB"; then
       exit 3
     fi
   else
-    LIBFN="$MYDIR/libc/$LIBC/libc.$ARCH.a"
+    if test "$OS" = any; then
+      LIBFN="$MYDIR/libc/$LIBC/libca.i386.a"
+      test "$DO_SMART" || DO_SMART=0
+      if test "$DO_SMART" != 0; then
+        # TODO(pts): Make smart.nasm recognize -bany, and prevent it from
+        # adding any Linux-specific functions then.
+        echo "fatal: -bany doesn't work with -msmart" >&2
+        exit 3
+      fi
+    else
+      LIBFN="$MYDIR/libc/$LIBC/libc.$ARCH.a"
+    fi
     if ! test -f "$LIBFN"; then
       if test "$LIBC" = minilibc; then
         if test "$ARCH" = i586 || test "$ARCH" = i486; then
@@ -793,7 +808,10 @@ if test "$DO_ADD_LIB"; then
           fi
         fi
       else
-        if test -f "$MYDIR/libc/$LIBC/libc.i386.a"; then  # Use libc precompiled for older arch.
+        if test "$OS" != linux; then
+          echo "fatal: the libc wasn't compiled for OS -b$OS, use e.g. -blinux instead" >&2
+          exit 3
+        elif test -f "$MYDIR/libc/$LIBC/libc.i386.a"; then  # Use libc precompiled for older arch.
           LIBFN="$MYDIR/libc/$LIBC/libc.i386.a"
         elif test -f "$MYDIR/libc/$LIBC/libc.i686.a"; then  # Example: minicc --uclibc -march=i386
           echo "fatal: the libc wasn't compiled for -march=$ARCH, use -march=i686" >&2
@@ -1401,12 +1419,16 @@ else
   test "$EC" = 0 || exit "$EC"
 fi
 
+if test "$OS" = any; then EXFL_FLAG=-ls  # Change ELF OSABI to SYSV.
+else EXFL_FLAG=-l  # Change ELF OSABI to Linux.
+fi
+
 if test "$STRIP_MODE" = 0; then
   :
 elif test "$IS_AOUT"; then
   test "$TMPOFILES" && rm -f $TMPOFILES
 elif test "$STRIP_MODE" = 1; then
-  EFARGS="$MYDIR/tools/elfxfix$NL-l$NL-a$NL$HAD_V$NL--$NL$OUTFILE"
+  EFARGS="$MYDIR/tools/elfxfix$NL$EXFL_FLAG$NL-a$NL$HAD_V$NL--$NL$OUTFILE"
   $EFARGS; EC="$?"
   test "$HAD_V" && echo "info: fixing ELF executable:" $EFARGS >&2
   test "$TMPOFILES" && rm -f $TMPOFILES
@@ -1422,7 +1444,7 @@ else  # 2 or 3.
   fi
   PARGS=
   test "$FIX_O_FN" && PARGS="-p$NL$FIX_O_FN"
-  EFARGS="$MYDIR/tools/elfxfix$NL-l$NL-a$NL$ELFXFIX_SFLAG$NL$PARGS$NL$HAD_V$NL--$NL$OUTFILE"
+  EFARGS="$MYDIR/tools/elfxfix$NL$EXFL_FLAG$NL-a$NL$ELFXFIX_SFLAG$NL$PARGS$NL$HAD_V$NL--$NL$OUTFILE"
   test "$HAD_V" && echo "info: running extra strip:" $EFARGS >&2
   if test "$FIX_O_FN"; then
     $EFARGS; EC="$?"
@@ -1437,7 +1459,7 @@ else  # 2 or 3.
       $ARGS; EC="$?"
       if test "$EC" = 0; then
         PARGS="-r$NL$FIX_O_FN"
-        EFARGS="$MYDIR/tools/elfxfix$NL-l$NL-a$NL$ELFXFIX_SFLAG$NL$PARGS$NL$HAD_V$NL--$NL$OUTFILE"
+        EFARGS="$MYDIR/tools/elfxfix$NL$EXFL_FLAG$NL-a$NL$ELFXFIX_SFLAG$NL$PARGS$NL$HAD_V$NL--$NL$OUTFILE"
         test "$HAD_V" && echo "info: running extra strip again:" $EFARGS >&2
         $EFARGS; EC="$?"
       fi
