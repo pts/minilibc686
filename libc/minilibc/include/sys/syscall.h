@@ -2,7 +2,7 @@
 #define _SYS_SYSCALL_H
 #include <_preincl.h>
 
-#if !(defined(__linux__) && defined(__i386__))
+#if !(defined(__linux__) && defined(__i386__)) || defined(CONFIG_NOT_LINUX)
 #error These syscall numbers are valid for Linux i386 only.
 #endif
 

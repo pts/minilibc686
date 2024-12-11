@@ -357,8 +357,7 @@ for ARG in "$@"; do
    -g*) ARGS="$ARGS$NL$ARG"; STRIP_MODE=0 ;;
    -nostdlib | -nodefaultlibs) DO_ADD_LIB= ;;
    -nostdinc) DO_ADD_INCLUDEDIR= ;;
-   -blinux) OS=linux ;;  # Compatible with `owcc -blinux'.
-   -bany) OS=any ;;  # Choose libc/minilibc/libca.i386.a.
+   -blinux | -bany | -bfreebsd | -bfreebsdx) OS="${ARG#-b}" ;;  # `-blinux' is compatible with `owcc -blinux'. -bfreebsdx output works on both Linux and FreeBSD. -bany omits syscalls and _start by linking against libc/minilibc/libca.i386.a.
    -[cSE])
      if test "$DO_MODE" && test "$DO_MODE" != "$ARG"; then echo "fatal: conflicting combination of $ARG and $DO_MODE" >&2; exit 1; fi
      test -z "$DO_MODE" && ARGS="$ARGS$NL$ARG"
@@ -721,7 +720,10 @@ if test "$DO_ADD_INCLUDEDIR"; then
     done
   fi
 fi
+if test "$OS" = linux || test "$OS" = freebsdx; then :; else DEF_ARG="$DEF_ARG$NL-DCONFIG_NOT_LINUX"; fi
 test "$OS" = any && DEF_ARG="$DEF_ARG$NL-D__ANYOS__"  # Don't mess with -D__linux__ or -D__LINUX__.
+test "$OS" = freebsd && DEF_ARG="$DEF_ARG$NL-D__FREEBSDOS__"
+test "$OS" = freebsdx && DEF_ARG="$DEF_ARG$NL-D__MULTIOS__$NL-D__FREEBSDOS__"
 test "$DO_MAIN_AUTO" && DEF_ARG="$DEF_ARG$NL-DCONFIG_MAIN_ARGS_AUTO"
 if test "$DO_ARGC" = 0; then DEF_ARG="$DEF_ARG$NL-DCONFIG_MAIN_NO_ARGC_ARGV_ENVP"
 elif test "$DO_ARGV" = 0; then DEF_ARG="$DEF_ARG$NL-DCONFIG_MAIN_NO_ARGV_ENVP"
@@ -781,6 +783,7 @@ else
 fi
 ANSIFLAG= ;  # Prevent reuse later.
 NEED_LIBMINITCC1=
+SYSNASM=
 if test "$DO_ADD_LIB"; then
   LIBWL=
   if test "$USE_UTCC"; then
@@ -790,14 +793,21 @@ if test "$DO_ADD_LIB"; then
       exit 3
     fi
   else
-    if test "$OS" = any; then
+    if test "$OS" != linux; then
       LIBFN="$MYDIR/libc/$LIBC/libca.i386.a"
       test "$DO_SMART" || DO_SMART=0
       if test "$DO_SMART" != 0; then
         # TODO(pts): Make smart.nasm recognize -bany, and prevent it from
         # adding any Linux-specific functions then.
-        echo "fatal: -bany doesn't work with -msmart" >&2
+        echo "fatal: -b$OS doesn't work with -msmart" >&2
         exit 3
+      fi
+      if test "$OS" != any; then  # freebsd or freeebsdx.
+        SYSNASM="$MYDIR/libc/$LIBC/sys_freebsd.nasm"
+        if ! test -f "$SYSNASM"; then
+          echo "fatal: missing -b$OS support nasm source file in libc: $SYSNASM" >&2
+          exit 3
+        fi
       fi
     else
       LIBFN="$MYDIR/libc/$LIBC/libc.$ARCH.a"
@@ -894,6 +904,7 @@ export TMPDIR
 if test "$DO_GET_CONFIG"; then
   # The values are not escaped.
   echo "MINICC=v1"
+  echo "OS=$OS"
   echo "GCC=$GCC"
   echo "TCC=$TCC"
   echo "IS_TCCLD=$IS_TCCLD"
@@ -1367,7 +1378,15 @@ else
   WHAT=compiler
 fi
 
-if test "$DO_SMART" != 0; then  # Smart linking.
+SYSO=
+if test "$DO_SMART" != 0 || test "$SYSNASM"; then  # Smart linking or OS-specific syscall linking.
+  if test "$SYSNASM"; then
+    SYSO="$OUTFILE.sys.o"  # !! Generate temporary filename.
+  else
+    SYSO="$OUTFILE.smart.o"  # !! Generate temporary filename.
+    SYSNASM="$MYDIR/libc/$LIBC/smart.nasm"
+  fi
+  # TODO(pts): Precompile $SYSNASM, and only compile it here if smart linking was specified.
   LIBMINITCC1=
   test "$NEED_LIBMINITCC1" && LIBMINITCC1="$MYDIR/helper_lib/libminitcc1.a"
   test "$HAD_V" && echo "info: running $WHAT:" $ARGS >&2  # GCC also writes to stderr.
@@ -1389,7 +1408,7 @@ if test "$DO_SMART" != 0; then  # Smart linking.
       rm -f "$OUTFILE.err" $TMPOFILES
       exit "$EC"  # No undefined symbols found, this means there is another reason for the $TCC failure.
     fi
-    rm -f "$OUTFILE.err" "$OUTFILE.smart.o"  # !! Generate temporary filename.
+    rm -f "$OUTFILE.err" "$SYSO"  # !! Generate temporary filename.
     if test "$DO_MAIN_AUTO" = 1; then
       case ",$UNDEFSYMS," in ,_start*,)  # Search for cstart_ and _argc manually in the specified .o files.
         SKIPARG=
@@ -1412,23 +1431,34 @@ if test "$DO_SMART" != 0; then  # Smart linking.
       elif test "$DO_ENVP" = 0; then DEF_ARG="$DEF_ARG$NL-DCONFIG_MAIN_NO_ENVP"
       fi
     fi
-    NASMCMD="$MYDIR/tools/nasm-0.98.39$NL-O0$NL-w+orphan-labels$NL-f${NL}elf$NL-DUNDEFSYMS=$UNDEFSYMS$NL$NASM_DEf_ARG$NL$DEF_ARG$NL$DEF_CMDARG$NL-o$NL$OUTFILE.smart.o$NL$MYDIR/libc/$LIBC/smart.nasm"; EC="$?"
+    NASMCMD="$MYDIR/tools/nasm-0.98.39$NL-O0$NL-w+orphan-labels$NL-f${NL}elf$NL-DUNDEFSYMS=$UNDEFSYMS$NL$NASM_DEf_ARG$NL$DEF_ARG$NL$DEF_CMDARG$NL-o$NL$SYSO$NL$SYSNASM"; EC="$?"
     test "$HAD_V" && echo "info: running smart nasm:" $NASMCMD >&2
     $NASMCMD; EC="$?"
-    if test "$EC" = 0 && test -f "$OUTFILE.smart.o"; then :; else
-      rm -f "$OUTFILE.smart.o" $TMPOFILES
+    if test "$EC" = 0 && test -f "$SYSO"; then :; else
+      rm -f "$SYSO" $TMPOFILES
       test "$EC" = 0 && EC=1
       exit "$EC"
     fi
+    if test "$DO_SMART" = 0; then  # Original sys_*.nasm, it needs elfofix because it uses weak symbols.
+      EFARGS="$MYDIR/tools/elfofix$NL-r$NL-w$NL$HAD_V$NL--$NL$SYSO"
+      test "$HAD_V" && echo "info: fixing ELF object:" $EFARGS >&2
+      $EFARGS; EC="$?"
+      if test "$EC" != 0; then rm -f $TMPOFILES "$SYSO"; exit "$EC"; fi
+    fi
     # /usr/bin/objdump -d "$OUTFILE.smart.o"
     # /usr/bin/nm "$OUTFILE.smart.o" | grep -v ' [dtbr] '
-    ARGS="$ARGS$NL$OUTFILE.smart.o$NL$LIBFN$NL$LIBMINITCC1"
+    if test "$DO_SMART" = 0; then  # sys_*.nasm
+      ARGS="$ARGS$NL$SYSO$NL$NL$LIBMINITCC1"
+    else
+      ARGS="$ARGS$NL$SYSO$NL$LIBFN$NL$LIBMINITCC1"
+    fi
     test "$HAD_V" && echo "info: running $WHAT again:" $ARGS >&2  # GCC also writes to stderr.
     $ARGS >&2; EC="$?"  # Redirect linker stdout to stderr.
     if test "$STRIP_MODE" != 0 && test "$EC" = 0; then :
-    else rm -f "$OUTFILE.smart.o" $TMPOFILES
+    else rm -f "$SYSO" $TMPOFILES
     fi
     test "$EC" = 0 || exit "$EC"
+    #exit 66
   fi
 else
   test "$HAD_V" && echo "info: running $WHAT:" $ARGS >&2  # GCC also writes to stderr.
@@ -1439,12 +1469,14 @@ else
   test "$EC" = 0 || exit "$EC"
 fi
 
-if test "$OS" = any; then EXFL_FLAG=-ls  # Change ELF OSABI to SYSV.
-else EXFL_FLAG=-l  # Change ELF OSABI to Linux.
-fi
+case "$OS" in
+ any) EXFL_FLAG=-ls ;;  # Change ELF OSABI to SYSV.
+ freebsd | freebsdx) EXFL_FLAG=-lf ;;  # Change ELF OSABI to FreeBSD.
+ *) EXFL_FLAG=-l ;;  # Change ELF OSABI to Linux.
+esac
 
 if test "$STRIP_MODE" = 0; then
-  :
+  test "$SYSO" && rm -f "$SYSO"
 elif test "$IS_AOUT"; then
   test "$TMPOFILES" && rm -f $TMPOFILES
 elif test "$STRIP_MODE" = 1; then
@@ -1452,6 +1484,7 @@ elif test "$STRIP_MODE" = 1; then
   $EFARGS; EC="$?"
   test "$HAD_V" && echo "info: fixing ELF executable:" $EFARGS >&2
   test "$TMPOFILES" && rm -f $TMPOFILES
+  test "$SYSO" && rm -f "$SYSO"
   test "$EC" = 0 || exit "$EC"
 else  # 2 or 3.
   ELFXFIX_SFLAG="$SFLAG"
@@ -1470,7 +1503,7 @@ else  # 2 or 3.
     $EFARGS; EC="$?"
     if test "$EC" != 0; then
       rm -f -- "$FIX_O_FN"
-      test "$DO_SMART" != 0 && rm -f "$OUTFILE.smart.o"
+      test "$SYSO" && rm -f "$SYSO"
       exit "$EC"
     fi
     if test -s "$FIX_O_FN"; then  # elfxfix has written to it.
@@ -1489,6 +1522,6 @@ else  # 2 or 3.
     $EFARGS; EC="$?"
     test "$TMPOFILES" && rm -f $TMPOFILES
   fi
-  test "$DO_SMART" != 0 && rm -f "$OUTFILE.smart.o"
+  test "$SYSO" && rm -f "$SYSO"
   test "$EC" = 0 || exit "$EC"
 fi

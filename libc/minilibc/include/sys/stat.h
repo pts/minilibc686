@@ -4,6 +4,8 @@
 
 #include <sys/types.h>
 
+#ifndef CONFIG_NOT_LINUX
+
 #define S_IFMT  00170000
 #define S_IFSOCK 0140000
 #define S_IFLNK	 0120000
@@ -98,10 +100,6 @@ struct __old_kernel_stat {  /* For i386 syscalls SYS_oldstat, SYS_oldlstat, SYS_
 };
 __LIBC_STATIC_ASSERT(sizeof_struct___old_kernel_stat, sizeof(struct __old_kernel_stat) == 32);
 
-__LIBC_FUNC(int, mkdir, (const char *pathname, mode_t mode), __LIBC_NOATTR);
-__LIBC_FUNC(mode_t, umask, (mode_t mask), __LIBC_NOATTR);
-__LIBC_FUNC(int, chmod, (const char *pathname, mode_t mode), __LIBC_NOATTR);
-__LIBC_FUNC(int, fchmod, (int fd, mode_t mode), __LIBC_NOATTR);
 __LIBC_FUNC(int, stat64, (const char *path, struct stat64 *buf), __LIBC_NOATTR);
 __LIBC_FUNC(int, lstat64, (const char *path, struct stat64 *buf), __LIBC_NOATTR);
 __LIBC_FUNC(int, fstat64, (int fd, struct stat64 *buf), __LIBC_NOATTR);
@@ -115,5 +113,12 @@ __LIBC_FUNC(int, fstat64, (int fd, struct stat64 *buf), __LIBC_NOATTR);
   __LIBC_FUNC(int, sys_oldlstat, (const char *path, struct __old_kernel_stat *buf), __LIBC_NOATTR);
   __LIBC_FUNC(int, sys_oldfstat, (int fd, struct __old_kernel_stat *buf), __LIBC_NOATTR);
 #endif
+
+#endif  /* ifndef CONFIG_NOT_LINUX */
+
+__LIBC_FUNC(int, mkdir, (const char *pathname, mode_t mode), __LIBC_NOATTR);
+__LIBC_FUNC(mode_t, umask, (mode_t mask), __LIBC_NOATTR);
+__LIBC_FUNC(int, chmod, (const char *pathname, mode_t mode), __LIBC_NOATTR);
+__LIBC_FUNC(int, fchmod, (int fd, mode_t mode), __LIBC_NOATTR);
 
 #endif  /* _SYS_STAT_H */

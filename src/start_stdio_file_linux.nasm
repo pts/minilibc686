@@ -19,6 +19,7 @@ global mini___M_jmp_syscall_pop_ebx_return
 global mini___M_jmp_pop_ebx_syscall_return
 global mini___M_jmp_syscall_return
 global mini_exit
+global mini___M_fopen_open
 global mini_open
 global mini_close
 global mini_read
@@ -109,6 +110,7 @@ mini_read:	mov al, 3  ; __NR_read.
 		jmp strict short syscall3
 mini_write:	mov al, 4  ; __NR_write.
 		jmp strict short syscall3
+mini___M_fopen_open:
 mini_open:	mov al, 5  ; __NR_open.
 		jmp strict short syscall3
 mini_close:	mov al, 6  ; __NR_close.

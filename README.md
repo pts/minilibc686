@@ -1,7 +1,8 @@
-# minilibc686: libc and tools for creating size-optimized, statically linked Linux i386 and i686 programs
+# minilibc686: libc and tools for creating size-optimized, statically linked i386 and i686 programs for Linux and FreeBSD
 
 minilibc686 is a minimalistic, size-optimized C runtime library (libc)
-targeting Linux i386 and i686, for building statically linked ELF-32
+targeting the i386 and i686 CPUs, primarily Linux (but also FreeBSD),
+for building statically linked ELF-32
 executable programs. minilibc686 is batteries-included: it contains all
 necessary tools (e.g. the compiler driver *minicc*, C preprocessor, C
 compiler, assembler, linker) for building size-optimized Linux i386
@@ -38,6 +39,10 @@ The first time you run *minicc*, it builds the static libraries
 `libc/minilibc/libc.i386.a` and `libc/minilibc/libc.i686.a`, using the
 bundled NASM (`tools/nasm-0.98.39`) assembler. That's why you get hundrdeds
 of command log lines upon your first compile.
+
+By default, *minicc* builds Linux i386 ELF-32 executable programs. To target
+FreeBSD i386 instead, use `minicc -bfreebsd`. To target both Linux i386 and
+FreeBSD i386 (detected at runtime), use `minicc -bfreebsdx`.
 
 ## libc size analysis
 
@@ -248,6 +253,17 @@ The following components are included in *minilibc686*:
   compilers, it can use the bundled TinyCC compiler (`tools/miniutcc`) (use
   the `--tcc` flag).
 
+* src/smart.nasm and libc/minilibc/smart.nasm: It implements smart linking
+  support (minilibc686 libc only). With smart linking, some libc functions
+  become shorter, and program initialization (the *_start* function) aso
+  becomes shorter. Another example: if the program uses both strcasecmp(3)
+  and strncasecmp(3), the total code size will be smaller, because lots of
+  code is shared.
+
+* libc/minilibc/sys_freebsd.nasm: Implements program initialization (the
+  *_start* function) and syscall functions (such as *mini_isatty*,
+  *mini_write* and *mini__exit*) for the FreeBSD i386 target. It use used
+  with `minicc -bfreebsd` and `minicc -bfreebsdx`.
 * libc/dietlibc-0.34.sfx.7z: Self-extracting archive containing diet libc
   0.34 (released on 2018-09-24) (.h and .a files) targeting Linux i386,
   compiled for `-march=i386` and `-march=i686`. Use it with `minicc
@@ -480,6 +496,11 @@ you can specify any libc. It runs the compiler and the linker with many
 size-optimization flags, and it removes most unnecessary stuff from the
 final executable. *minicc* accepts the command-line flags in GCC syntax (and
 from that it generates OpenWatcom *wcc386* syntax and others as needed).
+
+By default, *minicc* builds Linux i386 ELF-32 executable programs. To target
+FreeBSD i386 instead, use `minicc -bfreebsd`. To target both Linux i386 and
+FreeBSD i386 (detected at runtime), use `minicc -bfreebsdx`. Please not that
+FreeBSD syscall support is currently very limited, but it can be extended.
 
 Here is how to pick the compiler:
 

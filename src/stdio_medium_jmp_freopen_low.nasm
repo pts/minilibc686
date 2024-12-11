@@ -17,11 +17,11 @@ section .text align=1
 section .rodata align=1
 section .data align=1
 section .bss align=1
-mini_open equ +0x12345678
+mini___M_fopen_open equ +0x12345678
 mini___M_discard_buf equ +0x12345679
 mini___M_start_flush_opened equ +0x1234567d
 %else
-extern mini_open
+extern mini___M_fopen_open
 extern mini___M_discard_buf
 extern mini___M_start_flush_opened
 section .text align=1
@@ -54,8 +54,8 @@ mini___M_jmp_freopen_low:
 		push dword 666o
 		push eax  ; File open flags.
 		push dword [esp+6*4]  ; Argument pathname.
-		call mini_open
-		add esp, byte 0xc  ; Clean up arguments of mini_open(...) from the stack.
+		call mini___M_fopen_open  ; Same as mini_open(...), but can use a simpler implementation which supports only a few values for flags.
+		add esp, byte 0xc  ; Clean up arguments of mini___M_fopen_open(...) from the stack.
 		test eax, eax
 		jns .open_ok
 .error:		xor eax, eax  ; EAX := NULL (return value, indicating error).

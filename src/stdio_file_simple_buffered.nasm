@@ -28,7 +28,7 @@ section .data align=1
 section .bss align=1
 mini_close equ $+0x12345678
 mini_lseek equ $+0x12345679
-mini_open equ $+0x1234567a
+mini___M_fopen_open equ $+0x1234567a
 mini_read equ $+0x1234567b
 mini_write equ $+0x1234567c
 %else
@@ -38,7 +38,7 @@ section .data align=4
 section .bss align=4
 extern mini_close
 extern mini_lseek
-extern mini_open
+extern mini___M_fopen_open
 extern mini_read
 extern mini_write
 %endif
@@ -71,7 +71,7 @@ mini_fopen:  ; FILE *mini_fopen(const char *pathname, const char *mode);
 		push dword 0x1b6
 		push eax
 		push dword [esp+0x14]
-		call mini_open
+		call mini___M_fopen_open  ; Same as mini_open(...), but can use a simpler implementation which supports only a few values for flags.
 		add esp, byte 0xc
 		test eax, eax
 		js .5

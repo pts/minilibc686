@@ -4,6 +4,7 @@
 
 #include <sys/types.h>
 
+#ifndef CONFIG_NOT_LINUX
 #define MREMAP_MAYMOVE 1UL
 #define MREMAP_FIXED 2UL
 #define PROT_READ 0x1
@@ -52,6 +53,8 @@
 #define MADV_DONTNEED 0x4
 #define MAP_ANON MAP_ANONYMOUS
 #define MAP_FILE 0
+#endif
+
 #define MAP_FAILED ((void *) -1)
 
 __LIBC_FUNC(void *, mmap, (void *addr, size_t length, int prot, int flags, int fd, off_t offset), __LIBC_NOATTR);  /* Not a syscall, `offset' needs processing. */

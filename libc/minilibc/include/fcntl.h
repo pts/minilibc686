@@ -8,6 +8,7 @@
 #define O_WRONLY 1
 #define O_RDWR   2
 #define O_ACCMODE 3
+#ifndef CONFIG_NOT_LINUX
 /* Everything below is Linux-specifc. */
 #define O_CREAT 0100
 #define O_EXCL  0200
@@ -26,8 +27,12 @@
 #define O_CLOEXEC 02000000
 #define O_SYNC (O_DSYNC|04000000)
 #define O_PATH 010000000
+#endif
 
 __LIBC_FUNC(int, open, (const char *pathname, int flags, ...), __LIBC_NOATTR);  /* Optional 3rd argument: mode_t mode */
+#ifdef __MINILIBC686__
+__LIBC_FUNC(int, __M_fopen_open, (const char *pathname, int flags, ...), __LIBC_NOATTR);  /* Optional 3rd argument: mode_t mode */
+#endif
 __LIBC_FUNC(int, creat, (const char *pathname, mode_t mode), __LIBC_NOATTR);  /* Optional 3rd argument: mode_t mode */
 /*static __inline__ int creat(const char *pathname, mode_t mode) { return open(pathname, O_CREAT | O_WRONLY | O_TRUNC, mode); }*/  /* This would also work. */
 
