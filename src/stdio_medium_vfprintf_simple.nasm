@@ -48,7 +48,7 @@ mini_vfprintf_simple:  ; void mini_vfprintf_simple(FILE *filep, const char *form
 		cmp al, 0
 		je strict short .done
 .write_char:	call .call_mini_putc
-		jmp strict .next_fmt_char
+		jmp strict short .next_fmt_char
 .done:		mov eax, [esp+8*4]  ; filep.
 		call mini___M_writebuf_unrelax_RP1  ; mini___M_writebuf_unrelax_RP1(filep);
 		add esp, strict byte 16
