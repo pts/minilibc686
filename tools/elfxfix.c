@@ -143,7 +143,7 @@ int main(int argc, char **argv) {
   char is_first_pt_load = 1;
   char can_fix;
   const char *fix_o_fn = NULL;  /* Use NULL to pacify GCC. */
-  Elf32_Off end_off, last_off, sz, sz2;
+  Elf32_Off end_off, last_off, sz, sz2, pt_load_count;
 
   (void)argc; (void)argv;
   if (!argv[0] || !argv[1] || strcmp(argv[1], "--help") == 0) {
@@ -281,8 +281,15 @@ int main(int argc, char **argv) {
   phdr_end = phdrs + ehdr.e_phnum;
   last_off = ehdr.e_phoff + want;
   phdrl0 = NULL;
+  for (phdr = phdrs, pt_load_count = 0; phdr != phdr_end; ++phdr) {
+    if (phdr->p_type == PT_LOAD) ++pt_load_count;
+  }
   for (phdr = phdrs; phdr != phdr_end; ++phdr) {
     if (phdr->p_type == PT_LOAD) {
+      if (pt_load_count == 1 && phdrs->p_align < 0x1000) {  /* Typical GNU ld(1) `ld -N' output: p_align == 4. */
+        phdr_has_changed = 1;
+        phdrs->p_align = 0x1000;
+      }
       if (flag_a && phdr->p_paddr == 0 && phdr->p_vaddr != 0) {
         phdr->p_paddr = phdr->p_vaddr;
         phdr_has_changed = 1;
