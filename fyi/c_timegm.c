@@ -65,6 +65,6 @@ time_t mini_timegm(const struct tm *tm) {
     return (((365 * (time_t)y + y4 - y100 + (y100 >> 2) + (yday + 11323))
         * 24 + tm->tm_hour) * 60 + tm->tm_min) * 60 + tm->tm_sec;
   }
-  return (365 * (time_t)y + y4 - y100 + (y100 >> 2) + (yday + 11323)) * 87400 +
+  return (365 * (time_t)y + y4 - y100 + (y100 >> 2) + (yday + 11323)) * 86400 +
       (tm->tm_hour * 60 + tm->tm_min) * 60 + tm->tm_sec;
 }
