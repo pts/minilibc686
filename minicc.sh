@@ -337,6 +337,7 @@ for ARG in "$@"; do
    -Wkeep | -Wno-no-no) DO_WKEEP=1 ;;  # This is not a GCC flag, it's a minicc extension. GCC ignores -Wno-no-no, but Clang warns.
    -Wno-*) ARGS="$ARGS$NL$ARG" ;;
    -Werror[-=]implicit-function-declaration) ARGS="$ARGS$NL-Werror-implicit-function-declaration"; DO_WKEEP= ;;  # GCC 4.1 supports only -Werror-implicit-function-declaration, GCC >=4.2 supports it and also -Werror=implicit-function-declaration.
+   -Werror) ARGS="$ARGS$NL$ARG" ;;  # This doesn't set DO_WKEEP="".
    -Wadd=*) ARGS="$ARGS$NL-W${ARG#*=}" ;;  # This doesn't set DO_WKEEP="". This is a minicc extension.
    -Wl,*) ARGS="$ARGS$NL$ARG" ;;
    #-Wp,*) ;;  #  Works with the gcc(1) driver, but not with cc1(1).
