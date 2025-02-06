@@ -35,7 +35,8 @@ __LIBC_FUNC(int, unlink, (const char *pathname), __LIBC_NOATTR);
 __LIBC_FUNC(int, rename, (const char *oldpath, const char *newpath), __LIBC_NOATTR);  /* Typically rename(2) is defined in <stdio.h>, bu we are lenient are and define in <unistd.h> as well. */
 /* Limitation: it doesn't always set errno in minilibc686. */
 __LIBC_FUNC(int, isatty, (int fd), __LIBC_NOATTR);
-__LIBC_FUNC(int, ftruncate, (int fd, off_t length), __LIBC_NOATTR);  /* 32-bit length. */
+__LIBC_FUNC(int, ftruncate, (int fd, off_t length), __LIBC_NOATTR);  /* 32-bit length. Use ftruncate64(...) for 64-bit length. */
+__LIBC_FUNC(int, ftruncate64, (int fd, off64_t length), __LIBC_NOATTR);  /* Linux >=2.4. */
 __LIBC_FUNC(int, symlink, (const char *target, const char *linkpath), __LIBC_NOATTR);
 __LIBC_FUNC(uid_t, getuid, (void), __LIBC_NOATTR);
 __LIBC_FUNC(uid_t, geteuid, (void), __LIBC_NOATTR);
