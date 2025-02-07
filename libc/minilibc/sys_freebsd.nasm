@@ -79,7 +79,7 @@ WEAK.._start:
 		;   argv strings
 		;   environment strings
 		;   program name
-		;   NULL		
+		;   NULL
 %ifdef __MULTIOS__  ; Set by minicc.sh if Linux support is needed in addition to FreeBSD.
 		push byte 20  ; SYS_getpid for both Linux and FreeBSD.
 		pop eax
@@ -192,7 +192,7 @@ global mini_lseek
 mini_lseek:  ; off_t mini_lseek(int fd, off_t offset, int whence);
   %ifdef __MULTIOS__
 		cmp byte [mini___M_is_freebsd], 0
-		jne .freebsd
+		jne short .freebsd
 		mov al, 19  ; Linux i386 SYS_lseek.
 		jmp short simple_syscall3_AL
     .freebsd:
@@ -221,7 +221,7 @@ global mini_time
 mini_time:  ; time_t mini_time(time_t *tloc);
   %ifdef __MULTIOS__  ; Already done.
 		cmp byte [mini___M_is_freebsd], 0
-		jne .freebsd
+		jne short .freebsd
 		mov al, 13  ; Linux i386 SYS_time.
 		jmp short simple_syscall3_AL
 		; Alternatively, Linux i386 SYS_gettimeofday would also work, but SYS_time may be faster.
@@ -235,7 +235,7 @@ mini_time:  ; time_t mini_time(time_t *tloc);
 		mov al, 116  ; FreeBSD i386 SYS_gettimeofday.
   ;%ifdef __MULTIOS__  ; Already done.
   ;		cmp byte [mini___M_is_freebsd], 0
-  ;		jne .freebsd
+  ;		jne short .freebsd
   ;		mov al, 78  ; Linux i386 SYS_gettimeofday.
   ;  .freebsd:
   ;%endif
@@ -291,7 +291,7 @@ global mini_ftruncate:
 mini_ftruncate:  ; int mini_ftruncate(int fd, off_t length);
   %ifdef __MULTIOS__
 		cmp byte [mini___M_is_freebsd], 0
-		jne .freebsd
+		jne short .freebsd
 		mov al, 93  ; Linux i386 SYS_ftruncate. Supported on Linux >=1.0.
 		jmp short simple_syscall3_AL
     .freebsd:
@@ -318,7 +318,7 @@ simple_syscall3_AL:
 		movzx eax, al
   %ifdef __MULTIOS__
 		cmp byte [mini___M_is_freebsd], 0
-		jne .freebsd
+		jne short .freebsd
 		push ebx  ; Save.
 		mov ebx, [esp+2*4]  ; Argument fd.
 		mov ecx, [esp+3*4]  ; Argument buf.
@@ -457,7 +457,7 @@ mini_isatty:  ; int mini_isatty(int fd);
 		push strict dword 0x402c7413  ; Change assumed Linux TCGETS (0x5401) to FreeBSD TIOCGETA (0x402c7413).
   %ifdef __MULTIOS__
 		cmp byte [mini___M_is_freebsd], 0
-		jne .freebsd
+		jne short .freebsd
 		pop eax  ; Clean up previous push.
 		push strict dword 0x5401  ; TCGETS. The syscall will change it to TIOCGETA for FreeBSD.
     .freebsd:
@@ -484,7 +484,7 @@ global mini_lseek64:
 mini_lseek64:  ; off64_t mini_lseek64(int fd, off64_t offset, int whence);
   %ifdef __MULTIOS__
 		cmp byte [mini___M_is_freebsd], 0
-		jne .freebsd
+		jne short .freebsd
 		push ebx
 		push esi
 		push edi
@@ -680,7 +680,7 @@ mini_malloc_simple_unaligned:  ; void *mini_malloc_simple_unaligned(size_t size)
 		xor ecx, ecx
   %ifdef __MULTIOS__
 		cmp byte [_IS_FREEBSD], 0
-		jne .freebsd2
+		jne short .freebsd2
 		push ecx  ; offset == 0.
 		push strict byte -1 ; fd.
 		push strict byte MAP.PRIVATE|MAP.ANONYMOUS_LINUX|MAP.FIXED  ; flags.
