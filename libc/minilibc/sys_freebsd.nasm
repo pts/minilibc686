@@ -67,7 +67,7 @@ section .text align=1
   %endif
 %endif
 WEAK.._start:
-;mini__start:  ; Entry point (_start) of the Linux i386 executable.
+;mini__start:  ; Entry point (_start) of the Linux i386 executable. Same for SVR3 i386, SVR4 i386, FreeBSD i386 and macOS i386 up to the end of envp.
 		; Now the stack looks like (from top to bottom):
 		;   dword [esp]: argc
 		;   dword [esp+4]: argv[0] pointer
@@ -81,13 +81,24 @@ WEAK.._start:
 		;   program name
 		;   NULL		
 %ifdef __MULTIOS__  ; Set by minicc.sh if Linux support is needed in addition to FreeBSD.
-		xor eax, eax
-		mov al, 20		; EAX := __NR_getpid for both Linux and FreeBSD.
-		stc			; CF := 1.
-		int 0x80		; Linux and FreeBSD i386 syscall.
-		sbb eax, eax		; FreeBSD set s CF := 0 on success, Linux keeps it intact (== 1). EAX := 0 in FreeBSD, -1 on Linux.
-		inc eax			; EAX := 1 in FreeBSD, 0 on Linux.
+		push byte 20  ; SYS_getpid for both Linux and FreeBSD.
+		pop eax
+		stc  ; CF := 1.
+		int 0x80  ; Linux and FreeBSD i386 syscall.
+		sbb eax, eax  ; FreeBSD set CF := 0 on success, Linux keeps it intact (== 1). EAX := 0 in FreeBSD, -1 on Linux.
+		inc eax  ; EAX := 1 in FreeBSD, 0 on Linux.
 		mov [mini___M_is_freebsd], al
+%else  ; Exit gracefully (without segmentation fault) if this FreeBSD i386 program is run on Linux i386.
+		push byte 20  ; SYS_getpid for both Linux and FreeBSD.
+		pop eax
+		stc  ; CF := 1.
+		int 0x80  ; Linux and FreeBSD i386 syscall.
+		jnc freebsd  ; FreeBSD set s CF := 0 on success, Linux keeps it intact (== 1). EAX := 0 in FreeBSD, -1 on Linux.
+		xor eax, eax
+		inc eax  ; EAX := SYS_exit for Linux.
+		or ebx, byte -1  ; exit(255);
+		int 0x80  ; Linux i386 sysall.
+freebsd:
 %endif
 %if MAIN_ARG_MODE<1
 %elif MAIN_ARG_MODE==1  ; argc only.
