@@ -190,11 +190,11 @@ mini_lseek:  ; off_t mini_lseek(int fd, off_t offset, int whence);
 		mov al, 199  ; FreeBSD SYS_freebsd6_lseek (also available in FreeBSD 3.0, released on 1998-10-16), with 64-bit offset.
 		call simple_syscall3_AL
 		test eax, eax
-		js .bad
+		js short .bad
 		test edx, edx
-		jz .done
-  .bad:		or eax, -1  ; Report error unless result fits to 31 bits, unsigned.
-		mov edx, eax
+		jz short .done
+  .bad:		or eax, byte -1  ; Report error unless result fits to 31 bits, unsigned.
+		cdq  ; EDX := -1. Sign-extend EAX (32-bit offset) to EDX:EAX (64-bit offset).
   .done:	add esp, byte 5*4  ; Clean up arguments of sys_freebsd6_lseek(...) above from the stack.
 		ret
 %endif
@@ -438,6 +438,82 @@ WEAK..mini___M_start_isatty_stdout:  ; Fallback, tools/elfofix will convert it t
 WEAK..mini___M_start_flush_stdout:   ; Fallback, tools/elfofix will convert it to a weak symbol.
 WEAK..mini___M_start_flush_opened:   ; Fallback, tools/elfofix will convert it to a weak symbol.
 		ret
+
+%ifdef __NEED_mini_lseek64
+global mini_lseek64:
+mini_lseek64:  ; off64_t mini_lseek64(int fd, off64_t offset, int whence);
+  %ifdef __MULTIOS__
+		cmp byte [mini___M_is_freebsd], 0
+		jne .freebsd
+		push ebx
+		push esi
+		push edi
+		push ebx  ; High dword of result.
+		push ebx  ; Low dword of result.
+		xor eax, eax
+		mov al, 140  ; Linux i386 SYS__llseek. Needs Linux >=1.2. We do a fallback later.
+		mov ebx, [esp+0x14+4]  ; Argument fd.
+		mov edx, [esp+0x14+8]  ; Argument offset (low dword).
+		mov ecx, [esp+0x14+0xc]  ; Argument offset (high dword).
+		mov esi, esp  ; &result.
+		mov edi, [esi+0x14+0x10]  ; Argument whence.
+		int 0x80  ; Linux i386 syscall.
+		test eax, eax
+		jns short .ok  ; It's OK to check the sign bit, SYS__llseek won't return negative values as success.
+		cmp eax, byte -38  ; Linux -ENOSYS. We get it if the kernel doesn't support SYS__llseek. Typically this happens for Linux <1.2.
+		jne short .bad_linux
+		; Try SYS_lseek. It works on Linux 1.0. Only Linux >=1.2 provides SYS__llseek.
+		mov eax, [esp+0x14+8]  ; Argument offset (low word).
+		cdq  ; EDX:EAX = sign_extend(EAX).
+		cmp edx, [esp+0x14+0xc]  ; Argument offset (high word).
+		xchg ecx, eax  ; ECX := argument offset (low word); EAX := junk.
+		push byte -22  ; Linux i386 -EINVAL.
+		pop eax
+		jne .bad_linux  ; Jump iff computed offset high word differs from the actual one.
+		;mov ebx, [esp+0x14+4]  ; Argument fd. Not needed, it already has that value.
+		mov edx, [esp+0x14+0x10]  ; Argument whence.
+		push byte 19  ; Linux i386 SYS_lseek.
+		pop eax
+		int 0x80  ; Linux i386 syscall.
+		test eax, eax
+		jns short .done  ; It's OK to check the sign bit, SYS_llseek won't return negative values as success, because it doesn't support files >=2 GiB.
+    .bad_linux:
+  %ifdef __NEED_mini_errno
+		neg eax
+		mov [mini_errno], eax  ; Linux errno.
+  %endif
+		or eax, byte -1  ; EAX := -1 (error).
+		cdq  ; EDX := -1. Sign-extend EAX (32-bit offset) to EDX:EAX (64-bit offset).
+		jmp short .bad_ret
+    .ok:	lodsd  ; High dword of result.
+		mov edx, [esi]  ; Low dword of result.
+    .done:	pop ebx  ; Discard low word of SYS__llseek result.
+		pop ebx  ; Discard high word of SYS__llseek result.
+		pop edi
+		pop esi
+		pop ebx
+		ret
+    .freebsd:
+  %endif
+		push dword [esp+4*4]  ; Argument whence of lseek and sys_freebsd6_lseek.
+		push dword [esp+4*4]  ; High dword of argument offset of lseek.
+		push dword [esp+4*4]  ; Low dword of argument offset of lseek.
+		push eax ; Dummy argument pad of sys_freebsd6_lseek.
+		push dword [esp+5*4]  ; Argument fd of lseek and sys_freebsd6_lseek.
+		xor eax, eax
+		mov al, 199  ; FreeBSD SYS_freebsd6_lseek (also available in FreeBSD 3.0, released on 1998-10-16), with 64-bit offset.
+		push eax  ; Dummy return address needed by FreeBSD i386 syscall.
+		int 0x80  ; FreeBSD i386 syscall.
+		lea esp, [esp+6*4]  ; Clean up arguments above from stack, without affecting the flags.
+		jnc short .ret
+  .bad:
+  %ifdef __NEED_mini_errno
+		mov [mini_errno], eax  ; FreeBSD errno.
+  %endif
+  .bad_ret:	or eax, byte -1  ; EAX := -1. Report error unless result fits to 31 bits, unsigned.
+		cdq  ; EDX := -1. Sign-extend EAX (32-bit offset) to EDX:EAX (64-bit offset).
+  .ret:		ret
+%endif
 
 %ifdef __NEED_mini_malloc_simple_unaligned
 extern _end  ; Set to end of .bss by GNU ld(1).
