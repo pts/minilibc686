@@ -296,6 +296,7 @@ _need mini_exit, mini__exit
 _need mini_fopen, mini_open
 _need mini___M_jmp_freopen_low, mini_open
 _need mini___M_jmp_freopen_low, mini___M_discard_buf
+_need mini_open_largefile, mini_open
 _need mini_fclose, mini_close
 _need mini_mq_getattr, mini_syscall3_RP1
 _need mini_malloc_simple_unaligned, mini_syscall3_AL

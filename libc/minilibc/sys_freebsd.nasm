@@ -144,6 +144,9 @@ mini__exit:  ; __attribute__((noreturn)) void mini__exit(int exit_code);
 %ifdef __NEED_mini_read
   %define __NEED_simple_syscall3_AL
 %endif
+%ifdef __NEED_mini_open_largefile
+  %define __NEED_mini_open
+%endif
 %ifdef __NEED_mini_open
   %define __NEED_simple_syscall3_AL
 %endif
@@ -239,6 +242,14 @@ mini_time:  ; time_t mini_time(time_t *tloc);
     mini_open:  ; int mini_open(const char *pathname, int flags, mode_t mode);
   %endif
 %endif
+%ifdef __NEED_mini_open_largefile
+  %ifndef __MULTIOS__
+    %define __NEED_mini___M_fopen_open
+    %undef __NEED_mini_open_largefile
+    global mini_open_largefile
+    mini_open_largefile:  ; int mini_open(const char *pathname, int flags, mode_t mode);
+  %endif
+%endif
 %ifdef __NEED_mini___M_fopen_open
   %ifndef __NEED_mini_open
     global mini___M_fopen_open
@@ -279,9 +290,10 @@ simple_syscall3_AL:
 		; For mmap2(2), do: cmp eax, -0x100 ++ jna .final_result
 		jns .ok_linux
     %ifdef __NEED_mini_errno
+		neg eax
 		mov [mini_errno], eax
     %endif
-		or eax, -1  ; EAX := -1 (ignore -errnum value).
+		or eax, byte -1  ; EAX := -1 (ignore -errnum value).
 .ok_linux:	ret
 .freebsd:
   %endif
@@ -381,6 +393,19 @@ mini_unlink:  ; int mini_unlink(const char *pathname);
 		mov al, 5
 		call simple_syscall3_AL
 		add esp, byte 3*4  ; Clean up stack of simple_syscall3_AL.
+		ret
+%endif
+
+%ifdef __NEED_mini_open_largefile
+global mini_open_largefile
+mini_open_largefile:  ; char *mini_open_largefile(const char *pathname, int flags, mode_t mode);  /* Argument mode is optional. */
+		push dword [esp+3*4]  ; Argument mode.
+		mov eax, [esp+3*4]  ; Argument flags.
+		or ah, 0x80  ; Add O_LARGEFILE (Linux i386).
+		push eax
+		push dword [esp+3*4]  ; Argument pathname.
+		call mini_open
+		add esp, byte 3*4  ; Clean up arguments of open above.
 		ret
 %endif
 
