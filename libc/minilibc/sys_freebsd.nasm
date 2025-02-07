@@ -346,8 +346,13 @@ simple_syscall3_AL:
 		mov [mini_errno], eax
   %endif
 		sbb eax, eax  ; EAX := -1, indicating error.
-.ok:		ret
+.ok:
 %endif
+WEAK..mini___M_start_isatty_stdin:   ; Fallback, tools/elfofix will convert it to a weak symbol.
+WEAK..mini___M_start_isatty_stdout:  ; Fallback, tools/elfofix will convert it to a weak symbol.
+WEAK..mini___M_start_flush_stdout:   ; Fallback, tools/elfofix will convert it to a weak symbol.
+WEAK..mini___M_start_flush_opened:   ; Fallback, tools/elfofix will convert it to a weak symbol.
+		ret
 
 %ifdef __NEED_mini_write
 global mini_write
@@ -480,11 +485,6 @@ mini_isatty:  ; int mini_isatty(int fd);
 		inc eax
 .have_retval:
 %endif
-WEAK..mini___M_start_isatty_stdin:   ; Fallback, tools/elfofix will convert it to a weak symbol.
-WEAK..mini___M_start_isatty_stdout:  ; Fallback, tools/elfofix will convert it to a weak symbol.
-WEAK..mini___M_start_flush_stdout:   ; Fallback, tools/elfofix will convert it to a weak symbol.
-WEAK..mini___M_start_flush_opened:   ; Fallback, tools/elfofix will convert it to a weak symbol.
-		ret
 
 %ifdef __NEED_mini_lseek64
 global mini_lseek64:
