@@ -371,15 +371,19 @@ mini_close:  ; int mini_close(int fd);;
 %endif
 
 %ifdef __NEED_mini_remove
-global mini_remove
-mini_remove:  ; int mini_remove(const char *pathname);
+  global mini_remove
+  mini_remove:  ; int mini_remove(const char *pathname);
+  %define __DO_mini_unlink
 %endif
 %ifdef __NEED_mini_unlink  ; Also true if: ifdef __NEED_mini_remove.
-global mini_unlink
-mini_unlink:  ; int mini_unlink(const char *pathname);
+  global mini_unlink
+  mini_unlink:  ; int mini_unlink(const char *pathname);
+  %define __DO_mini_unlink
 %endif
+%ifdef __DO_mini_unlink
 		mov al, 10  ; FreeBSD i386 and Linux i386 SYS_unlink.
 		jmp short simple_syscall3_AL
+%endif
 
 ; --- No more instances of `jmp short simple_syscall3_AL', so we don't have to enforce `short'.
 
