@@ -57,8 +57,8 @@
 
 #define MAP_FAILED ((void *) -1)
 
-__LIBC_FUNC(void *, mmap, (void *addr, size_t length, int prot, int flags, int fd, off_t offset), __LIBC_NOATTR);  /* Not a syscall, `offset' needs processing. */
-__LIBC_FUNC(void *, sys_mmap2, (void *addr, size_t length, int prot, int flags, int fd, off_t offset), __LIBC_NOATTR);
+__LIBC_FUNC(void *, mmap, (void *addr, size_t length, int prot, int flags, int fd, __off_t offset), __LIBC_NOATTR);  /* Not a syscall, `offset' needs processing. */
+__LIBC_FUNC(void *, sys_mmap2, (void *addr, size_t length, int prot, int flags, int fd, __off_t offset), __LIBC_NOATTR);
 __LIBC_FUNC(void *, mremap, (void *old_address, size_t old_size, size_t new_size, int flags, ... /* void *new_address */), __LIBC_NOATTR);
 __LIBC_FUNC(int, munmap, (void *addr, size_t length), __LIBC_NOATTR);
 

@@ -4,8 +4,13 @@
 
 typedef unsigned size_t;
 typedef int ssize_t;
-typedef long off_t;  /* Still 32 bits only. */
-__extension__ typedef long long loff_t;
+typedef long __off_t;  /* Always 32 bits, compatible with uClibc and EGLIBC. */
+#if _FILE_OFFSET_BITS == 64  /* Specifgy -D_FILE_OFFSET_BITS=64 for GCC. */
+  __extension__ typedef long long off_t;  /* __extension__ is to make it work with `gcc -ansi -pedantic'. */
+#else
+  typedef long off_t;
+#endif
+__extension__ typedef long long loff_t;  /* __extension__ is to make it work with `gcc -ansi -pedantic'. */
 __extension__ typedef long long off64_t;  /* __extension__ is to make it work with `gcc -ansi -pedantic'. */
 typedef unsigned mode_t;
 typedef int ptrdiff_t;
