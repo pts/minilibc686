@@ -144,6 +144,9 @@ mini__exit:  ; __attribute__((noreturn)) void mini__exit(int exit_code);
 %ifdef __NEED_mini_read
   %define __NEED_simple_syscall3_AL
 %endif
+%ifdef __NEED_mini_open
+  %define __NEED_simple_syscall3_AL
+%endif
 %ifdef __NEED_mini_close
   %define __NEED_simple_syscall3_AL
 %endif
@@ -188,7 +191,7 @@ mini_lseek:  ; off_t mini_lseek(int fd, off_t offset, int whence);
 		test edx, edx
 		jz .done
   .bad:		or eax, -1  ; Report error unless result fits to 31 bits, unsigned.
-  		mov edx, eax
+		mov edx, eax
   .done:	add esp, byte 5*4  ; Clean up arguments of sys_freebsd6_lseek(...) above from the stack.
 		ret
 %endif
@@ -197,9 +200,9 @@ mini_lseek:  ; off_t mini_lseek(int fd, off_t offset, int whence);
 global mini_time
 mini_time:  ; time_t mini_time(time_t *tloc);
   %ifdef __MULTIOS__  ; Already done.
-  		cmp byte [mini___M_is_freebsd], 0
-  		jne .freebsd
-  		mov al, 13  ; Linux i386 SYS_time.
+		cmp byte [mini___M_is_freebsd], 0
+		jne .freebsd
+		mov al, 13  ; Linux i386 SYS_time.
 		jmp short simple_syscall3_AL
 		; Alternatively, Linux i386 SYS_gettimeofday would also work, but SYS_time may be faster.
     .freebsd:
@@ -227,6 +230,35 @@ mini_time:  ; time_t mini_time(time_t *tloc);
 		mov [edx], eax
 .ret:		ret
 %endif
+
+%ifdef __NEED_mini_open
+  %ifndef __MULTIOS__
+    %define __NEED_mini___M_fopen_open
+    %undef __NEED_mini_open
+    global mini_open
+    mini_open:  ; int mini_open(const char *pathname, int flags, mode_t mode);
+  %endif
+%endif
+%ifdef __NEED_mini___M_fopen_open
+  %ifndef __NEED_mini_open
+    global mini___M_fopen_open
+    mini___M_fopen_open:  ; int mini___M_fopen_open(const char *pathname, int flags, mode_t mode);
+		mov al, 5  ; FreeBSD i386 and Linux i386 SYS_open.
+    %ifdef __MULTIOS__
+		cmp byte [mini___M_is_freebsd], 0
+		je .flags_done
+		lea edx, [esp+2*4]  ; Address of flags argument.
+		; This only fixes the flags with which mini_fopen(...) calls mini_open(...). The other flags value is O_RDONLY, which doesn't have to be changed.
+		cmp word [edx], 1101o  ; flags: Linux   (O_WRONLY | O_CREAT | O_TRUNC) == (1 | 100o | 1000o).
+		jne .flags_done
+		mov word [edx], 0x601  ; flags: FreeBSD (O_WRONLY | O_CREAT | O_TRUNC) == (1 | 0x200 | 0x400) == 0x601. In the SYSV i386 calling convention, it's OK to modify an argument on the stack.
+      .flags_done:
+    %endif
+		jmp short simple_syscall3_AL
+  %endif
+%endif
+
+; TODO(pts): Make at least one function fall through to simple_syscall3_AL.
 
 %ifdef __NEED_simple_syscall3_AL
 ; Input: syscall number in AL, up to 3 arguments on the stack (__cdecl).
@@ -276,23 +308,6 @@ mini_read:  ; ssize_t mini_read(int fd, void *buf, size_t count);
 		jmp short simple_syscall3_AL
 %endif
 
-%ifdef __NEED_mini___M_fopen_open
-global mini___M_fopen_open
-mini___M_fopen_open:  ; int mini___M_fopen_open(const char *pathname, int flags, mode_t mode);
-		mov al, 5  ; FreeBSD i386 and Linux i386 SYS_open.
-  %ifdef __MULTIOS__
-		cmp byte [mini___M_is_freebsd], 0
-		je .flags_done
-		lea edx, [esp+2*4]  ; Address of flags argument.
-		; This only fixes the flags with which mini_fopen(...) calls mini_open(...). The other flags value is O_RDONLY, which doesn't have to be changed.
-		cmp word [edx], 1101o  ; flags: Linux   (O_WRONLY | O_CREAT | O_TRUNC) == (1 | 100o | 1000o).
-		jne .flags_done
-		mov word [edx], 0x601  ; flags: FreeBSD (O_WRONLY | O_CREAT | O_TRUNC) == (1 | 0x200 | 0x400) == 0x601. In the SYSV i386 calling convention, it's OK to modify an argument on the stack.
-    .flags_done:
-  %endif
-		jmp short simple_syscall3_AL
-%endif
-
 %ifdef __NEED_mini_close
 global mini_close
 mini_close:  ; int mini_close(int fd);;
@@ -310,6 +325,64 @@ mini_unlink:  ; int mini_unlink(const char *pathname);
 %endif
 		mov al, 10  ; FreeBSD i386 and Linux i386 SYS_unlink.
 		jmp short simple_syscall3_AL
+
+; --- No more instances of `jmp short simple_syscall3_AL', so we don't have to enforce `short'.
+
+%ifdef __NEED_mini_open
+  global mini_open
+  mini_open:  ; int mini_open(const char *pathname, int flags, mode_t mode);
+  %ifdef __NEED_mini___M_fopen_open
+    global mini___M_fopen_open
+    mini___M_fopen_open:  ; int mini___M_fopen_open(const char *pathname, int flags, mode_t mode);
+  %endif
+  %ifndef __MULTIOS__
+    %error MULTIOS_NEEDED_FOR_MINI_OPEN
+    db 1/0
+  %endif
+  ; Symbol       Linux   FreeBSD
+  ; ----------------------------
+  ; O_CREAT        0x40   0x0200
+  ; O_TRUNC       0x200   0x0400
+  ; O_EXCL         0x80   0x0800
+  ; O_NOCTTY      0x100   0x8000
+  ; O_APPEND      0x400        8
+  ; O_LARGEFILE  0x8000        0
+  %macro open_test_or 4
+    test %1, %2
+    jz short %%unset
+    and %1, ~(%2)
+    or %3, %4
+    %%unset:
+  %endm
+		mov eax, [esp+2*4]  ; Get argument flags.
+		mov edx, eax
+		cmp byte [mini___M_is_freebsd], 0
+		je .flags_done
+		and edx, byte 3  ; O_ACCMODE.
+		and eax, strict dword ~(0x8003)  ; ~(O_ACCMODE|O_LARGEFILE).
+		open_test_or al, 0x40, dh, 2  ; O_CREAT.
+		open_test_or al, 0x80, dh, 8  ; O_EXCL.
+		xchg al, ah  ; Save a few bytes below: operations on al are shorter than on ah.
+		open_test_or al, 1, dh, 0x80  ; O_NOCTTY.
+		open_test_or al, 2, dh, 4  ; O_TRUNC.
+		open_test_or al, 4, dl, 8  ; O_APPEND.
+		test eax, eax
+		jz short .flags_done  ; Jump if all flags converted correctly.
+  %ifdef __NEED_mini_errno
+		push byte 22  ; Linux EINVAL.
+		pop dword [mini_errno]
+  %endif
+		or eax, byte -1
+		ret
+    .flags_done:
+		push dword [esp+3*4]  ; Copy argument mode.
+		push edx  ; Modified argument flags.
+		push dword [esp+3*4]  ; Copy argument pathname.
+		mov al, 5
+		call simple_syscall3_AL
+		add esp, byte 3*4  ; Clean up stack of simple_syscall3_AL.
+		ret
+%endif
 
 %ifdef __NEED_mini_isatty
 global mini_isatty
@@ -473,7 +546,7 @@ mini_malloc_simple_unaligned:  ; void *mini_malloc_simple_unaligned(size_t size)
   %ifdef __MULTIOS__
 		pop esi  ; Restore.
   %endif
-  		pop edi
+		pop edi
 		pop ebx
 		ret
 %endif
