@@ -165,6 +165,9 @@ mini__exit:  ; __attribute__((noreturn)) void mini__exit(int exit_code);
 %ifdef __NEED_mini_lseek
   %define __NEED_simple_syscall3_AL
 %endif
+%ifdef __NEED_mini_ftruncate64
+  %define __NEED_simple_syscall3_AL
+%endif
 %ifdef __NEED_mini_malloc_simple_unaligned
   %define __NEED_simple_syscall3_AL
 %endif
@@ -513,6 +516,59 @@ mini_lseek64:  ; off64_t mini_lseek64(int fd, off64_t offset, int whence);
   .bad_ret:	or eax, byte -1  ; EAX := -1. Report error unless result fits to 31 bits, unsigned.
 		cdq  ; EDX := -1. Sign-extend EAX (32-bit offset) to EDX:EAX (64-bit offset).
   .ret:		ret
+%endif
+
+%ifdef __NEED_mini_ftruncate64
+global mini_ftruncate64:
+mini_ftruncate64:  ; int mini_ftruncate64(int fd, off64_t length);
+  %ifdef __MULTIOS__
+		cmp byte [mini___M_is_freebsd], 0
+		jne .freebsd
+		push ebx
+		xor eax, eax
+		mov al, 194  ; Linux i386 ftruncate64(2). Needs Linux >=2.4. !! TODO(pts): Fall back to mini_lseek64(...) + SYS_write for >=2 GiB on Linux >=1.2, Linux <2.4.
+		mov ebx, [esp+2*4]  ; Argument fd.
+		mov ecx, [esp+3*4]  ; Low  word of argument length.
+		mov edx, [esp+4*4]  ; High word of argument length.
+		int 0x80  ; Linux i386 syscall.
+		test eax, eax
+		jns short .done  ; It's OK to check the sign bit, SYS__llseek won't return negative values as success.
+		cmp eax, byte -38  ; Linux -ENOSYS. We get it if the kernel doesn't support SYS__llseek. Typically this happens for Linux <1.2.
+		jne short .bad_linux
+		; Try SYS_ftruncate. It works on Linux 1.0. Only Linux >=2.4 provides SYS_ftruncate(2).
+		xchg ecx, eax  ; EAX := argument offset (low word); ECX := junk.
+		cdq  ; EDX:EAX = sign_extend(EAX).
+		cmp edx, [esp+4*4]  ; Argument offset (high word).
+		xchg ecx, eax  ; ECX := argument offset (low word); EAX := junk.
+		push byte -22  ; Linux i386 -EINVAL.
+		pop eax
+		jne .bad_linux  ; Jump iff computed offset high word differs from the actual one.
+		;mov ebx, [esp+2*4]  ; Argument fd. Not needed, it already has that value.
+		;mov ecx, [esp+3*4]  ; Low word of argument length. Not needed, it already has that value.
+		push byte 93  ; Linux i386 SYS_ftruncate.
+		pop eax
+		int 0x80  ; Linux i386 syscall.
+		test eax, eax
+		jns short .done  ; It's OK to check the sign bit, SYS_llseek won't return negative values as success, because it doesn't support files >=2 GiB.
+    .bad_linux:
+  %ifdef __NEED_mini_errno
+		neg eax
+		mov [mini_errno], eax  ; Linux errno.
+  %endif
+		or eax, byte -1  ; EAX := -1 (error).
+    .done:	pop ebx  ; Restore.
+		ret
+    .freebsd:
+  %endif
+		mov al, 201  ; FreeBSD ftruncate(2) with 64-bit offset. FreeBSD 3.0 already had it. int ftruncate(int fd, int pad, off_t length); }
+		;mov eax, 130  ; FreeBSD old ftruncate(2) wit 32-bit offset. int ftruncate(int fd, long length); }.
+		push dword [esp+3*4]  ; High word of argument length.
+		push dword [esp+3*4]  ; Low word of argument length.
+		push eax  ; Arbitrary pad value.
+		push dword [esp+4*4]  ; Argument fd.
+		call simple_syscall3_AL
+		add esp, byte 4*4  ; Clean up arguments above.
+		ret
 %endif
 
 %ifdef __NEED_mini_malloc_simple_unaligned
