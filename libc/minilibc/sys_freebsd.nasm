@@ -181,6 +181,9 @@ mini__exit:  ; __attribute__((noreturn)) void mini__exit(int exit_code);
 %endif
 %ifdef __NEED_mini_ftruncate64
   %define __NEED_simple_syscall3_AL
+  %ifdef __MULTIOS__
+    %define __NEED_mini___M_lseek64_linux
+  %endif
 %endif
 %ifdef __NEED_mini_malloc_simple_unaligned
   %define __NEED_simple_syscall3_AL
@@ -555,46 +558,54 @@ mini_lseek64:  ; off64_t mini_lseek64(int fd, off64_t offset, int whence);
   .ret:		ret
 %endif
 
-%ifdef __NEED_mini_ftruncate64
-global mini_ftruncate64:
-mini_ftruncate64:  ; int mini_ftruncate64(int fd, off64_t length);
-  %ifdef __MULTIOS__
-		cmp byte [mini___M_is_freebsd], 0
-		jne .freebsd
+%ifdef __NEED_mini___M_lseek64_linux
+  global mini___M_lseek64_linux
+  %ifdef __NEED_mini_lseek64
+    mini___M_lseek64_linux: equ mini_lseek64
+  %else
+    mini___M_lseek64_linux:
 		push ebx
+		push esi
+		push edi
+		push ebx  ; High dword of SYS__llseek result.
+		push ebx  ; Low  dword of SYS__llseek result.
 		xor eax, eax
-		mov al, 194  ; Linux i386 ftruncate64(2). Needs Linux >=2.4. !! TODO(pts): Fall back to mini_lseek64(...) + SYS_write for >=2 GiB on Linux >=1.2, Linux <2.4.
-		mov ebx, [esp+2*4]  ; Argument fd.
-		mov ecx, [esp+3*4]  ; Low  word of argument length.
-		mov edx, [esp+4*4]  ; High word of argument length.
+		mov al, 140  ; SYS__llseek.
+		mov ebx, [esp+0x14+4]  ; Argument fd.
+		mov edx, [esp+0x14+8]  ; Argument offset (low dword).
+		mov ecx, [esp+0x14+0xc]  ; Argument offset (high dword).
+		mov esi, esp  ; &result.
+		mov edi, [esi+0x14+0x10]  ; Argument whence.
 		int 0x80  ; Linux i386 syscall.
 		test eax, eax
-		jns short .done  ; It's OK to check the sign bit, SYS__llseek won't return negative values as success.
-		cmp eax, byte -38  ; Linux -ENOSYS. We get it if the kernel doesn't support SYS__llseek. Typically this happens for Linux <1.2.
-		jne short .bad_linux
-		; Try SYS_ftruncate. It works on Linux 1.0. Only Linux >=2.4 provides SYS_ftruncate(2).
-		xchg ecx, eax  ; EAX := argument offset (low word); ECX := junk.
-		cdq  ; EDX:EAX = sign_extend(EAX).
-		cmp edx, [esp+4*4]  ; Argument offset (high word).
-		xchg ecx, eax  ; ECX := argument offset (low word); EAX := junk.
-		push byte -22  ; Linux i386 -EINVAL.
-		pop eax
-		jne .bad_linux  ; Jump iff computed offset high word differs from the actual one.
-		;mov ebx, [esp+2*4]  ; Argument fd. Not needed, it already has that value.
-		;mov ecx, [esp+3*4]  ; Low word of argument length. Not needed, it already has that value.
-		push byte 93  ; Linux i386 SYS_ftruncate.
-		pop eax
-		int 0x80  ; Linux i386 syscall.
-		test eax, eax
-		jns short .done  ; It's OK to check the sign bit, SYS_llseek won't return negative values as success, because it doesn't support files >=2 GiB.
-    .bad_linux:
+		js short .bad  ; It's OK to check the sign bit, SYS__llseek won't return negative values as success.
+    .ok:	lodsd  ; High dword of result.
+		mov edx, [esi]  ; Low dword of result.
+		jmp short .done
+    .bad:
   %ifdef __NEED_mini_errno
 		neg eax
 		mov [mini_errno], eax  ; Linux errno.
   %endif
 		or eax, byte -1  ; EAX := -1 (error).
-    .done:	pop ebx  ; Restore.
+		cdq  ; EDX := -1. Sign-extend EAX (32-bit offset) to EDX:EAX (64-bit offset).
+    .done:	pop ebx  ; Discard low  word of SYS__llseek result.
+		pop ebx  ; Discard high word of SYS__llseek result.
+		pop edi
+		pop esi
+		pop ebx
 		ret
+  %endif
+%endif
+
+%ifdef __NEED_mini_ftruncate64
+  ;%define DEBUG_SKIP_SYS_FTRUNCATE64
+  ;%define DEBUG_SKIP_SYS_FTRUNCATE
+  global mini_ftruncate64:
+  mini_ftruncate64:  ; int mini_ftruncate64(int fd, off64_t length);
+  %ifdef __MULTIOS__
+		cmp byte [mini___M_is_freebsd], 0
+		je short .linux
     .freebsd:
   %endif
 		mov al, 201  ; FreeBSD ftruncate(2) with 64-bit offset. FreeBSD 3.0 already had it. int ftruncate(int fd, int pad, off_t length); }
@@ -606,6 +617,124 @@ mini_ftruncate64:  ; int mini_ftruncate64(int fd, off64_t length);
 		call simple_syscall3_AL
 		add esp, byte 4*4  ; Clean up arguments above.
 		ret
+  %ifdef __MULTIOS__
+    .linux:	push ebx  ; Save.
+		push esi  ; Save.
+		push edi  ; Save.
+		xor eax, eax
+		mov al, 194  ; Linux i386 ftruncate64(2). Needs Linux >=2.4.
+		mov ebx, [esp+4*4]  ; Argument fd.
+		mov ecx, [esp+5*4]  ; Low  word of argument length.
+		mov edx, [esp+6*4]  ; High word of argument length.
+    %ifndef DEBUG_SKIP_SYS_FTRUNCATE64
+		int 0x80  ; Linux i386 syscall.
+		test eax, eax
+		jns short .done_linux  ; It's OK to check the sign bit, SYS__llseek won't return negative values as success.
+		cmp eax, byte -38  ; Linux -ENOSYS. We get it if the kernel doesn't support SYS__llseek. Typically this happens for Linux <1.2.
+		jne short .bad_linux
+    %endif
+		; Try SYS_ftruncate. It works on Linux 1.0. Only Linux >=2.4 provides SYS_ftruncate(2).
+		xchg ecx, eax  ; EAX := argument offset (low word); ECX := junk.
+		cdq  ; EDX:EAX = sign_extend(EAX).
+		cmp edx, [esp+6*4]  ; Argument offset (high word).
+		xchg ecx, eax  ; ECX := argument offset (low word); EAX := junk.
+		push byte -22  ; Linux i386 -EINVAL.
+		pop eax
+    %ifndef DEBUG_SKIP_SYS_FTRUNCATE
+		je short .ftruncate_linux  ; Jump iff computed offset high word is the same as the actual one.
+    %endif
+    .fallback_linux:  ; Now we fall back to greowing the file using mini_lseek64(...) + SYS_write of 1 byte.
+		push byte 1  ; Argument whence: SEEK_CUR.
+		push byte 0  ; High word of argument length.
+		push byte 0  ; Low  word of argument length.
+		push ebx  ; Argument fd.
+		call mini___M_lseek64_linux
+		add esp, byte 4*4  ; Clean up arguments of mini___M_lseek64_linux above.
+		test edx, edx
+		js short .done_linux
+		mov esi, edx
+		xchg edi, eax  ; ESI:EDI := previous file position; EAX := junk.
+		push byte 2  ; Argument whence: SEEK_END.
+		push byte 0  ; High word of argument length.
+		push byte 0  ; Low  word of argument length.
+		push ebx  ; Argument fd.
+		call mini___M_lseek64_linux
+		add esp, byte 4*4  ; Clean up arguments of mini___M_lseek64_linux above.
+		jmp short .fallback_linux2
+    .ftruncate_linux:
+		;mov ebx, [esp+2*4]  ; Argument fd. Not needed, it already has that value.
+		;mov ecx, [esp+3*4]  ; Low word of argument length. Not needed, it already has that value.
+		push byte 93  ; Linux i386 SYS_ftruncate.
+		pop eax
+		int 0x80  ; Linux i386 syscall.
+		test eax, eax
+		jns short .done_linux  ; It's OK to check the sign bit, SYS_llseek won't return negative values as success, because it doesn't support files >=2 GiB.
+    .bad_linux:
+    %ifdef __NEED_mini_errno
+		neg eax
+		mov [mini_errno], eax  ; Linux errno.
+    %endif
+		or eax, byte -1  ; EAX := -1 (error).
+    .done_linux:
+		pop edi  ; Restore.
+		pop esi  ; Restore.
+		pop ebx  ; Restore.
+		ret
+    .fallback_linux2:
+		test edx, edx
+		js short .done_linux
+		cmp edx, [esp+6*4]  ; High word of argument length.
+		ja short .enosys_linux  ; The caller wants use to shrink the file, this fallback implementation can't do that.
+		jne .grow_linux
+		cmp eax, [esp+5*4]  ; Low word of argument length.
+		ja short .enosys_linux  ; The caller wants use to shrink the file, this fallback implementation can't do that.
+		je short .seek_back_linux
+    .grow_linux:
+		mov edx, [esp+6*4]  ; High word of argument length.
+		mov eax, [esp+5*4]  ; Low word of argument length.
+		dec eax
+		jnz .cont1_linux
+		dec edx
+    .cont1_linux:
+		push byte 0  ; Argument whence: SEEK_SET.
+		push edx  ; High word of argument length.
+		push eax  ; Low  word of argument length.
+		push ebx  ; Argument fd.
+		call mini___M_lseek64_linux
+		add esp, byte 4*4  ; Clean up arguments of mini___M_lseek64_linux above.
+		test edx, edx
+		js short .done_linux
+    .write1_linux:  ; Now write a NUL byte.
+		push byte 0  ; Buffer containing a single NUL byte.
+		mov ecx, esp
+		push byte 1  ; Argument count of SYS_write.
+		push ecx  ; Argument buf of SYS_write.
+		push ebx  ; Argument fd of SYS_write.
+		mov al, 4  ; Linux i386 SYS_write.
+		call simple_syscall3_AL
+		add esp, byte 3*4+4  ; Clean up arguments of simple_syscall3_AL above and also the buffer.
+		test eax, eax
+		js short .done_linux
+    .seek_back_linux:
+		push byte 0  ; Argument whence: SEEK_SET.
+		push esi  ; High word of argument length.
+		push edi  ; Low  word of argument length.
+		push ebx  ; Argument fd.
+		call mini___M_lseek64_linux
+		add esp, byte 4*4  ; Clean up arguments of mini___M_lseek64_linux above.
+		test edx, edx
+		js short .done_linux
+		xor eax, eax  ; Indicate success by returning 0 in EDX:EAX.
+		jmp short .done_linux
+    %ifdef __NEED_mini_errno
+      .enosys_linux:
+		push byte -38  ; Linux i386 -ENOSYS.  ; !!! Omit this if no __NEED_mini_errno.
+		pop eax
+		jmp short .bad_linux
+    %else
+      .enosys_linux: equ .bad_linux
+    %endif
+  %endif
 %endif
 
 %ifdef __NEED_mini_malloc_simple_unaligned
