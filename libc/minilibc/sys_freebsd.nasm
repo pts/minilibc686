@@ -80,25 +80,35 @@ WEAK.._start:
 		;   environment strings
 		;   program name
 		;   NULL
+		push byte 4  ; SYS_write for both Linux i386 and FreeBSD.
+		pop eax
+		xor edx, edx  ; Argument count of Linux i386 SYS_write.
+		push edx  ; Argument count of FreeBSD SYS_write.
+		xor ecx, ecx  ; Argument buf of Linux i386 SYS_write.
+		push ecx  ; Argument buf of FreeBSD SYS_write.
+		or ebx, byte -1  ; Argument fd of Linux i386 SYS_write.
+		push ebx  ; Argument fd of FreeBSD SYS_write.
+		push eax  ; Fake return address of FreeBSD syscall.
+		int 0x80  ; Linux i386 and FreeBSD i386 syscall. It fails because of the negative fd.
+		add esp, byte 4*4  ; Clean up syscall arguments above.
 %ifdef __MULTIOS__  ; Set by minicc.sh if Linux support is needed in addition to FreeBSD.
-		push byte 20  ; SYS_getpid for both Linux and FreeBSD.
-		pop eax
-		stc  ; CF := 1.
-		int 0x80  ; Linux and FreeBSD i386 syscall.
-		sbb eax, eax  ; FreeBSD set CF := 0 on success, Linux keeps it intact (== 1). EAX := 0 in FreeBSD, -1 on Linux.
-		inc eax  ; EAX := 1 in FreeBSD, 0 on Linux.
+		not eax
+		shr eax, 31  ; EAX := sign(EAX). Linux becomes 0 (because SYS_write has returned a negative errno value: -EBADF), FreeBSD becomes 1.
 		mov [mini___M_is_freebsd], al
+		; The previous detection used SYS_getpid and checked CF
+		; after `int 0x80'. This worked on modern Linux kernels (who
+		; don't change CF, but FreeBSD i386 sets CF=0 upon success),
+		; but `int 0x80' Linux 1.0.4 sets CF=0, so it didn't work.
+		; Checking the sign of the errno return value is more
+		; robust.
 %else  ; Exit gracefully (without segmentation fault) if this FreeBSD i386 program is run on Linux i386.
-		push byte 20  ; SYS_getpid for both Linux and FreeBSD.
-		pop eax
-		stc  ; CF := 1.
-		int 0x80  ; Linux and FreeBSD i386 syscall.
-		jnc freebsd  ; FreeBSD set s CF := 0 on success, Linux keeps it intact (== 1). EAX := 0 in FreeBSD, -1 on Linux.
+		test eax, eax
+		jns freebsd
 		xor eax, eax
-		inc eax  ; EAX := SYS_exit for Linux.
-		or ebx, byte -1  ; exit(255);
+		inc eax  ; EAX := SYS_exit for Linux i386.
+		;or ebx, byte -1  ; exit(255);  ; No need to set it it still has this value from above.
 		int 0x80  ; Linux i386 sysall.
-freebsd:
+  freebsd:
 %endif
 %if MAIN_ARG_MODE<1
 %elif MAIN_ARG_MODE==1  ; argc only.
