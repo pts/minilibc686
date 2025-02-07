@@ -165,6 +165,9 @@ mini__exit:  ; __attribute__((noreturn)) void mini__exit(int exit_code);
 %ifdef __NEED_mini_lseek
   %define __NEED_simple_syscall3_AL
 %endif
+%ifdef __NEED_mini_ftruncate
+  %define __NEED_simple_syscall3_AL
+%endif
 %ifdef __NEED_mini_ftruncate64
   %define __NEED_simple_syscall3_AL
 %endif
@@ -270,6 +273,29 @@ mini_time:  ; time_t mini_time(time_t *tloc);
     %endif
 		jmp short simple_syscall3_AL
   %endif
+%endif
+
+%ifdef __NEED_mini_ftruncate
+global mini_ftruncate:
+mini_ftruncate:  ; int mini_ftruncate(int fd, off_t length);
+  %ifdef __MULTIOS__
+		cmp byte [mini___M_is_freebsd], 0
+		jne .freebsd
+		mov al, 93  ; Linux i386 SYS_ftruncate. Supported on Linux >=1.0.
+		jmp short simple_syscall3_AL
+    .freebsd:
+  %endif
+		mov eax, [esp+2*4]  ; Argument length.
+		cdq  ; EDX:EAX = sign_extend(EAX).
+		push edx
+		push eax
+		push eax  ; Arbitrary pad value.
+		push dword [esp+4*4]  ; Argument fd.
+		;mov eax, 130  ; FreeBSD old ftruncate(2) wit 32-bit offset. int ftruncate(int fd, long length); }.
+		mov al, 201  ; FreeBSD ftruncate(2) with 64-bit offset. FreeBSD 3.0 already had it. int ftruncate(int fd, int pad, off_t length); }
+		call simple_syscall3_AL
+		add esp, byte 4*4  ; Clean up arguments above.
+		ret
 %endif
 
 ; TODO(pts): Make at least one function fall through to simple_syscall3_AL.
