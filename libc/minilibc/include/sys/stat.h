@@ -62,6 +62,31 @@ __LIBC_PACKED_STRUCT struct stat64 {
 };
 __LIBC_STATIC_ASSERT(sizeof_struct_stat64, sizeof(struct stat64) == 96);
 
+#if _FILE_OFFSET_BITS == 64
+__LIBC_PACKED_STRUCT struct stat {  /* Same as above, for i386 syscalls SYS_stat64, SYS_lstat64, SYS_fstat64, SYS_fstatat64. */
+  __extension__ unsigned long long st_dev;
+  unsigned char __pad0[4];
+  unsigned long __st_ino;  /* Unused, see st_ino below. */
+  unsigned int  st_mode;
+  unsigned int  st_nlink;
+  unsigned long st_uid;
+  unsigned long st_gid;
+  __extension__ unsigned long long st_rdev;
+  unsigned char __pad3[4];
+  __extension__ unsigned long long st_size;
+  unsigned long st_blksize;
+  /* Number 512-byte blocks allocated. */
+  __extension__ unsigned long long st_blocks;
+  unsigned long st_atime;
+  unsigned long st_atime_nsec;
+  unsigned long st_mtime;
+  unsigned int  st_mtime_nsec;
+  unsigned long st_ctime;
+  unsigned long st_ctime_nsec;
+  __extension__ unsigned long long st_ino;
+};
+__LIBC_STATIC_ASSERT(sizeof_struct_stat, sizeof(struct stat) == 96);
+#else
 struct stat {  /* For i386 syscalls SYS_stat, SYS_lstat, SYS_fstat. */
   unsigned long  st_dev;
   unsigned long  st_ino;
@@ -83,6 +108,7 @@ struct stat {  /* For i386 syscalls SYS_stat, SYS_lstat, SYS_fstat. */
   unsigned long  __unused5;
 };
 __LIBC_STATIC_ASSERT(sizeof_struct_stat, sizeof(struct stat) == 64);
+#endif
 
 struct __old_kernel_stat {  /* For i386 syscalls SYS_oldstat, SYS_oldlstat, SYS_oldfstat. */
   unsigned short st_dev;
@@ -104,9 +130,20 @@ __LIBC_FUNC(int, stat64, (const char *path, struct stat64 *buf), __LIBC_NOATTR);
 __LIBC_FUNC(int, lstat64, (const char *path, struct stat64 *buf), __LIBC_NOATTR);
 __LIBC_FUNC(int, fstat64, (int fd, struct stat64 *buf), __LIBC_NOATTR);
 #ifdef __MINILIBC686__  /* glibc has a different `struct stat' layout. */
+#  if _FILE_OFFSET_BITS == 64
+    int stat(const char *path, struct stat *buf) __LIBC_MAYBE_ASM(__LIBC_MINI "stat64");
+    int lstat(const char *path, struct stat *buf) __LIBC_MAYBE_ASM(__LIBC_MINI "lstat64");
+    int fstat(int fd, struct stat *buf) __LIBC_MAYBE_ASM(__LIBC_MINI "fstat64");
+#    ifdef __WATCOMC__
+#      pragma aux stat "_mini_stat64"
+#      pragma aux lstat "_mini_lstat64"
+#      pragma aux fstat "_mini_fstat64"
+#    endif
+#  else
   __LIBC_FUNC(int, stat, (const char *path, struct stat *buf), __LIBC_NOATTR);
   __LIBC_FUNC(int, lstat, (const char *path, struct stat *buf), __LIBC_NOATTR);
   __LIBC_FUNC(int, fstat, (int fd, struct stat *buf), __LIBC_NOATTR);
+#  endif
 #endif
 #ifdef __MINILIBC686__  /* Other libs don't have oldstat(2) etc. */
   __LIBC_FUNC(int, sys_oldstat, (const char *path, struct __old_kernel_stat *buf), __LIBC_NOATTR);
