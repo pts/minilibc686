@@ -29,18 +29,25 @@ __LIBC_FUNC(int, close, (int fd), __LIBC_NOATTR);
 __LIBC_FUNC(ssize_t, read, (int fd, void *buf, size_t count), __LIBC_NOATTR);
 __LIBC_FUNC(ssize_t, write, (int fd, const void *buf, size_t count), __LIBC_NOATTR);
 #if _FILE_OFFSET_BITS == 64
-#  define lseek(fd, offset, whence) lseek64(fd, offset, whence)  /* Same as uClibc and EGLIBC, both without #ifdef __REDIRECT_NTH. */
+  /* Limitation: it doesn't always set errno in minilibc686. */
+  off64_t lseek(int fd, off64_t offset, int whence) __LIBC_MAYBE_ASM(__LIBC_MINI "lseek64");  /* Same as uClibc and EGLIBC, both with  #ifdef __REDIRECT_NTH. */
+#  ifdef __WATCOMC__
+#    pragma aux lseek "_mini_lseek64"
+#  endif
 #else
+  /* Limitation: it doesn't always set errno in minilibc686. */
   __LIBC_FUNC(__off_t, lseek, (int fd, __off_t offset, int whence), __LIBC_NOATTR);  /* 32-bit offset. See lseek64(...) for 64-bit offset. */
 #endif
 __LIBC_FUNC(off64_t, lseek64, (int fd, off64_t offset, int whence), __LIBC_NOATTR);
 __LIBC_FUNC(long, syscall, (long nr, ...), __LIBC_NOATTR);
 __LIBC_FUNC(int, unlink, (const char *pathname), __LIBC_NOATTR);
 __LIBC_FUNC(int, rename, (const char *oldpath, const char *newpath), __LIBC_NOATTR);  /* Typically rename(2) is defined in <stdio.h>, bu we are lenient are and define in <unistd.h> as well. */
-/* Limitation: it doesn't always set errno in minilibc686. */
 __LIBC_FUNC(int, isatty, (int fd), __LIBC_NOATTR);
 #if _FILE_OFFSET_BITS == 64
-#  define ftruncate(fd, length) ftruncate64(fd, length)  /* Same as uClibc and EGLIBC, both without #ifdef __REDIRECT_NTH. */
+  int ftruncate(int fd, off64_t length) __LIBC_MAYBE_ASM(__LIBC_MINI "ftruncate64");  /* Same as uClibc and EGLIBC, both with  #ifdef __REDIRECT_NTH. */
+#  ifdef __WATCOMC__
+#    pragma aux ftruncate "_mini_ftruncate64"
+#  endif
 #else
   __LIBC_FUNC(int, ftruncate, (int fd, __off_t length), __LIBC_NOATTR);  /* 32-bit length. Use ftruncate64(...) for 64-bit length. */
 #endif
