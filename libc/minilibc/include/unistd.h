@@ -35,9 +35,9 @@ __LIBC_FUNC(ssize_t, write, (int fd, const void *buf, size_t count), __LIBC_NOAT
 #    pragma aux lseek "_mini_lseek64"
 #  endif
 #else
-  /* Limitation: it doesn't always set errno in minilibc686. */
   __LIBC_FUNC(__off_t, lseek, (int fd, __off_t offset, int whence), __LIBC_NOATTR);  /* 32-bit offset. See lseek64(...) for 64-bit offset. */
 #endif
+/* Limitation: it doesn't always set errno in minilibc686. */
 __LIBC_FUNC(off64_t, lseek64, (int fd, off64_t offset, int whence), __LIBC_NOATTR);
 __LIBC_FUNC(long, syscall, (long nr, ...), __LIBC_NOATTR);
 __LIBC_FUNC(int, unlink, (const char *pathname), __LIBC_NOATTR);
