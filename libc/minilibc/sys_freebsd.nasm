@@ -300,7 +300,7 @@ mini_time:  ; time_t mini_time(time_t *tloc);
 %endif
 
 %ifdef __NEED_mini_ftruncate
-global mini_ftruncate:
+global mini_ftruncate
 mini_ftruncate:  ; int mini_ftruncate(int fd, off_t length);
   %ifdef __MULTIOS__
 		cmp byte [mini___M_is_freebsd], 0
@@ -497,7 +497,7 @@ mini_isatty:  ; int mini_isatty(int fd);
 %endif
 
 %ifdef __NEED_mini_lseek64
-global mini_lseek64:
+global mini_lseek64
 mini_lseek64:  ; off64_t mini_lseek64(int fd, off64_t offset, int whence);
   %ifdef __MULTIOS__
 		cmp byte [mini___M_is_freebsd], 0
@@ -615,7 +615,7 @@ mini_lseek64:  ; off64_t mini_lseek64(int fd, off64_t offset, int whence);
 %ifdef __NEED_mini_ftruncate64
   ;%define DEBUG_SKIP_SYS_FTRUNCATE64
   ;%define DEBUG_SKIP_SYS_FTRUNCATE
-  global mini_ftruncate64:
+  global mini_ftruncate64
   mini_ftruncate64:  ; int mini_ftruncate64(int fd, off64_t length);
   %ifdef __MULTIOS__
 		cmp byte [mini___M_is_freebsd], 0
