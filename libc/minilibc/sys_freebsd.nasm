@@ -493,7 +493,7 @@ mini_isatty:  ; int mini_isatty(int fd);
 		jz .have_retval
 		xor eax, eax
 		inc eax
-.have_retval:
+.have_retval:	ret
 %endif
 
 %ifdef __NEED_mini_lseek64
