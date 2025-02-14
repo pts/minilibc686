@@ -43,7 +43,7 @@ __U8D:
 		mov ebx, edx		; Save the low half of the modulo to its final location (EBX).
 		mov edx, ecx		; Set the high half of the result (either to 0 or based on the `div' above).
 		sub ecx, ecx		; Set the high half of the modulo to 0 (because the divisor is 32-bit).
-.5:		ret			; Early return in the divisor is fits to 32 bits.
+.5:		ret			; Early return if the divisor fits to 32 bits.
 .6:		cmp ecx, edx
 		jb .8
 		jne .7
