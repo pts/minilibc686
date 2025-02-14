@@ -61,8 +61,6 @@ __I8D:
 		neg eax
 		sbb edx, byte 0
 		ret
-		call __U8D
-		ret
 
 %ifdef CONFIG_PIC  ; Already position-independent code.
 %endif
