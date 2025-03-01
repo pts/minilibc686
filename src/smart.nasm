@@ -49,6 +49,7 @@ bits 32
     %define __NEED_%1
     %rotate 1
   %endrep
+  %undef __NEED_
 %endmacro
 
 %macro _need_aliases 0-*

@@ -1403,7 +1403,8 @@ if test "$DO_SMART" != 0 || test "$SYSNASM"; then  # Smart linking or OS-specifi
     # : warning: cannot find entry symbol '_start'
     # : warning: cannot find entry symbol _start; defaulting to 0000000008048074
     # : warning: entry symbol '_start' exists but is not defined
-    UNDEFSYMS="$(awk '{if((((/: undefined reference to [`'\''].+'\''$/&&sub(/^.*?: undefined reference to [`'\'']/, "")||sub(/^tcc: error: undefined symbol '\''/,""))&&sub(/'\''$/,""))||(/: warning: /&&sub(/^.*: warning: (cannot find )?entry symbol '\''?/,"")&&sub(/['\'';].*/,"")&&!/ /))&&!h[$0]){h[$0]=1;printf"%s%s",c,$0;c=","}}' <"$OUTFILE.err")"
+    UNDEFSYMS="$(awk '{if((((/: undefined reference to [`'\''].+'\''$/&&sub(/^.*?: undefined reference to [`'\'']/, "")||sub(/^tcc: error: undefined symbol '\''/,""))&&sub(/'\''$/,""))||(/: warning: /&&sub(/^.*: warning: (cannot find )?entry symbol '\''?/,"")&&sub(/['\'';].*/,"")&&!/ /))&&!h[$0]){h[$0]=1;printf"%s%s",c,$0;c=","}}
+        END{if(c%16==0){printf",,"}}' <"$OUTFILE.err")"  # ,, to work around segfault-for-16-argument-macro bug in NASM 0.98.39.
     if test -z "$UNDEFSYMS" && test "$EC" != 0; then  # We can read this only if $EC != 0 (i.e. linker failure).
       cat "$OUTFILE.err" >&2
       rm -f "$OUTFILE.err" $TMPOFILES
