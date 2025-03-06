@@ -1316,8 +1316,9 @@ if test "$GCC" || test -z "$IS_TCCLD"; then
           test "$HAD_V" && echo "info: running OMF converter:" $EFARGS >&2
         else  # "$IS_CC1" or $SFILE.
           if test "$DO_SFIX"; then  # Replace `rep ret' (https://gcc.gnu.org/legacy-ml/gcc-help/2011-03/msg00286.html) with `.byte 0xf3, 0xc3', for compatibility with GNU as(2) 2.22.
+            # Also split `rep bsfl' to to multiple lines, for compatibility with GNU as(2) 2.22.
             test "$HAD_V" && echo "info: fixing rep ret in: $SFILE" >&2
-            awk '{if(/^[ \t]*rep[ \t]+ret[ \t]*$/){print".byte 0xf3, 0xc3"}else{print}}' <"$SFILE" >"$TMPOFILE2.fix.s"; EC="$?"
+            awk '{if(/^[ \t]*rep[ \t]+ret[ \t]*$/){print".byte 0xf3, 0xc3"}else if(/^[ \t]*rep[ \t]bsfl[ \t]*/){print"rep";sub(/^[ \t]*[^ \t]+[ \t]*/,"");print}else{print}}' <"$SFILE" >"$TMPOFILE2.fix.s"; EC="$?"
             if test "$EC" != 0; then rm -f $TMPOFILES "$TMPOFILE2.fix.s"; exit "$EC"; fi
             SFILE="$TMPOFILE2.fix.s"
           fi
