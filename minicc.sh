@@ -1052,6 +1052,7 @@ if test "$GCC" || test -z "$IS_TCCLD"; then
        -std=ow) WARGS="$WARGS$NL-ze" ;;
        -pedantic) ;;
        -m32 | -static | -fno-pic | -fcommon | -fno-unwind-tables | -fno-asynchronous-unwind-tables | -fno-builtin-* | -fno-ident | -ffreestanding | -fno-lto | -nostdinc | -falign-functions=* | -falign-jumps=* | -falign-loops=* | -mpreferred-stack-boundary=*) ;;
+       -fno-builtin-*)  ;;  # TODO(pts): Omit `#pragma intrinsic(memcpy)' if -fno-builtin-memcpy is specified.
        -fbuiltin) WBFLAG=-oi ;;
        -fno-builtin) WBFLAG= ;;
        -finline | -fno-inline | -fno-unroll-loops | -fmerge-all-constants | -fno-math-errno | -g0 | -g00 | -Wno-no) ;;
