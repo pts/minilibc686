@@ -55,14 +55,18 @@
 #  define __SCHAR_MAX__ 0x7f
 #endif
 #ifndef __SHRT_MAX__
-#  define __SHRT_MAX__ ((short)((unsigned short)~0U >> 1))
+#  define __SHRT_MAX__ 0x7fff  /* This doesn't work in a preprocessor #if: ((short)((unsigned short)~0U >> 1)) */
 #endif
 #ifndef __INT_MAX__
-#  define __INT_MAX__ ((int)(~0U >> 1))
+#  define __INT_MAX__ 0x7fffffff  /* This doesn't work in a preprocessor #if: ((int)(~0U >> 1)) */
 #endif
 #ifndef __LONG_MAX__
-#  define __LONG_MAX__ ((long)(~0UL >> 1))
+#  define __LONG_MAX__ 0x7fffffffL  /* This doesn't work in a preprocessor #if:  ((long)(~0UL >> 1)) */
 #endif
+#ifndef __LONG_LONG_MAX__
+#  define __LONG_LONG_MAX__ 0x7fffffffffffffffLL
+#endif
+
 #define CHAR_BIT 8
 #define SCHAR_MIN (-1 - SCHAR_MAX)
 #define SCHAR_MAX (__SCHAR_MAX__)
@@ -76,7 +80,7 @@
 #define LONG_MIN (-1l - LONG_MAX)
 #define LONG_MAX (__LONG_MAX__)
 #define ULONG_MAX (LONG_MAX * 2UL + 1)
-#define LLONG_MAX ((long long)(~0ULL >> 1))
+#define LLONG_MAX (__LONG_LONG_MAX__)  /* This doesn't work in a preprocessor #if: ((long long)(~0ULL >> 1)) */
 #define LLONG_MIN (-1LL - LLONG_MAX)
 #define ULLONG_MAX (~0ULL)
 #if defined(__SIZEOF_SIZE_T__) && __SIZEOF_SIZE_T__ == __SIZEOF_LONG__  /* Always true for i386. */
