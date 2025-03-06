@@ -253,6 +253,7 @@ IS_AOUT=  # Output file format is Linux i386 a.out QMAGIC executable.
 DO_SFIX=  # Do we have to fix the output of GNU as(1)?
 DO_GET_CONFIG=
 OS=linux
+DO_BUILTIN=  # Inline implementation of some built-in (intrinsic) functions, such as memcpy(3).
 
 SKIPARG=
 ARGS=
@@ -343,6 +344,8 @@ for ARG in "$@"; do
    #-Wp,*) ;;  #  Works with the gcc(1) driver, but not with cc1(1).
    -W[a-z],*) echo "fatal: unsupported tool flag: $ARG" >&2; exit 1 ;;
    -W*) ARGS="$ARGS$NL$ARG"; DO_WKEEP= ;;
+   -fbuiltin) DO_BUILTIN=1 ;;
+   -fno-builtin) DO_BUILTIN= ;;
    -fno-inline) ARGS="$ARGS$NL$ARG"; HAD_NOINLINE=1 ;;
    -finline) ARGS="$ARGS$NL$ARG"; HAD_NOINLINE= ;;
    -[fm]?* | -pedantic) ARGS="$ARGS$NL$ARG" ;;
@@ -760,6 +763,14 @@ fi
 OUTFILE_ARG=
 test "$OUTFILE" && OUTFILE_ARG="-o$NL$OUTFILE"
 test "$DO_WKEEP" || WFLAGS=  # Maybe clear the default -W... warning flags.
+if test "$DO_BUILTIN"; then
+  # All these are OK for GCC >=4.1. and Clang.
+  if test "$LIBC" = minilibc; then FBUILTINFLAGS="-fbuiltin$NL-fno-builtin-fputc$NL-fno-builtin-putc$NL-fno-builtin-putchar"  # Without the -fno-builtin-* here, GCC would report a warning for some minilibc686 <stdio.h> function declarations.
+  else FBUILTINFLAGS=-fbuiltin
+  fi
+else
+  FBUILTINFLAGS=-fno-builtin
+fi
 if test "$TCC"; then
   # TODO(pts): Does TCC really generate i386-only code?
   # We don't pass $ANSIFLAG, because TCC 0.9.26 would fail for it.
@@ -776,11 +787,12 @@ else
   # Add $INCLUDEDIR_ARG last, so that -I... specified by the user takes precedence. !! TODO(pts): Does GCC do this or the opposite?
   # Specifying -fcommon since -fno-common is the default since GCC 10 and Clang 11: https://maskray.me/blog/2022-02-06-all-about-common-symbols
   # DYI dietlibc 0.34 adds: gcc -Os -fomit-frame-pointer -falign-functions=1 -falign-jumps=1 -falign-loops=1 -mpreferred-stack-boundary=4
+  # The order matters here: -ffreestanding must come before -fbuiltin ($FBUILTINFLAGS), because other way round -ffreestanding would set -fno-builtin.
   # !! TODO(pts): Try -fomit-frame-pointer. Sometimes it makes the code larger. OpenWatcom definitely benefits.
   # !! TODO(pts): Try -mno-align-stringops. What happens with old GCC not supporting it, or Clang?
   # !! TODO(pts): Try -fno-unroll-loops -fmerge-all-constants -fno-math-errno. What happens with old GCC not supporting it, or Clang?
   # !! TODO(pts): Document -Wl,-N for merging sections .text and .data.
-  ARGS="$TCC$NL$GCC$NL$GCC_BARG$NL-m32$NL-march=$ARCH$NL-static$NL-fno-pic$NL-U_FORTIFY_SOURCE$NL-fcommon$NL-fno-stack-protector$NL-fno-unwind-tables$NL-fno-asynchronous-unwind-tables$NL-fno-builtin$NL-fno-ident$NL-fsigned-char$NL-ffreestanding$NL-nostdlib$NL-nostdinc$NL$SFLAG$NL$OFLAG_ARGS$NL$ANSIFLAG$NL$WFLAGS$NL$DEF_ARG$NL$DEF_CMDARG$NL$ARGS$NL$INCLUDEDIR_ARG$NL$OUTFILE_ARG"
+  ARGS="$TCC$NL$GCC$NL$GCC_BARG$NL-m32$NL-march=$ARCH$NL-static$NL-fno-pic$NL-U_FORTIFY_SOURCE$NL-fcommon$NL-fno-stack-protector$NL-fno-unwind-tables$NL-fno-asynchronous-unwind-tables$NL-ffreestanding$NL$FBUILTINFLAGS$NL-fno-ident$NL-fsigned-char$NL-nostdlib$NL-nostdinc$NL$SFLAG$NL$OFLAG_ARGS$NL$ANSIFLAG$NL$WFLAGS$NL$DEF_ARG$NL$DEF_CMDARG$NL$ARGS$NL$INCLUDEDIR_ARG$NL$OUTFILE_ARG"
 fi
 ANSIFLAG= ;  # Prevent reuse later.
 NEED_LIBMINITCC1=
