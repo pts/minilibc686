@@ -112,6 +112,14 @@
 #    define __LIBC_PACKED_STRUCT _Packed
 #    define __LIBC_PACKED
 #    define __GNUC_PREREQ(maj, min) 0
+#    if defined(__INLINE_FUNCTIONS__) || defined(__SW_OI)  /* `wcc386 -oi', same as `gcc -fbuiltin'. */
+      /* wcc386 -os -oi doesn't enable intrinsic function generation, so we
+       * enable it explicitly. Unfortunately wcc386(1) doesn't optimize these,
+       * so for example strlen("hello") is not replaced with just `5', but a
+       * `repne scasb' is generated and run.
+       */
+#      pragma intrinsic(abs, div, fabs, labs, ldiv, _lrotl, _lrotr, memchr, memcmp, memcpy, memset, _rotl, _rotr, strcat, strchr, strcmp, strcpy, strlen)
+#    endif
 #  else  /* Not __WATCOMC__: GCC, Clang, TinyCC. GCC doesn't define __i586__ if __i686__ is defined etc. */
 #    if !defined(__i386__)
 #      error This libc requires i386.

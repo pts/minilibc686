@@ -1002,12 +1002,14 @@ if test "$GCC" || test -z "$IS_TCCLD"; then
         exit 5
       fi
     fi
+    WBFLAG=
     WAFLAG=
     WFFLAG=-of+  # GCC -fno-omit-frame-pointer default.
     WSFLAG=
     WJFLAG=-j  # `signed char' is GCC default.
     WEIFLAG=-ei  # -fno-short-enums is GCC default.
     WECFLAG=-ec
+    WOFLAG=-os
     WOSSFLAG=  # Flag for tools/omf2emf.
     # Not specifying -zls makes wcc386 insert these extern symbols:
     # * _cstart_: if main is defined.
@@ -1037,7 +1039,9 @@ if test "$GCC" || test -z "$IS_TCCLD"; then
        -std=gnu99) WARGS="$WARGS$NL-za99" ;;
        -std=ow) WARGS="$WARGS$NL-ze" ;;
        -pedantic) ;;
-       -m32 | -static | -fno-pic | -fcommon | -fno-unwind-tables | -fno-asynchronous-unwind-tables | -fno-builtin | -fno-ident | -ffreestanding | -fno-lto | -nostdinc | -falign-functions=* | -falign-jumps=* | -falign-loops=* | -mpreferred-stack-boundary=*) ;;
+       -m32 | -static | -fno-pic | -fcommon | -fno-unwind-tables | -fno-asynchronous-unwind-tables | -fno-builtin-* | -fno-ident | -ffreestanding | -fno-lto | -nostdinc | -falign-functions=* | -falign-jumps=* | -falign-loops=* | -mpreferred-stack-boundary=*) ;;
+       -fbuiltin) WBFLAG=-oi ;;
+       -fno-builtin) WBFLAG= ;;
        -finline | -fno-inline | -fno-unroll-loops | -fmerge-all-constants | -fno-math-errno | -g0 | -g00 | -Wno-no) ;;
        -fomit-frame-pointer) WFFLAG= ;;
        -fomit-leaf-frame-pointer) WFFLAG=-of ;;
@@ -1090,13 +1094,13 @@ if test "$GCC" || test -z "$IS_TCCLD"; then
        -Wn[0-9]*) WARGS="$WARGS$NL-wce=${ARG#-Wn}" ;;
        -Wstop-after-errors=[0-9]*) WARGS="$WARGS$NL-e${ARG#*=}" ;;  # owcc(1)-specific.
        -H) WARGS="$WARGS$NL-fti" ;;
-       -O0) WARGS="$WARGS$NL-od" ;;  # TODO(pts): Try -oh (expensive optimizations). Does it reduce size?
-       -O1) WARGS="$WARGS$NL-oil" ;;
-       -O2) WARGS="$WARGS$NL-onatx" ;;
-       -O3) WARGS="$WARGS$NL-onatxl+" ;;
-       -Os) WARGS="$WARGS$NL-os" ;;
-       -Ot) WARGS="$WARGS$NL-ot" ;;
-       -O)  WARGS="$WARGS$NL-oil" ;;
+       -O0) WOFLAG=-od ;;  # TODO(pts): Try -oh (expensive optimizations). Does it reduce size?
+       -O1) WOFLAG=-oil ;;
+       -O2) WOFLAG=-onatx ;;
+       -O3) WOFLAG=-onatxl+ ;;
+       -Os) WOFLAG=-os ;;
+       -Ot) WOFLAG=-ot ;;
+       -O)  WOFLAG=-oil ;;
        # !! TODO(pts): Copy more flag translations from owcc.c.
        -c) ;;
        -S) echo "fatal: assembly generation not supported by minicc wcc386" >&2; exit 5 ;;
@@ -1110,7 +1114,7 @@ if test "$GCC" || test -z "$IS_TCCLD"; then
       esac
     done
     test "$HAD_NOINLINE" && WARGS="$WARGS$NL-oe0"
-    CCARGS="$GCC$NL$WSFLAG$NL$WJFLAG$NL$WEIFLAG$NL$WFFLAG$NL$WAFLAG$NL$WAUTOSYMFLAG$NL$WECFLAG$NL$WARGS"; WARGS=
+    CCARGS="$GCC$NL$WOFLAG$NL$WSFLAG$NL$WJFLAG$NL$WEIFLAG$NL$WFFLAG$NL$WAFLAG$NL$WBFLAG$NL$WAUTOSYMFLAG$NL$WECFLAG$NL$WARGS"; WARGS=
     # TODO(pts): Add -m... flag for string optimizations (like in minilibc32).
   elif test "$IS_CC1"; then  # If $IS_CC1, convert $CCARGS for GCC cc1.
     SKIPARG=
