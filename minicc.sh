@@ -1342,7 +1342,10 @@ if test "$GCC" || test -z "$IS_TCCLD"; then
           case "$SFILE" in
            *.nasm)
             # TODO(pts): Specify separate optimization flags for NASM.
-            EFARGS="$MYDIR/tools/nasm-0.98.39$NL-O999999999$NL-w+orphan-labels$NL-f${NL}elf$NL$NASM_DEF_ARG$NL$DEF_ARG$NL-D__CPU__=${ARCH#i}$NL-o$NL$TMPOFILE2$NL$SFILE"
+            # To disable NASM optimization in the source file, specify nasm:-O0 somewhere in the first line. The default is maximum optimization (-Oz).
+            if ! read LINE <"$SFILE"; then rm -f $TMPOFILES "$TMPOFILE2" "$TMPOFILE2.fix.s"; exit 11; fi
+            OFLAG="$(IFS=" 	"; oflag=-Oz; for spec in $LINE; do case "$spec" in nasm:-O[0-9z]*) oflag="${spec#*:}" ;; esac; done; test "$oflag" = -Oz && oflag=-O999999999; echo "$oflag")"
+            EFARGS="$MYDIR/tools/nasm-0.98.39$NL$OFLAG$NL-w+orphan-labels$NL-f${NL}elf$NL$NASM_DEF_ARG$NL$DEF_ARG$NL-D__CPU__=${ARCH#i}$NL-o$NL$TMPOFILE2$NL$SFILE"
             test "$HAD_V" && echo "info: running nasm assembler:" $EFARGS >&2
             DO_ELFOFIX_FOR_THIS=1 ;;
            *.s)
