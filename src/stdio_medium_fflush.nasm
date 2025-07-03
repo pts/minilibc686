@@ -64,7 +64,8 @@ mini_fflush_RP3:  ; int mini_fflush_RP3(FILE *filep) __attribute__((__regparm__(
 		sub esi, [ebx+0x18]
 		add [ebx+0x20], esi
 %ifdef CONFIG_FLUSH_INLINE_DISCARD_BUF
-; void mini___M_discard_buf(FILE *filep) {
+; void mini___M_discard_buf_RP3(FILE *filep) __attribute__((__regparm__(3)));
+; void mini___M_discard_buf_RP3(FILE *filep) {
 ;   filep->buf_read_ptr = filep->buf_write_ptr = filep->buf_last = filep->buf_start;
 ;   if (IS_FD_ANY_READ(filep->dire)) filep->buf_write_ptr = filep->buf_end;  /* Sentinel. */
 ; }

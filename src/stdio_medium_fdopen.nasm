@@ -17,13 +17,13 @@ section .text align=1
 section .rodata align=1
 section .data align=1
 section .bss align=1
-mini___M_discard_buf equ +0x12345679
+mini___M_discard_buf_RP3 equ +0x12345679
 mini___M_global_file_bufs equ +0x1234567a
 mini___M_global_files equ +0x1234567b
 mini___M_global_files_end equ +0x1234567c
 mini___M_start_flush_opened equ +0x1234567d
 %else
-extern mini___M_discard_buf
+extern mini___M_discard_buf_RP3
 extern mini___M_global_file_bufs
 extern mini___M_global_files
 extern mini___M_global_files_end
@@ -67,9 +67,8 @@ mini_fdopen:  ; FILE *mini_fdopen(int fd, const char *mode);
 		mov dword [esi+0x20], 0x0
 		mov [esi+0x4], edi
 		mov [esi+0x1c], edi
-		push esi
-		call mini___M_discard_buf
-		pop eax
+		mov eax, esi
+		call mini___M_discard_buf_RP3
 		jmp short .1
 .4:		add esi, byte 0x24
 		add edi, 0x1000

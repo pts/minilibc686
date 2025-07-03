@@ -13,11 +13,11 @@ section .text align=1
 section .rodata align=1
 section .data align=1
 section .bss align=1
-mini___M_discard_buf equ +0x12345678
+mini___M_discard_buf_RP3 equ +0x12345678
 mini_fflush equ +0x12345679
 mini_lseek equ +0x1234567a
 %else
-extern mini___M_discard_buf
+extern mini___M_discard_buf_RP3
 extern mini_fflush
 extern mini_lseek
 section .text align=1
@@ -47,9 +47,8 @@ mini_fseek:  ; int mini_fseek(FILE *stream, long offset, int whence);
 		mov [ebx+0x20], eax
 		add esi, eax
 		xor edi, edi
-.3:		push ebx
-		call mini___M_discard_buf
-		pop ecx
+.3:		mov eax, ebx
+		call mini___M_discard_buf_RP3
 		jmp short .4
 .2:		cmp al, 0x3
 		ja .5

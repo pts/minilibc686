@@ -283,20 +283,20 @@ _need mini_fputc, mini_fputc_RP3
 _need mini_fputc_RP3, mini_write
 _need mini_fputc_RP3, mini_fflush
 _need mini_fflush, mini_write
-;_need mini_fflush, mini___M_discard_buf  ; Not needed because CONFIG_FLUSH_INLINE_DISCARD_BUF.
+;_need mini_fflush, mini___M_discard_buf_RP3  ; Not needed because CONFIG_FLUSH_INLINE_DISCARD_BUF.
 _need mini_getc, mini_fread
 _need mini_fgetc, mini_fread
 _need mini_fgetc_RP3, mini_fread
 _need mini_fgets, mini_fread
 _need mini___M_fgetc_fallback_RP3, mini_fread
 _need mini_fread, mini_read
-_need mini_fread, mini___M_discard_buf
-_need mini_fopen, mini___M_discard_buf
-_need mini_fseek, mini___M_discard_buf
+_need mini_fread, mini___M_discard_buf_RP3
+_need mini_fopen, mini___M_discard_buf_RP3
+_need mini_fseek, mini___M_discard_buf_RP3
 _need mini_exit, mini__exit
 _need mini_fopen, mini_open
 _need mini___M_jmp_freopen_low, mini_open
-_need mini___M_jmp_freopen_low, mini___M_discard_buf
+_need mini___M_jmp_freopen_low, mini___M_discard_buf_RP3
 _need mini_open_largefile, mini_open
 _need mini_fclose, mini_close
 _need mini_mq_getattr, mini_syscall3_RP1
@@ -1211,8 +1211,8 @@ mini_putchar_RP3:  ; int REGPARM3 mini_putchar_RP3(int c);
 %endif
 
 %ifdef __NEED_mini_fflush
-  %ifdef __NEED_mini___M_discard_buf
-    __smart_extern mini___M_discard_buf
+  %ifdef __NEED_mini___M_discard_buf_RP3
+    __smart_extern mini___M_discard_buf_RP3
   %else
     %define CONFIG_FLUSH_INLINE_DISCARD_BUF
   %endif
@@ -1387,7 +1387,7 @@ mini_putchar_RP3:  ; int REGPARM3 mini_putchar_RP3(int c);
     %endif
   %endmacro
   _include_if_needed mini_isatty, "src/isatty_linux.nasm"
-  _include_if_needed mini___M_discard_buf, "src/stdio_medium_discard_buf.nasm"
+  _include_if_needed mini___M_discard_buf_RP3, "src/stdio_medium_discard_buf.nasm"
   _include_if_needed mini_fputc_RP3, "src/stdio_medium_fputc_rp3.nasm"
   _include_if_needed mini___M_vfsprintf, "src/stdio_medium_vfsprintf.nasm"
   _include_if_needed mini_vfprintf, "src/stdio_medium_vfprintf.nasm"

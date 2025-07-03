@@ -14,10 +14,10 @@ section .rodata align=1
 section .data align=1
 section .bss align=1
 mini_read equ +0x12345678
-mini___M_discard_buf equ +0x12345679
+mini___M_discard_buf_RP3 equ +0x12345679
 %else
 extern mini_read
-extern mini___M_discard_buf
+extern mini___M_discard_buf_RP3
 section .text align=1
 section .rodata align=1
 section .data align=1
@@ -49,9 +49,8 @@ mini_fread:  ; size_t mini_fread(void *ptr, size_t size, size_t nmemb, FILE *str
 		jne .4
 		sub ecx, [edi+0x18]
 		add [edi+0x20], ecx
-		push edi
-		call dword mini___M_discard_buf
-		add esp, byte 4
+		mov eax, edi
+		call dword mini___M_discard_buf_RP3
 		mov eax, [edi+0x4]
 		mov ecx, [edi+0x18]
 		sub eax, ecx
