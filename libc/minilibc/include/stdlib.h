@@ -13,7 +13,7 @@
 
 __LIBC_VAR(extern char **, environ);
 #ifdef __WATCOMC__  /* There is no other way with `wcc386 -za'. */
-#  pragma aux environ "_mini_*"
+#  pragma aux environ "mini_*"
 #endif
 
 __LIBC_FUNC(__LIBC_NORETURN void, exit, (int exit_code), __LIBC_NOATTR);   /* Flushes stdio streams first. To prevent flushing, _exit(...) instead. */
@@ -60,9 +60,9 @@ typedef struct { __extension__ long long quot, rem; } lldiv_t;
     div_t div(int numerator, int denominator);
     ldiv_t ldiv(long numerator, long denominator);
     lldiv_t lldiv(__extension__ long long numerator, long long denominator);
-#    pragma aux div "_mini_div_RP0W"
-#    pragma aux ldiv "_mini_ldiv_RP0W"
-#    pragma aux lldiv "_mini_ldiv_RP0W"  /* TODO(pts): Not using _mini_lldiv_RP0W, because in __WATCOMC__ sizeof(double) == sizeof(long double). */
+#    pragma aux div   "mini_div_RP0W"
+#    pragma aux ldiv  "mini_ldiv_RP0W"
+#    pragma aux lldiv "mini_ldiv_RP0W"  /* TODO(pts): Not using _mini_lldiv_RP0W, because in __WATCOMC__ sizeof(double) == sizeof(long double). */
 #  else
     /* TODO(pts): Add a better, inline assembly version. Can that return a struct? */
     static __inline div_t div(int numerator, int denominator) {
@@ -101,10 +101,10 @@ typedef struct { __extension__ long long quot, rem; } lldiv_t;
       void *realloc(void *ptr, size_t size);
       void free(void *ptr);
       void *calloc(size_t nmemb, size_t size);
-#      pragma aux malloc "_mini_malloc_mmap"
-#      pragma aux realloc "_mini_realloc_mmap"
-#      pragma aux free "_mini_free_mmap"
-#      pragma aux calloc "_mini_calloc_mmap"
+#      pragma aux malloc  "mini_malloc_mmap"
+#      pragma aux realloc "mini_realloc_mmap"
+#      pragma aux free    "mini_free_mmap"
+#      pragma aux calloc  "mini_calloc_mmap"
 #    else
       void *malloc(size_t size) __asm__("mini_malloc_mmap");
       void *realloc(void *ptr, size_t size) __asm__("mini_realloc_mmap");

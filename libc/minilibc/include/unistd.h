@@ -21,7 +21,7 @@
 
 __LIBC_VAR(extern char **, environ);
 #ifdef __WATCOMC__  /* There is no other way with `wcc386 -za'. */
-#  pragma aux environ "_mini_*"
+#  pragma aux environ "mini_*"
 #endif
 
 __LIBC_FUNC(__LIBC_NORETURN void, _exit, (int exit_code), __LIBC_NOATTR);  /* Doesn't flush stdio streams first. See exit(...) for that. */
@@ -32,7 +32,7 @@ __LIBC_FUNC(ssize_t, write, (int fd, const void *buf, size_t count), __LIBC_NOAT
   /* Limitation: it doesn't always set errno in minilibc686. */
   off64_t lseek(int fd, off64_t offset, int whence) __LIBC_MAYBE_ASM(__LIBC_MINI "lseek64");  /* Same as uClibc and EGLIBC, both with  #ifdef __REDIRECT_NTH. */
 #  ifdef __WATCOMC__
-#    pragma aux lseek "_mini_lseek64"
+#    pragma aux lseek "mini_lseek64"
 #  endif
 #else
   __LIBC_FUNC(__off_t, lseek, (int fd, __off_t offset, int whence), __LIBC_NOATTR);  /* 32-bit offset. See lseek64(...) for 64-bit offset. */
@@ -46,7 +46,7 @@ __LIBC_FUNC(int, isatty, (int fd), __LIBC_NOATTR);
 #if _FILE_OFFSET_BITS == 64
   int ftruncate(int fd, off64_t length) __LIBC_MAYBE_ASM(__LIBC_MINI "ftruncate64");  /* Same as uClibc and EGLIBC, both with  #ifdef __REDIRECT_NTH. */
 #  ifdef __WATCOMC__
-#    pragma aux ftruncate "_mini_ftruncate64"
+#    pragma aux ftruncate "mini_ftruncate64"
 #  endif
 #else
   __LIBC_FUNC(int, ftruncate, (int fd, __off_t length), __LIBC_NOATTR);  /* 32-bit length. Use ftruncate64(...) for 64-bit length. */
@@ -77,10 +77,10 @@ __LIBC_VAR(extern int, opterr);
 __LIBC_VAR(extern int, optopt);
 __LIBC_VAR(extern char *, optarg);
 #ifdef __WATCOMC__  /* There is no other way with `wcc386 -za'. */
-#  pragma aux optind "_mini_*"
-#  pragma aux opterr "_mini_*"
-#  pragma aux optopt "_mini_*"
-#  pragma aux optarg "_mini_*"
+#  pragma aux optind "mini_*"
+#  pragma aux opterr "mini_*"
+#  pragma aux optopt "mini_*"
+#  pragma aux optarg "mini_*"
 #endif
 __LIBC_FUNC(int, getopt, (int argc, char *const argv[], const char *options), __LIBC_NOATTR);
 
@@ -102,13 +102,13 @@ static __inline__ int getpagesize(void) { return 0x1000; }  /* The .a file also 
     long syscall4(long nr, long arg1, long arg2, long arg3, long arg4);
     long syscall5(long nr, long arg1, long arg2, long arg3, long arg4, long arg5);
     long syscall6(long nr, long arg1, long arg2, long arg3, long arg4, long arg5, long arg6);
-#    pragma aux (__minirp1) syscall0 "_mini_syscall3_RP1"
-#    pragma aux (__minirp1) syscall1 "_mini_syscall3_RP1"
-#    pragma aux (__minirp1) syscall2 "_mini_syscall3_RP1"
-#    pragma aux (__minirp1) syscall3 "_mini_syscall3_RP1"  /* mini_syscall3_RP1 works for 0..3 arguments. */
-#    pragma aux (__minirp1) syscall4 "_mini_syscall6_RP1"
-#    pragma aux (__minirp1) syscall5 "_mini_syscall6_RP1"
-#    pragma aux (__minirp1) syscall6 "_mini_syscall6_RP1"  /* mini_syscall6_RP1 works for 0..6 arguments. */
+#    pragma aux (__minirp1) syscall0 "mini_syscall3_RP1"
+#    pragma aux (__minirp1) syscall1 "mini_syscall3_RP1"
+#    pragma aux (__minirp1) syscall2 "mini_syscall3_RP1"
+#    pragma aux (__minirp1) syscall3 "mini_syscall3_RP1"  /* mini_syscall3_RP1 works for 0..3 arguments. */
+#    pragma aux (__minirp1) syscall4 "mini_syscall6_RP1"
+#    pragma aux (__minirp1) syscall5 "mini_syscall6_RP1"
+#    pragma aux (__minirp1) syscall6 "mini_syscall6_RP1"  /* mini_syscall6_RP1 works for 0..6 arguments. */
 #  else  /* __WATCOMC__ */
     long syscall0(long nr) __asm__("mini_syscall3_RP1") __attribute__((__regparm__(1)));
     long syscall1(long nr, long arg1) __asm__("mini_syscall3_RP1") __attribute__((__regparm__(1)));

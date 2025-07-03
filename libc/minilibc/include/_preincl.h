@@ -93,16 +93,16 @@
 #    pragma aux   __cdecl     "_*"           __parm __caller [] __value __struct __caller [] __modify [__eax __ecx __edx]  /* Same as the default. */
 #    pragma aux   __fastcall  "_*"           __parm __caller [__eax] [__edx] [__ecx] __value __struct __caller [] __modify [__eax __ecx __edx]  /* GCC __regparm__(1) .. __regparm(3). Returns struct address is passed in EAX. */
 #    ifdef __MINILIBC686__
-#      pragma aux __minirp1   "_mini_*_RP1"  __parm __caller [__eax] __value __struct __caller [] __modify [__eax __ecx __edx]  /* GCC __regparm__(1). Returns struct address is passed in EAX. */
-#      pragma aux __syscall   "_mini_*"      __parm __caller [] __value __struct __caller [] __modify [__eax __ecx __edx]  /* Same as the default, with mini_ prefix. */
-#      pragma aux __fortran   "_mini_*_RP3"  __parm __caller [__eax] [__edx] [__ecx] __value __struct __caller [] __modify [__eax __ecx __edx]  /* GCC __regparm__(1) .. __regparm(3). Returns struct address is passed in EAX. */
+#      pragma aux __minirp1   "mini_*_RP1"  __parm __caller [__eax] __value __struct __caller [] __modify [__eax __ecx __edx]  /* GCC __regparm__(1). Returns struct address is passed in EAX. */
+#      pragma aux __syscall   "mini_*"      __parm __caller [] __value __struct __caller [] __modify [__eax __ecx __edx]  /* Same as the default, with mini_ prefix. */
+#      pragma aux __fortran   "mini_*_RP3"  __parm __caller [__eax] [__edx] [__ecx] __value __struct __caller [] __modify [__eax __ecx __edx]  /* GCC __regparm__(1) .. __regparm(3). Returns struct address is passed in EAX. */
 #    endif
 #    pragma aux (__default) main
 #    pragma aux main "_*"
 #    ifdef __MINILIBC686__
 #      define __LIBC_FUNC(type, name, args, gcc_attrs) type __syscall name args  /* `wcc386 -za' doesn't allow extra semicolons at the end. */
 #      define __LIBC_FUNC_RP3(type, name, args, gcc_attrs) type __fortran name args  /* `wcc386 -za' doesn't allow extra semicolons at the end. */
-#      /* Extra manual #pragma is needed by __WATCOMC__ for libc global variables, e.g. #pragma aux stdin "_mini_*". It's not possible to automate this with `wcc386 -za'. */
+#      /* Extra manual #pragma is needed by __WATCOMC__ for libc global variables, e.g. #pragma aux stdin "mini_*". It's not possible to automate this with `wcc386 -za'. */
 #    else
 #      define __LIBC_FUNC(type, name, args, gcc_attrs) type name args
 #    endif

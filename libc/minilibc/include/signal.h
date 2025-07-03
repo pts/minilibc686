@@ -112,7 +112,7 @@
 #      ifdef __WATCOMC__
         sighandler_t signal(int signum, sighandler_t handler);
 #        ifdef __MINILIBC686__
-#          pragma aux signal "_mini_bsd_signal"
+#          pragma aux signal "mini_bsd_signal"
 #        else
 #          pragma aux signal "_bsd_signal"
 #        endif
@@ -124,7 +124,7 @@
 #      ifdef __WATCOMC__
         sighandler_t signal(int signum, sighandler_t handler);
 #        ifdef __MINILIBC686__
-#          pragma aux signal "_mini_sysv_signal"
+#          pragma aux signal "mini_sysv_signal"
 #        else
 #          pragma aux signal "_sysv_signal"
 #        endif

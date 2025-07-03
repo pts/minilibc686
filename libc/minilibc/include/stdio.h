@@ -34,9 +34,9 @@ __LIBC_VAR(extern FILE *, stdin);
 __LIBC_VAR(extern FILE *, stdout);
 __LIBC_VAR(extern FILE *, stderr);
 #ifdef __WATCOMC__  /* There is no other way with `wcc386 -za'. */
-#  pragma aux stdin "_mini_*"
-#  pragma aux stdout "_mini_*"
-#  pragma aux stderr "_mini_*"
+#  pragma aux stdin  "mini_*"
+#  pragma aux stdout "mini_*"
+#  pragma aux stderr "mini_*"
 #endif
 
 #ifndef _STDIO_SUPPORTS_LINE_BUFFERING
@@ -77,13 +77,13 @@ __LIBC_FUNC_MAYBE_MINIRP3(int, ungetc, (int c, FILE *filep), __LIBC_NOATTR);  /*
 #      ifdef CONFIG_NO_RP3
         int getc(FILE *filep);
         int putc(int c, FILE *filep);
-#        pragma aux getc "_mini_fgetc"
-#        pragma aux putc "_mini_fputc"
+#        pragma aux getc "mini_fgetc"
+#        pragma aux putc "mini_fputc"
 #      else  /* CONFIG_NO_RP3 */
         int __fortran getc(FILE *filep);
         int __fortran putc(int c, FILE *filep);
-#        pragma aux getc "_mini_fgetc_RP3"
-#        pragma aux putc "_mini_fputc_RP3"
+#        pragma aux getc "mini_fgetc_RP3"
+#        pragma aux putc "mini_fputc_RP3"
 #      endif
 #    else  /* __MINILIBC686__ */
       int getc(FILE *filep);

@@ -4,7 +4,7 @@
 
 __LIBC_VAR(extern int, errno);
 #ifdef __WATCOMC__  /* There is no other way with `wcc386 -za'. */
-#  pragma aux errno "_mini_*"
+#  pragma aux errno "mini_*"
 #endif
 
 /* Constants from asm-generic/errno-base.h and asm-generic/errno.h */

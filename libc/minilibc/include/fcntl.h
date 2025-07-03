@@ -49,7 +49,7 @@
 #  if _FILE_OFFSET_BITS == 64
     int open(const char *pathname, int flags, ...) __LIBC_MAYBE_ASM(__LIBC_MINI "open_largefile");  /* Optional 3rd argument: mode_t mode. */
 #    ifdef __WATCOMC__
-#      pragma aux open "_mini_open_largefile"
+#      pragma aux open "mini_open_largefile"
 #    endif
 #  else
     __LIBC_FUNC(int, open, (const char *pathname, int flags, ...), __LIBC_NOATTR);  /* Optional 3rd argument: mode_t mode */

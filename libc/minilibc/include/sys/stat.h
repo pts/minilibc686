@@ -135,9 +135,9 @@ __LIBC_FUNC(int, fstat64, (int fd, struct stat64 *buf), __LIBC_NOATTR);
     int lstat(const char *path, struct stat *buf) __LIBC_MAYBE_ASM(__LIBC_MINI "lstat64");
     int fstat(int fd, struct stat *buf) __LIBC_MAYBE_ASM(__LIBC_MINI "fstat64");
 #    ifdef __WATCOMC__
-#      pragma aux stat "_mini_stat64"
-#      pragma aux lstat "_mini_lstat64"
-#      pragma aux fstat "_mini_fstat64"
+#      pragma aux stat  "mini_stat64"
+#      pragma aux lstat "mini_lstat64"
+#      pragma aux fstat "mini_fstat64"
 #    endif
 #  else
   __LIBC_FUNC(int, stat, (const char *path, struct stat *buf), __LIBC_NOATTR);
