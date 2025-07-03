@@ -8,6 +8,7 @@ bits 32
 cpu 386
 
 global mini___M_discard_buf
+global mini___M_discard_buf_RP3
 %ifdef CONFIG_SECTIONS_DEFINED
 %elifidn __OUTPUT_FORMAT__, bin
 section .text align=1
@@ -24,11 +25,15 @@ section .bss align=1
 section .text
 
 mini___M_discard_buf:
+; As an implementation detail, it keeps ECX intact. mini_fflush depends on it.
 ; void mini___M_discard_buf(FILE *filep) {
 ;   filep->buf_read_ptr = filep->buf_write_ptr = filep->buf_last = filep->buf_start;
 ;   if (IS_FD_ANY_READ(filep->dire)) filep->buf_write_ptr = filep->buf_end;  /* Sentinel. */
 ; }
 		mov eax, [esp+0x4]
+		; Falls through to mini___M_discard_buf_RP3.
+
+mini___M_discard_buf_RP3:  ; void mini___M_discard_buf(FILE *filep) __attribute__((__regparm__(3)));
 		mov edx, [eax+0x18]
 		mov [eax+0xc], edx
 		mov [eax], edx
@@ -36,10 +41,10 @@ mini___M_discard_buf:
 		mov dl, [eax+0x14]
 		dec edx  ; DL -= 1; higher bits of EDX := junk.
 		cmp dl, 0x2
-		ja .1
+		ja short .flushed
 		mov edx, [eax+0x4]
 		mov [eax], edx
-.1:		ret
+.flushed:	ret
 
 %ifdef CONFIG_PIC  ; Already position-independent code.
 %endif

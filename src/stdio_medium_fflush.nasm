@@ -10,6 +10,7 @@ bits 32
 cpu 386
 
 global mini_fflush
+global mini_fflush_RP3
 %ifdef CONFIG_SECTIONS_DEFINED
 %elifidn __OUTPUT_FORMAT__, bin
 section .text align=1
@@ -17,10 +18,10 @@ section .rodata align=1
 section .data align=1
 section .bss align=1
 mini_write equ +0x12345678
-mini___M_discard_buf equ +0x12345679
+mini___M_discard_buf_RP3 equ +0x12345679
 %else
 extern mini_write
-extern mini___M_discard_buf
+extern mini___M_discard_buf_RP3
 section .text align=1
 section .rodata align=1
 section .data align=1
@@ -30,31 +31,37 @@ section .bss align=1
 section .text
 
 mini_fflush:  ; int mini_fflush(FILE *filep);
-		push esi
-		or ecx, byte -0x1
-		push ebx
-		mov ebx, [esp+0xc]
+		mov eax, [esp+1*4]  ; filep.
+		; Falls through to mini_fflush_RP3.
+
+mini_fflush_RP3:  ; int mini_fflush_RP3(FILE *filep) __attribute__((__regparm__(3)));
+		push esi  ; Save.
+		push ebx  ; Save.
+		xchg ebx, eax  ; EBX := EAX (filep); EAX := junk.
+		or ecx, byte -1  ; EAX := -1. For the early `jbe short .return_ecx' below.
 		cmp byte [ebx+0x14], 0x3
-		jbe .4
+		jbe short .return_ecx
 		mov esi, [ebx+0x18]
-.6:		mov eax, [ebx]
+.more_bytes:	mov eax, [ebx]
+		xor ecx, ecx  ; ECX := 0. Return value for `je short .flush_and_return_ecx' below.
 		cmp eax, esi
-		je .13
+		je short .flush_and_return_ecx
 		sub eax, esi
 		push eax
 		push esi
 		push dword [ebx+0x10]
-		call mini_write
-		add esp, byte 0xc
-		lea edx, [eax+0x1]
-		cmp edx, byte 0x1
-		jbe .10
+		call mini_write  ; Keeps EBX intact because of __cdecl.
+		add esp, byte 3*4  ; Clean up stack of mini_write.
 		add esi, eax
-		jmp short .6
-.13:		xor ecx, ecx
-		jmp short .7
-.10:		or ecx, byte -0x1
-.7:		sub esi, [ebx+0x18]
+		inc eax
+		cmp eax, byte 2  ; Sets CF := (EAX < 2).
+		dec eax  ; Doesn't affect CF.
+		jnc short .more_bytes
+.sub_flush_and_return_m1:
+		sbb ecx, ecx  ; ECX := -1 because CF == 1. Return value.
+		sub esi, eax
+.flush_and_return_ecx:
+		sub esi, [ebx+0x18]
 		add [ebx+0x20], esi
 %ifdef CONFIG_FLUSH_INLINE_DISCARD_BUF
 ; void mini___M_discard_buf(FILE *filep) {
@@ -68,18 +75,17 @@ mini_fflush:  ; int mini_fflush(FILE *filep);
 		mov al, [ebx+0x14]
 		dec eax  ; AL -= 1; higher bits of EAX := junk.
 		cmp al, 0x2
-		ja .1
+		ja short .flushed
 		mov edx, [ebx+0x4]
 		mov [ebx], edx
-.1:
+.flushed:
 %else
-		push ebx  ; filep.
-		call mini___M_discard_buf
-		pop eax  ; Clean up argument filep of mini___M_discard_buf(...) from the stack.
+		xchg eax, ebx  ; EAX := EBX (filep); EBX := junk.
+		call mini___M_discard_buf_RP3  ; Keeps EBX and (because of __cdecl) ECX intact. Ruins EDX.
 %endif
-.4:		pop ebx
-		mov eax, ecx
-		pop esi
+.return_ecx:	xchg eax, ecx  ; EAX := ECX (return value); ECX := junk.
+		pop ebx  ; Restore.
+		pop esi  ; Restore.
 		ret
 
 %ifdef CONFIG_PIC  ; Already position-independent code.

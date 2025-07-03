@@ -135,7 +135,7 @@ WEAK.._start:
 		call mini___M_start_isatty_stdout
 		call main
 		push eax  ; Push return value of main, it will be the exit code of the process.
-		push eax  ; Push fake return address.
+		push eax  ; Push fake return address. !! TODO(pts): Don't push if not needed (i.e. if no mini___M_start_flush_stdout and no mini___M_start_flush_opened calls below).
 		; Fall through to mini_exit.
 %endif  ; %ifdef __NEED_start
 global mini_exit
