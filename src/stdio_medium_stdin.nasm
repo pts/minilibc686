@@ -31,7 +31,7 @@ mini___M_start_isatty_stdin:
 		call mini_isatty
 		pop edx  ; Clean up the argument of mini_isatty from the stack.
 		add eax, eax
-		add [mini_stdin_struct.dire], al  ; filep->dire = FD_WRITE_LINEBUF, changed from FD_WRITE.
+		add [mini_stdin_struct.dire], al  ; filep->dire = FD_READ_LINEBUF, changed from FD_READ. It affects buffering in mini_fread(3).
 		ret
 %ifidn __OUTPUT_FORMAT__, bin  ; Affects start_stdio_medium_linux.nasm %included()d later: it won't try to redefine these symbols.
   %define mini___M_start_isatty_stdin mini___M_start_isatty_stdin
