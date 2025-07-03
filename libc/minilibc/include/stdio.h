@@ -18,7 +18,7 @@
 #define STDOUT_FILENO 1
 #define STDERR_FILENO 2
 
-#ifdef __OSI__
+#if defined(__OSI__) || defined(__DOS__) || defined(__NT__)
 #  define FILENAME_MAX 255
 #else
 #  define FILENAME_MAX 4095
