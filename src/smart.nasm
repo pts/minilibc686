@@ -262,9 +262,9 @@ _need mini___M_start_isatty_stdin, mini_isatty
 _need start.mini___M_start_isatty_stdout, mini_syscall3_AL
 _need mini___M_start_isatty_stdout, mini_isatty
 _need mini_isatty, mini_ioctl
-_need start.mini___M_start_flush_stdout, mini_fflush
-_need mini___M_start_flush_stdout, mini_fflush
-_need mini___M_start_flush_opened, mini_fflush
+_need start.mini___M_start_flush_stdout, mini_fflush_RP3
+_need mini___M_start_flush_stdout, mini_fflush_RP3
+_need mini___M_start_flush_opened, mini_fflush_RP3
 _need mini___M_start_flush_opened, mini___M_global_files
 _need mini___M_start_flush_opened, mini___M_global_files_end
 _need mini___M_start_flush_opened, mini___M_global_file_bufs
@@ -272,18 +272,20 @@ _need mini_rewind, mini_fseek
 _need mini_freopen, mini___M_jmp_freopen_low
 _need mini_freopen, mini_fclose
 _need mini_fclose, mini_close
-_need mini_fclose, mini_fflush
-_need mini_fwrite, mini_fflush
-_need mini_fseek, mini_fflush
+_need mini_fclose, mini_fflush_RP3
+_need mini_fwrite, mini_fflush_RP3
+_need mini_fseek, mini_fflush_RP3
 _need mini_fseek, mini_lseek
 _need mini_puts, mini_fputs
 _need mini_fputs, mini_fwrite
 _need mini_putc, mini_fputc_RP3
 _need mini_fputc, mini_fputc_RP3
 _need mini_fputc_RP3, mini_write
-_need mini_fputc_RP3, mini_fflush
+_need mini_fputc_RP3, mini_fflush_RP3
 _need mini_fflush, mini_write
+_need mini_fflush_RP3, mini_write
 ;_need mini_fflush, mini___M_discard_buf_RP3  ; Not needed because CONFIG_FLUSH_INLINE_DISCARD_BUF.
+;_need mini_fflush_RP3, mini___M_discard_buf_RP3  ; Not needed because CONFIG_FLUSH_INLINE_DISCARD_BUF.
 _need mini_getc, mini_fread
 _need mini_fgetc, mini_fread
 _need mini_fgetc_RP3, mini_fread
@@ -954,9 +956,8 @@ mini_exit:  ; void mini_exit(int exit_code);
 %ifdef NEED_cleanup
 %ifdef __NEED_start.mini___M_start_flush_stdout
 start.mini___M_start_flush_stdout:
-		push dword [mini_stdout]
-		call mini_fflush
-		pop edx  ; Clean up the argument of mini_fflush from the stack.
+		mov eax, [mini_stdout]
+		call mini_fflush_RP3
 %endif
 		_call_if_needed mini___M_start_flush_opened
 		; Fall through.
@@ -1211,6 +1212,13 @@ mini_putchar_RP3:  ; int REGPARM3 mini_putchar_RP3(int c);
 %endif
 
 %ifdef __NEED_mini_fflush
+  %define NEED_mini_fflush
+%elifdef __NEED_mini_fflush_RP3
+  %define NEED_mini_fflush
+  %define SMART_MINI_FFLUSH_RP3_ONLY  ; Used by "src/stdio_medium_fflush.nasm".
+%endif
+
+%ifdef NEED_mini_fflush
   %ifdef __NEED_mini___M_discard_buf_RP3
     __smart_extern mini___M_discard_buf_RP3
   %else

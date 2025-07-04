@@ -14,10 +14,10 @@ section .rodata align=1
 section .data align=1
 section .bss align=1
 mini_close equ +0x12345678
-mini_fflush equ +0x12345679
+mini_fflush_RP3 equ +0x12345679
 %else
 extern mini_close
-extern mini_fflush
+extern mini_fflush_RP3
 section .text align=1
 section .rodata align=1
 section .data align=1
@@ -38,10 +38,9 @@ mini_fclose:  ; int mini_fclose(FILE *stream);
 		xor esi, esi
 		cmp al, 0x2
 		jbe .3
-		push ebx
-		call mini_fflush
+		mov eax, ebx
+		call mini_fflush_RP3
 		xchg esi, eax  ; ESI := EAX; EAX := junk.
-		pop edx
 .3:		push dword [ebx+0x10]
 		call mini_close
 		pop eax  ; Clean up argument of mini_close(...) from the stack.

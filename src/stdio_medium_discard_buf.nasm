@@ -24,7 +24,7 @@ section .bss align=1
 section .text
 
 mini___M_discard_buf_RP3:
-; As an implementation detail, it keeps ECX intact. mini_fflush depends on it.
+; As an implementation detail, it keeps ECX intact. mini_fflush_RP3 and mini_fflush call it.
 ; void mini___M_discard_buf_RP3(FILE *filep) __attribute__((__regparm__(3)));
 ; void mini___M_discard_buf_RP3(FILE *filep) {
 ;   filep->buf_read_ptr = filep->buf_write_ptr = filep->buf_last = filep->buf_start;

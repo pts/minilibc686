@@ -13,9 +13,9 @@ section .text align=1
 section .rodata align=1
 section .data align=1
 section .bss align=1
-mini_fflush equ +0x12345678
+mini_fflush_RP3 equ +0x12345678
 %else
-extern mini_fflush
+extern mini_fflush_RP3
 section .text align=1
 section .rodata align=1
 section .data align=4
@@ -39,17 +39,15 @@ mini___M_writebuf_relax_RP1:
 mini___M_writebuf_unrelax_RP1:
 		cmp byte [eax+0x14], 5  ; FD_WRITE_RELAXED.
 		jne .27
-		push ebx
+		push ebx  ; Save.
 		mov ebx, eax
-		push eax
-		call mini_fflush
+		call mini_fflush_RP3  ; `FILE *filep' argument already in EAX.
 		mov edx, [ebx+0x1c]
 		mov ecx, [ebx+0x4]
 		dec byte [ebx+0x14]  ; FD_WRITE.
 		mov [ebx+0x4], edx
 		mov [ebx+0x1c], ecx
-		pop edx
-		pop ebx
+		pop ebx  ; Restore.
 		ret
 .27:		xor eax, eax
 		ret

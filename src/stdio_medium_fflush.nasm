@@ -30,9 +30,11 @@ section .bss align=1
 
 section .text
 
+%ifndef SMART_MINI_FFLUSH_RP3_ONLY
 mini_fflush:  ; int mini_fflush(FILE *filep);
 		mov eax, [esp+1*4]  ; filep.
 		; Falls through to mini_fflush_RP3.
+%endif
 
 mini_fflush_RP3:  ; int mini_fflush_RP3(FILE *filep) __attribute__((__regparm__(3)));
 		push esi  ; Save.

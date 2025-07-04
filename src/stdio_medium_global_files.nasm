@@ -18,7 +18,7 @@ section .rodata align=1
 section .data align=1
 section .bss align=4
 %else
-extern mini_fflush
+extern mini_fflush_RP3  ; !! Is this needed for smart.nasm etc. to track dependencies?
 section .text align=1
 section .rodata align=4
 section .data align=4

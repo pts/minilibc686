@@ -14,10 +14,10 @@ section .rodata align=1
 section .data align=1
 section .bss align=1
 mini_write equ +0x12345678
-mini_fflush equ +0x12345679
+mini_fflush_RP3 equ +0x12345679
 %else
 extern mini_write
-extern mini_fflush
+extern mini_fflush_RP3
 section .text align=1
 section .rodata align=1
 section .data align=1
@@ -69,15 +69,13 @@ mini_fwrite:  ; size_t mini_fwrite(const void *ptr, size_t size, size_t nmemb, F
 		cmp ebx, edi
 		jne .10
 		jmp short .38
-.8:		push esi
-		call mini_fflush
-		pop ecx
+.8:		mov eax, esi
+		call mini_fflush_RP3
 		test eax, eax
 		je .12
 		jmp short .11
-.38:		push esi
-		call mini_fflush
-		pop edx
+.38:		mov eax, esi
+		call mini_fflush_RP3
 		test eax, eax
 		jne .11
 .10:		cmp [esp], ebx
@@ -100,9 +98,8 @@ mini_fwrite:  ; size_t mini_fwrite(const void *ptr, size_t size, size_t nmemb, F
 .16:		mov edx, [esi]
 		cmp edx, [esi+0x4]
 		jne .17
-.15:		push esi
-		call mini_fflush
-		pop ecx
+.15:		mov eax, esi
+		call mini_fflush_RP3
 		test eax, eax
 		je .18
 		jmp short .11

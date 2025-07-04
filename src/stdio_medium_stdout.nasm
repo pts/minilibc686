@@ -18,10 +18,10 @@ section .rodata align=1
 section .data align=4
 section .bss align=4
 mini_isatty equ +0x12345678
-mini_fflush equ +0x12345679
+mini_fflush_RP3 equ +0x12345679
 %else
 extern mini_isatty  ; Force linking it.
-extern mini_fflush
+extern mini_fflush_RP3
 section .text align=1
 section .rodata align=1
 section .data align=4
@@ -38,10 +38,8 @@ mini___M_start_isatty_stdout:
 		add [mini_stdout_struct.dire], al  ; filep->dire = FD_WRITE_LINEBUF, changed from FD_WRITE.
 		ret
 mini___M_start_flush_stdout:
-		push dword [mini_stdout]
-		call mini_fflush
-		pop edx  ; Clean up the argument of mini_fflush from the stack.
-		ret
+		mov eax, [mini_stdout]
+		jmp mini_fflush_RP3
 
 %include "src/stdio_medium_stdout_in_data.nasm"
 

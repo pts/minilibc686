@@ -18,12 +18,12 @@ section .text align=1
 section .rodata align=1
 section .data align=1
 section .bss align=4
-mini_fflush equ +0x12345678
+mini_fflush_RP3 equ +0x12345678
 mini___M_global_files equ +0x12345679
 mini___M_global_files_end equ +0x1234567a
 mini___M_global_file_bufs equ +0x1234567b
 %else
-extern mini_fflush
+extern mini_fflush_RP3
 extern mini___M_global_files
 extern mini___M_global_files_end
 extern mini___M_global_file_bufs
@@ -47,31 +47,27 @@ mini___M_start_flush_opened:
 %if FILE_CAPACITY <= 0
 %else
 %if FILE_CAPACITY == 1
-		push strict dword mini___M_global_files
-		call mini_fflush
-		pop eax  ; Clean up argument of mini_fflush.
+		mov eax, mini___M_global_files
+		call mini_fflush_RP3
 %elif FILE_CAPACITY == 2
-		push strict dword mini___M_global_files
-		call mini_fflush
-		add dword [esp], byte SIZEOF_STRUCT_SMS_FILE
-		call mini_fflush
-		pop eax  ; Clean up argument of mini_fflush.
+		mov eax, mini___M_global_files
+		call mini_fflush_RP3
+		mov eax, mini___M_global_files+SIZEOF_STRUCT_SMS_FILE
+		call mini_fflush_RP3
 %elif FILE_CAPACITY == 3
-		push strict dword mini___M_global_files
-		call mini_fflush
-		add dword [esp], byte SIZEOF_STRUCT_SMS_FILE
-		call mini_fflush
-		add dword [esp], byte SIZEOF_STRUCT_SMS_FILE
-		call mini_fflush
-		pop eax  ; Clean up argument of mini_fflush.
+		mov eax, mini___M_global_files
+		call mini_fflush_RP3
+		mov eax, mini___M_global_files+SIZEOF_STRUCT_SMS_FILE
+		call mini_fflush_RP3
+		mov eax, mini___M_global_files+2*SIZEOF_STRUCT_SMS_FILE
+		call mini_fflush_RP3
 %else
-		push ebx
+		push ebx  ; !! __cdecl needs this. But do any of our callers need if? If not, omit the push+pop.
 		mov ebx, mini___M_global_files
 .next_file:	cmp ebx, mini___M_global_files_end
 		je .after_files
-		push ebx
-		call mini_fflush
-		pop eax  ; Clean up argument of mini_fflush.
+		mov eax, ebx
+		call mini_fflush_RP3
 		add ebx, byte SIZEOF_STRUCT_SMS_FILE
 		jmp short .next_file
 .after_files:	pop ebx

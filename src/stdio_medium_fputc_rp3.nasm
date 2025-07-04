@@ -13,10 +13,10 @@ section .rodata align=1
 section .data align=1
 section .bss align=1
 mini_write equ +0x12345678
-mini_fflush equ +0x12345679
+mini_fflush_RP3 equ +0x12345679
 %else
 extern mini_write
-extern mini_fflush
+extern mini_fflush_RP3
 section .text align=1
 section .rodata align=1
 section .data align=4
@@ -48,9 +48,8 @@ mini_fputc_RP3:  ; int mini_fputc_RP3(int c, FILE *filep) __attribute__((__regpa
 		mov eax, [edx+0x4]
 		cmp [edx], eax
 		jne .16
-		push edx
-		call mini_fflush
-		pop edx
+		mov eax, edx
+		call mini_fflush_RP3
 		test eax, eax
 		jnz .err
 		mov eax, [ebx+0x4]
@@ -76,9 +75,8 @@ mini_fputc_RP3:  ; int mini_fputc_RP3(int c, FILE *filep) __attribute__((__regpa
 		jne .done
 		cmp byte [ebx+0x14], 0x6  ; FD_WRITE_LINEBUF.
 		jne .done
-		push ebx
-		call mini_fflush
-		pop edx  ; Clean up the argument of mini_fflush from the stack. The pop register can be any of: EBX, ECX, EDX, ESI, EDI, EBP.
+		mov eax, ebx
+		call mini_fflush_RP3
 		test eax,  eax
 		jz .done
 .err:		pop eax

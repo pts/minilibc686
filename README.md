@@ -27,7 +27,7 @@ $ minicc -mprintf-mini -mno-envp -mconst-seg -o demo demo_c_hello.c
 $ ./demo
 Hello, World!
 $ ls -ld demo
--rwxrwxr-x 1 pts pts 1004 Jul  5 23:28 demo
+-rwxrwxr-x 1 pts pts 996 Jul  5 23:28 demo
 $ printf '#include <unistd.h>\nint main() { write(1, "Hello, World!\\n", 14); return 0; }\n' >demo_write.c
 $ minicc -fomit-frame-pointer -o demo_write demo_write.c
 $ ./demo_write
@@ -67,19 +67,19 @@ What sizes are achievable:
   program size depends on the C compiler. It's always 679 bytes when
   demo_hello_linux_printf.nasm is compiled with NASM.
 * A hello-world program, using printf(3) (demo_hello_linux_printf.nasm and demo_c_hello.c):
-  **1004 bytes**. Only the very short main(...) function was written in C,
+  **996 bytes**. Only the very short main(...) function was written in C,
   the rest of the code is part of the libc, written in NASM assembly. Please
   note that that `demo_c_hello.c` provides the same functionality, but the
   program size depends on the C compiler. The executable size usually
   depends on the compiler version used, but to make the results reproducible,
   an assembly implementation of main(...) is also included in `demo_c_hello.c`
-  above. For the original 1004-byte executable, GCC 7.5.0 was used to compile
+  above. For the original 996-byte executable, GCC 7.5.0 was used to compile
   main(...).
 
 hello-world size comparison of different libcs:
 
 * minilibc686 (`minicc --gcc`) is
-  1004 bytes, already stripped
+  996 bytes, already stripped
 * [Baselibc](https://github.com/PetteriAimonen/Baselibc)
   [2018-11-06](https://github.com/PetteriAimonen/Baselibc/commit/245a5940483267ef501aa7cdbc1b6a422f6e9daf) is
   1388 bytes after stripping, but it doesn't do output buffering;
@@ -172,18 +172,18 @@ How is this possible?
   * 89 bytes: _start (entry point) + stdout startup isatty ioctl + main(...)
     call + stdout exit flush + _exit(3) + syscalls wrapper
   * 4 bytes: write(2) syscall wrapper
-  * 89 bytes: mini_fputc_RP3(...), calls fflush(3) and write(2)
+  * 85 bytes: mini_fputc_RP3(...), calls fflush(3) and write(2)
   * 452 bytes: printf(3), calls mini_fputc_RP3(...),
     mini___M_writebuf_relax_RP1(...), mini___M_writebuf_unrelax_RP1(...)
   * 27 bytes: mini___M_writebuf_relax_RP1(...)
-  * 37 bytes: mini___M_writebuf_unrelax_RP1(...), calls fflush(3)
+  * 33 bytes: mini___M_writebuf_unrelax_RP1(...), calls fflush(3)
   * 89 bytes: fflush(3), calls write(2)
   * 18 bytes: two NUL-terminated strings in main(...)
   * 7 bytes: `"(null)"` string (NUL-terminated) in mini___M_vfsprintf(...)
   * 1 byte: alignment padding for section .data (to a multiple of 4)
   * 4 bytes: stdout pointer
   * 36 bytes: stdout struct
-  * (1004 bytes): total
+  * (996 bytes): total
 
 ## What's inside?
 
