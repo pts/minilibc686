@@ -49,7 +49,6 @@ mini_fputc:  ; int fputc(int c, FILE *filep);
 .ok:		pop eax  ; Return (unsigned char)c.
 		ret
 
-; !!! Move.
 section .rodata
 struct_stdout:	dd 1  ; File descriptor.
 struct_stderr:	dd 2  ; File descriptor.

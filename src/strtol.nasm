@@ -210,7 +210,6 @@ section .text
 		or edx, byte -1  ; Indicate overflow as saturated 0xffffffff.
   %endif
 %else  ; Signed overflow check.
-; !!! Check for overflow.
 		mov edx, 0x80000000
 		jnz .has_overflow
   %ifdef CONFIG_STRTOL_64BIT
