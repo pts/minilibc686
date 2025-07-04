@@ -44,6 +44,7 @@ section .text
 mini___M_start_flush_opened:
 ; Called from mini_exit(...).
 ; It flushes all files opened by mini_fopen(...).
+; It ruins EAX, EBX, ECX and EDX.
 %if FILE_CAPACITY <= 0
 %else
 %if FILE_CAPACITY == 1
@@ -51,26 +52,27 @@ mini___M_start_flush_opened:
 		call mini_fflush_RP3
 %elif FILE_CAPACITY == 2
 		mov eax, mini___M_global_files
+		lea ebx, [byte eax+SIZEOF_STRUCT_SMS_FILE]
 		call mini_fflush_RP3
-		mov eax, mini___M_global_files+SIZEOF_STRUCT_SMS_FILE
+		xchg eax, ebx  ; EAX := EBX; EBX := junk.
 		call mini_fflush_RP3
 %elif FILE_CAPACITY == 3
 		mov eax, mini___M_global_files
+		lea ebx, [byte eax+SIZEOF_STRUCT_SMS_FILE]
 		call mini_fflush_RP3
-		mov eax, mini___M_global_files+SIZEOF_STRUCT_SMS_FILE
+		xchg eax, ebx  ; EAX := EBX; EBX := junk.
+		lea ebx, [byte eax+SIZEOF_STRUCT_SMS_FILE]
 		call mini_fflush_RP3
-		mov eax, mini___M_global_files+2*SIZEOF_STRUCT_SMS_FILE
+		xchg eax, ebx  ; EAX := EBX; EBX := junk.
 		call mini_fflush_RP3
 %else
-		push ebx  ; !! __cdecl needs this. But do any of our callers need if? If not, omit the push+pop.
-		mov ebx, mini___M_global_files
-.next_file:	cmp ebx, mini___M_global_files_end
-		je .after_files
-		mov eax, ebx
+		mov eax, mini___M_global_files
+.next_file:	mov ebx, eax  ; Save for the duration of mini_fflush_RP3 below.
 		call mini_fflush_RP3
-		add ebx, byte SIZEOF_STRUCT_SMS_FILE
-		jmp short .next_file
-.after_files:	pop ebx
+		lea eax, [byte ebx+SIZEOF_STRUCT_SMS_FILE]
+		cmp eax, strict dword mini___M_global_files_end
+		jne short .next_file
+.after_files:
 %endif
 %endif
 		ret 

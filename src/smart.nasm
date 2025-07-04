@@ -959,7 +959,7 @@ start.mini___M_start_flush_stdout:
 		mov eax, [mini_stdout]
 		call mini_fflush_RP3
 %endif
-		_call_if_needed mini___M_start_flush_opened
+		_call_if_needed mini___M_start_flush_opened  ; Ruins EBX.
 		; Fall through.
 %endif  ; NEED_cleanup
 %ifdef __NEED_mini_sys_exit

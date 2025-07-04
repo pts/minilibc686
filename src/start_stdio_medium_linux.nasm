@@ -108,9 +108,9 @@ WEAK..mini__start:
 		push eax  ; Fake return address, for mini__exit.
 		; Fall through to mini_exit(...).
 mini_exit:  ; void mini_exit(int exit_code);
-		call mini___M_start_flush_stdout  ; Smart linking (smart.nasm) may omits this call.
+		call mini___M_start_flush_stdout  ; Smart linking (smart.nasm) may omit this call.
 %ifndef CONFIG_START_STDOUT_ONLY
-		call mini___M_start_flush_opened  ; Smart linking (smart.nasm) may omits this call.
+		call mini___M_start_flush_opened  ; Ruins EBX. Smart linking (smart.nasm) may omit this call.
 %endif
 		; Fall through to mini__exit(...).
 mini__exit:  ; void mini__exit(int exit_code);

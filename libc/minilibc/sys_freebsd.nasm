@@ -141,7 +141,7 @@ WEAK.._start:
 global mini_exit
 mini_exit:  ; __attribute__((noreturn)) void mini_exit(int status);
 		call mini___M_start_flush_stdout
-		call mini___M_start_flush_opened
+		call mini___M_start_flush_opened  ; Ruins EBX.
 		; Fall through to mini__exit.
 global mini__exit
 mini__exit:  ; __attribute__((noreturn)) void mini__exit(int exit_code);
