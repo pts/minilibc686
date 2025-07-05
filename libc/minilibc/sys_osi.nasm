@@ -1,5 +1,9 @@
 ; by pts@fazekas.hu at Sun Apr 28 02:07:17 CEST 2024
 ;
+; See also https://github.com/pts/oix-wcfd32/tree/master/osi5
+;
+; The output of `minicc -bosi' has to be post-processed with elf2oix.pl.
+;
 ; !! Make the number of files (-mfiles=...) in libci.a:stdio_medium_flobal_files.o configurable.
 ; !! minilibc printf is not smart enough to handle ndisasm (NASM listing is already supported)
 ; !! automatically convert \n to \r\n on TTY output in mini_write(...)

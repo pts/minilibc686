@@ -362,6 +362,7 @@ for ARG in "$@"; do
    -nostdlib | -nodefaultlibs) DO_ADD_LIB= ;;
    -nostdinc) DO_ADD_INCLUDEDIR= ;;
    -blinux | -bany | -bfreebsd | -bfreebsdx) OS="${ARG#-b}" ;;  # `-blinux' is compatible with `owcc -blinux'. -bfreebsdx output works on both Linux and FreeBSD. -bany omits syscalls and _start by linking against libc/minilibc/libca.i386.a.
+   -bosi | -boix) OS=osi ;;  # Imply these: -g0r (STRIP_MODE=3) -Wl,-N -march=i386 -D__OSI_
    -[cSE])
      if test "$DO_MODE" && test "$DO_MODE" != "$ARG"; then echo "fatal: conflicting combination of $ARG and $DO_MODE" >&2; exit 1; fi
      test -z "$DO_MODE" && ARGS="$ARGS$NL$ARG"
@@ -394,6 +395,13 @@ unset DO_MODE
 if test "$SKIPARG"; then
   echo "fatal: missing last flag argument: $SKIPARG" >&2
   exit 1
+fi
+if test "$OS" = osi; then
+  STRIP_MODE=3  # -g0r. Keep relocations.
+  ARGS="$ARGS$NL-Wl,-N"  # -Wl,-N. Merge .data+.bss to .text in the program header, creating a single section.
+  ARCH=i386  # -march=i386.
+  DEF_CMDARG="$DEF_CMDARG$NL-D__OSI__" # -D__OSI__.
+  # Post processing the ELF-32 executable output of minicc to .oix is necessary with elf2oix.pl.
 fi
 
 if test "$HAD_TRADITIONAL" && test "$DO_ADD_INCLUDEDIR"; then  # libcs supported by minicc don't support -traditional.
