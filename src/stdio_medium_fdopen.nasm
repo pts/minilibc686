@@ -21,13 +21,11 @@ mini___M_discard_buf_RP3 equ +0x12345679
 mini___M_global_file_bufs equ +0x1234567a
 mini___M_global_files equ +0x1234567b
 mini___M_global_files_end equ +0x1234567c
-mini___M_start_flush_opened equ +0x1234567d
 %else
 extern mini___M_discard_buf_RP3
 extern mini___M_global_file_bufs
 extern mini___M_global_files
 extern mini___M_global_files_end
-extern mini___M_start_flush_opened  ; This function is not called here. This extern just indicates to the linker that opened fds must be flushed by mini___M_start_flush_opened() called by mini_exit(3).
 section .text align=1
 section .rodata align=1
 section .data align=1

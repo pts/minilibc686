@@ -13,6 +13,8 @@ int my_fprintf(FILE *stream, const char *format, ...) {
 }
 
 int mini_isatty(int fd) { return 0; }  /* Used by mini_stdout. */
+void mini___M_call_start_flush_stdout(void) {}  /* Used by mini_stdout. */
+void mini___M_U_stdout(void) {}  /* Used by mini_stdout. */
 
 int main(int argc, char **argv) {
   my_fprintf(mini_stdout, "%s, %u%c %s%u\n", "Hello", 42, '!', "+", 0);

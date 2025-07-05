@@ -18,6 +18,7 @@ global mini_syscall3_RP1
 global mini___M_jmp_pop_ebx_syscall_return
 global mini___M_jmp_syscall_return
 global mini_exit
+global mini___M_call_start_flush_stdout
 global mini___M_fopen_open
 global mini_open
 global mini_close
@@ -108,8 +109,12 @@ WEAK..mini__start:
 		push eax  ; Fake return address, for mini__exit.
 		; Fall through to mini_exit(...).
 mini_exit:  ; void mini_exit(int exit_code);
+global mini___M_call_start_flush_stdout  ; Needed by --tccld and wlink(1). Not needed for GNU ld(1).
+mini___M_call_start_flush_stdout:
 		call mini___M_start_flush_stdout  ; Smart linking (smart.nasm) may omit this call.
 %ifndef CONFIG_START_STDOUT_ONLY
+global mini___M_call_start_flush_opened  ; Needed by --tccld and wlink(1). Not needed for GNU ld(1).
+mini___M_call_start_flush_opened:
 		call mini___M_start_flush_opened  ; Ruins EBX. Smart linking (smart.nasm) may omit this call.
 %endif
 		; Fall through to mini__exit(...).
@@ -148,6 +153,12 @@ mini___M_jmp_syscall_return:
 %endif
 		or eax, byte -1  ; EAX := -1 (error).
 .final_result:
+global mini___M_U_stdin
+mini___M_U_stdin:
+global mini___M_U_stdout
+mini___M_U_stdout:
+global mini___M_U_opened
+mini___M_U_opened:
 WEAK..mini___M_start_isatty_stdin:   ; Fallback, tools/elfofix will convert it to a weak symbol.
 WEAK..mini___M_start_isatty_stdout:  ; Fallback, tools/elfofix will convert it to a weak symbol.
 WEAK..mini___M_start_flush_stdout:   ; Fallback, tools/elfofix will convert it to a weak symbol.

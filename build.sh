@@ -44,10 +44,11 @@ AR=tools/tiny_libmaker
 
 export LC_ALL=C  # For consistency. With Busybox we don't need it, because the environment is empty.
 
-OUTFNS='libmini386.a libmini686.a libmina386.a libminitcc1.a need_start.o need_uclibc_main.o start_uclibc_linux.o'
+OUTFNS='libmini386.a libmini686.a libmina386.a libminu386.a libminitcc1.a need_start.o need_uclibc_main.o start_uclibc_linux.o'
 OUTDIR=helper_lib
 LIBI386_OBJS=
 LIBA386_OBJS=
+LIBU386_OBJS=
 LIBI686_OBJS=
 if ! test -f src/start_stdio_medium_linux.nasm; then
   echo "fatal: missing: src/start_stdio_medium_linux.nasm" >&2
@@ -86,8 +87,9 @@ for F in src/[a-zA-Z0-9_]*.nasm; do
      need_start.nasm) ;;
      need_uclibc_main.nasm) ;;
      tcc_*.nasm) ;;
-     stdio_medium_flush_opened.nasm) ;;  # We want special order in the .a file, for miniutcc.
+     stdio_medium_flush_opened.nasm) LA=a ;;  # We want special order in the .a file, for miniutcc.
      start_stdio_medium_linux.nasm) ;;  # We want special order in the .a file, for miniutcc.
+     stdio_medium_u_*.nasm) LA=u ;;  # We want to add it to libcau.i386.a ($LIBU386_OBJS) only.
      start_*.nasm) ;;
      smart.nasm) ;;  # Will be used in source form by smart linking, as libc/minilibc/smart.nasm.
      *.nasm) LA=1 ;;
@@ -116,12 +118,16 @@ for F in src/[a-zA-Z0-9_]*.nasm; do
       diff -U3 "$BFA".ndisasm "$BFA".o0.ndisasm
     fi
     set +ex
-    if test "$LA"; then
+    if test "$LA" = 1; then
       if test -z "$ARCH_I686"; then LIBI386_OBJS="$LIBI386_OBJS ${BFA#build_tmp/}.o"; LIBI686_OBJS="$LIBI686_OBJS ${BFA#build_tmp/}.o"
       elif test "$ARCH" = i386; then LIBI386_OBJS="$LIBI386_OBJS ${BFA#build_tmp/}.o"
       else LIBI686_OBJS="$LIBI686_OBJS ${BFA#build_tmp/}.o"
       fi
       case "$F" in *_linux.nasm) ;; *) LIBA386_OBJS="$LIBA386_OBJS ${BFA#build_tmp/}.o" ;; esac
+    elif test "$LA" = a; then
+      LIBA386_OBJS="$LIBA386_OBJS ${BFA#build_tmp/}.o"
+    elif test "$LA" = u; then
+      LIBU386_OBJS="$LIBU386_OBJS ${BFA#build_tmp/}.o"
     fi
     # !! TODO(pts): Strip the .o file (strip -S -x -R .comment start.o), and remove empty sections. Unfortunately we don't have strip(1) available here.
   done
@@ -130,14 +136,13 @@ done
 # !! We don't have .c source ready for this. Needed by TCC 0.9.26.
 cp -a src/tcc_float.o src/tcc_bcheck.o build_tmp/
 
-# Order of these .o files in libmini[34]86.a is importan when linking with
-# miniutcc, because these .o files contain weak symbols, and if they were
+# Order of these .o files in libmini[34]86.a is important when linking with
+# miniutcc, because some these .o files (such as start_stdio_medium_linux.o) contain weak symbols, and if they were
 # early, miniutcc would pick them (and then use the weak symbols within,
 # rather than the full implementation in another .o file).
 #
-# TODO(pts): Does GNU ld(1) have the same behavior?
-LIBA_OBJS_SPECIAL_ORDER="stdio_medium_flush_opened.o"
-LIBC_OBJS_SPECIAL_ORDER="$LIBA_OBJS_SPECIAL_ORDER start_stdio_medium_linux.o"
+# TODO(pts): Does GNU ld(1) have the same behavior? No.
+LIBC_OBJS_SPECIAL_ORDER="stdio_medium_flush_opened.o start_stdio_medium_linux.o"  # !! Are these files late enough so that the miniutcc linker doesn't have to go another round?
 LIB_OBJS_TCC1="$(for F in build_tmp/tcc_*.o; do echo "${F#build_tmp/}"; done)"
 ARB="$AR"
 test "${ARB#/}" = "$ARB" && ARB=../"$ARB"
@@ -148,8 +153,9 @@ for OUTFN in $OUTFNS; do
    *.a)
     if test "$OUTFN" = libminitcc1.a; then LIB_OBJS="$LIB_OBJS_TCC1"
     elif test "$OUTFN" = libmini386.a; then LIB_OBJS="$LIBI386_OBJS $LIBC_OBJS_SPECIAL_ORDER"; OUTPN=libc/minilibc/libc.i386.a
-    elif test "$OUTFN" = libmina386.a; then LIB_OBJS="$LIBA386_OBJS $LIBA_OBJS_SPECIAL_ORDER"; OUTPN=libc/minilibc/libca.i386.a  # Only those parts which work with any operating system (not only Linux).
     elif test "$OUTFN" = libmini686.a; then LIB_OBJS="$LIBI686_OBJS $LIBC_OBJS_SPECIAL_ORDER"; OUTPN=libc/minilibc/libc.i686.a
+    elif test "$OUTFN" = libmina386.a; then LIB_OBJS="$LIBA386_OBJS $LIBA_OBJS_SPECIAL_ORDER"; OUTPN=libc/minilibc/libca.i386.a  # Only those parts which work with any operating system (not only Linux).
+    elif test "$OUTFN" = libminu386.a; then LIB_OBJS="$LIBU386_OBJS"; OUTPN=libc/minilibc/libcau.i386.a
     else echo "fatal: unknown output library: $OUTFN" >&2; exit 3
     fi
     rm -f "$OUTDIR/$OUTFN"  # Some versions of ar(1) such as GNU ar(1) do something different if the .a file already exists.

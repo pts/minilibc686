@@ -38,20 +38,10 @@ extern main
     extern mini_errno  ; Not implemented.
   %endif
 %endif
-%macro define_weak 1
-  extern %1
-%endmacro
-define_weak mini___M_start_isatty_stdin
-define_weak mini___M_start_isatty_stdout
-define_weak mini___M_start_flush_stdout
-define_weak mini___M_start_flush_opened
-define_weak _start
 
 section .text align=1
 
 %ifdef __NEED__start
-;global _start
-;_start:
 %ifdef CONFIG_MAIN_NO_ARGC_ARGV_ENVP
   %define MAIN_ARG_MODE 0
 %elifdef CONFIG_MAIN_NO_ARGV_ENVP
@@ -66,8 +56,10 @@ section .text align=1
     %define MAIN_ARG_MODE 3
   %endif
 %endif
-WEAK.._start:
-;mini__start:  ; Entry point (_start) of the Linux i386 executable. Same for SVR3 i386, SVR4 i386, FreeBSD i386 and macOS i386 up to the end of envp.
+global _start
+_start:
+global mini__start
+mini__start:  ; Entry point (_start) of the Linux i386 executable. Same for SVR3 i386, SVR4 i386, FreeBSD i386 and macOS i386 up to the end of envp.
 		; Now the stack looks like (from top to bottom):
 		;   dword [esp]: argc
 		;   dword [esp+4]: argv[0] pointer
@@ -131,8 +123,23 @@ WEAK.._start:
 		push edx  ; Argument argv for main.
 		push eax  ; Argument argc for main.
 %endif
+%ifdef __NEED_mini___M_call_start_isatty_stdin
+  global mini___M_call_start_isatty_stdin
+  mini___M_call_start_isatty_stdin:
+  global mini___M_U_stdin
+  mini___M_U_stdin:
+  extern mini___M_start_isatty_stdin
 		call mini___M_start_isatty_stdin
+%endif
+%ifdef __NEED_mini___M_call_start_isatty_stdout
+  global mini___M_call_start_isatty_stdout
+  mini___M_call_start_isatty_stdout:
+  %define DEFINED_mini___M_U_stdout
+  global mini___M_U_stdout
+  mini___M_U_stdout:
+  extern mini___M_start_isatty_stdout
 		call mini___M_start_isatty_stdout
+%endif
 		call main
 		push eax  ; Push return value of main, it will be the exit code of the process.
 		push eax  ; Push fake return address. !! TODO(pts): Don't push if not needed (i.e. if no mini___M_start_flush_stdout and no mini___M_start_flush_opened calls below).
@@ -140,13 +147,28 @@ WEAK.._start:
 %endif  ; %ifdef __NEED_start
 global mini_exit
 mini_exit:  ; __attribute__((noreturn)) void mini_exit(int status);
+%ifdef __NEED_mini___M_call_start_flush_stdout
+  global mini___M_call_start_flush_stdout
+  mini___M_call_start_flush_stdout:
+  %ifndef DEFINED_mini___M_U_stdout
+    global mini___M_U_stdout
+    mini___M_U_stdout:
+  %endif
+  extern mini___M_start_flush_stdout
 		call mini___M_start_flush_stdout
+%endif
+%ifdef __NEED_mini___M_call_start_flush_opened
+  global mini___M_call_start_flush_opened
+  mini___M_call_start_flush_opened:
+  global mini___M_U_opened
+  mini___M_U_opened:
+  extern mini___M_start_flush_opened
 		call mini___M_start_flush_opened  ; Ruins EBX.
-		; Fall through to mini__exit.
+%endif
 global mini__exit
 mini__exit:  ; __attribute__((noreturn)) void mini__exit(int exit_code);
 %ifdef __MULTIOS__
-		mov ebx, [esp+4]  ; Linux i386 syscall needs the 1st argument in EBX. FreeBSD needs it in [esp+4].
+		mov ebx, [esp+4]  ; Linux i386 syscall needs the 1st argument in EBX. FreeBSD needs it in [esp+4] (which we already have).
 %endif
 		xor eax, eax
 		inc eax  ; EAX := FreeBSD i386 and Linux i386 SYS_exit (1).
@@ -358,10 +380,6 @@ simple_syscall3_AL:
 		sbb eax, eax  ; EAX := -1, indicating error.
 .ok:
 %endif
-WEAK..mini___M_start_isatty_stdin:   ; Fallback, tools/elfofix will convert it to a weak symbol.
-WEAK..mini___M_start_isatty_stdout:  ; Fallback, tools/elfofix will convert it to a weak symbol.
-WEAK..mini___M_start_flush_stdout:   ; Fallback, tools/elfofix will convert it to a weak symbol.
-WEAK..mini___M_start_flush_opened:   ; Fallback, tools/elfofix will convert it to a weak symbol.
 		ret
 
 %ifdef __NEED_mini_write

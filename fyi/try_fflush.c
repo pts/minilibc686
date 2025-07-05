@@ -6,6 +6,6 @@ int main(int argc, char **argv) {
   fputc('X', fopen("/dev/null", "w"));
   fputc('X', fopen("/dev/null", "w"));
   fputc('X', fopen("/dev/null", "w"));
-  putchar('\n');
+  fputc('\n', stderr);
   return 0;
 }

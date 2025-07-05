@@ -184,9 +184,10 @@ bits 32
   %endif
 %endmacro
 
-%macro _call_if_needed 1
-  %ifdef __NEED_%1
-    call %1
+%macro _call_if_needed 2
+  %ifdef __NEED_%2
+    global %2
+    %2: call %1
   %endif
 %endmacro
 
@@ -253,21 +254,25 @@ _need mini_vfprintf, mini___M_writebuf_unrelax_RP1
 _need mini_vfprintf, mini_fputc_RP3
 _need mini_stdin,  mini___M_start_isatty_stdin
 _need mini_stdout, start.mini___M_start_isatty_stdout
-_need mini_stdout, start.mini___M_start_flush_stdout
-_need mini_fopen, mini___M_start_flush_opened
-_need mini_freopen, mini___M_start_flush_opened
-_need mini_fdopen, mini___M_start_flush_opened
+_need mini_stdout, mini___M_call_start_flush_stdout
+_need mini_freopen, mini___M_jmp_freopen_low
+_need mini_fopen, mini___M_jmp_freopen_low
+_need mini___M_jmp_freopen_low, mini___M_call_start_flush_opened
+_need mini_fopen,  mini___M_call_start_flush_opened  ; Indirect, through mini___M_global_files.
+_need mini_fdopen, mini___M_call_start_flush_opened  ; Indirect, through mini___M_global_files.
+_need mini___M_call_start_flush_opened, mini___M_start_flush_opened
+_need mini___M_start_flush_opened, mini_fflush_RP3  ; Typically not triggered without mini___M_call_start_flush_opened, a typical program doesn't depend on mini___M_start_flush_opened directly.
+_need mini___M_start_flush_opened, mini___M_global_files
+_need mini___M_start_flush_opened, mini___M_global_files_end
+_need mini___M_start_flush_opened, mini___M_global_file_bufs
+;_need mini___M_global_files, mini___M_call_start_flush_opened   ; Not mentioned here, to avoid circular dependency.
 _need mini___M_start_isatty_stdin, mini_isatty
 ;_need start.mini___M_start_isatty_stdout, mini_isatty  ; Inlined.
 _need start.mini___M_start_isatty_stdout, mini_syscall3_AL
 _need mini___M_start_isatty_stdout, mini_isatty
 _need mini_isatty, mini_ioctl
-_need start.mini___M_start_flush_stdout, mini_fflush_RP3
+_need mini___M_call_start_flush_stdout, mini_fflush_RP3
 _need mini___M_start_flush_stdout, mini_fflush_RP3
-_need mini___M_start_flush_opened, mini_fflush_RP3
-_need mini___M_start_flush_opened, mini___M_global_files
-_need mini___M_start_flush_opened, mini___M_global_files_end
-_need mini___M_start_flush_opened, mini___M_global_file_bufs
 _need mini_rewind, mini_fseek
 _need mini_freopen, mini___M_jmp_freopen_low
 _need mini_freopen, mini_fclose
@@ -813,10 +818,10 @@ _need mini__exit, mini_sys_exit
 _need mini_sys_exit, mini___LM_push_exit_args
 
 %define CLEANUP_IS_EMPTY 1
-%ifdef __NEED_start.mini___M_start_flush_stdout
+%ifdef __NEED_mini___M_call_start_flush_stdout
   %define CLEANUP_IS_EMPTY 0
 %endif
-%ifdef __NEED_mini___M_start_flush_opened
+%ifdef __NEED_mini___M_call_start_flush_opened
   %define CLEANUP_IS_EMPTY 0
 %endif
 %ifdef __NEED_mini_syscall3_RP1
@@ -954,12 +959,13 @@ global mini_exit
 mini_exit:  ; void mini_exit(int exit_code);
 %endif
 %ifdef NEED_cleanup
-%ifdef __NEED_start.mini___M_start_flush_stdout
-start.mini___M_start_flush_stdout:
+%ifdef __NEED_mini___M_call_start_flush_stdout
+global mini___M_call_start_flush_stdout
+mini___M_call_start_flush_stdout:
 		mov eax, [mini_stdout]
 		call mini_fflush_RP3
 %endif
-		_call_if_needed mini___M_start_flush_opened  ; Ruins EBX.
+		_call_if_needed mini___M_start_flush_opened, mini___M_call_start_flush_opened  ; Ruins EBX.
 		; Fall through.
 %endif  ; NEED_cleanup
 %ifdef __NEED_mini_sys_exit

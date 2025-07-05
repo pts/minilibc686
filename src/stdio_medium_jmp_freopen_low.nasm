@@ -19,11 +19,9 @@ section .data align=1
 section .bss align=1
 mini___M_fopen_open equ +0x12345678
 mini___M_discard_buf_RP3 equ +0x12345679
-mini___M_start_flush_opened equ +0x1234567d
 %else
 extern mini___M_fopen_open
 extern mini___M_discard_buf_RP3
-extern mini___M_start_flush_opened  ; This function is not called here. This extern just indicates to the linker that opened fds must be flushed by mini___M_start_flush_opened() called by mini_exit(3).
 section .text align=1
 section .rodata align=1
 section .data align=1

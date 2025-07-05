@@ -756,7 +756,7 @@ if test "$FILE_CAPACITY"; then
     #  exit 3
     #fi
   fi
-  DEF_ARG="$DEF_ARG$NL-DCONFIG_FILE_CAPACITY=$FILE_CAPACITY"  # Respected by src/stdio_medium_flush_opened.nasm.
+  DEF_ARG="$DEF_ARG$NL-DCONFIG_FILE_CAPACITY=$FILE_CAPACITY"  # Respected by src/stdio_medium_flush_opened.nasm %include()d by smart.nasm.
 fi
 if test "$IS_WATCOM" || test "$IS_CC1" = 3 || test "$TCC"; then
   # Add some -D.. flags which GCC (>=1) already defines. These flags affect EGLIBC on other compilers.
@@ -806,7 +806,7 @@ ANSIFLAG= ;  # Prevent reuse later.
 NEED_LIBMINITCC1=
 SYSNASM=
 if test "$DO_ADD_LIB"; then
-  LIBWL=
+  LIBUFN=
   if test "$USE_UTCC"; then
     LIBFN=///tmp///LIBTCC1.a  # Embedded in tools/miniutcc.
     if test "$DO_SMART" && test "$DO_SMART" != 0; then
@@ -816,6 +816,7 @@ if test "$DO_ADD_LIB"; then
   else
     if test "$OS" != linux; then
       LIBFN="$MYDIR/libc/$LIBC/libca.i386.a"
+      LIBUFN="$MYDIR/libc/$LIBC/libcau.i386.a"
       test "$DO_SMART" || DO_SMART=0
       if test "$DO_SMART" != 0; then
         # TODO(pts): Make smart.nasm recognize -bany, and prevent it from
@@ -823,8 +824,9 @@ if test "$DO_ADD_LIB"; then
         echo "fatal: -b$OS doesn't work with -msmart" >&2
         exit 3
       fi
-      if test "$OS" != any; then  # freebsd or freeebsdx.
-        SYSNASM="$MYDIR/libc/$LIBC/sys_freebsd.nasm"
+      if test "$OS" != any; then  # osi, freebsd or freeebsdx.
+        OSSYSFN=sys_"$OS".nasm; test "$OS" = freebsdx && OSSYSFN=sys_freebsd.nasm
+        SYSNASM="$MYDIR/libc/$LIBC/$OSSYSFN"
         if ! test -f "$SYSNASM"; then
           echo "fatal: missing -b$OS support nasm source file in libc: $SYSNASM" >&2
           exit 3
@@ -894,7 +896,7 @@ if test "$DO_ADD_LIB"; then
       ARGS="$ARGS$NL$OBJFN"
     fi
   fi
-  test "$DO_SMART" = 0 && ARGS="$ARGS$NL$LIBWL$LIBFN"
+  test "$DO_SMART" = 0 && ARGS="$ARGS$NL$LIBFN$NL$LIBUFN"
   if test "$TCC" && test -z "$USE_UTCC"; then NEED_LIBMINITCC1=1
   elif test "$IS_TCCLD" && test "$IS_WATCOM"; then NEED_LIBMINITCC1=1  # We need it for dummy symbols cstart_ and _argc.
   elif test "$IS_TCCLD" && test "$HAD_OFILE"; then NEED_LIBMINITCC1=1  # We need it for dummy symbols cstart_ and _argc.
@@ -908,12 +910,12 @@ if test "$DO_ADD_LIB"; then
         exit 3
       fi
     fi
-    test "$DO_SMART" = 0 && ARGS="$ARGS$NL$LIBMTFN"
+    test "$DO_SMART" = 0 && ! test "$LIBUFN" && ARGS="$ARGS$NL$LIBMTFN"
   fi
   if test "$USE_UTCC"; then
     # OBJFN="$MYDIR/helper_lib/start_uclibc_linux.o"  # Not needed.
     OBJFN="///tmp///crt1.o"  # Embedded in the tools/miniutcc executable, same functionality as start_uclibc_linux.o.
-    ARGS="$ARGS$NL$LIBWL$OBJFN"
+    ARGS="$ARGS$NL$OBJFN"
   fi
 fi
 test "$DO_SMART" || DO_SMART=0  # Fallback.
@@ -1470,16 +1472,34 @@ if test "$DO_SMART" != 0 || test "$SYSNASM"; then  # Smart linking or OS-specifi
       test "$EC" = 0 && EC=1
       exit "$EC"
     fi
-    if test "$DO_SMART" = 0; then  # Original sys_*.nasm, it needs elfofix because it uses weak symbols.
-      EFARGS="$MYDIR/tools/elfofix$NL-r$NL-w$NL$HAD_V$NL--$NL$SYSO"
-      test "$HAD_V" && echo "info: fixing ELF object:" $EFARGS >&2
-      $EFARGS; EC="$?"
-      if test "$EC" != 0; then rm -f $TMPOFILES "$SYSO"; exit "$EC"; fi
-    fi
+    # No need for this, sys_*.nasm doesn't use weak symbols anymore, so it doesn't need `elfofix -w'. We don't bother for `elfofix -r'.
+    #if test "$DO_SMART" = 0; then  # Original sys_*.nasm, it needs elfofix because it uses weak symbols.
+    #  EFARGS="$MYDIR/tools/elfofix$NL-r$NL-w$NL$HAD_V$NL--$NL$SYSO"
+    #  test "$HAD_V" && echo "info: fixing ELF object:" $EFARGS >&2
+    #  $EFARGS; EC="$?"
+    #  if test "$EC" != 0; then rm -f $TMPOFILES "$SYSO"; exit "$EC"; fi
+    #fi
     # /usr/bin/objdump -d "$OUTFILE.smart.o"
     # /usr/bin/nm "$OUTFILE.smart.o" | grep -v ' [dtbr] '
     if test "$DO_SMART" = 0; then  # sys_*.nasm
-      ARGS="$ARGS$NL$SYSO$NL$NL$LIBMINITCC1"
+      NUARGS="$ARGS"; ARGS=
+      for ARG in --skiparg $NUARGS $LIBMINITCC1; do
+        if test "$SKIPARG"; then ARGS="$ARGS$NL$ARG"; SKIPARG=; continue; fi
+        case "$ARG" in
+         --skiparg) SKIPARG=1 ;;
+         --skiparg | -[zmeo]) ARGS="$ARGS$NL$ARG"; SKIPARG=1 ;;
+         -*) ARGS="$ARGS$NL$ARG" ;;
+         *)
+          # We put $SYSO in front of $LIBFN, so it can pull in additional
+          # functions from $LIBFN. If we used the wrong order,
+          # `pathbin/minicc -bfreebsdx -v fyi/try_fflush.c' would fail with:
+          # undefined reference to `mini___M_start_flush_opened'
+          if test "$ARG" = "$LIBFN"; then ARGS="$ARGS$NL$SYSO$NL$ARG"  # This is the correct order.
+          #if test "$ARG" = "$LIBFN"; then ARGS="$ARGS$NL$ARG$NL$SYSO"  # This is the wrong order.
+          elif test "$ARG" != "$LIBUFN"; then ARGS="$ARGS$NL$ARG"
+          fi ;;
+        esac
+      done
     else
       ARGS="$ARGS$NL$SYSO$NL$LIBFN$NL$LIBMINITCC1"
     fi

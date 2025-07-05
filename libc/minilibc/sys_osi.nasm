@@ -9,6 +9,23 @@
 ; !! automatically convert \n to \r\n on TTY output in mini_write(...)
 ;
 
+%ifnidn (__OUTPUT_FORMAT__), (elf)
+  %error '`nasm -f elf` required.'
+  times 1/0 nop
+%endif
+
+%ifndef UNDEFSYMS
+  %error 'Expecting UNDEFSYMS from minicc.'
+  times 1/0 nop
+%endif
+%macro _define_needs 0-*
+  %rep %0
+    %define __NEED_%1
+    %rotate 1
+  %endrep
+%endmacro
+_define_needs UNDEFSYMS
+
 bits 32
 cpu 386
 
@@ -45,14 +62,6 @@ global mini_environ
 
 extern main  ; extern int __cdecl main(int argc, char **argv);
 
-%macro define_weak 1
-  extern %1
-%endmacro
-define_weak mini___M_start_isatty_stdin
-define_weak mini___M_start_isatty_stdout
-define_weak mini___M_start_flush_stdout
-define_weak mini___M_start_flush_opened
-
 section .text
 
 section .bss
@@ -66,7 +75,11 @@ mini_environ:	resd 1  ; char **environ;
 ;_LpPgmName:	resd 1  ; char *_LpPgmName;
 section .text
 
-_start:  ; __OSI__ program entry point.
+%ifdef __NEED__start
+global _start
+_start:
+global mini__start
+mini__start: ; __OSI__ program entry point.
 		; Zero-initialize BSS. !! TODO(pts): The WCFD32 loader has done it.
 %if 0  ; !! What are the symbols _end and _edata for GNU ld(1)?
 		push edx
@@ -101,6 +114,7 @@ _start:  ; __OSI__ program entry point.
 		;mov [_LpCmdLine], eax	; Don't save it, parse_first_arg has overwritten it.
 		xor ecx, ecx
 		inc ecx			; ECX := 1 (current argc).
+		; !! Exclude command line if not needed, see CONFIG_MAIN_* in sys_freebsd.nasm.
 .argv_next:	mov edx, eax		; Save EAX (remaining command line).
 		call parse_first_arg
 		cmp eax, edx
@@ -131,15 +145,47 @@ _start:  ; __OSI__ program entry point.
 		push esp		; Argument envp for __cdecl main.
 		push edx		; Argument argv for __cdecl main.
 		push eax		; Argument argc for __cdecl main.
+%ifdef __NEED_mini___M_call_start_isatty_stdin
+  global mini___M_call_start_isatty_stdin
+  mini___M_call_start_isatty_stdin:
+  global mini___M_U_stdin
+  mini___M_U_stdin:
+  extern mini___M_start_isatty_stdin
 		call mini___M_start_isatty_stdin
+%endif
+%ifdef __NEED_mini___M_call_start_isatty_stdout
+  global mini___M_call_start_isatty_stdout
+  mini___M_call_start_isatty_stdout:
+  %define DEFINED_mini___M_U_stdout
+  global mini___M_U_stdout
+  mini___M_U_stdout:
+  extern mini___M_start_isatty_stdout
 		call mini___M_start_isatty_stdout
+%endif
 		call main  ; Return value (exit code) in EAX (AL).
 		push eax  ; Save exit code, for mini__exit.
 		push eax  ; Fake return address, for mini__exit.
 		; Fall through to mini_exit(...).
+%endif  ; %ifdef __NEED_start
 mini_exit:  ; void __cdecl mini_exit(int exit_code);
-		call mini___M_start_flush_stdout  ; Smart linking (smart.nasm) may omits this call.
-		call mini___M_start_flush_opened  ; Smart linking (smart.nasm) may omits this call.
+%ifdef __NEED_mini___M_call_start_flush_stdout
+  global mini___M_call_start_flush_stdout
+  mini___M_call_start_flush_stdout:
+  %ifndef DEFINED_mini___M_U_stdout
+    global mini___M_U_stdout
+    mini___M_U_stdout:
+  %endif
+  extern mini___M_start_flush_stdout
+		call mini___M_start_flush_stdout
+%endif
+%ifdef __NEED_mini___M_call_start_flush_opened
+  global mini___M_call_start_flush_opened
+  mini___M_call_start_flush_opened:
+  global mini___M_U_opened
+  mini___M_U_opened:
+  extern mini___M_start_flush_opened
+		call mini___M_start_flush_opened  ; Ruins EBX.
+%endif
 		; Fall through to mini__exit(...).
 mini__exit:  ; void mini__exit(int exit_code);
 		mov eax, [esp+4]
@@ -387,10 +433,6 @@ reverse_ptrs:  ; void __watcall reverse_ptrs(void **p);
 .nothing:	pop edx
 		pop ecx
 .ret:
-WEAK..mini___M_start_isatty_stdin:   ; Fallback, tools/elfofix will convert it to a weak symbol.
-WEAK..mini___M_start_isatty_stdout:  ; Fallback, tools/elfofix will convert it to a weak symbol.
-WEAK..mini___M_start_flush_stdout:   ; Fallback, tools/elfofix will convert it to a weak symbol.
-WEAK..mini___M_start_flush_opened:   ; Fallback, tools/elfofix will convert it to a weak symbol.
 		ret
 
 ; This is a helper function used by _start.

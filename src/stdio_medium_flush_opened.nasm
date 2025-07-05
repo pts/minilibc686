@@ -9,9 +9,6 @@ bits 32
 cpu 386
 
 global mini___M_start_flush_opened
-global mini___M_global_files
-global mini___M_global_files_end
-global mini___M_global_file_bufs
 %ifdef CONFIG_SECTIONS_DEFINED
 %elifidn __OUTPUT_FORMAT__, bin
 section .text align=1
