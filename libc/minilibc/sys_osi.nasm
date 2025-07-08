@@ -37,7 +37,9 @@ section .bss align=4
 global _start
 global mini__exit
 global mini_exit
-global mini_environ
+%ifdef __NEED_mini_environ
+  global mini_environ
+%endif
 ; !! TODO(pts): Move thee functions below to separate .o files.
 global mini___M_fopen_open
 global mini_open
@@ -58,7 +60,6 @@ global _INT21ADDR
 global __OS
 global _STACKTOP
 global _BreakFlagPtr
-global mini_environ
 
 extern main  ; extern int __cdecl main(int argc, char **argv);
 
@@ -71,7 +72,9 @@ __OS:		resb 1  ; char __OS;
 _STACKTOP:	resd 1  ; void *_STACKTOP;
 _BreakFlagPtr:	resd 1  ; unsigned *_BreakFlagPtr;
 ;__EnvPtr:	resd 1  ; char **_EnvPtr;
-mini_environ:	resd 1  ; char **environ;
+%ifdef __NEED_mini_environ
+  mini_environ:	resd 1  ; char **environ;
+%endif
 ;_LpPgmName:	resd 1  ; char *_LpPgmName;
 section .text
 
@@ -124,24 +127,28 @@ mini__start: ; __OSI__ program entry point.
 		jmp .argv_next
 .argv_end:	mov eax, esp
 		call reverse_ptrs
+%ifdef __NEED_mini_environ
 		mov ebp, esp		; Save argv to EBP.
 		; Initialize environ.
 		; TODO(pts): Allocate pointers on the heap, not on the stack.
 		mov esi, [edi+8]	; get environment pointer
 		;mov _EnvPtr, esi	; save environment pointer
 		push 0			; NULL marks end of env array
-.2:		push esi		; push ptr to next string
-.3:		lodsb			; get character
+  .2:		push esi		; push ptr to next string
+  .3:		lodsb			; get character
 		cmp al, 0		; check for null char
 		jne .3			; until end of string
-		cmp byte [esi], 0       ; check for double null char
+		cmp byte [esi], byte 0  ; check for double null char
 		jne .2			; until end of environment strings
 		mov eax, esp
 		call reverse_ptrs
 		mov [mini_environ], esp	; set pointer to array of ptrs
+		mov edx, ebp		; EDX := EBP (saved argv).
+%else
+		mov edx, esp		; EDX := ESP (argv).
+%endif
 		; Call main.
 		xchg eax, ecx		; EAX := ECX (argc). ECX := junk.
-		mov edx, ebp		; EDX := EBP (saved argv).
 		push esp		; Argument envp for __cdecl main.
 		push edx		; Argument argv for __cdecl main.
 		push eax		; Argument argc for __cdecl main.
