@@ -69,6 +69,12 @@ _define_needs UNDEFSYMS
   %define NEED_reverse_ptrs
   %define NEED_parse_first_arg
 %endif
+%ifdef __NEED_mini_write
+  %define NEED_write_binary
+%endif
+%ifdef __NEED_mini_write_binary
+  %define NEED_write_binary
+%endif
 
 bits 32
 cpu 386
@@ -96,7 +102,7 @@ section .text
 section .bss
 _INT21ADDR:	resb 6  ; void (__far *_INT21ADDR)(void);
 __OS:		resb 1  ; char __OS;
-		resb 1  ; Alignment to multiple of 4.
+		resb 1  ; Align to multiple of 4.
 _STACKTOP:	resd 1  ; void *_STACKTOP;
 _BreakFlagPtr:	resd 1  ; unsigned *_BreakFlagPtr;
 ;__EnvPtr:	resd 1  ; char **_EnvPtr;
@@ -105,6 +111,9 @@ _BreakFlagPtr:	resd 1  ; unsigned *_BreakFlagPtr;
   mini_environ:	resd 1  ; char **environ;
 %endif
 ;_LpPgmName:	resd 1  ; char *_LpPgmName;
+%ifndef CONFIG_WRITE_BINARY
+  mini___M_isatty_bitset: resb 1  ; (is_stdout_tty ? 1 : 0) | (is_stderr_tty ? 2 : 0).
+%endif
 section .text
 
 %ifdef __NEED__start
@@ -202,6 +211,17 @@ section .text
     extern mini___M_start_isatty_stdout
 		call mini___M_start_isatty_stdout
   %endif
+  %ifndef CONFIG_WRITE_BINARY
+		push byte 1  ; STDOUT_FILENO.
+		call mini_isatty
+		pop edx  ; Clean up argument of mini_isatty above from the stack.
+		xchg edi, eax  ; EDI := (is_stdout_tty ? 1 : 0); EAX := junk.
+		push byte 2  ; STDERR_FILENO.
+		call mini_isatty
+		pop edx  ; Clean up argument of mini_isatty above from the stack.
+		lea eax, [edi+2*eax]  ; EAX := (is_stdout_tty ? 1 : 0) | (is_stderr_tty ? 2 : 0).
+		mov [mini___M_isatty_bitset], al
+  %endif
   extern main  ; extern int __cdecl main(int argc, char **argv);
 		call main  ; Return value (exit code) in EAX (AL).
 		push eax  ; Save exit code, for mini__exit.
@@ -283,15 +303,24 @@ INT21H_FUNC_60H_GET_FULL_FILENAME equ 0x60
 		mov ebx, [esp+8]  ; File descriptor.
 		mov edx, [esp+0xc]  ; Data pointer.
 		call far [_INT21ADDR]
-		jc strict short mini_write.err
+		jc strict short write_binary.err
 		xor eax, eax  ; Also sets CF := 0.
 		pop ebx
 		ret
 %endif
 
 %ifdef __NEED_mini_write
-  global mini_write
-  mini_write:  ; ssize_t __cdecl mini_write(int fd, const void *buf, size_t count);
+  %ifdef CONFIG_WRITE_BINARY
+    global mini_write  ; Writes the specified bytes to the specified fd.
+    mini_write:  ; ssize_t __cdecl mini_write(int fd, const void *buf, size_t count);
+  %endif
+%endif
+%ifdef __NEED_mini_write_binary
+  global mini_write_binary
+  mini_write_binary:  ; ssize_t __cdecl mini_write_binary(int fd, const void *buf, size_t count);
+%endif
+%ifdef NEED_write_binary
+  write_binary:  ; static ssize_t __cdecl write_binary(int fd, const void *buf, size_t count);
 		push ebx
 		xor eax, eax  ; Return value in case ECX == 0.
 		mov ah, INT21H_FUNC_40H_WRITE_TO_OR_TRUNCATE_FILE
@@ -314,7 +343,7 @@ INT21H_FUNC_60H_GET_FULL_FILENAME equ 0x60
 		push ebx
 		xor eax, eax
 		mov ah, INT21H_FUNC_3FH_READ_FROM_FILE
-		jmp strict short mini_write.rw
+		jmp strict short write_binary.rw
 %endif
 
 %ifdef __NEED_mini_unlink
@@ -326,10 +355,10 @@ INT21H_FUNC_60H_GET_FULL_FILENAME equ 0x60
 %ifdef NEED_mini_unlink_or_remove
   mini_unlink:  ; int __cdecl mini_unlink(const char *pathname);
   mini_remove:  ; int __cdecl mini_remove(const char *pathname);
-		push ebx  ; No need to save, but save code size by mergining it with mini_write.
+		push ebx  ; No need to save, but save code size by mergining it with write_binary.
 		mov ah, INT21H_FUNC_41H_DELETE_NAMED_FILE
 		mov edx, [esp+8]
-		jmp strict short mini_write.do_call
+		jmp strict short write_binary.do_call
 %endif
 
 %ifdef __NEED_mini_close
@@ -338,7 +367,7 @@ INT21H_FUNC_60H_GET_FULL_FILENAME equ 0x60
 		push ebx
 		mov ah, INT21H_FUNC_3EH_CLOSE_FILE
 		mov ebx, [esp+8]
-		jmp strict short mini_write.do_call
+		jmp strict short write_binary.do_call
 %endif
 
 %ifdef __NEED_mini_lseek  ; !! TODO(pts): Like in Win32, if the file is growing, add NUL bytes explicitly.
@@ -352,7 +381,7 @@ INT21H_FUNC_60H_GET_FULL_FILENAME equ 0x60
 		mov edx, ecx  ; Low word of offset.
 		shr ecx, 16
 		call far [_INT21ADDR]
-		jc strict short mini_write.err
+		jc strict short write_binary.err
 		shl edx, 16
 		mov dx, ax
 		xchg eax, edx  ; EAX := EDX; EDX := junk.
@@ -370,7 +399,7 @@ LINUX_O_TRUNC equ 1000q   ; Linux-specific value used by __MINILIBC686__ <fcntl.
   global mini___M_fopen_open  ; Minimalist open(2) (only a few flag combinations are allowed) which can serve mini_fopen(3).
   mini___M_fopen_open:  ; int __cdecl mini___M_fopen_open(const char *pathname, int flags, mode_t mode);  /* The mode argument is optional, it is only used when the file is created. */
   ;mini_open:  ; int __cdecl mini_open(const char *pathname, int flags, mode_t mode);  /* The mode argument is optional, it is only used when the file is created. */
-		push ebx  ; No need to save, but save code size by mergining it with mini_write.
+		push ebx  ; No need to save, but save code size by mergining it with write_binary.
 		mov eax, [esp+0xc]
 		mov edx, [esp+8]  ; Filename.
 		cmp eax, O_WRONLY|LINUX_O_CREAT|LINUX_O_TRUNC  ; TODO(pts): Reopen it later in actual O_WRONLY mode. INT21H_FUNC_3CH_CREATE_FILE does O_RDWR.
@@ -384,14 +413,91 @@ LINUX_O_TRUNC equ 1000q   ; Linux-specific value used by __MINILIBC686__ <fcntl.
   .create:	; FYI We ignore the `mode' (permissions) argument. TODO(pts): Extend the ABI to use it on Linux.
 		mov ah, INT21H_FUNC_3CH_CREATE_FILE
 		xor ecx, ecx  ; Create a regular file.
-  .call:		call far [_INT21ADDR]
-		jc strict short mini_write.err
+  .call:	call far [_INT21ADDR]
+		jc strict short write_binary.err
 		jmp .done		
   .mode_error:	push 0xc  ; Invalid access mode (open mode is invalid). https://stanislavs.org/helppc/dos_error_codes.html
 		pop dword [mini_errno]
 		or eax, -1
   .done:	pop ebx
 		ret
+%endif
+
+%ifdef __NEED_mini_write
+  %ifndef CONFIG_WRITE_BINARY
+    global mini_write  ; Writes the specified bytes, maybe converting LF to CRLF to the specified fd.
+    mini_write:  ; ssize_t __cdecl mini_write(int fd, const void *buf, size_t count);
+		;cmp dword [eax+3*4], byte 0  ; count.
+		;jz short write_binary
+		mov eax, [esp+1*4]  ; Argument fd.
+		dec eax
+		cmp eax, 2
+		jnc short write_binary  ; Jumps iff EAX (fd) is not 1 (stdout) or 2 (stderr).
+		inc eax
+		test [mini___M_isatty_bitset], al
+		jz short write_binary  ; Jumps iff EAX (fd) is not a TTY. This with the `test' above works only if EAX == 1 or EAX == 2.
+		; We will find all instances of LF, and split to multiple
+		; writes, e.g. write("foo\nbar") will be split to
+		; write_binary("foo"), write_binary("\r"),
+		; write_binary("\nbar").
+		mov edx, [esp+2*4]  ; Argument buf.
+		mov ecx, [esp+3*4]  ; Argument count.
+		push esi  ; Save.
+		push edi  ; Save.
+		mov edi, edx  ; EDI := buf. It will keep holding the original buf until .done.
+		mov esi, edx  ; ESI := buf.
+		add ecx, edx  ; ECX := buf+count. It will keep holding the original+count buf until .done unless saved+restored.
+		dec esi  ; Cancel the effect of the `inc esi' following this.
+    .next_byte:	inc esi
+		cmp esi, ecx
+		je short .write_block
+		cmp [esi], byte 10  ; LF, '\n'.
+		jne .next_byte
+    .write_block:  ; Write the memory region EDX..ESI to fd EAX.
+		cmp edx, esi
+		je short .check_end  ; Skip writing 0 bytes.
+		push eax  ; Save fd.
+		push ecx  ; Save.
+		push edx  ; Save.
+		push esi
+		sub [esp], edx  ; Argument count.
+		push edx  ; Argument buf.
+		push eax  ; Argument fd.
+		call write_binary  ; Write bytes until the first LF.
+		add esp, byte 3*4  ; Clean up arguments of write_binary above from the stack.
+		pop edx  ; Restore.
+		cmp eax, byte -1
+		je short .skip_add
+		add edx, eax
+    .skip_add:	cmp eax, ecx
+		pop ecx  ; Restore.
+		pop eax  ; Restore EAX := fd.
+		jne short .done  ; Jump iff the write_binary(...) above has returned short write or error.
+    .check_end:	cmp esi, ecx
+		je short .done  ; Jump iff everything has been written.
+		push eax  ; Save fd.
+		push ecx  ; Save.
+		push edx  ; Save.
+		push byte 13  ; CR, '\r'.
+		mov edx, esp
+		push byte 1  ; Argument count.
+		push edx  ; Argument buf.
+		push eax  ; Argument fd.
+		call write_binary
+		add esp, byte 4*4  ; Clean up arguments of write_binary above and the CR from the stack.
+		pop edx  ; Restore.
+		pop ecx  ; Restore.
+		dec eax
+		pop eax  ; Restore EAX := fd.
+		jz short .next_byte  ; Jump iff the write_binary(...) above has returned 1. (i.e. no on short write, no error). Since .next_byte starts with `inc esi', it won't stop at the LF at byte [esi].
+    .done:	sub edx, edi  ; EDX := total number of bytes written (ignoring the manually added CR bytes).
+		jnz short .edx_ok
+		dec edx  ; EDX := -1, indicating error.
+    .edx_ok:    xchg eax, edx  ; EAX := total number of bytes written (ignoring the manually added CR bytes); EDX := junk.
+		pop edi  ; Restore.
+		pop esi  ; Restore.
+		ret
+  %endif
 %endif
 
 %ifdef __NEED_mini_creat

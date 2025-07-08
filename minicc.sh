@@ -254,6 +254,7 @@ DO_SFIX=  # Do we have to fix the output of GNU as(1)?
 DO_GET_CONFIG=
 OS=linux
 DO_BUILTIN=  # Inline implementation of some built-in (intrinsic) functions, such as memcpy(3).
+DO_WRITE_BINARY=  # Affects -bosi via -DCONFIG_WRITE_BINARY.
 
 SKIPARG=
 ARGS=
@@ -333,6 +334,8 @@ for ARG in "$@"; do
    -mprintf-longlong | -mprintf-long-long | -mprintf-ll) PRINTF_LONGLONG=1 ;;
    -mno-printflonglong | -mno-printf-long-long | -mno-printf-ll) PRINTF_LONGLONG= ;;
    -mfiles=[1-9]* | -mfiles=) FILE_CAPACITY="${ARG#*=}" ;;
+   -mwrite-binary) DO_WRITE_BINARY=1 ;;
+   -mno-write-binary) DO_WRITE_BINARY= ;;  # Default.
    -maout | -Wl,-m,i386linux) IS_AOUT=1 ;;
    -Wno-no) DO_WKEEP= ;;  # Disable warnings. GCC and Clang accept and ignore it. GCC ignores it.
    -Wkeep | -Wno-no-no) DO_WKEEP=1 ;;  # This is not a GCC flag, it's a minicc extension. GCC ignores -Wno-no-no, but Clang warns.
@@ -758,6 +761,7 @@ if test "$FILE_CAPACITY"; then
   fi
   DEF_ARG="$DEF_ARG$NL-DCONFIG_FILE_CAPACITY=$FILE_CAPACITY"  # Respected by src/stdio_medium_flush_opened.nasm %include()d by smart.nasm.
 fi
+test "$DO_WRITE_BINARY" && DEF_ARG="$DEF_ARG$NL-DCONFIG_WRITE_BINARY"
 if test "$IS_WATCOM" || test "$IS_CC1" = 3 || test "$TCC"; then
   # Add some -D.. flags which GCC (>=1) already defines. These flags affect EGLIBC on other compilers.
   test "$HAD_OPTIMIZE" && DEF_ARG="$DEF_ARG$NL-D__OPTIMIZE__"
