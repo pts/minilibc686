@@ -63,7 +63,7 @@ __LIBC_PACKED_STRUCT struct stat64 {
 __LIBC_STATIC_ASSERT(sizeof_struct_stat64, sizeof(struct stat64) == 96);
 
 #if _FILE_OFFSET_BITS == 64
-__LIBC_PACKED_STRUCT struct stat {  /* Same as above, for i386 syscalls SYS_stat64, SYS_lstat64, SYS_fstat64, SYS_fstatat64. */
+__LIBC_PACKED_STRUCT struct stat {  /* Same as above, for i386 syscalls SYS_stat64, SYS_lstat64, SYS_fstat64 == 197 (needs Linux >=2.4), SYS_fstatat64 == 300 (needs Linux >=2.6.16). */
   __extension__ unsigned long long st_dev;
   unsigned char __pad0[4];
   unsigned long __st_ino;  /* Unused, see st_ino below. */
@@ -87,7 +87,7 @@ __LIBC_PACKED_STRUCT struct stat {  /* Same as above, for i386 syscalls SYS_stat
 };
 __LIBC_STATIC_ASSERT(sizeof_struct_stat, sizeof(struct stat) == 96);
 #else
-struct stat {  /* For i386 syscalls SYS_stat, SYS_lstat, SYS_fstat. */
+struct stat {  /* For i386 syscalls SYS_stat, SYS_lstat, SYS_fstat == 108. Already supported by Linux 1.0. */
   unsigned long  st_dev;
   unsigned long  st_ino;
   unsigned short st_mode;
@@ -110,7 +110,7 @@ struct stat {  /* For i386 syscalls SYS_stat, SYS_lstat, SYS_fstat. */
 __LIBC_STATIC_ASSERT(sizeof_struct_stat, sizeof(struct stat) == 64);
 #endif
 
-struct __old_kernel_stat {  /* For i386 syscalls SYS_oldstat, SYS_oldlstat, SYS_oldfstat. */
+struct __old_kernel_stat {  /* For i386 syscalls SYS_oldstat, SYS_oldlstat, SYS_oldfstat == 28. Supported by Linux 1.0. */
   unsigned short st_dev;
   unsigned short st_ino;
   unsigned short st_mode;
