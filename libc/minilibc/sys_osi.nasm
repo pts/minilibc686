@@ -381,7 +381,7 @@ INT21H_FUNC_60H_GET_FULL_FILENAME equ 0x60
 		mov edx, ecx  ; Low word of offset.
 		shr ecx, 16
 		call far [_INT21ADDR]
-		jc strict short write_binary.err
+  .jc_wbe:	jc strict short write_binary.err
 		shl edx, 16
 		mov dx, ax
 		xchg eax, edx  ; EAX := EDX; EDX := junk.
@@ -414,7 +414,11 @@ LINUX_O_TRUNC equ 1000q   ; Linux-specific value used by __MINILIBC686__ <fcntl.
 		mov ah, INT21H_FUNC_3CH_CREATE_FILE
 		xor ecx, ecx  ; Create a regular file.
   .call:	call far [_INT21ADDR]
+  %ifdef __NEED_mini_lseek
+		jc strict short mini_lseek.jc_wbe
+  %else
 		jc strict short write_binary.err
+  %endif
 		jmp .done		
   .mode_error:	push 0xc  ; Invalid access mode (open mode is invalid). https://stanislavs.org/helppc/dos_error_codes.html
 		pop dword [mini_errno]
@@ -432,10 +436,11 @@ LINUX_O_TRUNC equ 1000q   ; Linux-specific value used by __MINILIBC686__ <fcntl.
 		mov eax, [esp+1*4]  ; Argument fd.
 		dec eax
 		cmp eax, 2
-		jnc short write_binary  ; Jumps iff EAX (fd) is not 1 (stdout) or 2 (stderr).
-		inc eax
+		jc short .skip_wb  ; Jumps iff EAX (fd) is not 1 (stdout) or 2 (stderr).
+    .j_wb:	jmp strict near write_binary
+    .skip_wb:	inc eax
 		test [mini___M_isatty_bitset], al
-		jz short write_binary  ; Jumps iff EAX (fd) is not a TTY. This with the `test' above works only if EAX == 1 or EAX == 2.
+		jz short .j_wb  ; Jumps iff EAX (fd) is not a TTY. This with the `test' above works only if EAX == 1 or EAX == 2.
 		; We will find all instances of LF, and split to multiple
 		; writes, e.g. write("foo\nbar") will be split to
 		; write_binary("foo"), write_binary("\r"),
