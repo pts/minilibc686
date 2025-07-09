@@ -73,11 +73,12 @@ typedef struct {
 
 #define ET_EXEC		2		/* Executable file */
 
-#define EI_OSABI	7		/* OS ABI identification */
-#define ELFOSABI_SYSV		0	/* Alias.  */
-#define ELFOSABI_GNU		3	/* Object uses GNU ELF extensions.  */
-#define ELFOSABI_LINUX		ELFOSABI_GNU /* Compatibility alias.  */
-#define ELFOSABI_FREEBSD	9
+#define EI_OSABI		7	/* OS ABI identification */
+#define ELFOSABI_SYSV		0	/* Alias. */
+#define ELFOSABI_GNU		3	/* Object uses GNU ELF extensions. */
+#define ELFOSABI_LINUX		ELFOSABI_GNU /* Compatibility alias. */
+#define ELFOSABI_IRIX		8	/* SGI Irix. */
+#define ELFOSABI_FREEBSD	9	/* FreeBSD. */
 
 #define PT_LOAD		1		/* Loadable program segment */
 
@@ -150,8 +151,9 @@ int main(int argc, char **argv) {
     fprintf(stderr, "Usage: %s [<flag>...] <elfprog>\nFlags:\n"
             "-v: verbose operation, write info to stderr\n"
             "-l or -ll: change the ELF OSABI to Linux\n"
-            "-lf: change the ELF OSABI to FreeBSD\n"
             "-ls: change the ELF OSABI to SYSV\n"
+            "-lf: change the ELF OSABI to FreeBSD\n"
+            "-li: change the ELF OSABI to IRIX\n"
             "-a: align the early PT_LOAD phdr to page size\n"
             "-s: strip beyond the last PT_LOAD (sstrip)\n"
             "-p <fix.o>: detect the GNU ld .data padding bug\n"
@@ -170,6 +172,20 @@ int main(int argc, char **argv) {
         osabi = ELFOSABI_LINUX;
       } else if (arg[2] == 'f') {
         osabi = ELFOSABI_FREEBSD;
+      } else if (arg[2] == 'i') {
+        /* This is fake IRIX. IRIX has never supported i386 ELF-32 (only
+         * MIPS ELF-32). Also IRIX has never supported little-endian
+         * systems (only big-endian MIPS). The last release of IRIX was on
+         * 2006-08-16 (with mostly bugfixes and small improvements to IRIX
+         * 6.5 released in 1998-05).
+         *
+         * We could make it even more fake by setting a nonzero e_flags
+         * value (i386 ELF-32 has 0 in practice everywhere), such as
+         * 0xef80ffff, which contains invalid (undefined) values in many
+         * fields for MIPS. See More EF_MIPS_... flags on
+         * https://llvm.org/doxygen/namespacellvm_1_1ELF.html
+         */
+        osabi = ELFOSABI_IRIX;
       } else if (arg[2] == 's') {
         osabi = ELFOSABI_SYSV;
       } else {

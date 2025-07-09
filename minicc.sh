@@ -1527,6 +1527,7 @@ fi
 case "$OS" in
  any) EXFL_FLAG=-ls ;;  # Change ELF OSABI to SYSV.
  freebsd | freebsdx) EXFL_FLAG=-lf ;;  # Change ELF OSABI to FreeBSD.
+ osi) EXFL_FLAG=-li  ;;  # Change ELF OSABI to (fake) IRIX. IRIX has never supported i386 ELF-32 (only MIPS ELF-32), and last release was on 2006-08-16.
  *) EXFL_FLAG=-l ;;  # Change ELF OSABI to Linux.
 esac
 
