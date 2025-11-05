@@ -71,6 +71,7 @@ __LIBC_FUNC(char *, getcwd, (char *buf, size_t size), __LIBC_NOATTR);  /* Limita
 __LIBC_FUNC(int, access, (const char *name, int type), __LIBC_NOATTR);
 __LIBC_FUNC(void, sync, (void), __LIBC_NOATTR);
 __LIBC_FUNC(int, syncfs, (int fd), __LIBC_NOATTR);
+__LIBC_FUNC(int, pipe, (int pipefd[2]), __LIBC_NOATTR);
 
 __LIBC_VAR(extern int, optind);
 __LIBC_VAR(extern int, opterr);
@@ -85,6 +86,7 @@ __LIBC_VAR(extern char *, optarg);
 __LIBC_FUNC(int, getopt, (int argc, char *const argv[], const char *options), __LIBC_NOATTR);
 
 static __inline__ int getpagesize(void) { return 0x1000; }  /* The .a file also contains mini_getpagesize(...), for binary compatibility. */
+
 #ifdef __MINILIBC686__
   /* Returns 0 on success, anything else (and sets errno) on error. The
    * implementation quite shorter than lseek64(...).
