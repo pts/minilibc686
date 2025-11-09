@@ -13,6 +13,11 @@ struct timeval {
   suseconds_t tv_usec;  /* microseconds */
 };
 
+struct utimbuf {
+  time_t actime;  /* access time */
+  time_t modtime; /* modification time */
+};
+
 struct tm {
   int tm_sec;           /* Seconds.     [0-60] (1 leap second). */
   int tm_min;           /* Minutes.     [0-59]. */
@@ -33,6 +38,7 @@ struct timezone;
 
 __LIBC_FUNC(time_t, time, (time_t *tloc), __LIBC_NOATTR);  /* <time.h> in other libcs. For __MINILIBC686__, both include all. */
 __LIBC_FUNC(int, utimes, (const char *filename, const struct timeval *times), __LIBC_NOATTR);
+__LIBC_FUNC(int, utime, (const char *filename, const struct utimbuf *buf), __LIBC_NOATTR);
 __LIBC_FUNC(int, gettimeofday, (struct timeval *tv, struct timezone *tz), __LIBC_NOATTR);
 __LIBC_FUNC(struct tm *, gmtime_r, (const time_t *timep, struct tm *tm), __LIBC_NOATTR);
 __LIBC_FUNC(struct tm *, localtime_r, (const time_t *timep, struct tm *tm), __LIBC_NOATTR);  /* No concept of time zones, everything is GMT, same as gmtime_r(...). */
