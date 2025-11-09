@@ -215,13 +215,16 @@ _define_needs UNDEFSYMS  ; Must be called before _need and _alias.
 ;    libc/minilibc/libc.i686.a(start_stdio_medium_linux.o): In function `mini_ioctl':
 ;    src/start_stdio_medium_linux.nasm:(.text+0x66): multiple definition of `mini_ioctl'
 ;    ....smart.o:/home/pts/prg/trusty.i386.dir/tmp/minilibc686/libc/minilibc/smart.nasm:(.text+0x67): first defined here
-; 3. Removed start_stdio_medium_linux.o temporarily from build.sh in `LIB_OBJS_SPECIAL_ORDER="stdio_medium_flush_opened.o start_stdio_medium_linux.o"'.
-; 4.  Now GNU ld(1) reports the real error:
+; 3. Remove start_stdio_medium_linux.o temporarily from build.sh in `LIB_OBJS_SPECIAL_ORDER="stdio_medium_flush_opened.o start_stdio_medium_linux.o"'.
+; 4. Recompile. Now GNU ld(1) reports the real error:
 ;    .../libc/minilibc/libc.i686.a(stdio_medium_fseek.o): In function `mini_fseek.4':
 ;    src/stdio_medium_fseek.nasm:(.text+0x52): undefined reference to `mini_lseek'
-; 5.  Fixed by adding `_need mini_rewind, mini_fseek' (mini_rewind was guessed), and
+; 5. Sometimes the above just works here. Then add it back, and compile it
+;    with `-Wl,-Map=t.map', and search for `libc.i686.a(stdio_medium_stdin.o)'
+;    within the generated t.map. Example output: `mini___M_U_stdin'.
+; 6. Fix by adding `_need mini_rewind, mini_fseek' (mini_rewind was guessed), and
 ;    then running `./build.sh'.
-; 6. Changed `./build.sh' back and rerun `./build.sh'.
+; 7. Change `./build.sh' back and rerun `./build.sh'.
 ;
 ; TODO(pts): Autogenerate these dependencies.
 _need _start, mini__start
@@ -913,9 +916,20 @@ mini__start:  ; Entry point (_start) of the Linux i386 executable.
 		push edx  ; Argument argv for main.
 		push eax  ; Argument argc for main.
 %endif
+%ifdef __NEED_mini___M_start_isatty_stdin
+  ;global mini___M_call_start_isatty_stdin
+  ;mini___M_call_start_isatty_stdin:
+  global mini___M_U_stdin
+  mini___M_U_stdin:
 		_call_extern_if_needed mini___M_start_isatty_stdin
+%endif
 %ifdef __NEED_start.mini___M_start_isatty_stdout
-start.mini___M_start_isatty_stdout:
+  ;global mini___M_call_start_isatty_stdout
+  ;mini___M_call_start_isatty_stdout:
+  %define DEFINED_mini___M_U_stdout
+  global mini___M_U_stdout
+  mini___M_U_stdout:
+  start.mini___M_start_isatty_stdout:
   %ifdef __NEED_mini_isatty
   __smart_extern mini_isatty
 		push byte 1  ; STDOUT_FILENO.
@@ -960,10 +974,18 @@ mini_exit:  ; void mini_exit(int exit_code);
 %endif
 %ifdef NEED_cleanup
 %ifdef __NEED_mini___M_call_start_flush_stdout
-global mini___M_call_start_flush_stdout
-mini___M_call_start_flush_stdout:
+  global mini___M_call_start_flush_stdout
+  mini___M_call_start_flush_stdout:
+  %ifndef DEFINED_mini___M_U_stdout
+    global mini___M_U_stdout
+    mini___M_U_stdout:
+  %endif
 		mov eax, [mini_stdout]
 		call mini_fflush_RP3
+%endif
+%ifdef __NEED_mini___M_call_start_flush_opened
+  global mini___M_U_opened
+  mini___M_U_opened:
 %endif
 		_call_if_needed mini___M_start_flush_opened, mini___M_call_start_flush_opened  ; Ruins EBX.
 		; Fall through.
