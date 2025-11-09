@@ -157,5 +157,7 @@ __LIBC_FUNC(int, mkdir, (const char *pathname, mode_t mode), __LIBC_NOATTR);
 __LIBC_FUNC(mode_t, umask, (mode_t mask), __LIBC_NOATTR);
 __LIBC_FUNC(int, chmod, (const char *pathname, mode_t mode), __LIBC_NOATTR);
 __LIBC_FUNC(int, fchmod, (int fd, mode_t mode), __LIBC_NOATTR);
+__LIBC_FUNC(int, chown, (const char *pathname, uid_t owner, gid_t group), __LIBC_NOATTR);
+__LIBC_FUNC(int, fchown, (int fd, uid_t owner, gid_t group), __LIBC_NOATTR);
 
 #endif  /* _SYS_STAT_H */
