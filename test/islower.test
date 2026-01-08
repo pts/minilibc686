@@ -11,7 +11,11 @@ _nasm2 isalnum.o
 _nasm2 isalnum_rp3.o
 _nasm2 isxdigit.o
 _nasm2 isxdigit_rp3.o
-_mtcc -o test_islower.prog islower.o isupper.o isalpha.o isdigit.o isalnum.o isxdigit.o "$TESTDIR"/test_islower.c start_linux.o
+_nasm2 isascii.o
+_nasm2 isascii_rp3.o
+_nasm2 isprint.o
+_nasm2 isprint_rp3.o
+_mtcc -o test_islower.prog islower.o isupper.o isalpha.o isdigit.o isalnum.o isxdigit.o isascii.o isprint.o "$TESTDIR"/test_islower.c start_linux.o
 ./test_islower.prog
-_mtcc -o test_islower_rp3.prog -DDO_TEST_RP3 islower_rp3.o isupper_rp3.o isalpha_rp3.o isdigit_rp3.o isalnum_rp3.o isxdigit_rp3.o "$TESTDIR"/test_islower.c start_linux.o
+_mtcc -o test_islower_rp3.prog -DDO_TEST_RP3 islower_rp3.o isupper_rp3.o isalpha_rp3.o isdigit_rp3.o isalnum_rp3.o isxdigit_rp3.o isascii_rp3.o isprint_rp3.o "$TESTDIR"/test_islower.c start_linux.o
 ./test_islower_rp3.prog
