@@ -32,8 +32,8 @@ mini_memcmp:  ; int mini_memcmp(const void *s1, const void *s2, size_t n);
 		mov esi, [esp+0xc]  ; s1.
 		mov edi, [esp+0x10]  ; s2.
 		mov ecx, [esp+0x14]
-		xor eax, eax
-		jecxz .done
+		xor eax, eax  ; Also sets ZF := 1.
+		;jecxz .done  ; Not needed, because ZF == 1.
 		repz cmpsb  ; Continue while equal.
 		je .done
 		inc eax
