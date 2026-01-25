@@ -108,7 +108,7 @@
 #    else
 #      include <features.h>
 #    endif
-#    if (defined(__MINILIBC686__) && defined(CONFIG_SIGNAL_BSD)) || (!defined(__MINILIBC686__) && (defined(_BSD_SOURCE) || defined(_DEFAULT_SOURCE)))  /* Not defined by default in minilibc686. */
+#    if (defined(__MINILIBC686__) && defined(CONFIG_SIGNAL_BSD)) || (defined(_BSD_SOURCE) || defined(_DEFAULT_SOURCE))  /* Not defined by default in minilibc686. */
 #      ifdef __WATCOMC__
         sighandler_t signal(int signum, sighandler_t handler);
 #        ifdef __MINILIBC686__
@@ -119,8 +119,7 @@
 #      else
         sighandler_t signal(int signum, sighandler_t handler) __asm__(__LIBC_MINI "bsd_signal");
 #      endif
-#    endif
-#    if (defined(__MINILIBC686__) && defined(CONFIG_SIGNAL_SYSV)) || (!defined(__MINILIBC686__) && !(defined(_BSD_SOURCE) || defined(_DEFAULT_SOURCE)))  /* Not defined by default in minilibc686. */
+#    else  /* (defined(__MINILIBC686__) && defined(CONFIG_SIGNAL_SYSV)) etc. */
 #      ifdef __WATCOMC__
         sighandler_t signal(int signum, sighandler_t handler);
 #        ifdef __MINILIBC686__
