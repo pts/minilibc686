@@ -325,6 +325,8 @@ _need mini_getopt, mini_write
 _need mini_execvp, mini_environ
 _need mini_execvp, mini_errno
 _need mini_execvp, mini_execve
+_need mini_execv, mini_environ
+_need mini_execv, mini_execve
 _need mini_mkstemp, mini_open
 _need mini_mkstemp, mini_errno
 _need mini_mkstemp, mini_rand

@@ -61,8 +61,9 @@ __LIBC_FUNC(pid_t, getpid, (void), __LIBC_NOATTR);
 __LIBC_FUNC(pid_t, getppid, (void), __LIBC_NOATTR);
 __LIBC_FUNC(pid_t, fork, (void), __LIBC_NOATTR);
 __LIBC_FUNC(void *, sys_brk, (void *addr), __LIBC_NOATTR);
-__LIBC_FUNC(int, execve, (const char *filename, char *const argv[], char *const envp[]), __LIBC_NOATTR);
+__LIBC_FUNC(int, execve, (const char *filename, char *const argv[], char *const envp[]), __LIBC_NOATTR);  /* Syscall. */
 __LIBC_FUNC(int, execvp, (const char *file, char *const argv[]), __LIBC_NOATTR);
+__LIBC_FUNC(int, execv, (const char *filename, char *const argv[]), __LIBC_NOATTR);
 __LIBC_FUNC(pid_t, setsid, (void), __LIBC_NOATTR);
 __LIBC_FUNC(int, dup,( int oldfd), __LIBC_NOATTR);
 __LIBC_FUNC(int, dup2, (int oldfd, int newfd), __LIBC_NOATTR);
