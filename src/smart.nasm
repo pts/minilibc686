@@ -246,8 +246,12 @@ _need mini_vsnprintf, mini_snprintf
 _need mini_printf, mini___M_writebuf_relax_RP1
 _need mini_printf, mini___M_writebuf_unrelax_RP1
 _need mini_printf, mini_fputc_RP3
+;_need mini_fprintf, mini___M_vfsprintf  ; Needed?
+;_need mini_vfprintf, mini___M_vfsprintf  ; Needed?
 _need mini_sprintf, mini___M_vfsprintf
 _need mini_snprintf, mini___M_vfsprintf
+_need mini_fprintf, mini_vfprintf
+_need mini_sprintf, mini_vfprintf
 _need mini_vprintf, mini_vfprintf
 _need mini_fprintf, mini___M_writebuf_relax_RP1
 _need mini_fprintf, mini___M_writebuf_unrelax_RP1
