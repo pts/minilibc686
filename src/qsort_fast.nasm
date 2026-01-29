@@ -20,9 +20,9 @@ global mini_qsort_fast
 %ifdef CONFIG_SECTIONS_DEFINED
 %elifidn __OUTPUT_FORMAT__, bin
 section .text align=1
-section .rodata align=4
-section .data align=4
-section .bss align=4
+section .rodata align=1
+section .data align=1
+section .bss align=1
 mini_memswap_RP3 equ +0x12345678
 %else
 extern mini_memswap_RP3

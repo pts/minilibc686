@@ -18,9 +18,9 @@ mini_vfprintf equ $+0x12345678
 mini_stdout equ $+0x12345600
 %else
 section .text align=1
-section .rodata align=4
-section .data align=4
-section .bss align=4
+section .rodata align=1
+section .data align=1
+section .bss align=1
 extern mini_stdout
 extern mini_vfprintf
 %endif

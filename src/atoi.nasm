@@ -15,14 +15,14 @@ global mini_atol
 section .text align=1
 section .rodata align=1
 section .data align=1
-section .bss align=4
+section .bss align=1
 mini_strtol equ +0x12345678
 %else
 extern mini_strtol
 section .text align=1
 section .rodata align=1
 section .data align=1
-section .bss align=4
+section .bss align=1
 %endif
 
 section .text

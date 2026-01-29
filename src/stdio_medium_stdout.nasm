@@ -18,8 +18,8 @@ global mini___M_start_flush_stdout
 %elifidn __OUTPUT_FORMAT__, bin
 section .text align=1
 section .rodata align=1
-section .data align=4
-section .bss align=4
+section .data align=1
+section .bss align=1
 mini_isatty equ +0x12345678
 mini___M_U_stdout equ +0x12345679
 mini_fflush_RP3 equ +0x1234567a
@@ -47,8 +47,8 @@ extern mini_fflush_RP3
 extern mini___M_U_stdout  ; This will trigger stdio_medium_u_stdout.o to be linked for libca.386.a.
 section .text align=1
 section .rodata align=1
-section .data align=4
-section .bss align=4
+section .data align=1
+section .bss align=1
 %endif
 %define CONFIG_SECTIONS_DEFINED
 

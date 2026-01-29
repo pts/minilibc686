@@ -16,8 +16,8 @@ global mini___M_U_opened
 %elifidn __OUTPUT_FORMAT__, bin
 section .text align=1
 section .rodata align=1
-section .data align=4
-section .bss align=4
+section .data align=1
+section .bss align=1
 mini___M_call_start_flush_opened equ +0x12345679
 %else
 extern mini___M_call_start_flush_opened

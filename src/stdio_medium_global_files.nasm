@@ -16,14 +16,14 @@ global mini___M_global_file_bufs
 section .text align=1
 section .rodata align=1
 section .data align=1
-section .bss align=4
+section .bss align=1
 mini___M_call_start_flush_opened equ +0x12345678
 %else
 extern mini___M_U_opened  ; This will trigger stdio_medium_u_opened.o to be linked for libca.386.a.
 section .text align=1
-section .rodata align=4
-section .data align=4
-section .bss align=4
+section .rodata align=1
+section .data align=1
+section .bss align=1
 %endif
 
 ; Using the SMGF_ prefix to avoid `equ' conflict with

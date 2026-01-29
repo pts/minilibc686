@@ -14,13 +14,13 @@ global mini_stdout_struct.dire
 %elifidn __OUTPUT_FORMAT__, bin
 section .text align=1
 section .rodata align=1
-section .data align=4
-section .bss align=4
+section .data align=1
+section .bss align=1
 %else
 section .text align=1
 section .rodata align=1
-section .data align=4
-section .bss align=4
+section .data align=1
+section .bss align=1
 %endif
 
 section .data

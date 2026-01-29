@@ -19,9 +19,9 @@ mini_fwrite equ +0x12345678
 %else
 extern mini_fwrite
 section .text align=1
-section .rodata align=4
-section .data align=4
-section .bss align=4
+section .rodata align=1
+section .data align=1
+section .bss align=1
 %endif
 
 section .text
