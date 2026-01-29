@@ -49,10 +49,10 @@
 
 ; Config options respected by src/smart.nasm and other minilibc686 src/*.nasm.
 %define CONFIG_MAIN_NO_ENVP
-%define CONFIG_VFPRINTF_NO_PLUS
-%define CONFIG_VFPRINTF_NO_OCTAL
-%define CONFIG_VFPRINTF_NO_LONG
-%define CONFIG_VFPRINTF_NO_LONGLONG
+%define CONFIG_VFPRINTF_NO_PLUS      ; Also enabled by -mprintf-mini.
+%define CONFIG_VFPRINTF_NO_OCTAL     ; Also enabled by -mprintf-mini.
+%define CONFIG_VFPRINTF_NO_LONG      ; Also enabled by -mprintf-mini.
+%define CONFIG_VFPRINTF_NO_LONGLONG  ; Also enabled by -mprintf-mini.
 
 extern mini_snprintf
 extern mini_write
@@ -100,7 +100,7 @@ main:  ; int main(int argc, char **argv, char **envp);  /* envp is optional to d
 		leave
 		ret
 
-section .rodata
+section .rodata align=1
 str_world	db 'World', 0
 str_hello	db 'Hello, %s!', 10, 0
 
@@ -110,7 +110,7 @@ str_hello	db 'Hello, %s!', 10, 0
   ; stdio_medium_snprintf.nasm, the others are dependencies.
   %include "src/smart.nasm"  ; Defines (among others) _start which calls main(...).
   ; These below are helpfully included by smart.nasm because of UNDEFSYMS.
-  ;%include "src/stdio_medium_snprintf.nasm"  ; Reimplemented by src/smart.nasm to call mini___M_vfsprintf(...) instead of mini_vfprintf(...).
+  ;%include "src/stdio_medium_snprintf.nasm"
   ;%include "src/stdio_medium_vfsprintf.nasm"
   ;...
 %endif

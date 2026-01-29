@@ -22,14 +22,6 @@
 bits 32
 cpu 386
 
-%ifdef __NEED_mini___M_vfsprintf
-  %define CONFIG_VFPRINTF_IS_FOR_S_PRINTF_ONLY
-  %define mini_vfprintf mini___M_vfsprintf
-%else
-  %undef  CONFIG_VFPRINTF_IS_FOR_S_PRINTF_ONLY
-  %undef  mini_vfprintf
-%endif
-
 %ifndef   CONFIG_VFPRINTF_NO_LONGLONG
   %undef  CONFIG_VFPRINTF_NO_LONGS
 %elifndef CONFIG_VFPRINTF_NO_LONG

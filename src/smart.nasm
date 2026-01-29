@@ -228,6 +228,18 @@ _define_needs UNDEFSYMS  ; Must be called before _need and _alias.
 ;
 ; TODO(pts): Autogenerate these dependencies.
 _need _start, mini__start
+_need mini_fprintf,   mini_vfprintf
+_need mini_vprintf,   mini_vfprintf
+_need mini_vfprintf,  mini___M_vfprintf_nonprintf  ; Any non-libc code (except for those which need mini_printf) needs (transtively) mini_vfprintf.
+_need mini_printf,    mini_vfprintf
+_need mini_vfprintf,  mini___M_vfprintf_nonlibc    ; Any non-libc code needs (transitively) mini_vfprintf.
+_need mini_vsprintf,  mini_sprintf   ; mini_vsprintf  calls mini_sprintf.do .
+_need mini_vsnprintf, mini_snprintf  ; mini_vsnprintf calls mini_snprintf.do .
+_need mini_sprintf,   mini_vfprintf  ; Don't enable mini___M_vfprintf_nonlibc.
+_need mini_snprintf,  mini_vfprintf  ; Don't enable mini___M_vfprintf_nonlibc.
+_need mini_sprintf,   mini___M_s_printf_opt  ; Signify that we may benefit from the CONFIG_VFPRINTF_IS_FOR_S_PRINTF_ONLY optimization.
+_need mini_snprintf,  mini___M_s_printf_opt  ; Signify that we may benefit from the CONFIG_VFPRINTF_IS_FOR_S_PRINTF_ONLY optimization.
+_need mini_printf,    mini___M_printf_opt  ; Signify that we can benefit from the combo-printf-vfprintf optimization.
 _need mini_getchar, mini_stdin
 _need mini_getchar, mini_fgetc
 _need mini_gets, mini_stdin
@@ -240,25 +252,12 @@ _need mini_putchar_RP3, mini_fputc_RP3
 _need mini_puts, mini_stdout
 _need mini_printf, mini_stdout
 _need mini_vprintf, mini_stdout
-_need mini_vsprintf, mini_sprintf
-_need mini_vsnprintf, mini_snprintf
-;_need mini_printf, mini_vfprintf  ; Inlined.
-_need mini_printf, mini___M_writebuf_relax_RP1
-_need mini_printf, mini___M_writebuf_unrelax_RP1
-_need mini_printf, mini_fputc_RP3
-;_need mini_fprintf, mini___M_vfsprintf  ; Needed?
-;_need mini_vfprintf, mini___M_vfsprintf  ; Needed?
-_need mini_sprintf, mini___M_vfsprintf
-_need mini_snprintf, mini___M_vfsprintf
-_need mini_fprintf, mini_vfprintf
-_need mini_sprintf, mini_vfprintf
-_need mini_vprintf, mini_vfprintf
 _need mini_fprintf, mini___M_writebuf_relax_RP1
 _need mini_fprintf, mini___M_writebuf_unrelax_RP1
 _need mini_fprintf, mini_fputc_RP3
-_need mini_vfprintf, mini___M_writebuf_relax_RP1
-_need mini_vfprintf, mini___M_writebuf_unrelax_RP1
-_need mini_vfprintf, mini_fputc_RP3
+_need mini___M_vfprintf_nonlibc, mini___M_writebuf_relax_RP1
+_need mini___M_vfprintf_nonlibc, mini___M_writebuf_unrelax_RP1
+_need mini___M_vfprintf_nonlibc, mini_fputc_RP3
 _need mini_stdin,  mini___M_start_isatty_stdin
 _need mini_stdout, start.mini___M_start_isatty_stdout
 _need mini_stdout, mini___M_call_start_flush_stdout
@@ -339,15 +338,18 @@ _need mini_environ, .bss
 _need mini_stdout, .data
 _need mini_stdout, .bss
 ;
-%ifdef __NEED_mini___M_vfsprintf
-  %ifdef __NEED_mini_vfprintf
-    %undef __NEED_mini___M_vfsprintf  ; mini_vfprintf(...) will do it instead.
+%ifdef __NEED_mini___M_s_printf_opt
+  %ifdef __NEED_mini___M_vfprintf_nonlibc  ; Does any non-libc code needs mini_vfprintf?
+    %undef __NEED_mini___M_s_printf_opt  ; Turn off the CONFIG_VFPRINTF_IS_FOR_S_PRINTF_ONLY optimization, we need full mini_vfprintf functionality.
+    %undef CONFIG_VFPRINTF_IS_FOR_S_PRINTF_ONLY
+  %else
+    %define CONFIG_VFPRINTF_IS_FOR_S_PRINTF_ONLY
   %endif
-  %ifdef __NEED_mini_printf
-    %undef __NEED_mini___M_vfsprintf  ; mini_vfprintf(...) will do it instead.
-  %endif
-  %ifdef __NEED_mini_fprintf
-    %undef __NEED_mini___M_vfsprintf  ; mini_vfprintf(...) will do it instead.
+%endif
+;
+%ifdef __NEED_mini___M_printf_opt
+  %ifdef mini___M_vfprintf_nonprintf  ; Does any non-libc code (except for those which need mini_printf) needs mini_vfprintf?
+    %undef __NEED_mini___M_printf_opt  ; Turn off the combo-printf-vfprintf optimization (which only works if nobody else needs mini_vfprintf).
   %endif
 %endif
 ;
@@ -1261,52 +1263,32 @@ mini_putchar_RP3:  ; int REGPARM3 mini_putchar_RP3(int c);
   %include "src/stdio_medium_fflush.nasm"
 %endif
 
-%define NEED_include_vfprintf 0
-%ifdef __NEED_mini_printf
-  %ifndef __NEED_mini_vfprintf
-    %define NEED_include_vfprintf 1
-  %endif
+; TODO(pts): Unify mini_sprintf(...) and mini_snprintf(...) if both are needed.
+
+%define USE_smart_vfprintf 0
+%ifdef CONFIG_VFPRINTF_IS_FOR_S_PRINTF_ONLY  ; Modifies src/stdio_medium_vfprintf.nasm below.
+  %define USE_smart_vfprintf 1
 %endif
-%ifdef CONFIG_VFPRINTF_NO_PLUS
-  %define NEED_include_vfprintf 1
+%ifdef CONFIG_VFPRINTF_NO_PLUS  ; Modifies src/stdio_medium_vfprintf.nasm below.
+  %define USE_smart_vfprintf 1
 %endif
-%ifdef CONFIG_VFPRINTF_NO_OCTAL
-  %define NEED_include_vfprintf 1
+%ifdef CONFIG_VFPRINTF_NO_OCTAL  ; Modifies src/stdio_medium_vfprintf.nasm below.
+  %define USE_smart_vfprintf 1
 %endif
-%ifdef CONFIG_VFPRINTF_NO_LONG
-  %define NEED_include_vfprintf 1
+%ifdef CONFIG_VFPRINTF_NO_LONG  ; Modifies src/stdio_medium_vfprintf.nasm below.
+  %define USE_smart_vfprintf 1
 %endif
-%ifdef CONFIG_VFPRINTF_NO_LONGLONG
-  %define NEED_include_vfprintf 1
+%ifdef CONFIG_VFPRINTF_NO_LONGLONG  ; Modifies src/stdio_medium_vfprintf.nasm below.
+  %define USE_smart_vfprintf 1
+%endif
+%ifidn __OUTPUT_FORMAT__, bin  ; Helpfully enable for elf0.inc.nasm output.
+  %define USE_smart_vfprintf 1
 %endif
 
-%ifdef __NEED_mini___M_vfsprintf
-  %define mini_vfprintf mini___M_vfsprintf
-  %ifndef NEED_include_vfprintf
-    __smart_extern mini_vfprintf
-  %endif
-  ; %include these files, so that the `call mini_vfprintf_for_s_printf' they
-  ; contain can be replaced with `call mini___M_vfsprintf'.
-  ; TODO(pts): Unify mini_sprintf(...) and mini_snprintf(...) if both are needed.
-  %ifdef __NEED_mini_sprintf
-    %include "src/stdio_medium_sprintf.nasm"
-  %endif  ; __NEED_mini_sprintf
-  %ifdef __NEED_mini_snprintf
-    %include "src/stdio_medium_snprintf.nasm"
-  %endif  ; __NEED_mini_snprintf
-  %undef mini_vfprintf
-  %ifdef __NEED_mini_vfprintf
-    %error conflicting labels: mini___M_vfsprintf and mini_vfprintf
-    times 1/0 nop
-  %endif
-%endif  ; __NEED_mini___M_vfsprintf
-
-%ifdef __NEED_mini_printf
+%ifdef __NEED_mini___M_printf_opt   ; Do the combo-printf-vfprintf optimization: merge mini_printf with a modified src/stdio_medium_vfprintf.nasm implementation.
   global mini_printf
   mini_printf:  ; int mini_printf(const char *fmt, ...) { return mini_vfprintf(mini_stdout, fmt, ap); }
-  %ifndef __NEED_mini_vfprintf
 		mov eax, esp
-  %endif
   ;esp:retaddr fmt val
 		push esp  ; 1 byte.
   ;esp:&retaddr retaddr fmt val
@@ -1316,25 +1298,18 @@ mini_putchar_RP3:  ; int REGPARM3 mini_putchar_RP3(int c);
   ;esp:fmt ap=&val retaddr fmt val
 		push dword [mini_stdout]  ; 6 bytes.
   ;esp:filep fmt ap=&val retaddr fmt val
-  %ifdef __NEED_mini_vfprintf
-    __smart_extern mini_vfprintf
-		call mini_vfprintf  ; 5 bytes.
-    ;esp:filep fmt ap=&val retaddr fmt val
-		add esp, strict byte 3*4  ; 3 bytes, same as `times 3 pop edx'.
-    ;esp:retaddr fmt val
-		ret  ; 1 byte.
-  %else
 		push eax  ; Prepared return ESP instead of return address, for CONFIG_VFPRINTF_POP_ESP_BEFORE_RET.
 		; Fall through to mini_vfprintf.
-    %define CONFIG_VFPRINTF_POP_ESP_BEFORE_RET
+  %define CONFIG_VFPRINTF_POP_ESP_BEFORE_RET  ; Modifies src/stdio_medium_vfprintf.nasm below.
+  %define USE_smart_vfprintf 1
+  %define __NEED_mini_vfprintf
+%endif
+%ifdef __NEED_mini_vfprintf
+  %if USE_smart_vfprintf
+    section .rodata align=1  ; TODO(pts): Why is this line needed?
+    section .text
+    %include "src/stdio_medium_vfprintf.nasm"
   %endif
-%endif  ; __NEED_mini_printf
-%if NEED_include_vfprintf
-  section .rodata align=1  ; TODO(pts): Why is this line needed?
-  section .text
-  %include "src/stdio_medium_vfprintf.nasm"
-  %undef __NEED_mini_vfprintf  ; Don't %include it again.
-  %undef __NEED_mini___M_vfsprintf  ; Don't %include it again.
 %endif
 
 %ifdef __NEED_mini___M_start_flush_opened
@@ -1409,7 +1384,8 @@ mini_putchar_RP3:  ; int REGPARM3 mini_putchar_RP3(int c);
   %endif
 %endif
 
-; Helpfully %include some needed minilibc686 source files.
+; Helpfully %include some needed minilibc686 source files for elf0.inc.nasm output.
+; Other parts of smart.nasm also help with this.
 ; demo_hello_linux_printf.nasm relies on this.
 %ifidn __OUTPUT_FORMAT__, bin
   ; Usage: _include_if_needed <name>[, <name2>...], "<include-file.nasm>"
@@ -1431,8 +1407,7 @@ mini_putchar_RP3:  ; int REGPARM3 mini_putchar_RP3(int c);
   _include_if_needed mini_isatty, "src/isatty_linux.nasm"
   _include_if_needed mini___M_discard_buf_RP3, "src/stdio_medium_discard_buf.nasm"
   _include_if_needed mini_fputc_RP3, "src/stdio_medium_fputc_rp3.nasm"
-  _include_if_needed mini___M_vfsprintf, "src/stdio_medium_vfsprintf.nasm"
-  _include_if_needed mini_vfprintf, "src/stdio_medium_vfprintf.nasm"
+  _include_if_needed mini_snprintf, "src/stdio_medium_snprintf.nasm"
   _include_if_needed mini___M_writebuf_relax_RP1, mini___M_writebuf_unrelax_RP1, "src/stdio_medium_writebuf_relax.nasm"
 %endif
 
