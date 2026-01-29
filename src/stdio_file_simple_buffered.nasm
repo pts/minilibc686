@@ -33,8 +33,8 @@ mini_read equ $+0x1234567b
 mini_write equ $+0x1234567c
 %else
 section .text align=1
-section .rodata align=4
-section .data align=4
+section .rodata align=1
+section .data align=1
 section .bss align=4
 extern mini_close
 extern mini_lseek

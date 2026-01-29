@@ -22,8 +22,8 @@ mini___M_U_stdin equ +0x12345679
 extern mini_isatty
 extern mini___M_U_stdin  ; This will trigger stdio_medium_u_stdin.o to be linked for libca.386.a.
 section .text align=1
-section .rodata align=4
-section .data align=4
+section .rodata align=1
+section .data align=1
 section .bss align=4
 %endif
 
