@@ -53,13 +53,14 @@ extern mini_errno
 
 section .text
 
-; TODO(pts): Add it in separate .nasm file.
+%if 0  ; All calls inlined.
 my_ldexpl:  ; long double my_ldexpl(long double x, int exp);
 		fild dword [esp+0x10]
 		fld tword [esp+4]
 		fscale
 		fstp st1
 		ret
+%endif
 
 %if 0  ; All calls inlined.
 ; TODO(pts): Add it in separate .nasm file.
@@ -836,19 +837,17 @@ decfloat:  ; static long double decfloat(struct sfile *f, int c, int sign);
 		jg near .95
 		mov eax, 0x7f
 		sub eax, [ebp+4-0x14]
+		; This is an inlined call to my_ldexpl.
 		push eax
+		fild dword [esp]
+		pop eax  ; Discard value from stack.
 		fld1
-		lea esp, [esp-0xc]
-		fstp tword [esp]
-		call my_ldexpl
-		add esp, byte 0x10
+		fscale
+		fstp st1
+		;
+		fld st0  ; Duplicate st0.
+		fstp tword [ebp+4-0x74]
 		fstp tword [ebp+4-0x20c0]
-		mov eax, [ebp+4-0x20c0]
-		mov edx, [ebp+4-0x20bc]
-		mov ecx, [ebp+4-0x20b8]
-		mov [ebp+4-0x74], eax
-		mov [ebp+4-0x70], edx
-		mov [ebp+4-0x6c], ecx
 		cmp dword [ebx+0x8], byte 0x0
 		jns .96
 		fld tword [ebp+4-0x74]
@@ -856,12 +855,14 @@ decfloat:  ; static long double decfloat(struct sfile *f, int c, int sign);
 		fstp tword [ebp+4-0x74]
 .96:		mov eax, 0x40
 		sub eax, [ebp+4-0x14]
+		; This is an inlined call to my_ldexpl.
 		push eax
+		fild dword [esp]
+		pop eax  ; Discard value from stack.
 		fld1
-		lea esp, [esp-0xc]
-		fstp tword [esp]
-		call my_ldexpl
-		add esp, byte 0x10
+		fscale
+		fstp st1
+		;
 		; This is an inlined call to my_fmodl.
 		fld tword [ebp+4-0x5c]
 .modagain1:	fprem
@@ -1018,12 +1019,14 @@ decfloat:  ; static long double decfloat(struct sfile *f, int c, int sign);
 		xor ah, 0x40
 		jne .116
 .103:		mov eax, [ebp+4-0x4c]
+		; This is an inlined call to my_ldexpl.
 		push eax
-		push dword [ebp+4-0x54]
-		push dword [ebp+4-0x58]
-		push dword [ebp+4-0x5c]
-		call my_ldexpl
-		add esp, byte 0x10
+		fild dword [esp]
+		pop eax  ; Discard value from stack.
+		fld tword [ebp+4-0x5c]
+		fscale
+		fstp st1
+		;
 .done:  ; hexfloat also returns using this.
 		lea ecx, [ebx-4]  ; ECX := original ESP value.
 		lea esp, [ebp+4-4*4]  ; Discard local variables.
@@ -1357,19 +1360,17 @@ hexfloat:  ; static long double hexfloat(struct sfile *f, int sign);
 		jg .160
 		mov eax, 0x5f
 		sub eax, [ebp+4-0x14]
+		; This is an inlined call to my_ldexpl.
 		push eax
+		fild dword [esp]
+		pop eax  ; Discard value from stack.
 		fld1
-		lea esp, [esp-0xc]
-		fstp tword [esp]
-		call my_ldexpl
-		add esp, byte 0x10
+		fscale
+		fstp st1
+		;
+		fld st0  ; Duplicate st0.
 		fstp tword [ebp+4-0x78]
-		mov eax, [ebp+4-0x78]
-		mov edx, [ebp+4-0x74]
-		mov ecx, [ebp+4-0x70]
-		mov [ebp+4-0x3c], eax
-		mov [ebp+4-0x38], edx
-		mov [ebp+4-0x34], ecx
+		fstp tword [ebp+4-0x3c]
 		cmp dword [ebx+0x4], byte 0x0
 		jns .160
 		fld tword [ebp+4-0x3c]
@@ -1415,25 +1416,17 @@ hexfloat:  ; static long double hexfloat(struct sfile *f, int sign);
 		fnstsw ax
 		and ah, 0x45
 		cmp ah, 0x40
-		je .162
-		mov eax, [ebp+4-0x60]
-		push eax
-		push dword [ebp+4-0x1c]
-		push dword [ebp+4-0x20]
-		push dword [ebp+4-0x24]
-		call my_ldexpl
-		add esp, byte 0x10
-		fstp tword [ebp+4-0x78]
-		mov eax, [ebp+4-0x78]
-		mov edx, [ebp+4-0x74]
-		mov ecx, [ebp+4-0x70]
-		mov [ebp+4-0x24], eax
-		mov [ebp+4-0x20], edx
-		mov [ebp+4-0x1c], ecx
+		je .162  ; Jump iff y is zero.
+		; This is an inlined call to my_ldexpl.
+		fild dword [ebp+4-0x60]
+		fld tword [ebp+4-0x24]
+		fscale
+		fstp st1
+		;
 		jmp short .163
 .162:		set_errno 0x22
-.163:		fld tword [ebp+4-0x24]
-		jmp near decfloat.done
+		fld tword [ebp+4-0x24]
+.163:		jmp near decfloat.done
 
 mini_strtold:  ; long double mini_strtold(const char *s, char **p);
 		push ebp
