@@ -61,6 +61,7 @@ my_ldexpl:  ; long double my_ldexpl(long double x, int exp);
 		fstp st1
 		ret
 
+%if 0  ; All calls inlined.
 ; TODO(pts): Add it in separate .nasm file.
 my_fmodl:  ; long double fmodl(long double x, long double y);
 		fld tword [esp+0x10]
@@ -71,6 +72,7 @@ my_fmodl:  ; long double fmodl(long double x, long double y);
 		jp .again
 		fstp st1
 		ret
+%endif
 
 scanexp:  ; static int32_t scanexp(struct sfile *f);
 ; Map of local variables: c-'0' is CH; neg is ECX; x is EDX.
@@ -860,13 +862,14 @@ decfloat:  ; static long double decfloat(struct sfile *f, int c, int sign);
 		fstp tword [esp]
 		call my_ldexpl
 		add esp, byte 0x10
-		lea esp, [esp-0xc]
-		fstp tword [esp]
-		push dword [ebp+4-0x54]
-		push dword [ebp+4-0x58]
-		push dword [ebp+4-0x5c]
-		call my_fmodl
-		add esp, byte 0x18
+		; This is an inlined call to my_fmodl.
+		fld tword [ebp+4-0x5c]
+.modagain1:	fprem
+		fnstsw ax
+		sahf
+		jp .modagain1
+		fstp st1
+		;
 		fstp tword [ebp+4-0x20c0]
 		mov eax, [ebp+4-0x20c0]
 		mov edx, [ebp+4-0x20bc]
@@ -948,13 +951,14 @@ decfloat:  ; static long double decfloat(struct sfile *f, int c, int sign);
 		cmp eax, byte 0x1
 		jle .97
 		fld1
-		lea esp, [esp-0xc]
-		fstp tword [esp]
-		push dword [ebp+4-0x60]
-		push dword [ebp+4-0x64]
-		push dword [ebp+4-0x68]
-		call my_fmodl
-		add esp, byte 0x18
+		; This is an inlined call to my_fmodl.
+		fld tword [ebp+4-0x68]
+.modagain2:	fprem
+		fnstsw ax
+		sahf
+		jp .modagain2
+		fstp st1
+		;
 		fldz
 		fxch st1
 		fucompp
