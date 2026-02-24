@@ -2,6 +2,7 @@
 #define _STDLIB_H
 #include <_preincl.h>
 
+
 #include <sys/types.h>
 
 #include <alloca.h>
@@ -226,7 +227,7 @@ __LIBC_FUNC(void *, bsearch, (const void *key, const void *base, size_t nmemb, s
    * unaligned pointers.
    */
   __LIBC_FUNC(void *, malloc_simple_unaligned, (size_t size), __LIBC_NOATTR);
-#endif  /* __MINiLIBC686__ */
+#endif  /* __MINILIBC686__ */
 
 #ifdef __MINILIBC686__
   __LIBC_FUNC_RP3(unsigned, mini_prng_mix3_RP3, (unsigned key), __LIBC_NOATTR);  /* unsigned is uint32_t here. */
