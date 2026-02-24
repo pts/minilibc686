@@ -1,6 +1,8 @@
 #ifndef _SIGNAL_H
 #  define _SIGNAL_H
 #  include <_preincl.h>
+
+
   typedef int sig_atomic_t;
   typedef void (*sighandler_t)(int);
   typedef sighandler_t sig_t;  /* For BSD. */
@@ -105,8 +107,6 @@
     __LIBC_FUNC(sighandler_t, sysv_signal, (int signum, sighandler_t handler), __LIBC_NOATTR);  /* SYSV semantics: .sa_flags == SA_RESETHAND | SA_NODEFER. */
 #    ifdef __MINILIBC686__
       __LIBC_FUNC(sighandler_t, sys_signal,  (int signum, sighandler_t handler), __LIBC_NOATTR);  /* SYSV semantics: .sa_flags == SA_RESETHAND | SA_NODEFER. Linux-specific, qemu-i386 doesn't support it. */
-#    else
-#      include <features.h>
 #    endif
 #    if (defined(__MINILIBC686__) && defined(CONFIG_SIGNAL_BSD)) || (defined(_BSD_SOURCE) || defined(_DEFAULT_SOURCE))  /* Not defined by default in minilibc686. */
 #      ifdef __WATCOMC__
