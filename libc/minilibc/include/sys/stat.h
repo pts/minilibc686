@@ -27,61 +27,61 @@
 #define S_ISSOCK(m)	(((m) & S_IFMT) == S_IFSOCK)
 
 /* These fields must be __LIBC_PACKED for amd64, because the default
- * alignment for `long long' is 8 there. __PCC__ fails with in internal
- * error `strmemb' if we add __LIBC_PACKED here.
+ * alignment for `long long' is 8 there. (We have to double-check a possible
+ * `unsigned long st_uid;' and st_gid there as well.) __PCC__ fails with in
+ * internal error `strmemb' if we add __LIBC_PACKED here.
  *
- * The struct matches glibc 2.1 and 2.2 and Linux i386 stat64(2). The padding around
- * st_dev and st_drev is useless, but this is how it was used in glibc 2.2.
+ * The struct is based on glibc 2.1 and 2.2 and Linux i386 stat64(2). The
+ * padding around st_dev and st_drev is useless, but this is how it was used
+ * in glibc 2.2.
  *
  * struct stat, struct stat64 and struct __old_kernel_stat are based on
  *  https://github.com/torvalds/linux/blob/c964ced7726294d40913f2127c3f185a92cb4a41/arch/x86/include/uapi/asm/stat.h
  *
- * struct stat64 is for i386 syscalls SYS_stat64, SYS_lstat64, SYS_fstat64, SYS_fstatat64.
+ * struct stat64 is for i386 syscalls SYS_stat64, SYS_lstat64, SYS_fstat64 == 197 (needs Linux >=2.4), SYS_fstatat64 == 300 (needs Linux >=2.6.16).
  */
 __LIBC_PACKED_STRUCT struct stat64 {
   __extension__ unsigned long long st_dev;
   unsigned char __pad0[4];
-  unsigned long __st_ino;  /* Unused, see st_ino below. */
-  unsigned int  st_mode;
-  unsigned int  st_nlink;
-  unsigned long st_uid;
-  unsigned long st_gid;
+  unsigned long __st_ino;  /* Unused, st_ino below is used instead. */
+  unsigned      st_mode;
+  unsigned      st_nlink;
+  unsigned      st_uid;
+  unsigned      st_gid;
   __extension__ unsigned long long st_rdev;
   unsigned char __pad3[4];
   __extension__ unsigned long long st_size;
   unsigned long st_blksize;
-  /* Number 512-byte blocks allocated. */
-  __extension__ unsigned long long st_blocks;
-  unsigned long st_atime;
+  __extension__ unsigned long long st_blocks;  /* Number of 512-byte blocks allocated. */
+  long st_atime;
   unsigned long st_atime_nsec;
-  unsigned long st_mtime;
-  unsigned int  st_mtime_nsec;
-  unsigned long st_ctime;
+  long st_mtime;
+  unsigned long st_mtime_nsec;
+  long st_ctime;
   unsigned long st_ctime_nsec;
   __extension__ unsigned long long st_ino;
 };
 __LIBC_STATIC_ASSERT(sizeof_struct_stat64, sizeof(struct stat64) == 96);
 
 #if _FILE_OFFSET_BITS == 64
-__LIBC_PACKED_STRUCT struct stat {  /* Same as above, for i386 syscalls SYS_stat64, SYS_lstat64, SYS_fstat64 == 197 (needs Linux >=2.4), SYS_fstatat64 == 300 (needs Linux >=2.6.16). */
+__LIBC_PACKED_STRUCT struct stat {  /* For i386 syscalls SYS_stat64, SYS_lstat64, SYS_fstat64 == 197 (needs Linux >=2.4), SYS_fstatat64 == 300 (needs Linux >=2.6.16). */
   __extension__ unsigned long long st_dev;
   unsigned char __pad0[4];
-  unsigned long __st_ino;  /* Unused, see st_ino below. */
-  unsigned int  st_mode;
-  unsigned int  st_nlink;
-  unsigned long st_uid;
-  unsigned long st_gid;
+  unsigned long __st_ino;  /* Unused, st_ino below is used instead. */
+  unsigned      st_mode;
+  unsigned      st_nlink;
+  unsigned      st_uid;
+  unsigned      st_gid;
   __extension__ unsigned long long st_rdev;
   unsigned char __pad3[4];
   __extension__ unsigned long long st_size;
   unsigned long st_blksize;
-  /* Number 512-byte blocks allocated. */
-  __extension__ unsigned long long st_blocks;
-  unsigned long st_atime;
+  __extension__ unsigned long long st_blocks;  /* Number of 512-byte blocks allocated. */
+  long st_atime;
   unsigned long st_atime_nsec;
-  unsigned long st_mtime;
-  unsigned int  st_mtime_nsec;
-  unsigned long st_ctime;
+  long st_mtime;
+  unsigned long st_mtime_nsec;
+  long st_ctime;
   unsigned long st_ctime_nsec;
   __extension__ unsigned long long st_ino;
 };
@@ -96,13 +96,13 @@ struct stat {  /* For i386 syscalls SYS_stat, SYS_lstat, SYS_fstat == 108. Alrea
   unsigned short st_gid;  /* Special returned value 0xfffe means larger than 0xffff. */
   unsigned long  st_rdev;
   unsigned long  st_size;  /* If file_size >= 0x80000000, then the syscall fails with EOVERFLOW == 75 == Value too large for defined data type. */
-  unsigned long  st_blksize;  /* May be incorrect: 0x1000 reported here instead of 0x200 reported in struct stat64. */
-  unsigned long  st_blocks;
-  unsigned long  st_atime;
+  unsigned long  st_blksize;  /* Maybe incorrect: 0x1000 reported here instead of 0x200 reported in struct stat64. */
+  unsigned long  st_blocks;  /* Number of 512-byte blocks allocated. */
+  long st_atime;
   unsigned long  st_atime_nsec;
-  unsigned long  st_mtime;
+  long st_mtime;
   unsigned long  st_mtime_nsec;
-  unsigned long  st_ctime;
+  long st_ctime;
   unsigned long  st_ctime_nsec;
   unsigned long  __unused4;
   unsigned long  __unused5;
@@ -120,9 +120,9 @@ struct __old_kernel_stat {  /* For i386 syscalls SYS_oldstat, SYS_oldlstat, SYS_
   unsigned short st_rdev;
   unsigned short __pad1;
   unsigned long  st_size;  /* If file_size >= 0x80000000, then the syscall fails with EOVERFLOW == 75 == Value too large for defined data type. */
-  unsigned long  st_atime;
-  unsigned long  st_mtime;
-  unsigned long  st_ctime;
+  long st_atime;
+  long st_mtime;
+  long st_ctime;
 };
 __LIBC_STATIC_ASSERT(sizeof_struct___old_kernel_stat, sizeof(struct __old_kernel_stat) == 32);
 
