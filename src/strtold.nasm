@@ -74,11 +74,8 @@ my_fmodl:  ; long double fmodl(long double x, long double y);
 		ret
 %endif
 
-scanexp:  ; static int32_t scanexp(struct sfile *f);
+scanexp_ESI:  ; static int64_t __usercall scanexp [EDX:EAX](const char *fp [in-out ESI]) [ruins ECX];
 ; Map of local variables: c-'0' is CH; neg is ECX; x is EDX.
-		push esi  ; Save.
-		mov esi, [esp+2*4]  ; &f->p.
-		mov esi, [esi]  ; ESI := f->p.
 		xor ecx, ecx  ; neg (CL) := 0 (positive).
 		xor edx, edx  ; x := 0.
 		lodsb
@@ -118,22 +115,21 @@ scanexp:  ; static int32_t scanexp(struct sfile *f);
 		sub al, '0'
 		cmp al, '9'-'0'
 		jbe .14
-.15:		dec esi  ; f->p -= 1.
+.15:		dec esi  ; fp -= 1.
 		xchg eax, edx  ; result := x; EDX := junk.
 		test cl, cl  ; neg.
 		jz .done  ; Jump iff !neg.
 		neg eax
-.done:		mov edx, [esp+2*4]  ; &f->p.
-		mov [edx], esi
-		pop esi  ; Restore.
+.done:		cdq  ; EDX := sign_extend(EAX).
 		ret
 
 decfloat:  ; static long double decfloat(struct sfile *f, int c, int sign);
-		push ebp  ; Save. !! Use registers ESI, EDI.
-		push ebx  ; Save.
+		push ebp  ; Save. !! Use registers EBX, EDI.
+		push esi  ; Save.
 		mov ebp, esp
 		; [ebp+16-0x20c0 ... ebp+16-0x10]: Local variables.
-		mov ebx, [ebp+3*4]  ; EBX := argument f. It will remain so until the function returns.
+		mov esi, [ebp+3*4]  ; ESI := argument f. It will remain so until the function returns.
+		mov esi, [esi]  ; ESI := f->p.
 		xor eax, eax
 		times 24 push eax  ; Initialize dwords #0 .. #24. !! Change local variable order to reduce this push count.
 		;mov [ebp+16-0x14], eax  ; dword #0.
@@ -178,12 +174,10 @@ decfloat:  ; static long double decfloat(struct sfile *f, int c, int sign);
 		;fstp tword [ebp+16-0x68]
 		;fldz
 		;fstp tword [ebp+16-0x74]
-		mov eax, [ebp+3*4+0x4]  ; c.
+		mov eax, [ebp+3*4+0x4]  ; c.  !! Make it a byte, sign-extend it on demand.
 		jmp short .18
 .19:		mov byte [ebp+16-0x40], 0x1
-		mov eax, [ebx]  ; !! Use ESI as [ebx], i.e. the f->p.
-		inc dword [ebx]
-		mov al, [eax]
+		lodsb
 		movsx eax, al
 		mov [ebp+3*4+0x4], eax  ; c.
 .18:		cmp al, '0'
@@ -191,18 +185,14 @@ decfloat:  ; static long double decfloat(struct sfile *f, int c, int sign);
 		cmp al, '.'
 		jne .20
 		mov byte [ebp+16-0x44], 0x1
-		mov eax, [ebx]
-		inc dword [ebx]
-		mov al, [eax]
+		lodsb
 		movsx eax, al
 		mov [ebp+3*4+0x4], eax  ; c.
 		jmp short .21
 .22:		mov byte [ebp+16-0x40], 0x1
 		add dword [ebp+16-0x30], byte -0x1
 		adc dword [ebp+16-0x2c], byte -0x1
-		mov eax, [ebx]
-		inc dword [ebx]
-		mov al, [eax]
+		lodsb
 		movsx eax, al
 		mov [ebp+3*4+0x4], eax  ; c.
 .21:		cmp dword [ebp+3*4+0x4], byte '0'  ; c.
@@ -261,9 +251,7 @@ decfloat:  ; static long double decfloat(struct sfile *f, int c, int sign);
 		mov eax, [ebp+16-0xc4]
 		or eax, byte 0x1
 		mov [ebp+16-0xc4], eax
-.27:		mov eax, [ebx]
-		inc dword [ebx]
-		mov al, [eax]
+.27:		lodsb
 		movsx eax, al
 		mov [ebp+3*4+0x4], eax  ; c.
 .23:		mov eax, [ebp+3*4+0x4]  ; c.
@@ -286,22 +274,18 @@ decfloat:  ; static long double decfloat(struct sfile *f, int c, int sign);
 		or eax, byte 0x20
 		cmp eax, byte 'e'
 		jne .35
-		push ebx
-		call scanexp
-		pop edx  ; Discard argument of scanexp above.
-		cdq
+		call scanexp_ESI
 		add [ebp+16-0x30], eax
 		adc [ebp+16-0x2c], edx
 		jmp short .36
-.35:		cmp dword [ebp+3*4+0x4], byte 0  ; c == '\0'.
+.35:		cmp dword [ebp+3*4+0x4], byte 0  ; c >= 0.
 		js .36
-		mov eax, [ebx]
-		dec dword [ebx]
+		dec esi
 .36:		cmp byte [ebp+16-0x40], 0x0
 		jne .cont37
 		set_errno 22  ; EINVAL.
-		mov edx, [ebx+0x4]  ; f->p0.
-		mov [ebx], edx
+		mov edx, [ebp+3*4]  ; EDX := argument f.
+		mov esi, [edx+0x4]  ; f->p = f->p0;
 		fldz
 		jmp short .jjdone
 .cont37:	cmp dword [esp], byte 0  ; [ebp+16-0x20b4]. &x[0].
@@ -921,8 +905,9 @@ decfloat:  ; static long double decfloat(struct sfile *f, int c, int sign);
 		fstp st1
 		;
 .done:  ; hexfloat also returns using this.
+		mov [ebp+3*4], esi  ; Set f->p to it's final value (ESI).
 		mov esp, ebp  ; Discard local variables.
-		pop ebx  ; Restore.
+		pop esi  ; Restore.
 		pop ebp  ; Restore.
 		ret
 .destructive_calc_sign_times_x_of_0:  ; Helper function for decfloat. This function is destructive because it sets x[1] := 0.
@@ -933,11 +918,12 @@ decfloat:  ; static long double decfloat(struct sfile *f, int c, int sign);
 		ret  ; st0 == sign * (long double)x[0].
 
 hexfloat:  ; static long double hexfloat(struct sfile *f, int sign);
-		push ebp  ; Save. !! Use registers ESI, EDI.
-		push ebx  ; Save.
+		push ebp  ; Save. !! Use registers EBX, EDI.
+		push esi  ; Save.
 		mov ebp, esp
 		; [ebp+16-0x68 ... ebp+16-0x10]: Local variables: 22 dwords: (#0 .. #21).
-		mov ebx, [ebp+3*4]  ; EBX := argument f. It will remain so until the function returns.
+		mov esi, [ebp+3*4]  ; ESI := argument f. It will remain so until the function returns.
+		mov esi, [esi]  ; ESI := f->p.
 		xor eax, eax
 		times 20 push eax  ; Initialize dwords #0 .. #19. !! Change local variable order to reduce this push count.
 		;mov [ebp+16-0x14], eax  ; dword #0.
@@ -964,16 +950,12 @@ hexfloat:  ; static long double hexfloat(struct sfile *f, int sign);
 		fld1  ; This instruction is 2 bytes.
 		fstp tword [ebp+16-0x30]  ; This instruction is 3 bytes.
 		mov byte [ebp+16-0x14], 0x40  ; Only change the low byte of dword, other bytes have been changed above.
-		mov eax, [ebx]
-		inc dword [ebx]
-		mov al, [eax]
+		lodsb
 		movsx eax, al
 		mov [ebp+16-0x68], eax
 		jmp short .121
 .122:		mov byte [ebp+16-0x48], 0x1
-		mov eax, [ebx]
-		inc dword [ebx]
-		mov al, [eax]
+		lodsb
 		movsx eax, al
 		mov [ebp+16-0x68], eax
 .121:		cmp dword [ebp+16-0x68], byte '0'
@@ -981,18 +963,14 @@ hexfloat:  ; static long double hexfloat(struct sfile *f, int sign);
 		cmp dword [ebp+16-0x68], byte '.'
 		jne near .126
 		mov byte [ebp+16-0x44], 0x1
-		mov eax, [ebx]
-		inc dword [ebx]
-		mov al, [eax]
+		lodsb
 		movsx eax, al
 		mov [ebp+16-0x68], eax
 		mov dword [ebp+16-0x50], 0x0
 		mov dword [ebp+16-0x4c], 0x0
 		jmp short .124
 .125:		mov byte [ebp+16-0x48], 0x1
-		mov eax, [ebx]
-		inc dword [ebx]
-		mov al, [eax]
+		lodsb
 		movsx eax, al
 		mov [ebp+16-0x68], eax
 		add dword [ebp+16-0x50], byte -0x1
@@ -1062,9 +1040,7 @@ hexfloat:  ; static long double hexfloat(struct sfile *f, int sign);
 		mov byte [ebp+16-0x40], 0x1
 .135:		add dword [ebp+16-0x58], byte 0x1
 		adc dword [ebp+16-0x54], byte 0x0
-.130:		mov eax, [ebx]
-		inc dword [ebx]
-		mov al, [eax]
+.130:		lodsb
 		movsx eax, al
 		mov [ebp+16-0x68], eax
 .126:		mov eax, [ebp+16-0x68]
@@ -1082,11 +1058,11 @@ hexfloat:  ; static long double hexfloat(struct sfile *f, int sign);
 .172:
 .129:		cmp byte [ebp+16-0x48], 0x0  ; gotdig.
 		jne .139
-		dec dword [ebx]
-		dec dword [ebx]
+		dec esi
+		dec esi
 		cmp byte [ebp+16-0x44], 0x0  ; gotrad.
 		je .140
-		dec dword [ebx]
+		dec esi
 .140:		fild dword [ebp+3*4+0x4]  ; sign.
 		fldz
 		fmulp st1, st0
@@ -1110,14 +1086,11 @@ hexfloat:  ; static long double hexfloat(struct sfile *f, int sign);
 		or eax, byte 0x20
 		cmp eax, byte 'p'
 		jne .146
-		push ebx
-		call scanexp
-		pop edx  ; Discard argument of scanexp above.
-		cdq
+		call scanexp_ESI
 		mov [ebp+16-0x60], eax
 		mov [ebp+16-0x5c], edx
 		jmp short .147
-.146:		dec dword [ebx]
+.146:		dec esi
 .147:		mov eax, [ebp+16-0x50]
 		mov edx, [ebp+16-0x4c]
 		add eax, byte -0x8
