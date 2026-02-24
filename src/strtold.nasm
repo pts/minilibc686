@@ -10,7 +10,6 @@
 ; fyi/c_strtold.c passes the same tests.
 ;
 ; !! TODO(pts): Optimize manually for size.
-; !! TODO(pts): Use less stack space, currently it uses a bit more than 0x2000 (8192) bytes.
 ;
 
 bits 32
@@ -103,7 +102,7 @@ scanexp:  ; static int32_t scanexp(struct sfile *f);
 		jmp short .done
 .9:		mov ch, al
 		mov eax, edx
-		sal eax, 0x2
+		shl eax, 0x2
 		add edx, eax
 		add edx, edx
 		movzx eax, ch
@@ -131,11 +130,11 @@ scanexp:  ; static int32_t scanexp(struct sfile *f);
 
 decfloat:  ; static long double decfloat(struct sfile *f, int c, int sign);
 		mov ecx, esp
-		and esp, byte -8  ; !! TODO(pts) Don't align. Are we aligning because of double and long double values on the stack?
+		and esp, byte -8  ; !! TODO(pts) Don't align. Are we aligning because of double and long double values on the stack? Anyway, our alignment is broken.
 		push ebp  ; Save.
 		mov ebp, esp
-		push edi  ; Save.
-		push esi  ; Save.
+		push edi  ; Save. !! Don't save or restore.
+		push esi  ; Save. !! Don't save or restore.
 		push ebx  ; Save.
 		; [ebp+4-0x20c0 ... ebp+4-0x10]: Local variables.
 		lea ebx, [ecx+4]  ; Arguments will be fetched from [EBX+...], local variables are at [EBP-...].
@@ -154,19 +153,19 @@ decfloat:  ; static long double decfloat(struct sfile *f, int c, int sign);
 		;mov [ebp+4-0x3c], eax  ; dword #10.
 		;mov [ebp+4-0x40], eax  ; dword #11. Only a byte is used.
 		;mov [ebp+4-0x44], eax  ; dword #12. Only a byte is used.
-		;; dword [ebp+4-0x48]: dword #13.
+		;; dword [ebp+4-0x48]: dword #13. rp.
 		;; dword [ebp+4-0x4c]: dword #14.
 		;mov [ebp+4-0x50], eax  ; dword #15. Only a byte is used.
 		;; dword [ebp+4-0x54], dword [ebp+4-0x58], dword [ebp+4-0x5c]: dwords #16, #17, #18.
 		;; dword [ebp+4-0x60], dword [ebp+4-0x64], dword [ebp+4-0x68]: dwords #19, #20, #21. To be zero-initialized.
 		;; dword [ebp+4-0x6c], dword [ebp+4-0x70], dword [ebp+4-0x74]: dwords #22, #23, #24. To be zero-initialized.
-		sub esp, 0x20b0-24*4  ; This huge stack usage is needed for full precision.
+		sub esp, 0x20b4-4*4-24*4  ; This huge stack usage is needed for full precision.
 		; dword [ebp+4-0x78]: dword #25.
 		; dword [ebp+4-0x7c]: dword #26.
 		; dword [ebp+4-0x80]: dword #27.
 		; dword [ebp+4-0x84]: dword #28.
-		; dword [ebp+4-0x88]: dword #29.
-		; dword [ebp+4-0x8c]: dword #30.
+		; dword [ebp+4-0x88]: dword #29. bitlim. Unused.
+		; dword [ebp+4-0x8c]: dword #30. rp9. Unused.
 		; dword [ebp+4-0x90]: dword #31.
 		; dword [ebp+4-0x94]: dword #32.
 		; dword [ebp+4-0x98]: dword #33.
@@ -175,15 +174,15 @@ decfloat:  ; static long double decfloat(struct sfile *f, int c, int sign);
 		; dword [ebp+4-0xa4]: dword #36.
 		; dword [ebp+4-0xa8]: dword #37.
 		; dword [ebp+4-0xac], dword [ebp+4-0xb0], dword [ebp+4-0xb4]: dwords #38, #39, #40.
-		; dword [ebp+4-0xb8]. Not mentioned.
-		; dword [ebp+4-0x20c0]. Used.
-		; dword [ebp+4-0x20bc]. Used.
-		; dword [ebp+4-0x20b8]. Used.
+		; [ebp+4-0x20b4 ... ebp+4-0xb4] is the `uint32_t x[KMAX]' array.
+		; Now ESP == EBP+4-0x20b4 == &x[0].
+		mov [esp], eax  ; x[0] = 0;
 		mov byte [ebp+4-0x14], 0x40  ; Only change the low byte of dword, other bytes have been changed above.
 		;fldz
 		;fstp tword [ebp+4-0x68]
 		;fldz
 		;fstp tword [ebp+4-0x74]
+		mov eax, [ebx+0x4]
 		jmp short .18
 .19:		mov byte [ebp+4-0x40], 0x1
 		mov eax, [ebx]
@@ -194,9 +193,9 @@ decfloat:  ; static long double decfloat(struct sfile *f, int c, int sign);
 		mov al, [eax]
 		movsx eax, al
 		mov [ebx+0x4], eax
-.18:		cmp dword [ebx+0x4], byte '0'
+.18:		cmp al, '0'
 		je .19
-		cmp dword [ebx+0x4], byte 0x2e
+		cmp al, '.'
 		jne .20
 		mov byte [ebp+4-0x44], 0x1
 		mov eax, [ebx]
@@ -221,9 +220,8 @@ decfloat:  ; static long double decfloat(struct sfile *f, int c, int sign);
 		mov [ebx+0x4], eax
 .21:		cmp dword [ebx+0x4], byte '0'
 		je .22
-.20:		mov dword [ebp+4-0x20b4], 0x0
-		jmp near .23
-.33:		cmp dword [ebx+0x4], byte 0x2e
+.20:		jmp near .23
+.33:		cmp dword [ebx+0x4], byte '.'
 		jne .24
 		cmp byte [ebp+4-0x44], 0x0
 		jne near .115
@@ -244,9 +242,9 @@ decfloat:  ; static long double decfloat(struct sfile *f, int c, int sign);
 .29:		cmp dword [ebp+4-0x1c], byte 0x0
 		je .30
 		mov eax, [ebp+4-0x20]
-		mov edx, [ebp+4+eax*0x4-0x20b4]
+		mov edx, [esp+eax*4]  ; x[EAX]. [ebp+4-0x20b4+eax*4]
 		mov eax, edx
-		sal eax, 0x2
+		shl eax, 0x2
 		add eax, edx
 		add eax, eax
 		mov edx, eax
@@ -254,13 +252,13 @@ decfloat:  ; static long double decfloat(struct sfile *f, int c, int sign);
 		add eax, edx
 		lea edx, [eax-0x30]
 		mov eax, [ebp+4-0x20]
-		mov [ebp+4+eax*0x4-0x20b4], edx
+		mov [esp+eax*4], edx  ; x[EAX].
 		jmp short .31
 .30:		mov eax, [ebx+0x4]
 		sub eax, byte '0'
 		mov edx, eax
 		mov eax, [ebp+4-0x20]
-		mov [ebp+4+eax*0x4-0x20b4], edx
+		mov [esp+eax*4], edx  ; x[EAX].
 .31:		inc dword [ebp+4-0x1c]
 		cmp dword [ebp+4-0x1c], byte 0x9
 		jne .32
@@ -288,7 +286,7 @@ decfloat:  ; static long double decfloat(struct sfile *f, int c, int sign);
 		sub eax, byte '0'
 		cmp eax, byte 0x9
 		jbe .33
-		cmp dword [ebx+0x4], byte 0x2e
+		cmp dword [ebx+0x4], byte '.'
 		je .33
 		jmp short .26
 .115:
@@ -306,12 +304,12 @@ decfloat:  ; static long double decfloat(struct sfile *f, int c, int sign);
 		jne .35
 		push dword [ebx]
 		call scanexp
-		add esp, byte 0x4
+		pop edx  ; Discard argument of scanexp above.
 		cdq
 		add [ebp+4-0x30], eax
 		adc [ebp+4-0x2c], edx
 		jmp short .36
-.35:		cmp dword [ebx+0x4], byte 0x0
+.35:		cmp dword [ebx+0x4], byte 0  ; NUL.
 		js .36
 		mov eax, [ebx]
 		mov eax, [eax]
@@ -319,215 +317,167 @@ decfloat:  ; static long double decfloat(struct sfile *f, int c, int sign);
 		mov eax, [ebx]
 		mov [eax], edx
 .36:		cmp byte [ebp+4-0x40], 0x0
-		jne .37
-		set_errno 0x16
+		jne .cont37
+		set_errno 22  ; EINVAL.
 		mov eax, [ebx]
 		mov edx, [eax+0x4]
 		mov eax, [ebx]
 		mov [eax], edx
 		fldz
-		jmp short .jdone
-.37:		mov eax, [ebp+4-0x20b4]
-		test eax, eax
-		jne .39
+		jmp short .jjdone
+.cont37:	cmp dword [esp], byte 0  ; [ebp+4-0x20b4]. &x[0].
+		jne .cont39
 		fild dword [ebx+0x8]
 		fldz
 		fmulp st1, st0
-.jdone:		jmp near .done
-.39:		mov eax, [ebp+4-0x30]
+		jmp short .jjdone
+.cont39:	mov eax, [ebp+4-0x30]  ; lrp.
 		mov edx, [ebp+4-0x2c]
-		mov ecx, edx
-		xor ecx, [ebp+4-0x34]
-		xor eax, [ebp+4-0x38]
-		or eax, ecx
-		test eax, eax
-		jne .40
+		xor eax, [ebp+4-0x38]  ; dc.
+		xor edx, [ebp+4-0x34]
+		or eax, edx
+		jnz .cont40
 		cmp dword [ebp+4-0x34], byte 0x0
-		jg .40
-		cmp dword [ebp+4-0x34], byte 0x0
+		jg .cont40
 		js .109
-		cmp dword [ebp+4-0x38], byte 0x9
-		ja .40
-.109:		cmp dword [ebp+4-0x14], byte 0x1e
-		jg .42
-		mov edx, [ebp+4-0x20b4]
-		mov eax, [ebp+4-0x14]
-		mov cl, al
+		cmp dword [ebp+4-0x38], byte 10-1  ; dc < 10.
+		ja .cont40
+.109:		cmp dword [ebp+4-0x14], byte 30
+		jg .return_sign_times_x_of_0
+		; !! TODO(pts): Add test for this branch.
+		mov edx, [esp]  ; [ebp+4-0x20b4]. &x[0].
+		mov cl, [ebp+4-0x14]
 		shr edx, cl
 		mov eax, edx
 		test eax, eax
-		jne .40
-.42:		fild dword [ebx+0x8]
-		mov eax, [ebp+4-0x20b4]
-		mov [ebp+4-0x20c0], eax
-		mov dword [ebp+4-0x20bc], 0x0
-		fild qword [ebp+4-0x20c0]
-		fmulp st1, st0
-		jmp short .jdone
-.40:		cmp dword [ebp+4-0x2c], byte 0x0
+		jne .cont40
+.return_sign_times_x_of_0:
+		call .destructive_calc_sign_times_x_of_0
+.jjdone:	jmp near .done  ; return sign * (long double)x[0];
+.cont40:	cmp dword [ebp+4-0x2c], byte 0x0
 		js .43
-		cmp dword [ebp+4-0x2c], byte 0x0
 		jg .116
-		cmp dword [ebp+4-0x30], 0x201e
+		cmp dword [ebp+4-0x30], 0x201e ; -EMIN/2.
 		jbe .43
-.116:
-.45:		set_errno 0x22
-		fild dword [ebx+0x8]
-		fld tword [const3]
-		fmulp st1, st0
-		fld tword [const3]
-		fmulp st1, st0
-		jmp short .jjdone
+.116:		fld tword [ldbl_inf]  ; return sign * LDBL_MAX * LDBL_MAX;
+		jmp short .donemul34
 .43:		cmp dword [ebp+4-0x2c], byte -0x1
-		jg .46
-		cmp dword [ebp+4-0x2c], byte -0x1
+		jg .cont46
 		jl .110
-		cmp dword [ebp+4-0x30], -0x40bd
-		jnb .46
-.110:		set_errno 0x22
-		fild dword [ebx+0x8]
-		fld tword [const4]
+		cmp dword [ebp+4-0x30], -0x40bd  ; EMIN-2*LDBL_MANT_DIG.
+		jnb .cont46
+.110:		fldz  ; return sign * LDBL_MIN * LDBL_MIN;
+.donemul34:	fild dword [ebx+0x8]  ; sign.
 		fmulp st1, st0
-		fld tword [const4]
-		fmulp st1, st0
-.jjdone:	jmp near .done
-.46:		cmp dword [ebp+4-0x1c], byte 0x0
+		set_errno 34  ; ERANGE.
+		jmp short .jjdone
+.cont46:	cmp dword [ebp+4-0x1c], byte 0x0  ; j.
 		je .48
 		jmp short .49
 .50:		mov eax, [ebp+4-0x20]
-		mov edx, [ebp+4+eax*0x4-0x20b4]
+		mov edx, [esp+eax*4]  ; x[EAX].
 		mov eax, edx
-		sal eax, 0x2
+		shl eax, 0x2
 		add eax, edx
 		add eax, eax
 		mov edx, eax
 		mov eax, [ebp+4-0x20]
-		mov [ebp+4+eax*0x4-0x20b4], edx
+		mov [esp+eax*4], edx  ; x[EAX] := EDX.
 		inc dword [ebp+4-0x1c]
 .49:		cmp dword [ebp+4-0x1c], byte 0x8
 		jle .50
 		inc dword [ebp+4-0x20]
-		mov dword [ebp+4-0x1c], 0x0
-.48:		mov dword [ebp+4-0x24], 0x0
+		xor eax, eax
+		mov [ebp+4-0x1c], eax
+.48:		xor eax, eax
+		mov [ebp+4-0x24], eax
 		mov eax, [ebp+4-0x20]
 		mov [ebp+4-0x28], eax
 		mov dword [ebp+4-0x4c], 0x0
 		mov eax, [ebp+4-0x30]
 		mov [ebp+4-0x48], eax
 		cmp dword [ebp+4-0x3c], byte 0x8
-		jg near .55
+		jg short .jg55
 		mov eax, [ebp+4-0x3c]
-		cmp eax, [ebp+4-0x48]
-		jg near .55
-		cmp dword [ebp+4-0x48], byte 0x11
-		jg near .55
-		cmp dword [ebp+4-0x48], byte 0x9
-		jne .52
-		fild dword [ebx+0x8]
-		mov eax, [ebp+4-0x20b4]
-		mov [ebp+4-0x20c0], eax
-		mov dword [ebp+4-0x20bc], 0x0
-		fild qword [ebp+4-0x20c0]
-		fmulp st1, st0
-		jmp short .jjjdone
-.52:		cmp dword [ebp+4-0x48], byte 0x8
+		mov edx, [ebp+4-0x48]  ; rp.
+		cmp eax, edx
+		jg short .jg55
+		cmp edx, byte 18-1  ; rp.
+.jg55:		jg near .55
+		cmp edx, byte 9  ; rp.
+		je near .return_sign_times_x_of_0
+		cmp edx, byte 8  ; rp.
 		jg .53
-		fild dword [ebx+0x8]
-		mov eax, [ebp+4-0x20b4]
-		mov [ebp+4-0x20c0], eax
-		mov dword [ebp+4-0x20bc], 0x0
-		fild qword [ebp+4-0x20c0]
-		fmulp st1, st0
-		mov eax, 0x8
-		sub eax, [ebp+4-0x48]
-		mov eax, [+eax*0x4+p10s.989]
-		mov [ebp+4-0x20c0], eax
-		fild dword [ebp+4-0x20c0]
+		; !! TODO(pts): Add test for this branch.
+		call .destructive_calc_sign_times_x_of_0
+		push byte 8
+		pop eax
+		sub eax, edx  ; rp.
+		fild dword [p10s.989+eax*4]  ; p10s[8-rp].
 		fdivp st1, st0
-.jjjdone:	jmp near .jdone
-.53:		mov eax, [ebp+4-0x48]
-		sub eax, byte 0x9
+.jjjdone:	jmp near .done
+.53:		mov eax, edx  ; rp.
+		sub eax, byte 9
 		mov edx, eax
 		add edx, edx
 		add eax, edx
 		neg eax
-		mov edx, [ebp+4-0x14]
-		add eax, edx
-		mov [ebp+4-0x88], eax
-		cmp dword [ebp+4-0x88], byte 0x1e
+		add eax, [ebp+4-0x14]  ; bits.
+		cmp eax, byte 30
 		jg .54
-		mov edx, [ebp+4-0x20b4]
-		mov eax, [ebp+4-0x88]
-		mov cl, al
-		shr edx, cl
-		mov eax, edx
-		test eax, eax
-		jne .55
-.54:		fild dword [ebx+0x8]
-		mov eax, [ebp+4-0x20b4]
-		mov [ebp+4-0x20c0], eax
-		mov dword [ebp+4-0x20bc], 0x0
-		fild qword [ebp+4-0x20c0]
-		fmulp st1, st0
-		mov eax, [ebp+4-0x48]
-		sub eax, byte 0xa
-		mov eax, [+eax*0x4+p10s.989]
-		mov [ebp+4-0x20c0], eax
-		fild dword [ebp+4-0x20c0]
+		; !! TODO(pts): Add test for this branch.
+		xchg ecx, eax  ; CL := ECX := bitlim; EAX := junk.
+		mov eax, [esp]  ; [ebp+4-0x20b4]. &x[0].
+		shr eax, cl  ; x[0] >> bitlim.
+		jnz .55
+.54:		; !! TODO(pts): Add test for this branch.
+		call .destructive_calc_sign_times_x_of_0
+		mov eax, [ebp+4-0x48]  ; rp.
+		fild dword [p10s.989-(10*4)+eax*4]  ; p10s[rp-10].
 		fmulp st1, st0
 		jmp short .jjjdone
 .56:		dec dword [ebp+4-0x28]
 .55:		mov eax, [ebp+4-0x28]
 		dec eax
-		mov eax, [ebp+4+eax*0x4-0x20b4]
+		mov eax, [esp+eax*4]  ; x[EAX].
 		test eax, eax
 		je .56
-		mov eax, [ebp+4-0x48]
-		mov ecx, 0x9
+		mov eax, [ebp+4-0x48]  ; rp.
 		cdq
-		idiv ecx
-		mov eax, edx
-		test eax, eax
-		je near .64
-		cmp dword [ebp+4-0x48], byte 0x0
-		js .58
-		mov eax, [ebp+4-0x48]
-		mov ecx, 0x9
-		cdq
-		idiv ecx
-		mov eax, edx
-		jmp short .59
-.58:		mov eax, [ebp+4-0x48]
-		mov ecx, 0x9
-		cdq
-		idiv ecx
-		mov eax, edx
-		add eax, byte 0x9
-.59:		mov [ebp+4-0x8c], eax
-		mov eax, 0x8
-		sub eax, [ebp+4-0x8c]
-		mov eax, [+eax*0x4+p10s.989]
-		mov [ebp+4-0x90], eax
-		mov dword [ebp+4-0x78], 0x0
-		mov eax, [ebp+4-0x24]
-		mov [ebp+4-0x20], eax
+		push byte 9
+		pop ecx  ; ECX := 9.
+		idiv ecx  ; EDX := rp % 9; EAX := rp / 9 (junk). Rounds towards 0.
+		test edx, edx
+		jz near .64
+		cmp dword [ebp+4-0x48], byte 0x0  ; rp.
+		jns .59
+		add edx, ecx  ; ECX == 9. The result is 1 <= rpm9 == EDX <= 8.
+.59:		mov eax, ecx  ; ECX == 9.
+		sub eax, edx  ; EDX == rpm9.
+		add [ebp+4-0x48], eax  ; rp.
+		mov eax, [p10s.989+eax*4-1*4]  ; p10s[8-rpm9].
+		mov [ebp+4-0x90], eax  ; int p10 = p10s[8-rpm9];
+		xor eax, eax
+		mov [ebp+4-0x78], eax  ; uint32_t carry = 0;
+		mov eax, [ebp+4-0x24]  ; a.
+		mov [ebp+4-0x20], eax  ; k = a;
 		jmp near .60
 .62:		mov eax, [ebp+4-0x20]
-		mov eax, [ebp+4+eax*0x4-0x20b4]
+		mov eax, [esp+eax*4]  ; x[EAX].
 		mov ecx, [ebp+4-0x90]
-		mov edx, 0x0
+		xor edx, edx
 		div ecx
 		mov [ebp+4-0x94], edx
 		mov eax, [ebp+4-0x20]
-		mov eax, [ebp+4+eax*0x4-0x20b4]
-		mov edi, [ebp+4-0x90]
-		mov edx, 0x0
-		div edi
+		mov eax, [esp+eax*4]  ; x[EAX].
+		mov ecx, [ebp+4-0x90]
+		xor edx, edx
+		div ecx
 		mov edx, eax
 		mov eax, [ebp+4-0x78]
 		add edx, eax
 		mov eax, [ebp+4-0x20]
-		mov [ebp+4+eax*0x4-0x20b4], edx
+		mov [esp+eax*4], edx  ; x[EAX].
 		mov eax, 0x3b9aca00
 		cdq
 		idiv dword [ebp+4-0x90]
@@ -538,15 +488,14 @@ decfloat:  ; static long double decfloat(struct sfile *f, int c, int sign);
 		mov eax, [ebp+4-0x20]
 		cmp eax, [ebp+4-0x24]
 		jne .61
-		mov eax, [ebp+4-0x20]
-		mov eax, [ebp+4+eax*0x4-0x20b4]
+		mov eax, [esp+eax*4]  ; x[EAX].
 		test eax, eax
 		jne .61
 		mov eax, [ebp+4-0x24]
 		inc eax
 		and eax, 0x7ff
 		mov [ebp+4-0x24], eax
-		sub dword [ebp+4-0x48], byte 0x9
+		sub dword [ebp+4-0x48], byte 0x9  ; rp.
 .61:		inc dword [ebp+4-0x20]
 .60:		mov eax, [ebp+4-0x20]
 		cmp eax, [ebp+4-0x28]
@@ -557,57 +506,36 @@ decfloat:  ; static long double decfloat(struct sfile *f, int c, int sign);
 		lea edx, [eax+0x1]
 		mov [ebp+4-0x28], edx
 		mov edx, [ebp+4-0x78]
-		mov [ebp+4+eax*0x4-0x20b4], edx
-.63:		mov eax, 0x9
-		sub eax, [ebp+4-0x8c]
-		add [ebp+4-0x48], eax
-		jmp near .64
+		mov [esp+eax*4], edx  ; x[EAX].
+.63:		jmp near .64
 .73:		mov dword [ebp+4-0x7c], 0x0
-		sub dword [ebp+4-0x4c], byte 0x1d
+		sub dword [ebp+4-0x4c], byte 29  ; e -= 29.
 		mov eax, [ebp+4-0x28]
 		dec eax
 		and eax, 0x7ff
 		mov [ebp+4-0x20], eax
 .71:		mov eax, [ebp+4-0x20]
-		mov eax, [ebp+4+eax*0x4-0x20b4]
-		mov esi, eax
-		mov edi, 0x0
-		mov eax, esi
-		mov edx, edi
-		shld dword edx, eax, 0x1d
-		sal eax, 0x1d
-		mov esi, [ebp+4-0x7c]
-		mov edi, 0x0
-		add eax, esi
-		adc edx, edi
-		mov [ebp+4-0xa8], eax
-		mov [ebp+4-0xa4], edx
-		cmp dword [ebp+4-0xa4], byte 0x0
-		jb .65
-		cmp dword [ebp+4-0xa4], byte 0x0
-		ja .111
-		cmp dword [ebp+4-0xa8], 0x3b9aca00
-		jbe .65
-.111:		mov ecx, [ebp+4-0xa8]
-		mov eax, [ebp+4-0xa8]
-		mov edx, [ebp+4-0xa4]
-		mov eax, edx
+		mov eax, [esp+eax*4]  ; x[EAX].
 		xor edx, edx
-		mov esi, eax
-		mov edi, edx
-		mov edx, esi
-		mov esi, 0x3b9aca00
-		mov eax, ecx
-		div esi
-		mov [ebp+4-0x7c], eax
-		mov eax, [ebp+4-0x20]
-		mov [ebp+4+eax*0x4-0x20b4], edx
-		jmp short .67
-.65:		mov dword [ebp+4-0x7c], 0x0
-		mov edx, [ebp+4-0xa8]
-		mov eax, [ebp+4-0x20]
-		mov [ebp+4+eax*0x4-0x20b4], edx
-.67:		mov eax, [ebp+4-0x28]
+		shld edx, eax, 29  ; (uint64_t)x[k] << 29.
+		shl eax, 29
+		add eax, [ebp+4-0x7c]
+		adc edx, byte 0
+		mov ecx, 1000000000
+		cmp edx, byte 0
+		jb .65
+		ja .111
+		cmp eax, ecx  ; ECX == 1000000000.
+		jbe .65
+.111:		div ecx
+		xchg ecx, eax  ; ECX := quotient; EAX := junk.
+		jmp short .66
+.65:		xchg eax, edx
+		xor ecx, ecx  ; ECX := 0;
+.66:		mov eax, [ebp+4-0x20]
+		mov [esp+eax*4], edx  ; x[EAX].
+		mov [ebp+4-0x7c], ecx
+		mov eax, [ebp+4-0x28]
 		dec eax
 		and eax, 0x7ff
 		cmp [ebp+4-0x20], eax
@@ -615,8 +543,7 @@ decfloat:  ; static long double decfloat(struct sfile *f, int c, int sign);
 		mov eax, [ebp+4-0x20]
 		cmp eax, [ebp+4-0x24]
 		je .68
-		mov eax, [ebp+4-0x20]
-		mov eax, [ebp+4+eax*0x4-0x20b4]
+		mov eax, [esp+eax*4]  ; x[EAX].
 		test eax, eax
 		jne .68
 		mov eax, [ebp+4-0x20]
@@ -624,7 +551,6 @@ decfloat:  ; static long double decfloat(struct sfile *f, int c, int sign);
 .68:		mov eax, [ebp+4-0x20]
 		cmp eax, [ebp+4-0x24]
 		je .117
-		mov eax, [ebp+4-0x20]
 		dec eax
 		and eax, 0x7ff
 		mov [ebp+4-0x20], eax
@@ -646,29 +572,30 @@ decfloat:  ; static long double decfloat(struct sfile *f, int c, int sign);
 		mov eax, [ebp+4-0x28]
 		dec eax
 		and eax, 0x7ff
-		mov ecx, [ebp+4+eax*0x4-0x20b4]
+		mov ecx, [esp+eax*4]  ; x[EAX].
 		mov eax, [ebp+4-0x28]
-		mov edx, [ebp+4+eax*0x4-0x20b4]
+		mov edx, [esp+eax*4]  ; x[EAX].
 		mov eax, [ebp+4-0x28]
 		dec eax
 		and eax, 0x7ff
 		or edx, ecx
-		mov [ebp+4+eax*0x4-0x20b4], edx
+		mov [esp+eax*4], edx  ; x[EAX].
 .72:		mov eax, [ebp+4-0x24]
 		mov edx, [ebp+4-0x7c]
-		mov [ebp+4+eax*0x4-0x20b4], edx
-.64:		cmp dword [ebp+4-0x48], byte 0x1a
-		jle .73
-		cmp dword [ebp+4-0x48], byte 0x1b
+		mov [esp+eax*4], edx  ; x[EAX].
+.64:		cmp dword [ebp+4-0x48], byte 0x1b  ; rp.
+		jl .73
 		jne .89
 		mov eax, [ebp+4-0x24]
-		mov edx, [ebp+4+eax*0x4-0x20b4]
+		mov edx, [esp+eax*4]  ; x[EAX].
 		mov eax, [th.972]
 		cmp edx, eax
 		jb .73
-.89:		mov dword [ebp+4-0x80], 0x0
-		mov dword [ebp+4-0x84], 0x1
-		mov dword [ebp+4-0x18], 0x0
+.89:		xor eax, eax
+		mov dword [ebp+4-0x80], eax  ; 0.
+		mov dword [ebp+4-0x18], eax  ; 0.
+		inc eax
+		mov dword [ebp+4-0x84], eax  ; 1.
 		jmp short .75
 .80:		mov edx, [ebp+4-0x24]
 		mov eax, [ebp+4-0x18]
@@ -678,10 +605,9 @@ decfloat:  ; static long double decfloat(struct sfile *f, int c, int sign);
 		mov eax, [ebp+4-0x20]
 		cmp eax, [ebp+4-0x28]
 		je .76
-		mov eax, [ebp+4-0x20]
-		mov edx, [ebp+4+eax*0x4-0x20b4]
+		mov edx, [esp+eax*4]  ; x[EAX].
 		mov eax, [ebp+4-0x18]
-		mov eax, [+eax*0x4+th.972]
+		mov eax, [th.972+eax*4]
 		cmp edx, eax
 		jnb .77
 .76:		mov dword [ebp+4-0x18], 0x3
@@ -690,9 +616,9 @@ decfloat:  ; static long double decfloat(struct sfile *f, int c, int sign);
 		mov eax, [ebp+4-0x18]
 		add eax, edx
 		and eax, 0x7ff
-		mov edx, [ebp+4+eax*0x4-0x20b4]
+		mov edx, [esp+eax*4]  ; x[EAX].
 		mov eax, [ebp+4-0x18]
-		mov eax, [+eax*0x4+th.972]
+		mov eax, [th.972+eax*4]
 		cmp edx, eax
 		ja .118
 		inc dword [ebp+4-0x18]
@@ -713,38 +639,32 @@ decfloat:  ; static long double decfloat(struct sfile *f, int c, int sign);
 		mov [ebp+4-0x20], eax
 		jmp near .84
 .86:		mov eax, [ebp+4-0x20]
-		mov edx, [ebp+4+eax*0x4-0x20b4]
-		mov eax, [ebp+4-0x84]
-		mov esi, 0x1
-		mov cl, al
-		sal esi, cl
-		mov eax, esi
+		mov edx, [esp+eax*4]  ; x[EAX].
+		mov cl, [ebp+4-0x84]
+		xor eax, eax
+		inc eax ;  EAX := 1.
+		shl eax, cl
 		dec eax
 		and eax, edx
 		mov [ebp+4-0x9c], eax
 		mov eax, [ebp+4-0x20]
-		mov edx, [ebp+4+eax*0x4-0x20b4]
-		mov eax, [ebp+4-0x84]
-		mov cl, al
+		mov edx, [esp+eax*4]  ; x[EAX].
+		mov cl, [ebp+4-0x84]
 		shr edx, cl
 		mov eax, [ebp+4-0x80]
 		add edx, eax
 		mov eax, [ebp+4-0x20]
-		mov [ebp+4+eax*0x4-0x20b4], edx
-		mov eax, [ebp+4-0x84]
+		mov [esp+eax*4], edx  ; x[EAX].
+		mov cl, [ebp+4-0x84]
 		mov edx, 0x3b9aca00
-		mov cl, al
 		sar edx, cl
-		mov eax, edx
-		mov edx, eax
 		mov eax, [ebp+4-0x9c]
 		imul eax, edx
 		mov [ebp+4-0x80], eax
 		mov eax, [ebp+4-0x20]
 		cmp eax, [ebp+4-0x24]
 		jne .85
-		mov eax, [ebp+4-0x20]
-		mov eax, [ebp+4+eax*0x4-0x20b4]
+		mov eax, [esp+eax*4]  ; x[EAX].
 		test eax, eax
 		jne .85
 		mov eax, [ebp+4-0x24]
@@ -769,7 +689,7 @@ decfloat:  ; static long double decfloat(struct sfile *f, int c, int sign);
 		je .88
 		mov eax, [ebp+4-0x28]
 		mov edx, [ebp+4-0x80]
-		mov [ebp+4+eax*0x4-0x20b4], edx
+		mov [esp+eax*4], edx  ; x[EAX].
 		mov eax, [ebp+4-0x28]
 		inc eax
 		and eax, 0x7ff
@@ -778,12 +698,12 @@ decfloat:  ; static long double decfloat(struct sfile *f, int c, int sign);
 .88:		mov eax, [ebp+4-0x28]
 		dec eax
 		and eax, 0x7ff
-		mov edx, [ebp+4+eax*0x4-0x20b4]
+		mov edx, [esp+eax*4]  ; x[EAX].
 		mov eax, [ebp+4-0x28]
 		dec eax
 		and eax, 0x7ff
 		or edx, byte 0x1
-		mov [ebp+4+eax*0x4-0x20b4], edx
+		mov [esp+eax*4], edx  ; x[EAX].
 		jmp near .89
 .119:		mov dword [ebp+4-0x18], 0x0
 		fldz
@@ -795,13 +715,14 @@ decfloat:  ; static long double decfloat(struct sfile *f, int c, int sign);
 		and eax, 0x7ff
 		cmp [ebp+4-0x28], eax
 		jne .91
-		mov eax, [ebp+4-0x28]
 		inc eax
 		and eax, 0x7ff
 		mov [ebp+4-0x28], eax
 		mov eax, [ebp+4-0x28]
 		dec eax
-		mov dword [ebp+4+eax*0x4-0x20b4], 0x0
+		; !! TODO(pts): Add test for this.
+		xor edx, edx
+		mov dword [ebp+4-0x20b4+eax*0x4], edx  ; x[(z=((z+1) & (KMAX-1)))-1] = 0;  ; x[EAX].
 .91:		fld tword [ebp+4-0x5c]
 		fld tword [const5]
 		fmulp st1, st0
@@ -809,18 +730,18 @@ decfloat:  ; static long double decfloat(struct sfile *f, int c, int sign);
 		mov eax, [ebp+4-0x18]
 		add eax, edx
 		and eax, 0x7ff
-		mov eax, [ebp+4+eax*0x4-0x20b4]
-		mov [ebp+4-0x20c0], eax
-		mov dword [ebp+4-0x20bc], 0x0
-		fild qword [ebp+4-0x20c0]
-		faddp st1, st0
+		push byte 0
+		push dword [ebp+4-0x20b4+eax*0x4]  ; x[(a+i) & (KMAX-1)].  ; x[EAX].
+		fild qword [esp]  ; This is not aligned to 64 bits.
+		times 2 pop eax  ; Discard 64 bits pushed above.
+		faddp st1, st0  ; y = 1000000000.0L * y + x[(a+i) & (KMAX-1)];
 		fstp tword [ebp+4-0x5c]
 		inc dword [ebp+4-0x18]
 .90:		cmp dword [ebp+4-0x18], byte 0x2
 		jle .92
 		fild dword [ebx+0x8]
 		fld tword [ebp+4-0x5c]
-		fmulp st1, st0
+		fmulp st1, st0  ; y *= sign;
 		fstp tword [ebp+4-0x5c]
 		mov eax, [ebp+4-0x4c]
 		add eax, 0x407d
@@ -829,15 +750,16 @@ decfloat:  ; static long double decfloat(struct sfile *f, int c, int sign);
 		mov eax, [ebp+4-0x4c]
 		add eax, 0x407d
 		mov [ebp+4-0x14], eax
-		cmp dword [ebp+4-0x14], byte 0x0
+		xor eax, eax
+		cmp [ebp+4-0x14], eax  ; 0.
 		jns .94
-		mov dword [ebp+4-0x14], 0x0
+		mov [ebp+4-0x14], eax  ; 0.
 .94:		mov byte [ebp+4-0x50], 0x1
 .93:		cmp dword [ebp+4-0x14], byte 0x3f
 		jg near .95
 		mov eax, 0x7f
 		sub eax, [ebp+4-0x14]
-		; This is an inlined call to my_ldexpl.
+		; This is an inlined call to my_ldexpl.  ; bias = my_ldexpl(1, 2*LDBL_MANT_DIG-bits-1);
 		push eax
 		fild dword [esp]
 		pop eax  ; Discard value from stack.
@@ -845,13 +767,11 @@ decfloat:  ; static long double decfloat(struct sfile *f, int c, int sign);
 		fscale
 		fstp st1
 		;
-		fld st0  ; Duplicate st0.
-		fstp tword [ebp+4-0x74]
-		fstp tword [ebp+4-0x20c0]
+		fstp tword [ebp+4-0x74]  ; bias.
 		cmp dword [ebx+0x8], byte 0x0
-		jns .96
+		jns .96  ; if (sign < 0)
 		fld tword [ebp+4-0x74]
-		fchs
+		fchs  ; bias = -bias;
 		fstp tword [ebp+4-0x74]
 .96:		mov eax, 0x40
 		sub eax, [ebp+4-0x14]
@@ -871,13 +791,7 @@ decfloat:  ; static long double decfloat(struct sfile *f, int c, int sign);
 		jp .modagain1
 		fstp st1
 		;
-		fstp tword [ebp+4-0x20c0]
-		mov eax, [ebp+4-0x20c0]
-		mov edx, [ebp+4-0x20bc]
-		mov ecx, [ebp+4-0x20b8]
-		mov [ebp+4-0x68], eax
-		mov [ebp+4-0x64], edx
-		mov [ebp+4-0x60], ecx
+		fstp tword [ebp+4-0x68]
 		fld tword [ebp+4-0x5c]
 		fld tword [ebp+4-0x68]
 		fsubp st1, st0
@@ -896,9 +810,9 @@ decfloat:  ; static long double decfloat(struct sfile *f, int c, int sign);
 		mov eax, [ebp+4-0x18]
 		add eax, edx
 		and eax, 0x7ff
-		mov eax, [ebp+4+eax*0x4-0x20b4]
+		mov eax, [esp+eax*4]  ; x[EAX].
 		mov [ebp+4-0x98], eax
-		cmp dword [ebp+4-0x98], 0x1dcd64ff
+		cmp dword [ebp+4-0x98], 500000000-1
 		ja .98
 		cmp dword [ebp+4-0x98], byte 0x0
 		jne .99
@@ -916,7 +830,7 @@ decfloat:  ; static long double decfloat(struct sfile *f, int c, int sign);
 		faddp st1, st0
 		fstp tword [ebp+4-0x68]
 		jmp short .100
-.98:		cmp dword [ebp+4-0x98], 0x1dcd6500
+.98:		cmp dword [ebp+4-0x98], 500000000
 		jbe .101
 		fild dword [ebx+0x8]
 		fld qword [const8]
@@ -925,7 +839,7 @@ decfloat:  ; static long double decfloat(struct sfile *f, int c, int sign);
 		faddp st1, st0
 		fstp tword [ebp+4-0x68]
 		jmp short .100
-.101:		cmp dword [ebp+4-0x98], 0x1dcd6500
+.101:		cmp dword [ebp+4-0x98], 500000000
 		jne .100
 		mov edx, [ebp+4-0x24]
 		mov eax, [ebp+4-0x18]
@@ -1036,14 +950,20 @@ decfloat:  ; static long double decfloat(struct sfile *f, int c, int sign);
 		pop ebp  ; Restore.
 		mov esp, ecx
 		ret
+.destructive_calc_sign_times_x_of_0:  ; Helper function for decfloat. This function is destructive because it sets x[1] := 0.
+		fild dword [ebx+0x8]  ; sign.
+		and dword [esp+8], byte 0  ; High dword of qword [esp+8].
+		fild qword [esp+4]  ; [ebp+4-0x20b4]. &x[0]. This is not aligned to 64 bits. But the `fstp tword' and `fld tword' instruction arguments aren't aligned either.
+		fmulp st1, st0
+		ret  ; st0 == sign * (long double)x[0].
 
 hexfloat:  ; static long double hexfloat(struct sfile *f, int sign);
 		mov ecx, esp
-		and esp, byte -8  ; !! TODO(pts) Don't align. Are we aligning because of double and long double values on the stack?
+		and esp, byte -8  ; !! TODO(pts) Don't align. Are we aligning because of double and long double values on the stack? Anyway, our alignment is broken.
 		push ebp
 		mov ebp, esp
-		push edi  ; Save.
-		push esi  ; Save.
+		push edi  ; Save.  !! Don't save or restore.
+		push esi  ; Save.  !! Don't save or restore.
 		push ebx  ; Save.
 		; [ebp+4-0x68 ... ebp+4-0x10]: Local variables: 22 dwords: (#0 .. #21).
 		; dword [ebp+4-0x10]: dword [esp+0x68]: Saved ECX.
@@ -1071,7 +991,7 @@ hexfloat:  ; static long double hexfloat(struct sfile *f, int sign);
 		;fstp tword [ebp+4-0x24]
 		;fldz
 		;fstp tword [ebp+4-0x3c]
-		sub esp, byte 0x68-20*4
+		sub esp, byte 0x6c-4*4-20*4
 		; dword [ebp+4-0x64]: dword #20.
 		; dword [ebp+4-0x68]: dword #21.
 		fld1  ; This instruction is 2 bytes.
@@ -1097,7 +1017,7 @@ hexfloat:  ; static long double hexfloat(struct sfile *f, int sign);
 		mov [ebp+4-0x68], eax
 .121:		cmp dword [ebp+4-0x68], byte '0'
 		je .122
-		cmp dword [ebp+4-0x68], byte 0x2e
+		cmp dword [ebp+4-0x68], byte '.'
 		jne near .126
 		mov byte [ebp+4-0x44], 0x1
 		mov eax, [ebx]
@@ -1125,7 +1045,7 @@ hexfloat:  ; static long double hexfloat(struct sfile *f, int sign);
 .124:		cmp dword [ebp+4-0x68], byte '0'
 		je .125
 		jmp near .126
-.138:		cmp dword [ebp+4-0x68], byte 0x2e
+.138:		cmp dword [ebp+4-0x68], byte '.'
 		jne .127
 		cmp byte [ebp+4-0x44], 0x0
 		jne near .172
@@ -1136,7 +1056,7 @@ hexfloat:  ; static long double hexfloat(struct sfile *f, int sign);
 		mov byte [ebp+4-0x44], 0x1
 		jmp near .130
 .127:		mov byte [ebp+4-0x48], 0x1
-		cmp dword [ebp+4-0x68], byte 0x39
+		cmp dword [ebp+4-0x68], byte '9'
 		jle .131
 		mov eax, [ebp+4-0x68]
 		or eax, byte 0x20
@@ -1148,12 +1068,11 @@ hexfloat:  ; static long double hexfloat(struct sfile *f, int sign);
 		mov [ebp+4-0x64], eax
 .132:		cmp dword [ebp+4-0x54], byte 0x0
 		jg .133
-		cmp dword [ebp+4-0x54], byte 0x0
 		js .164
 		cmp dword [ebp+4-0x58], byte 0x7
 		ja .133
 .164:		mov eax, [ebp+4-0x18]
-		sal eax, 0x4
+		shl eax, 0x4
 		mov edx, eax
 		mov eax, [ebp+4-0x64]
 		add eax, edx
@@ -1161,7 +1080,6 @@ hexfloat:  ; static long double hexfloat(struct sfile *f, int sign);
 		jmp short .135
 .133:		cmp dword [ebp+4-0x54], byte 0x0
 		jg .136
-		cmp dword [ebp+4-0x54], byte 0x0
 		js .165
 		cmp dword [ebp+4-0x58], byte 0x10
 		ja .136
@@ -1198,15 +1116,15 @@ hexfloat:  ; static long double hexfloat(struct sfile *f, int sign);
 		movsx eax, al
 		mov [ebp+4-0x68], eax
 .126:		mov eax, [ebp+4-0x68]
-		sub eax, byte 0x30
+		sub eax, byte '0'
 		cmp eax, byte 0x9
 		jbe .138
 		mov eax, [ebp+4-0x68]
 		or eax, byte 0x20
-		sub eax, byte 0x61
+		sub eax, byte 'a'
 		cmp eax, byte 0x5
 		jbe .138
-		cmp dword [ebp+4-0x68], byte 0x2e
+		cmp dword [ebp+4-0x68], byte '.'
 		je .138
 		jmp short .129
 .172:
@@ -1240,22 +1158,21 @@ hexfloat:  ; static long double hexfloat(struct sfile *f, int sign);
 		mov [ebp+4-0x50], eax
 		mov [ebp+4-0x4c], edx
 		jmp short .143
-.144:		sal dword [ebp+4-0x18], 0x4
+.144:		shl dword [ebp+4-0x18], 0x4
 		add dword [ebp+4-0x58], byte 0x1
 		adc dword [ebp+4-0x54], byte 0x0
 .143:		cmp dword [ebp+4-0x54], byte 0x0
 		js .144
-		cmp dword [ebp+4-0x54], byte 0x0
 		jg .166
 		cmp dword [ebp+4-0x58], byte 0x7
 		jbe .144
 .166:		mov eax, [ebp+4-0x68]
 		or eax, byte 0x20
-		cmp eax, byte 0x70
+		cmp eax, byte 'p'
 		jne .146
 		push dword [ebx]
 		call scanexp
-		add esp, byte 0x4
+		pop edx  ; Discard argument of scanexp above.
 		cdq
 		mov [ebp+4-0x60], eax
 		mov [ebp+4-0x5c], edx
@@ -1269,13 +1186,8 @@ hexfloat:  ; static long double hexfloat(struct sfile *f, int sign);
 		mov edx, [ebp+4-0x4c]
 		add eax, byte -0x8
 		adc edx, byte -0x1
-		mov esi, eax
-		mov edi, edx
-		mov eax, esi
-		mov edx, edi
-		shld dword edx, eax, 0x2
-		add eax, eax
-		add eax, eax
+		shld dword edx, eax, 2
+		shl eax, 2
 		add [ebp+4-0x60], eax
 		adc [ebp+4-0x5c], edx
 		cmp dword [ebp+4-0x18], byte 0x0
@@ -1286,29 +1198,20 @@ hexfloat:  ; static long double hexfloat(struct sfile *f, int sign);
 		jmp near decfloat.done
 .148:		cmp dword [ebp+4-0x5c], byte 0x0
 		js .149
-		cmp dword [ebp+4-0x5c], byte 0x0
 		jg .167
 		cmp dword [ebp+4-0x60], 0x403d
 		jbe .149
-.167:		set_errno 0x22
-		fild dword [ebx+0x4]
-		fld tword [const3]
-		fmulp st1, st0
-		fld tword [const3]
-		fmulp st1, st0
-		jmp near decfloat.done
+.167:		fld tword [ldbl_inf]  ; return sign * LDBL_MAX * LDBL_MAX;
+		jmp short .donemul34
 .149:		cmp dword [ebp+4-0x5c], byte -0x1
 		jg near .153
-		cmp dword [ebp+4-0x5c], byte -0x1
 		jl .168
 		cmp dword [ebp+4-0x60], -0x40bd
 		jnb .153
-.168:		set_errno 0x22
-		fild dword [ebx+0x4]
-		fld tword [const4]
+.168:		fldz  ; return sign * LDBL_MAX * LDBL_MAX;
+.donemul34:	fild dword [ebx+0x4]  ; sign.
 		fmulp st1, st0
-		fld tword [const4]
-		fmulp st1, st0
+		set_errno 34  ; ERANGE.
 		jmp near decfloat.done
 .157:		fld tword [const11]
 		fld tword [ebp+4-0x24]
@@ -1340,25 +1243,27 @@ hexfloat:  ; static long double hexfloat(struct sfile *f, int sign);
 		jns .157
 		mov eax, [ebp+4-0x14]
 		cdq
-		mov esi, [ebp+4-0x60]
-		mov edi, [ebp+4-0x5c]
-		add esi, 0x405d
-		adc edi, byte 0x0
-		cmp edx, edi
+		mov ecx, [ebp+4-0x60]
+		add ecx, 0x405d
+		push ecx  ; Save.
+		mov ecx, [ebp+4-0x5c]
+		adc ecx, byte 0x0  ; CF is coming from the `add ecx, ...' above.
+		cmp edx, ecx
+		pop ecx  ; Restore.
 		jl .158
-		cmp edx, edi
 		jg .170
-		cmp eax, esi
+		cmp eax, ecx
 		jbe .158
 .170:		mov eax, [ebp+4-0x60]
 		add eax, 0x405d
 		mov [ebp+4-0x14], eax
-		cmp dword [ebp+4-0x14], byte 0x0
+		xor eax, eax
+		cmp [ebp+4-0x14], eax  ; 0.
 		jns .158
-		mov dword [ebp+4-0x14], 0x0
+		mov dword [ebp+4-0x14], eax  ; 0.
 .158:		cmp dword [ebp+4-0x14], byte 0x3f
 		jg .160
-		mov eax, 0x5f
+		mov al, 0x5f  ; EAX := 0x5f.
 		sub eax, [ebp+4-0x14]
 		; This is an inlined call to my_ldexpl.
 		push eax
@@ -1368,8 +1273,6 @@ hexfloat:  ; static long double hexfloat(struct sfile *f, int sign);
 		fscale
 		fstp st1
 		;
-		fld st0  ; Duplicate st0.
-		fstp tword [ebp+4-0x78]
 		fstp tword [ebp+4-0x3c]
 		cmp dword [ebx+0x4], byte 0x0
 		jns .160
@@ -1393,11 +1296,10 @@ hexfloat:  ; static long double hexfloat(struct sfile *f, int sign);
 		fldz
 		fstp tword [ebp+4-0x24]
 .161:		fild dword [ebx+0x4]
-		mov eax, [ebp+4-0x18]
-		mov edx, 0x0
-		mov [ebp+4-0x78], eax
-		mov [ebp+4-0x74], edx
-		fild qword [ebp+4-0x78]
+		push byte 0
+		push dword [ebp+4-0x18]
+		fild qword [esp]
+		times 2 pop eax  ; Discard 64 bits pushed above.
 		fmulp st1, st0
 		fld tword [ebp+4-0x3c]
 		faddp st1, st0
@@ -1436,7 +1338,10 @@ mini_strtold:  ; long double mini_strtold(const char *s, char **p);
 		mov [ebp-0x20], eax
 		mov eax, [ebp+0x8]
 		mov [ebp-0x1c], eax
-		mov dword [ebp-0x10], 0x1
+		xor eax, eax
+		mov dword [ebp-0x14], eax  ; 0.
+		inc eax
+		mov dword [ebp-0x10], eax  ; 1.
 .174:		mov eax, [ebp-0x20]
 		lea edx, [eax+0x1]
 		mov [ebp-0x20], edx
@@ -1452,7 +1357,7 @@ mini_strtold:  ; long double mini_strtold(const char *s, char **p);
 		cmp dword [ebp-0x18], byte '+'
 		je .175
 		cmp dword [ebp-0x18], byte '-'
-		jne .176
+		jne .178
 .175:		cmp dword [ebp-0x18], byte '-'  ; TODO(pts): Optimize this comparison after the previous one.
 		jne .177
 		mov dword [ebp-0x10], -0x1
@@ -1462,7 +1367,6 @@ mini_strtold:  ; long double mini_strtold(const char *s, char **p);
 		mov al, [eax]
 		movsx eax, al
 		mov [ebp-0x18], eax
-.176:		mov dword [ebp-0x14], 0x0
 		jmp short .178
 .181:		cmp dword [ebp-0x14], byte 0x6
 		ja .179
@@ -1484,13 +1388,10 @@ mini_strtold:  ; long double mini_strtold(const char *s, char **p);
 		movsx eax, al
 		cmp edx, eax
 		je .181
-.180:		cmp dword [ebp-0x14], byte 0x3
-		je .182
-		cmp dword [ebp-0x14], byte 0x8
-		je .182
-		cmp dword [ebp-0x14], byte 0x3
-		jbe .183
-.182:		cmp dword [ebp-0x14], byte 0x8
+.180:		mov al, [ebp-0x14]
+		cmp al, 3
+		jb .183
+		cmp al, 8
 		je .184
 		mov eax, [ebp-0x20]
 		dec eax
@@ -1537,7 +1438,7 @@ mini_strtold:  ; long double mini_strtold(const char *s, char **p);
 		lea edx, [eax+0x1]
 		mov [ebp-0x20], edx
 		mov al, [eax]
-		cmp al, 0x28
+		cmp al, '('
 		je .193
 		mov eax, [ebp-0x20]
 		dec eax
@@ -1555,18 +1456,18 @@ mini_strtold:  ; long double mini_strtold(const char *s, char **p);
 		cmp eax, byte 0x9
 		jbe .195
 		mov eax, [ebp-0x18]
-		sub eax, byte 0x41
-		cmp eax, byte 0x19
+		sub eax, byte 'A'
+		cmp eax, byte 26-1
 		jbe .195
 		mov eax, [ebp-0x18]
-		sub eax, byte 0x61
-		cmp eax, byte 0x19
+		sub eax, byte 'a'
+		cmp eax, byte 26-1
 		jbe .195
-		cmp dword [ebp-0x18], byte 0x5f
+		cmp dword [ebp-0x18], byte '_'
 		jne .196
 .195:		inc dword [ebp-0x14]
 		jmp short .197
-.196:		cmp dword [ebp-0x18], byte 0x29
+.196:		cmp dword [ebp-0x18], byte ')'
 		je .206
 		mov eax, [ebp-0x20]
 		dec eax
@@ -1606,7 +1507,7 @@ mini_strtold:  ; long double mini_strtold(const char *s, char **p);
 		mov [ebp-0x18], eax
 		mov eax, [ebp-0x18]
 		or eax, byte 0x20
-		cmp eax, byte 0x78
+		cmp eax, byte 'x'
 		je .203
 		mov eax, [ebp-0x20]
 		dec eax
@@ -1650,10 +1551,9 @@ mini_strtold:  ; long double mini_strtold(const char *s, char **p);
 		ret
 
 section .rodata
-p10s.989:	dd 0xa, 0x64, 0x3e8, 0x2710, 0x186a0, 0xf4240, 0x989680, 0x5f5e100
-th.972:		dd 0x12, 0x1aa0c609, 0x2a4ae5ff
-const3:		dd 0xffffffff, 0xffffffff, 0x7ffe
-const4:		dd 0x0, 0x80000000, 0x1
+p10s.989:	dd 10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000  ; `static const int32_t p10s[]' in decfloat.
+th.972:		dd 18, 446744073, 709551615  ; `static const uint32_t th' in decfloat.
+ldbl_inf:	dd 0, 0x80000000, 0x7fff
 const5:		dd 0x0, 0xee6b2800, 0x401c
 const7:		dd 0x0, 0x3fd00000
 const8:		dd 0x0, 0x3fe80000
