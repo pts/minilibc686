@@ -690,7 +690,7 @@ decfloat:  ; static long double decfloat(struct sfile *f, unsigned char c, int s
 		xor edx, edx
 		mov dword [ebp+16-0x20b4+eax*0x4], edx  ; x[(z=((z+1) & (KMAX-1)))-1] = 0;  ; x[EAX].
 .91:		fld tword [ebp+16-0x5c]
-		fld tword [const5]
+		fld dword [f32_1000000000.0]
 		fmulp st1, st0
 		mov edx, [ebp+16-0x24]
 		mov eax, [ebp+16-0x18]
@@ -794,7 +794,7 @@ decfloat:  ; static long double decfloat(struct sfile *f, unsigned char c, int s
 		cmp [ebp+16-0x28], eax
 		je .98
 .99:		fild dword [ebp+3*4+0x8]  ; sign.
-		fld qword [const7]
+		fld dword [f32_0.25]
 		fmulp st1, st0
 		fld tword [ebp+16-0x68]
 		faddp st1, st0
@@ -803,7 +803,7 @@ decfloat:  ; static long double decfloat(struct sfile *f, unsigned char c, int s
 .98:		cmp dword [ebp+16-0x98], 500000000
 		jbe .101
 		fild dword [ebp+3*4+0x8]  ; sign.
-		fld qword [const8]
+		fld dword [f32_0.75]
 		fmulp st1, st0
 		fld tword [ebp+16-0x68]
 		faddp st1, st0
@@ -819,14 +819,14 @@ decfloat:  ; static long double decfloat(struct sfile *f, unsigned char c, int s
 		cmp [ebp+16-0x28], eax
 		jne .102
 		fild dword [ebp+3*4+0x8]  ; sign.
-		fld qword [const9]
+		fld dword [f32_0.5]
 		fmulp st1, st0
 		fld tword [ebp+16-0x68]
 		faddp st1, st0
 		fstp tword [ebp+16-0x68]
 		jmp short .100
 .102:		fild dword [ebp+3*4+0x8]  ; sign.
-		fld qword [const8]
+		fld dword [f32_0.75]
 		fmulp st1, st0
 		fld tword [ebp+16-0x68]
 		faddp st1, st0
@@ -871,7 +871,7 @@ decfloat:  ; static long double decfloat(struct sfile *f, unsigned char c, int s
 		fstp tword [ebp+16-0xb4]
 		fld tword [ebp+16-0xb4]
 		fabs
-		fld tword [const10]
+		fld dword [f32_18446744073709551616.0]
 		fxch st1
 		fucompp
 		fnstsw ax
@@ -885,7 +885,7 @@ decfloat:  ; static long double decfloat(struct sfile *f, unsigned char c, int s
 		jne .107
 		mov byte [ebp+16-0x50], 0x0
 .107:		fld tword [ebp+16-0x5c]
-		fld tword [const11]
+		fld dword [f32_0.5]
 		fmulp st1, st0
 		fstp tword [ebp+16-0x5c]
 		inc dword [ebp+16-0x4c]
@@ -1018,9 +1018,9 @@ hexfloat:  ; static long double hexfloat(struct sfile *f, int sign);
 		ja .136
 .165:		fild dword [ebp+16-0x64]  ; d.
 		fld tword [ebp+16-0x30]  ; scale.
-		fld tword [ldbl_16]
-		fdivp st1, st0  ; !! Is an fmul or a shift faster here?
-		fstp tword [ebp+16-0x30]  ; scale.
+		fld dword [f32_0.0625]
+		fmulp st1, st0
+		fstp tword [ebp+16-0x30]  ; scale /= 16.0.
 		fld tword [ebp+16-0x30]  ; scale.
 		fmulp st1, st0
 		fld tword [ebp+16-0x24]
@@ -1032,7 +1032,7 @@ hexfloat:  ; static long double hexfloat(struct sfile *f, int sign);
 		cmp byte [ebp+16-0x40], 0x0
 		jne .135
 		fld tword [ebp+16-0x30]
-		fld tword [const11]
+		fld dword [f32_0.5]
 		fmulp st1, st0
 		fld tword [ebp+16-0x24]
 		faddp st1, st0
@@ -1118,7 +1118,7 @@ hexfloat:  ; static long double hexfloat(struct sfile *f, int sign);
 		fmulp st1, st0
 		set_errno 34  ; ERANGE.
 .jdone:		jmp near decfloat.done
-.157:		fld tword [const11]
+.157:		fld dword [f32_0.5]
 		fld tword [ebp+16-0x24]
 		fucompp
 		fnstsw ax
@@ -1326,7 +1326,7 @@ mini_strtold:  ; long double mini_strtold(const char *s, char **p);
 		; !! TODO(pts): Test this.
 		dec esi
 		sub esi, ecx
-.206:		fld tword [ldbl_nan]
+.206:		fld dword [f32_nan]
 .jdonep:	jmp short .donep
 .cont192:	jecxz .cont201
 		set_errno 22  ; EINVAL.
@@ -1366,15 +1366,16 @@ mini_strtold:  ; long double mini_strtold(const char *s, char **p);
 section .rodata
 p10s.989:	dd 10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000  ; `static const int32_t p10s[]' in decfloat.
 th.972:		dd 18, 446744073, 709551615  ; `static const uint32_t th' in decfloat.
-const5:		dd 0x0, 0xee6b2800, 0x401c  ; !! Is there an f32 constant for this?
-const7:		dd 0x0, 0x3fd00000  ; !! Is there an f32 constant for this?
-const8:		dd 0x0, 0x3fe80000  ; !! Is there an f32 constant for this?
-const9:		dd 0x0, 0x3fe00000  ; !! Is there an f32 constant for this?
-const10:	dd 0x0, 0x80000000, 0x403f  ; !! Is there an f32 constant for this?
-const11:	dd 0x0, 0x80000000, 0x3ffe  ; !! Is there an f32 constant for this?
-ldbl_16:	dd 0x0, 0x80000000, 0x4003  ; 16.0l. !! Use f32 constant.
+f32_0.25:	dd 0x3e800000
+f32_0.5:	dd 0x3f000000
+f32_0.75:	dd 0x3f400000
+;f32_16.0:	dd 0x41800000
+f32_0.0625:	dd 0x3d800000  ; The reciprocal of f32_16.0.
 f32_infinity:	dd 0x7f800000
-ldbl_nan:	dd 0x0, 0xc0000000, 0x7fff  ; !! Is there an f32 constant for this?
+f32_1000000000.0: dd 0x4e6e6b28
+f32_18446744073709551616.0: dd 0x5f800000
+f32_nan:	dd 0x7fc00000  ; Same as f96_nan below.
+;f96_nan:	dd 0x0, 0xc0000000, 0x7fff
 
 str_infinity:	db 'infinity', 0
 str_nan:	db 'nan', 0
