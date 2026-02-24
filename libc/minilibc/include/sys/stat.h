@@ -26,6 +26,7 @@
 #define S_ISFIFO(m)	(((m) & S_IFMT) == S_IFIFO)
 #define S_ISSOCK(m)	(((m) & S_IFMT) == S_IFSOCK)
 
+#if defined(__UCLIBC__) || defined(__GLIBC__) || defined(__MINILIBC686__)
 /* These fields must be __LIBC_PACKED for amd64, because the default
  * alignment for `long long' is 8 there. (We have to double-check a possible
  * `unsigned long st_uid;' and st_gid there as well.) __PCC__ fails with in
@@ -39,6 +40,7 @@
  *  https://github.com/torvalds/linux/blob/c964ced7726294d40913f2127c3f185a92cb4a41/arch/x86/include/uapi/asm/stat.h
  *
  * struct stat64 is for i386 syscalls SYS_stat64, SYS_lstat64, SYS_fstat64 == 197 (needs Linux >=2.4), SYS_fstatat64 == 300 (needs Linux >=2.6.16).
+ * Also works with uclibc-0.9.30.1 i386, eglibc-2.19 i386, glibc-2.27 i386.
  */
 __LIBC_PACKED_STRUCT struct stat64 {
   __extension__ unsigned long long st_dev;
@@ -62,9 +64,11 @@ __LIBC_PACKED_STRUCT struct stat64 {
   __extension__ unsigned long long st_ino;
 };
 __LIBC_STATIC_ASSERT(sizeof_struct_stat64, sizeof(struct stat64) == 96);
+#endif
 
 #if _FILE_OFFSET_BITS == 64
-__LIBC_PACKED_STRUCT struct stat {  /* For i386 syscalls SYS_stat64, SYS_lstat64, SYS_fstat64 == 197 (needs Linux >=2.4), SYS_fstatat64 == 300 (needs Linux >=2.6.16). */
+#if defined(__UCLIBC__) || defined(__GLIBC__) || defined(__MINILIBC686__)
+__LIBC_PACKED_STRUCT struct stat {  /* For i386 syscalls SYS_stat64, SYS_lstat64, SYS_fstat64 == 197 (needs Linux >=2.4), SYS_fstatat64 == 300 (needs Linux >=2.6.16). Also works with uclibc-0.9.30.1 i386, eglibc-2.19 i386, glibc-2.27 i386. */
   __extension__ unsigned long long st_dev;
   unsigned char __pad0[4];
   unsigned long __st_ino;  /* Unused, st_ino below is used instead. */
@@ -86,7 +90,9 @@ __LIBC_PACKED_STRUCT struct stat {  /* For i386 syscalls SYS_stat64, SYS_lstat64
   __extension__ unsigned long long st_ino;
 };
 __LIBC_STATIC_ASSERT(sizeof_struct_stat, sizeof(struct stat) == 96);
-#else
+#endif
+#else  /* #if _FILE_OFFSET_BITS == 64 */
+#ifdef __MINILIBC686__
 struct stat {  /* For i386 syscalls SYS_stat, SYS_lstat, SYS_fstat == 108. Already supported by Linux 1.0. */
   unsigned long  st_dev;
   unsigned long  st_ino;
@@ -108,7 +114,34 @@ struct stat {  /* For i386 syscalls SYS_stat, SYS_lstat, SYS_fstat == 108. Alrea
   unsigned long  __unused5;
 };
 __LIBC_STATIC_ASSERT(sizeof_struct_stat, sizeof(struct stat) == 64);
+#else
+#if defined(__UCLIBC__) || defined(__GLIBC__)
+struct stat {  /* Works with uclibc-0.9.30.1 i386, eglibc-2.19 i386, glibc-2.27 i386. */
+  /*__dev_t*/ /*__u_quad_t*/ unsigned long long st_dev;
+  unsigned char __pad1[4];
+  /*__ino_t*/ unsigned long st_ino;
+  /*__mode_t*/ unsigned st_mode;
+  /*__nlink_t*/ unsigned st_nlink;
+  /*__uid_t*/ unsigned st_uid;
+  /*__gid_t*/ unsigned st_gid;
+  /*__dev_t*/ /*__u_quad_t*/ unsigned long long st_rdev;
+  unsigned char __pad2[4];
+  /*__off_t*/ long st_size;
+  /*__blksize_t*/ long st_blksize;
+  /*__blkcnt_t*/ long st_blocks;
+  /*__time_t*/ long st_atime;
+  unsigned long st_atimensec;
+  /*__time_t*/ long st_mtime;
+  unsigned long st_mtimensec;
+  /*__time_t*/ long st_ctime;
+  unsigned long st_ctimensec;
+  unsigned long __unused4;
+  unsigned long __unused5;
+};
+__LIBC_STATIC_ASSERT(sizeof_struct_stat, sizeof(struct stat) == 88);
 #endif
+#endif
+#endif  /* #else #if _FILE_OFFSET_BITS == 64 */
 
 struct __old_kernel_stat {  /* For i386 syscalls SYS_oldstat, SYS_oldlstat, SYS_oldfstat == 28. Supported by Linux 1.0. */
   unsigned short st_dev;
