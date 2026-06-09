@@ -76,7 +76,7 @@ void *realloc(void *ptr, size_t size1) {
       if (!size1) ++size1;
     }
     size1 = (size1 + sizeof(size_t) - 1) & -sizeof(size_t);  /* Align to multiple of 4. */
-    /* No need to check overflow of size2, we've already checked size1 above (deisred memory block too large). */
+    /* No need to check overflow of size2, we've already checked size1 above (desired memory block too large). */
     for (size2 = sizeof(void*) > sizeof(size_t) ? sizeof(void*) : sizeof(size_t), bucketp = free_bucket_heads; size2 < size1; size2 <<= 1, ++bucketp) {}
     if (size1 & (size1 - 1)) {  /* Try best-fit from the 1 smaller bucket. */
       prev_ptr = bucketp - 1;
@@ -119,7 +119,7 @@ void *realloc(void *ptr, size_t size1) {
     ptr1 = NULL;  /* Return value. */
     size = *(size_t*)((char*)ptr - sizeof(size_t));
    do_free:
-    /* No need to check overflow of size2, we've already checked size1 above (deisred memory block too large). */
+    /* No need to check overflow of size2, we've already checked size1 above (desired memory block too large). */
     for (size2 = sizeof(void*) > 4 ? sizeof(void*) : 4, bucketp = free_bucket_heads; size2 <= size; size2 <<= 1, ++bucketp) {}
     --size2; --bucketp;
 #    ifdef CONFIG_MALLOC_VERBOSE
@@ -134,7 +134,7 @@ void *realloc(void *ptr, size_t size1) {
     /* Round up to next multiple of 2. This is to make the number of copies
      * in successive realloc(...)s O(n) instead of O(n**2).
      */
-    for (size2 = sizeof(void*); size2 < size1; size2 <<= 1) {}  /* No need to check overflow of size2, we've already checked size1 above (deisred memory block too large). */
+    for (size2 = sizeof(void*); size2 < size1; size2 <<= 1) {}  /* No need to check overflow of size2, we've already checked size1 above (desired memory block too large). */
     if ((ptr1 = realloc(NULL, size2)) == NULL) return NULL;
     mini_memcpy(ptr1, ptr, size);
     goto do_free;
