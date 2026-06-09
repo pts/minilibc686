@@ -1584,3 +1584,5 @@ else  # 2 or 3.
   test "$SYSO" && rm -f "$SYSO"
   test "$EC" = 0 || exit "$EC"
 fi
+
+:  # exit successfully even if one of the `test's above fail.
