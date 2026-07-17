@@ -59,6 +59,10 @@ __LIBC_FUNC(gid_t, getgid, (void), __LIBC_NOATTR);
 __LIBC_FUNC(gid_t, getegid, (void), __LIBC_NOATTR);
 __LIBC_FUNC(pid_t, getpid, (void), __LIBC_NOATTR);
 __LIBC_FUNC(pid_t, getppid, (void), __LIBC_NOATTR);
+#ifndef __MINILIBC686__ /* No such Linux syscall, not implemented in minilibc. */
+  __LIBC_FUNC(uid_t, setuid, (uid_t uid), __LIBC_NOATTR);
+#endif
+__LIBC_FUNC(uid_t, setreuid, (uid_t ruid, uid_t euid), __LIBC_NOATTR);
 __LIBC_FUNC(pid_t, fork, (void), __LIBC_NOATTR);
 __LIBC_FUNC(void *, sys_brk, (void *addr), __LIBC_NOATTR);
 __LIBC_FUNC(int, execve, (const char *filename, char *const argv[], char *const envp[]), __LIBC_NOATTR);  /* Syscall. */
