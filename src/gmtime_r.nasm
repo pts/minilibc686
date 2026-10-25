@@ -30,7 +30,7 @@ TM_sec   equ 0*4  ; Seconds.    [0-60]  (1 leap second =60, mini_gmtime(...) nev
 TM_min   equ 1*4  ; Minutes.    [0-59]
 TM_hour  equ 2*4  ; Hours.      [0-23]
 TM_mday  equ 3*4  ; Day.        [1-31]
-TM_mon   equ 4*4  ; Month.      [0-11]
+TM_mon   equ 4*4  ; Month - 1.  [0-11]
 TM_year  equ 5*4  ; Year - 1900.
 TM_wday  equ 6*4  ; Day of week. [0-6, Sunday==0]
 TM_yday  equ 7*4  ; Days in year. [0-365]
@@ -131,7 +131,9 @@ mini_localtime_r:  ; struct tm *mini_localtime_r(const time_t *timep, struct tm 
 		dec ecx  ; --yday;
 .month_fi:	mov [ebp+TM_mon], eax
 		mov [ebp+TM_year], edx  ; tm->tm_year = c;
-		; Now: 1901 <= tm->tm_year <= 2038.
+		; Now: 1901 <= tm->tm_year + 1900 <= 2038.
+		; Now: 1 <= tm->tm_year <= 138.
+		; Now: 1 <= tm->tm_mon + 1 <= 12.
 		; Now: 0 <= tm->tm_mon <= 11.
 		; Now: 0 <= yday <= 365.
 		mov [ebp+TM_yday], ecx  ; tm->tm_yday = yday;
