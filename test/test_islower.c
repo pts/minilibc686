@@ -12,6 +12,7 @@ declare_func(mini_isalnum);
 declare_func(mini_isxdigit);
 declare_func(mini_isascii);
 declare_func(mini_isprint);
+declare_func(mini_isspace);
 
 int main(int argc, char **argv) {
   int i;
@@ -35,10 +36,13 @@ int main(int argc, char **argv) {
     if (mini_isxdigit(i) != ((i >= 'A' && i <= 'F') || (i >= 'a' && i <= 'f') || (i >= '0' && i <= '9'))) return 16;
   }
   for (i = -1; i < 256; ++i) {
-    if (mini_isascii(i) != ((i) >= 0 && (i) <= 127)) return 17;
+    if (mini_isspace(i) != ((i >= '\t' && i <= '\r') || i == ' ')) return 17;
   }
   for (i = -1; i < 256; ++i) {
-    if (mini_isprint(i) != ((i) >= 32 && (i) <= 126)) return 18;
+    if (mini_isascii(i) != ((i) >= 0 && (i) <= 127)) return 18;
+  }
+  for (i = -1; i < 256; ++i) {
+    if (mini_isprint(i) != ((i) >= 32 && (i) <= 126)) return 19;
   }
   return 0;
 }
