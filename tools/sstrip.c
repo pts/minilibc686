@@ -326,20 +326,20 @@ int main(int argc, char **argv) {
     ehdr.e_ident[EI_OSABI] = osabi;
     memcpy(&ehdr.e_ident[EI_BRAND], brand, 8);  /* By copying "FreeBSD" here, it makes the program work on FreeBSD 3.0. Some later version of FreeBSD has dropped this requirement. */
     ehdr_has_changed = 1;
-    if (!flag_a && !flag_s && !flag_z) {
+    if (!flag_a && !flag_s && !flag_z && !flag_h) {
       off = EI_OSABI;
       if (lseek(fd, off, SEEK_SET) != off) {  /* This succeeds even if the file is shorter. */
         fprintf(stderr, "fatal: error seeking to ELF e_ident EI_OSABI: %s\n", filename);
         return 9;
       }
-      if (write(fd, &ehdr.e_ident[EI_OSABI], 1) != 1) {
+      if (write(fd, &ehdr.e_ident[EI_OSABI], 1 + 8) != 1 + 8) {  /* Also writes EI_BRAND. */
         fprintf(stderr, "fatal: error changing ELF e_ident EI_OSABI: %s\n", filename);
         return 10;
       }
       return 0;  /* EXIT_SUCCESS. */
     }
   }
-  if (!flag_a && !flag_s && !flag_z) return 0;  /* EXIT_SUCCESS. */
+  if (!flag_a && !flag_s && !flag_z && !flag_h) return 0;  /* EXIT_SUCCESS. */
   if (ehdr.e_phoff < 0x34) {
     fprintf(stderr, "fatal: bad ELF e_phoff: %s\n", filename);
     return 11;

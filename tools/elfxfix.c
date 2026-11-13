@@ -265,7 +265,7 @@ int main(int argc, char **argv) {
         fprintf(stderr, "fatal: error seeking to ELF e_ident EI_OSABI: %s\n", filename);
         return 9;
       }
-      if (write(fd, &ehdr.e_ident[EI_OSABI], 1) != 1) {
+      if (write(fd, &ehdr.e_ident[EI_OSABI], 1 + 8) != 1 + 8) {  /* Also writes EI_BRAND. */
         fprintf(stderr, "fatal: error changing ELF e_ident EI_OSABI: %s\n", filename);
         return 10;
       }
