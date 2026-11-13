@@ -141,6 +141,8 @@ typedef struct {
 
 #define ET_EXEC		2		/* Executable file */
 
+#define EI_BRAND	8		/* 8 bytes, typically all NUL. */
+
 #define EI_OSABI	7		/* OS ABI identification */
 #define ELFOSABI_SYSV		0	/* Alias.  */
 #define ELFOSABI_GNU		3	/* Object uses GNU ELF extensions.  */
@@ -172,6 +174,7 @@ int main(int argc, char **argv) {
   char phdr_has_changed = 0, ehdr_has_changed = 0;
   char is_first_pt_load = 1;
   Elf32_Off end_off, last_off, pt_load_count;
+  const char *brand;
 
   (void)argc; (void)argv;
   if (!argv[0] || !argv[1] || strcmp(argv[1], "--help") == 0) {
@@ -318,8 +321,10 @@ int main(int argc, char **argv) {
     fprintf(stderr, "fatal: bad ELF e_version: %s\n", filename);
     return 8;
   }
-  if (osabi != (unsigned char)-1 && ehdr.e_ident[EI_OSABI] != osabi) {
+  brand = osabi == ELFOSABI_FREEBSD ? "FreeBSD" : "\0\0\0\0\0\0\0";
+  if (osabi != (unsigned char)-1 && (ehdr.e_ident[EI_OSABI] != osabi || memcmp(&ehdr.e_ident[EI_BRAND], brand, 8) != 0)) {
     ehdr.e_ident[EI_OSABI] = osabi;
+    memcpy(&ehdr.e_ident[EI_BRAND], brand, 8);  /* By copying "FreeBSD" here, it makes the program work on FreeBSD 3.0. Some later version of FreeBSD has dropped this requirement. */
     ehdr_has_changed = 1;
     if (!flag_a && !flag_s && !flag_z) {
       off = EI_OSABI;
