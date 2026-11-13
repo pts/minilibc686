@@ -2,7 +2,7 @@
  * elfxfix: do various fixes on ELF executables
  * by pts@fazekas.hu at Wed May 24 02:20:35 CEST 2023
  *
- * Compile: pathbin/minicc --noenv --gcc=4.8 -o tools/elfxfix.new tools/elfxfix.c
+ * Compile: pathbin/minicc --noenv --gcc=4.8 -o tools/elfxfix.new tools/elfxfix.c && mv tools/elfxfix.new tools/elfxfix
  */
 
 #include <fcntl.h>
@@ -127,7 +127,6 @@ static Elf32_Off bss_o[] = {  /* ELF-32 .o file containing data of a specific sp
 #endif
 
 int main(int argc, char **argv) {
-  char new_char[1];
   int fd, fd2;
   const char *filename;
   Elf32_Ehdr ehdr;
@@ -253,7 +252,7 @@ int main(int argc, char **argv) {
     return 8;
   }
   if (osabi != (unsigned char)-1 && ehdr.e_ident[EI_OSABI] != osabi) {
-    ehdr.e_ident[EI_OSABI] = new_char[0] = osabi;
+    ehdr.e_ident[EI_OSABI] = osabi;
     ehdr_has_changed = 1;
     if (!flag_s && !flag_a && !flag_p) {
       off = EI_OSABI;
@@ -261,7 +260,7 @@ int main(int argc, char **argv) {
         fprintf(stderr, "fatal: error seeking to ELF e_ident EI_OSABI: %s\n", filename);
         return 9;
       }
-      if (write(fd, new_char, 1) != 1) {
+      if (write(fd, &ehdr.e_ident[EI_OSABI], 1) != 1) {
         fprintf(stderr, "fatal: error changing ELF e_ident EI_OSABI: %s\n", filename);
         return 10;
       }
