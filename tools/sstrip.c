@@ -123,6 +123,29 @@ typedef struct {
   Elf32_Half	e_shnum;		/* Section header table entry count */
   Elf32_Half	e_shstrndx;		/* Section header string table index */
 } Elf32_Ehdr;
+typedef char static_assert_sizeof_ehdr[sizeof(Elf32_Ehdr) == 0x34 ? 1 : -1];
+
+#ifdef ENABLE_PEPATCH  /* Can be defined on the command line. */
+typedef struct {  /* All integer fields little-endian. */
+  char signature[2];  /* "MZ. */
+  uint16_t lastsize;
+  uint16_t nblocks;
+  uint16_t nreloc;
+  uint16_t hdrsize;
+  uint16_t minalloc;
+  uint16_t maxalloc;
+  uint16_t ss;
+  uint16_t sp;
+  uint16_t checksum;
+  uint16_t ip;
+  uint16_t cs;
+  uint16_t relocpos;  /* At file offset @0x18 == @24. */
+  uint16_t noverlay;
+  char unused[0x3c-0x1c];
+  uint32_t pe_fofs;  /* At file offset @0x3c == @60. */
+} Mzhdr;
+typedef char static_assert_sizeof_mzhdr[sizeof(Mzhdr) == 0x40 ? 1 : -1];
+#endif
 
 #define ELFCLASS32	1		/* 32-bit objects */
 
@@ -160,7 +183,13 @@ typedef char static_assert_sizeof_int[sizeof(int) >= 4 ? 1 : -1];
 int main(int argc, char **argv) {
   int fd;
   const char *filename;
-  Elf32_Ehdr ehdr;
+  union {
+    Elf32_Ehdr ehdr;
+#ifdef ENABLE_PEPATCH  /* Can be defined on the command line. */
+    Mzhdr mzhdr;
+#endif
+  } u;
+#define ehdr u.ehdr
   off_t off;
   size_t want;
   static Elf32_Phdr phdrs[0x80];
@@ -175,6 +204,11 @@ int main(int argc, char **argv) {
   char is_first_pt_load = 1;
   Elf32_Off end_off, last_off, pt_load_count;
   const char *brand;
+#ifdef ENABLE_PEPATCH  /* Can be defined on the command line. */
+  unsigned char pe_fofs_parity = (unsigned char)-1;
+  const char *mz_message = NULL;
+  char *cp;
+#endif
 
   (void)argc; (void)argv;
   if (!argv[0] || !argv[1] || strcmp(argv[1], "--help") == 0) {
@@ -190,6 +224,11 @@ int main(int argc, char **argv) {
             "-nh: disable -h\n"
             "-s: strip beyond the last PT_LOAD (sstrip) (strip default, enabled by default)\n"
             "-ns: disable -s\n"
+#ifdef ENABLE_PEPATCH  /* Can be defined on the command line. */
+            "-p0: make the PE .exe header offset even\n"
+            "-p1: make the PE .exe header offset odd\n"
+            "-m <msg>: set message between PE .exe file offsets 0x18...0x3c\n"
+#endif
             "-z: discard trailing zero bytes (sstrip flag) (not implemented)\n",
             argv[0]);
     return !argv[0] || !argv[1];  /* 0 (EXIT_SUCCESS) for--help. */
@@ -212,7 +251,23 @@ int main(int argc, char **argv) {
       } else {
         goto unknown_flag;
       }
-    } else if (arg[1] == 'l' && arg[2] != '\0' && arg[3] == '\0') {
+#ifdef ENABLE_PEPATCH  /* Can be defined on the command line. */
+    } else if (c == 'p' && arg[2] != '\0' && arg[3] == '\0') {
+      if (arg[2] - '0' + 0U < 2U) {
+        pe_fofs_parity = arg[2] - '0';
+        flag_a = flag_s = flag_h = 0;
+      } else {
+        goto unknown_flag;
+      }
+    } else if (c == 'p' && arg[3] == '\0') {
+      if (arg[2] - '0' + 0U < 2U) {
+        pe_fofs_parity = arg[2] - '0';
+        flag_a = flag_s = flag_h = 0;
+      } else {
+        goto unknown_flag;
+      }
+#endif
+    } else if (c == 'l' && arg[2] != '\0' && arg[3] == '\0') {
       if (arg[2] == 'l') {
         osabi = ELFOSABI_LINUX;
       } else if (arg[2] == 'f') {
@@ -253,12 +308,22 @@ int main(int argc, char **argv) {
       /* TODO(pts): Implement this instead of ignoring it. */
     } else if (c == 'g' || c == 'd' || c == 'S' || c == 'M') {
       /* Ignored for GNU strip(1) compatibility. */
-    } else if (c == 'x' || c == 'X' || c == 'N' || c == 'R') {
+    } else if (c == 'x' || c == 'X' || c == 'N' || c == 'R'
+#ifdef ENABLE_PEPATCH  /* Can be defined on the command line. */
+               || c == 'm'
+#endif
+              ) {
       if (!argp[1]) {
         fprintf(stderr, "fatal: missing argument for flag: %s\n", arg);
         return 1;
       }
       ++argp;
+#ifdef ENABLE_PEPATCH  /* Can be defined on the command line. */
+     if (c == 'm') {
+       mz_message = *argp;
+       flag_a = flag_s = flag_h = 0;
+     }
+#endif
     } else {
      unknown_flag:
       fprintf(stderr, "fatal: unknown command-line flag: %s\n", arg);
@@ -282,6 +347,44 @@ int main(int argc, char **argv) {
     fprintf(stderr, "fatal: error opening for read-write: %s\n", filename);
     return 2;
   }
+#ifdef ENABLE_PEPATCH  /* Can be defined on the command line. */
+  if (pe_fofs_parity != (unsigned char)-1 || mz_message) {
+    if (read(fd, &u.mzhdr, sizeof(u.mzhdr)) != sizeof(u.mzhdr)) {
+      fprintf(stderr, "fatal: error reading PE mzhdr: %s\n", filename);
+      return 3;
+    }
+    if (memcmp(u.mzhdr.signature, "MZ", 2) != 0) {
+      fprintf(stderr, "fatal: bad MZ signature: %s\n", filename);
+      return 4;
+    }
+    /*close(fd);*/  /* No need, we are exiting anyway. */
+    if (pe_fofs_parity != (unsigned char)-1 && (unsigned char)(u.mzhdr.pe_fofs & 1U) != pe_fofs_parity) {
+      u.mzhdr.pe_fofs &= ~1U;
+      u.mzhdr.pe_fofs |= pe_fofs_parity;
+      ehdr_has_changed = 1;
+    }
+    if (mz_message) {
+      for (cp = (char*)&u.mzhdr.relocpos; *mz_message != '\0' && cp != (char*)&u.mzhdr.pe_fofs; ++cp, ++mz_message) {
+        if (*cp != *mz_message) { ehdr_has_changed = 1; *cp = *mz_message; }
+      }
+      for (; cp != (char*)&u.mzhdr.pe_fofs; ++cp) {
+        if (*cp != '\0') { ehdr_has_changed = 1; *cp = '\0'; }
+      }
+    }
+    if (ehdr_has_changed) {
+      off = 0;
+      if (lseek(fd, off, SEEK_SET) != off) {  /* This succeeds even if the file is shorter. */
+        fprintf(stderr, "fatal: error seeking to PE mzhdr: %s\n", filename);
+        return 22;
+      }
+      if ((size_t)write(fd, &u.mzhdr, sizeof(u.mzhdr)) != sizeof(u.mzhdr)) {
+        fprintf(stderr, "fatal: error changing PE mzhdr: %s\n", filename);
+        return 23;
+      }
+    }
+    return 0;
+  }
+#endif
   if (read(fd, &ehdr, sizeof(ehdr)) != sizeof(ehdr)) {
     fprintf(stderr, "fatal: error reading ELF ehdr: %s\n", filename);
     return 3;
