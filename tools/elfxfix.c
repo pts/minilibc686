@@ -139,7 +139,7 @@ int main(int argc, char **argv) {
   char **argp;
   unsigned char osabi = (unsigned char)-1;
   char flag_a = 0, flag_s = 0, flag_p = 0, flag_r = 0, is_verbose = 0;
-  char phdr_has_changed = 0, ehdr_has_changed = 1;
+  char phdr_has_changed = 0, ehdr_has_changed = 0;
   char is_first_pt_load = 1;
   char can_fix;
   const char *fix_o_fn = NULL;  /* Use NULL to pacify GCC. */
@@ -254,7 +254,7 @@ int main(int argc, char **argv) {
   if (osabi != (unsigned char)-1 && ehdr.e_ident[EI_OSABI] != osabi) {
     ehdr.e_ident[EI_OSABI] = osabi;
     ehdr_has_changed = 1;
-    if (!flag_s && !flag_a && !flag_p) {
+    if (!flag_a && !flag_s && !flag_p && !flag_r) {
       off = EI_OSABI;
       if (lseek(fd, off, SEEK_SET) != off) {  /* This succeeds even if the file is shorter. */
         fprintf(stderr, "fatal: error seeking to ELF e_ident EI_OSABI: %s\n", filename);
@@ -267,6 +267,7 @@ int main(int argc, char **argv) {
       return 0;  /* EXIT_SUCCESS. */
     }
   }
+  if (!flag_a && !flag_s && !flag_p && !flag_r) return 0;  /* EXIT_SUCCESS. */
   if (ehdr.e_phoff < 0x34) {
     fprintf(stderr, "fatal: bad ELF e_phoff: %s\n", filename);
     return 11;

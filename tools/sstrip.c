@@ -123,7 +123,7 @@ int main(int argc, char **argv) {
   char c;
   char flag_l = 0, flag_a = 1, flag_s = 1, flag_h = 1, is_verbose = 0;
   const char flag_z = 0;
-  char phdr_has_changed = 0, ehdr_has_changed = 1;
+  char phdr_has_changed = 0, ehdr_has_changed = 0;
   char is_first_pt_load = 1;
   Elf32_Off end_off, last_off, pt_load_count;
 
