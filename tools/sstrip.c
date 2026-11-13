@@ -23,17 +23,61 @@
  * compilers.
  */
 
-#include <fcntl.h>
-#include <stdio.h>
-#include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
+#ifndef _ALL_LIBC_INCLUDED
+#  include <fcntl.h>
+#  include <stdio.h>
+#  include <stdint.h>
+#  include <stdlib.h>
+#  include <string.h>
+#  include <unistd.h>
+#  ifdef _LIBC_NO_FILEP
+#    include <stdarg.h>
+#  endif
+#endif
+
+#ifndef _LIBC_HAS_OPEN_FAILED
+#  define _LIBC_HAS_OPEN_FAILED(fd_result) ((fd_result) < 0)
+#endif
 
 #if defined(__i386) || defined(__i386__) || defined(__amd64__) || defined(__x86_64__) || defined(_M_X64) || defined(_M_AMD64) || defined(__386) || \
     defined(__X86_64__) || defined(_M_I386) || defined(_M_I86) || defined(_M_X64) || defined(_M_AMD64) || defined(_M_IX86) || defined(__386__) || \
     defined(__X86__) || defined(__I86__) || defined(_M_I86) || defined(_M_I8086) || defined(_M_I286)
 #  define IS_X86 1
+#endif
+
+#ifdef _LIBC_NO_FILEP
+#  define stdout ((void*)1)
+#  define stderr ((void*)2)
+  /* Poor man's fprintf. It doesn't do buffering, and it supports only %%
+   * and %s in the format string, and it replaces "\n" with "\r\n" in
+   * fmt only.
+   */
+  static void fprintf(void *file, const char *fmt, ...) {
+    va_list ap;
+    int fd = (int)file;
+    const char *fmt0, *s;
+    va_start(ap, fmt);
+    for (fmt0 = fmt; *fmt != '\0'; ++fmt) {
+#  ifdef _LIBC_CRLF
+      if (*fmt == '\n') {
+        if (fmt0 != fmt) (void)!write(fd, fmt0, fmt - fmt0);
+        (void)!write(fd, "\r", 1);
+        fmt0 = fmt;
+        continue;
+      }
+#  endif
+      if (*fmt != '%') continue;
+      if (fmt0 != fmt) (void)!write(fd, fmt0, fmt - fmt0);
+      fmt0 = fmt++;
+      if (*fmt == '%') { ++fmt0; continue; }
+      if (*fmt != 's') break;  /* We only support %s. */
+      fmt0 += 2;
+      s = va_arg(ap, const char*);
+      if (*s != '\0') (void)!write(fd, s, strlen(s));
+    }
+    if (fmt0 != fmt) (void)!write(fd, fmt0, fmt - fmt0);
+    va_end(ap);
+  }
 #endif
 
 /* --- ELF file format. */
@@ -231,7 +275,7 @@ int main(int argc, char **argv) {
   if (is_verbose) {  /* GNU strip(1) comaptibility. */
     fprintf(stderr, "info: %s: %s\n", flag_s ? (osabi != (unsigned char)-1 || flag_a ? "stripping and fixing" : "stripping") : (osabi != (unsigned char)-1 || flag_a ? "fixing" : "checking"), filename);
   }
-  if ((fd = open(filename, O_RDWR)) < 0) {
+  if (_LIBC_HAS_OPEN_FAILED(fd = open(filename, O_RDWR))) {
     fprintf(stderr, "fatal: error opening for read-write: %s\n", filename);
     return 2;
   }
