@@ -101,6 +101,8 @@ typedef struct {
 #define ELFOSABI_SYSV		0	/* Alias.  */
 #define ELFOSABI_GNU		3	/* Object uses GNU ELF extensions.  */
 #define ELFOSABI_LINUX		ELFOSABI_GNU /* Compatibility alias.  */
+#define ELFOSABI_IRIX		8	/* SGI Irix. */
+#define ELFOSABI_FREEBSD	9	/* FreeBSD. */
 
 #define PT_LOAD		1		/* Loadable program segment */
 
@@ -110,7 +112,6 @@ typedef struct {
 typedef char static_assert_sizeof_int[sizeof(int) >= 4 ? 1 : -1];
 
 int main(int argc, char **argv) {
-  char new_char[1];
   int fd;
   const char *filename;
   Elf32_Ehdr ehdr;
@@ -121,7 +122,8 @@ int main(int argc, char **argv) {
   const char *arg;
   char **argp;
   char c;
-  char flag_l = 0, flag_a = 1, flag_s = 1, flag_h = 1, is_verbose = 0;
+  unsigned char osabi = (unsigned char)-1;
+  char flag_a = 1, flag_s = 1, flag_h = 1, is_verbose = 0;
   const char flag_z = 0;
   char phdr_has_changed = 0, ehdr_has_changed = 0;
   char is_first_pt_load = 1;
@@ -131,7 +133,10 @@ int main(int argc, char **argv) {
   if (!argv[0] || !argv[1] || strcmp(argv[1], "--help") == 0) {
     fprintf(stderr, "Usage: %s [<flag>...] <elfprog>\nFlags:\n"
             "-v: verbose operation, write info to stderr\n"
-            "-l: change the ELF OSABI to Linux\n"
+            "-l or -ll: change the ELF OSABI to Linux\n"
+            "-ls: change the ELF OSABI to SYSV\n"
+            "-lf: change the ELF OSABI to FreeBSD\n"
+            "-li: change the ELF OSABI to IRIX\n"
             "-a: align the early PT_LOAD phdr to page size (enabled by default)\n"
             "-na: disable -a\n"
             "-h: fix ELF section header size (enabled by default)\n"
@@ -160,12 +165,36 @@ int main(int argc, char **argv) {
       } else {
         goto unknown_flag;
       }
+    } else if (arg[1] == 'l' && arg[2] != '\0' && arg[3] == '\0') {
+      if (arg[2] == 'l') {
+        osabi = ELFOSABI_LINUX;
+      } else if (arg[2] == 'f') {
+        osabi = ELFOSABI_FREEBSD;
+      } else if (arg[2] == 'i') {
+        /* This is fake IRIX. IRIX has never supported i386 ELF-32 (only
+         * MIPS ELF-32). Also IRIX has never supported little-endian
+         * systems (only big-endian MIPS). The last release of IRIX was on
+         * 2006-08-16 (with mostly bugfixes and small improvements to IRIX
+         * 6.5 released in 1998-05).
+         *
+         * We could make it even more fake by setting a nonzero e_flags
+         * value (i386 ELF-32 has 0 in practice everywhere), such as
+         * 0xef80ffff, which contains invalid (undefined) values in many
+         * fields for MIPS. See More EF_MIPS_... flags on
+         * https://llvm.org/doxygen/namespacellvm_1_1ELF.html
+         */
+        osabi = ELFOSABI_IRIX;
+      } else if (arg[2] == 's') {
+        osabi = ELFOSABI_SYSV;
+      } else {
+        goto unknown_flag;
+      }
     } else if (arg[2] != '\0') {
       goto unknown_flag;
     } else if (c == 'v') {
       is_verbose = 1;
     } else if (c == 'l') {
-      flag_l = 1;
+      osabi = ELFOSABI_LINUX;
     } else if (c == 'a') {
       flag_a = 1;
     } else if (c == 's') {
@@ -200,7 +229,7 @@ int main(int argc, char **argv) {
   }
 
   if (is_verbose) {  /* GNU strip(1) comaptibility. */
-    fprintf(stderr, "info: %s: %s\n", flag_s ? (flag_l || flag_a ? "stripping and fixing" : "stripping") : (flag_l || flag_a ? "fixing" : "checking"), filename);
+    fprintf(stderr, "info: %s: %s\n", flag_s ? (osabi != (unsigned char)-1 || flag_a ? "stripping and fixing" : "stripping") : (osabi != (unsigned char)-1 || flag_a ? "fixing" : "checking"), filename);
   }
   if ((fd = open(filename, O_RDWR)) < 0) {
     fprintf(stderr, "fatal: error opening for read-write: %s\n", filename);
@@ -245,21 +274,20 @@ int main(int argc, char **argv) {
     fprintf(stderr, "fatal: bad ELF e_version: %s\n", filename);
     return 8;
   }
-  if (flag_l && ehdr.e_ident[EI_OSABI] != ELFOSABI_LINUX) {
+  if (osabi != (unsigned char)-1 && ehdr.e_ident[EI_OSABI] != osabi) {
+    ehdr.e_ident[EI_OSABI] = osabi;
+    ehdr_has_changed = 1;
     if (!flag_a && !flag_s && !flag_z) {
       off = EI_OSABI;
       if (lseek(fd, off, SEEK_SET) != off) {  /* This succeeds even if the file is shorter. */
         fprintf(stderr, "fatal: error seeking to ELF e_ident EI_OSABI: %s\n", filename);
         return 9;
       }
-      if (write(fd, new_char, 1) != 1) {
+      if (write(fd, &ehdr.e_ident[EI_OSABI], 1) != 1) {
         fprintf(stderr, "fatal: error changing ELF e_ident EI_OSABI: %s\n", filename);
         return 10;
       }
       return 0;  /* EXIT_SUCCESS. */
-    } else {
-      ehdr.e_ident[EI_OSABI] = new_char[0] = ELFOSABI_LINUX;
-      ehdr_has_changed = 1;
     }
   }
   if (!flag_a && !flag_s && !flag_z) return 0;  /* EXIT_SUCCESS. */
