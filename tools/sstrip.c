@@ -143,8 +143,74 @@ typedef struct {  /* All integer fields little-endian. */
   uint16_t noverlay;
   char unused[0x3c-0x1c];
   uint32_t pe_fofs;  /* At file offset @0x3c == @60. */
-} Mzhdr;
-typedef char static_assert_sizeof_mzhdr[sizeof(Mzhdr) == 0x40 ? 1 : -1];
+} MzHdr;
+typedef char static_assert_sizeof_MzHdr[sizeof(MzHdr) == 0x40 ? 1 : -1];
+
+typedef struct { /* Image data directory. */  /* All integer fields little-endian. */
+  uint32_t VirtualAddress;
+  uint32_t Size;
+} PeIdd;
+
+typedef struct {
+  char Signature[4];  /* "PE\0\0". */
+  uint16_t Machine;
+  uint16_t NumberOfSections;
+  uint32_t TimeDateStamp;
+  uint32_t PointerToSymbolTable;
+  uint32_t NumberOfSymbols;
+  uint16_t SizeOfOptionalHeader;
+  uint16_t Characteristics;
+  uint16_t Magic;
+  uint8_t  MajorLinkerVersion;
+  uint8_t  MinorLinkerVersion;
+  uint32_t SizeOfCode;
+  uint32_t SizeOfInitializedData;
+  uint32_t SizeOfUninitializedData;
+  uint32_t AddressOfEntryPoint;
+  uint32_t BaseOfCode;
+  uint32_t BaseOfData;
+  uint32_t ImageBase;
+  uint32_t SectionAlignment;
+  uint32_t FileAlignment;
+  uint16_t MajorOperatingSystemVersion;
+  uint16_t MinorOperatingSystemVersion;
+  uint16_t MajorImageVersion;
+  uint16_t MinorImageVersion;
+  uint16_t MajorSubsystemVersion;
+  uint16_t MinorSubsystemVersion;
+  uint32_t Win32VersionValue;
+  uint32_t SizeOfImage;
+  uint32_t SizeOfHeaders;
+  uint32_t CheckSum;
+  uint16_t Subsystem;
+  uint16_t DllCharacteristics;
+  uint32_t SizeOfStackReserve;
+  uint32_t SizeOfStackCommit;
+  uint32_t SizeOfHeapReserve;
+  uint32_t SizeOfHeapCommit;
+  uint32_t LoaderFlags;
+  uint32_t NumberOfRvaAndSizes;
+#if 0  /* No need to get or set these. */
+  /* PeIdd DataDirectory[IMAGE_NUMBEROF_DIRECTORY_ENTRIES]; */
+  PeIdd IMAGE_DIRECTORY_ENTRY_EXPORT;  /* 0. Export. */
+  PeIdd IMAGE_DIRECTORY_ENTRY_IMPORT;  /* 1. Import. */
+  PeIdd IMAGE_DIRECTORY_ENTRY_RESOURCE;  /* 2. Resource. */
+  PeIdd IMAGE_DIRECTORY_ENTRY_EXCEPTION;  /* 3. Exception. */
+  PeIdd IMAGE_DIRECTORY_ENTRY_SECURITY;  /* 4. Security. Certificates. */
+  PeIdd IMAGE_DIRECTORY_ENTRY_BASERELOC;  /* 5. Base relocation. */
+  PeIdd IMAGE_DIRECTORY_ENTRY_DEBUG;  /* 6. Debug. */
+  PeIdd IMAGE_DIRECTORY_ENTRY_ARCHITECTURE;  /* 7. Description. Architecture. */
+  PeIdd IMAGE_DIRECTORY_ENTRY_GLOBALPTR;  /* 8. Global pointer. Special. */
+  PeIdd IMAGE_DIRECTORY_ENTRY_TLS;  /* 9. Thread local storage. */
+  PeIdd IMAGE_DIRECTORY_ENTRY_LOAD_CONFIG;  /* 10. Load configuration. */
+  PeIdd IMAGE_DIRECTORY_ENTRY_BOUND_IMPORT;  /* 11. Bound import. */
+  PeIdd IMAGE_DIRECTORY_ENTRY_IAT;  /* 12. Import address table. */
+  PeIdd IMAGE_DIRECTORY_ENTRY_DELAY_IMPORT;  /* 13. Delay Import. */
+  PeIdd IMAGE_DIRECTORY_ENTRY_COM_DESCRIPTOR;  /* 14. COM descriptor. CLR runtime. Nonzero for .NET .exe. */
+  PeIdd IMAGE_DIRECTORY_ENTRY_RESERVED;  /* 15. Reserved. */
+#endif
+} PeHdr;
+typedef char static_assert_sizeof_PeHdr[sizeof(PeHdr) == 0xf8 - 0x80 ? 1 : -1];
 #endif
 
 #define ELFCLASS32	1		/* 32-bit objects */
@@ -186,7 +252,8 @@ int main(int argc, char **argv) {
   union {
     Elf32_Ehdr ehdr;
 #ifdef ENABLE_PEPATCH  /* Can be defined on the command line. */
-    Mzhdr mzhdr;
+    MzHdr mzhdr;
+    PeHdr pehdr;
 #endif
   } u;
 #define ehdr u.ehdr
@@ -206,6 +273,7 @@ int main(int argc, char **argv) {
   const char *brand;
 #ifdef ENABLE_PEPATCH  /* Can be defined on the command line. */
   unsigned char pe_fofs_parity = (unsigned char)-1;
+  char flag_pt0 = 0, flag_ph0 = 0, flag_ps = 0;
   const char *mz_message = NULL;
   char *cp;
 #endif
@@ -227,6 +295,9 @@ int main(int argc, char **argv) {
 #ifdef ENABLE_PEPATCH  /* Can be defined on the command line. */
             "-p0: make the PE .exe header offset even\n"
             "-p1: make the PE .exe header offset odd\n"
+            "-pt0: set the PE .exe TimeDateStamp to 0\n"
+            "-ph0: set the PE .exe SizeOfHeapReserve and SizeOfHeapCommit to 0\n"
+            "-ps: fix the PE .exe SizeOfStackReserve and SizeOfStackCommit\n"
             "-m <msg>: set message between PE .exe file offsets 0x18...0x3c\n"
 #endif
             "-z: discard trailing zero bytes (sstrip flag) (not implemented)\n",
@@ -252,9 +323,19 @@ int main(int argc, char **argv) {
         goto unknown_flag;
       }
 #ifdef ENABLE_PEPATCH  /* Can be defined on the command line. */
+    } else if (c == 'p' && (arg[2] == 't' || arg[2] == 'h') && arg[3] == '0' && arg[4] == '\0') {
+      flag_a = flag_s = flag_h = 0;
+      if (arg[2] == 't') {
+        flag_pt0 = 1;
+      } else {
+        flag_ph0 = 1;
+      }
     } else if (c == 'p' && arg[2] != '\0' && arg[3] == '\0') {
       if (arg[2] - '0' + 0U < 2U) {
         pe_fofs_parity = arg[2] - '0';
+        flag_a = flag_s = flag_h = 0;
+      } else if (arg[2] == 's') {
+        flag_ps = 1;
         flag_a = flag_s = flag_h = 0;
       } else {
         goto unknown_flag;
@@ -359,7 +440,7 @@ int main(int argc, char **argv) {
     }
     /*close(fd);*/  /* No need, we are exiting anyway. */
     if (pe_fofs_parity != (unsigned char)-1 && (unsigned char)(u.mzhdr.pe_fofs & 1U) != pe_fofs_parity) {
-      u.mzhdr.pe_fofs &= ~1U;
+      u.mzhdr.pe_fofs &= ~(uint32_t)1U;
       u.mzhdr.pe_fofs |= pe_fofs_parity;
       ehdr_has_changed = 1;
     }
@@ -380,6 +461,59 @@ int main(int argc, char **argv) {
       if ((size_t)write(fd, &u.mzhdr, sizeof(u.mzhdr)) != sizeof(u.mzhdr)) {
         fprintf(stderr, "fatal: error changing PE mzhdr: %s\n", filename);
         return 23;
+      }
+    }
+    if (flag_pt0 || flag_ph0 || flag_ps) {
+      ehdr_has_changed = 0;
+      off = u.mzhdr.pe_fofs & ~(uint32_t)1U;
+      if (lseek(fd, off, SEEK_SET) != off) {  /* This succeeds even if the file is shorter. */
+        fprintf(stderr, "fatal: error seeking to PE pehdr: %s\n", filename);
+        return 22;
+      }
+      if (read(fd, &u.pehdr, sizeof(u.pehdr)) != sizeof(u.pehdr)) {
+        fprintf(stderr, "fatal: error reading PE pehdr: %s\n", filename);
+        return 3;
+      }
+      if (memcmp(u.pehdr.Signature, "PE\0", 4) != 0) {
+        fprintf(stderr, "fatal: bad PE signature: %s\n", filename);
+        return 4;
+      }
+      if (flag_pt0 && u.pehdr.TimeDateStamp != 0) {
+        ehdr_has_changed = 1;
+        u.pehdr.TimeDateStamp = 0;
+      }
+      if (flag_ph0 && (u.pehdr.SizeOfHeapReserve != 0 || u.pehdr.SizeOfHeapCommit != 0)) {
+        ehdr_has_changed = 1;
+        u.pehdr.SizeOfHeapReserve = 0;
+        u.pehdr.SizeOfHeapCommit = 0;
+      }
+      if (flag_ps) {
+        if (u.pehdr.SizeOfStackCommit < 0x1000) {
+          ehdr_has_changed = 1;
+          u.pehdr.SizeOfStackCommit = 0x1000;
+        }
+        if (u.pehdr.SizeOfStackCommit & 0xfff) {
+          ehdr_has_changed = 1;
+          u.pehdr.SizeOfStackCommit = (u.pehdr.SizeOfStackCommit + 0xfff) & ~0xfffU;  /* Incorrect on overflow. */
+        }
+        if (u.pehdr.SizeOfStackReserve < u.pehdr.SizeOfStackCommit) {
+          ehdr_has_changed = 1;
+          u.pehdr.SizeOfStackReserve = u.pehdr.SizeOfStackCommit;
+        }
+        if (u.pehdr.SizeOfStackReserve & 0xffff) {
+          ehdr_has_changed = 1;
+          u.pehdr.SizeOfStackReserve = (u.pehdr.SizeOfStackReserve + 0xffff) & ~0xffffU;  /* Incorrect on overflow. */
+        }
+      }
+      if (ehdr_has_changed) {
+        if (lseek(fd, off, SEEK_SET) != off) {  /* This succeeds even if the file is shorter. */
+          fprintf(stderr, "fatal: error seeking to PE pehdr: %s\n", filename);
+          return 22;
+        }
+        if ((size_t)write(fd, &u.pehdr, sizeof(u.pehdr)) != sizeof(u.pehdr)) {
+          fprintf(stderr, "fatal: error changing PE pehdr: %s\n", filename);
+          return 23;
+        }
       }
     }
     return 0;
